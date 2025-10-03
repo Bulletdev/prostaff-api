@@ -27,6 +27,155 @@ This API follows a modular monolith architecture with the following modules:
 - `team_goals` - Goal setting and tracking
 - `riot_integration` - Riot Games API integration
 
+### Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        Client[Frontend Application]
+    end
+
+    subgraph "API Gateway"
+        Router[Rails Router]
+        CORS[CORS Middleware]
+        RateLimit[Rate Limiting]
+        Auth[Authentication Middleware]
+    end
+
+    subgraph "Application Layer - Modular Monolith"
+subgraph "Authentication Module"
+    AuthController[Auth Controller]
+    JWTService[JWT Service]
+    UserModel[User Model]
+end
+subgraph "Dashboard Module"
+    DashboardController[Dashboard Controller]
+    DashStats[Statistics Service]
+end
+subgraph "Players Module"
+    PlayersController[Players Controller]
+    PlayerModel[Player Model]
+    ChampionPool[Champion Pool Model]
+end
+subgraph "Scouting Module"
+    ScoutingController[Scouting Controller]
+    ScoutingTarget[Scouting Target Model]
+    Watchlist[Watchlist Service]
+end
+subgraph "Analytics Module"
+    AnalyticsController[Analytics Controller]
+    PerformanceService[Performance Service]
+    KDAService[KDA Trend Service]
+end
+subgraph "Matches Module"
+    MatchesController[Matches Controller]
+    MatchModel[Match Model]
+    PlayerMatchStats[Player Match Stats Model]
+end
+subgraph "Schedules Module"
+    SchedulesController[Schedules Controller]
+    ScheduleModel[Schedule Model]
+end
+subgraph "VOD Reviews Module"
+    VODController[VOD Reviews Controller]
+    VODModel[VOD Review Model]
+    TimestampModel[Timestamp Model]
+end
+subgraph "Team Goals Module"
+    GoalsController[Team Goals Controller]
+    GoalModel[Team Goal Model]
+end
+subgraph "Riot Integration Module"
+    RiotService[Riot API Service]
+    RiotSync[Sync Service]
+end
+    end
+
+    subgraph "Data Layer"
+        PostgreSQL[(PostgreSQL Database)]
+        Redis[(Redis Cache)]
+    end
+
+    subgraph "Background Jobs"
+        Sidekiq[Sidekiq Workers]
+        JobQueue[Job Queue]
+    end
+
+    subgraph "External Services"
+        RiotAPI[Riot Games API]
+    end
+
+    Client -->|HTTP/JSON| CORS
+    CORS --> RateLimit
+    RateLimit --> Auth
+    Auth --> Router
+    
+    Router --> AuthController
+    Router --> DashboardController
+    Router --> PlayersController
+    Router --> ScoutingController
+    Router --> AnalyticsController
+    Router --> MatchesController
+    Router --> SchedulesController
+    Router --> VODController
+    Router --> GoalsController
+    AuthController --> JWTService
+    AuthController --> UserModel
+    PlayersController --> PlayerModel
+    PlayerModel --> ChampionPool
+    ScoutingController --> ScoutingTarget
+    ScoutingController --> Watchlist
+    MatchesController --> MatchModel
+    MatchModel --> PlayerMatchStats
+    SchedulesController --> ScheduleModel
+    VODController --> VODModel
+    VODModel --> TimestampModel
+    GoalsController --> GoalModel
+    AnalyticsController --> PerformanceService
+    AnalyticsController --> KDAService
+    AuditLogModel[AuditLog Model] --> PostgreSQL
+    ChampionPoolModel[ChampionPool Model] --> PostgreSQL
+    MatchModel[Match Model] --> PostgreSQL
+    OrganizationModel[Organization Model] --> PostgreSQL
+    PlayerModel[Player Model] --> PostgreSQL
+    PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
+    ScheduleModel[Schedule Model] --> PostgreSQL
+    ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
+    TeamGoalModel[TeamGoal Model] --> PostgreSQL
+    UserModel[User Model] --> PostgreSQL
+    VodReviewModel[VodReview Model] --> PostgreSQL
+    VodTimestampModel[VodTimestamp Model] --> PostgreSQL
+    JWTService --> Redis
+    DashStats --> Redis
+    PerformanceService --> Redis
+PlayersController --> RiotService
+MatchesController --> RiotService
+ScoutingController --> RiotService
+RiotService --> RiotAPI
+
+RiotService --> Sidekiq
+Sidekiq --> JobQueue
+JobQueue --> Redis
+    
+    style Client fill:#e1f5ff
+    style PostgreSQL fill:#336791
+    style Redis fill:#d82c20
+    style RiotAPI fill:#eb0029
+    style Sidekiq fill:#b1003e
+```
+
+
+**Key Architecture Principles:**
+
+1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
+2. **API-Only**: Rails configured in API mode for JSON responses
+3. **JWT Authentication**: Stateless authentication using JWT tokens
+4. **Background Processing**: Long-running tasks handled by Sidekiq
+5. **Caching**: Redis used for session management and performance optimization
+6. **External Integration**: Riot Games API integration for real-time data
+7. **Rate Limiting**: Rack::Attack for API rate limiting
+8. **CORS**: Configured for cross-origin requests from frontend
+
 ## Setup
 
 ### Prerequisites
@@ -176,6 +325,38 @@ docker build -t prostaff-api .
 docker run -p 3333:3000 prostaff-api
 ```
 
+## CI/CD
+
+### Architecture Diagram Auto-Update
+
+This project includes an automated workflow that keeps the architecture diagram in sync with the codebase:
+
+- **Trigger**: Automatically runs when changes are made to:
+  - `app/modules/**` - Module definitions
+  - `app/models/**` - Data models
+  - `app/controllers/**` - Controllers
+  - `config/routes.rb` - Route definitions
+  - `Gemfile` - Dependencies
+
+- **Process**: 
+  1. GitHub Actions workflow detects relevant code changes
+  2. Runs `scripts/update_architecture_diagram.rb`
+  3. Script analyzes project structure (modules, models, controllers, services)
+  4. Generates updated Mermaid diagram
+  5. Updates README.md with new diagram
+  6. Commits changes back to the repository
+
+- **Manual Update**: You can also manually update the diagram:
+  ```bash
+  ruby scripts/update_architecture_diagram.rb
+  ```
+
+The diagram automatically reflects:
+- New modules added to `app/modules/`
+- New models created
+- New controllers and routes
+- Service integrations (Riot API, Redis, PostgreSQL, Sidekiq)
+
 ## Contributing
 
 1. Create a feature branch
@@ -183,6 +364,8 @@ docker run -p 3333:3000 prostaff-api
 3. Add tests
 4. Ensure all tests pass
 5. Submit a pull request
+
+**Note**: The architecture diagram will be automatically updated when you add new modules, models, or controllers.
 
 ## License
 

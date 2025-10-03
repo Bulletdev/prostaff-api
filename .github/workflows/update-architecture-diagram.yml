@@ -1,0 +1,65 @@
+name: Update Architecture Diagram
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - 'app/modules/**'
+      - 'app/models/**'
+      - 'app/controllers/**'
+      - 'config/routes.rb'
+      - 'Gemfile'
+  pull_request:
+    branches:
+      - master
+      - main
+    paths:
+      - 'app/modules/**'
+      - 'app/models/**'
+      - 'app/controllers/**'
+      - 'config/routes.rb'
+      - 'Gemfile'
+  workflow_dispatch:
+
+jobs:
+  update-diagram:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1.7'
+          bundler-cache: false
+
+      - name: Update architecture diagram
+        run: |
+          ruby scripts/update_architecture_diagram.rb
+
+      - name: Check for changes
+        id: verify_diff
+        run: |
+          if git diff --quiet README.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push if changed
+        if: steps.verify_diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: auto-update architecture diagram [skip ci]"
+          git push
