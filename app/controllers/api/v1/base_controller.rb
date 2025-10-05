@@ -1,5 +1,6 @@
 class Api::V1::BaseController < ApplicationController
   include Authenticatable
+  include Pundit::Authorization
 
   # Skip authentication for specific actions if needed
   # This will be overridden in individual controllers
@@ -7,6 +8,7 @@ class Api::V1::BaseController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
   rescue_from ActiveRecord::RecordInvalid, with: :render_validation_errors
   rescue_from ActionController::ParameterMissing, with: :render_parameter_missing
+  rescue_from Pundit::NotAuthorizedError, with: :render_forbidden_policy
 
   protected
 
@@ -106,5 +108,18 @@ class Api::V1::BaseController < ApplicationController
 
   def set_content_type
     response.content_type = 'application/json'
+  end
+
+  def render_forbidden_policy(exception)
+    policy_name = exception.policy.class.to_s.underscore
+    render_error(
+      message: "You are not authorized to perform this action",
+      code: 'FORBIDDEN',
+      status: :forbidden,
+      details: {
+        policy: policy_name,
+        action: exception.query
+      }
+    )
   end
 end
