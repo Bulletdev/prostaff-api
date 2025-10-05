@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  # Mount Rswag API documentation
+  mount Rswag::Ui::Engine => '/api-docs'
+  mount Rswag::Api::Engine => '/api-docs'
+
   # Health check endpoint
   get "up" => "rails/health#show", as: :rails_health_check
 
@@ -6,14 +10,14 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Auth
-      namespace :auth, module: 'authentication/controllers' do
-        post 'register'
-        post 'login'
-        post 'refresh'
-        post 'logout'
-        post 'forgot-password'
-        post 'reset-password'
-        get 'me'
+      scope :auth do
+        post 'auth/register', to: 'authentication/auth#register'
+        post 'auth/login', to: 'authentication/auth#login'
+        post 'auth/refresh', to: 'authentication/auth#refresh'
+        post 'auth/logout', to: 'authentication/auth#logout'
+        post 'auth/forgot-password', to: 'authentication/auth#forgot_password'
+        post 'auth/reset-password', to: 'authentication/auth#reset_password'
+        get 'auth/me', to: 'authentication/auth#me'
       end
 
       # Dashboard
@@ -44,13 +48,13 @@ Rails.application.routes.draw do
             post :sync
           end
         end
-        get 'regions'
+        get 'regions', to: 'regions#index'
         resources :watchlist, only: [:index, :create, :destroy]
       end
 
       # Analytics
       namespace :analytics do
-        get 'performance'
+        get 'performance', to: 'performance#index'
         get 'champions/:player_id', to: 'champions#show'
         get 'kda-trend/:player_id', to: 'kda_trend#show'
         get 'laning/:player_id', to: 'laning#show'
