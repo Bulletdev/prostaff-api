@@ -16,6 +16,6 @@ class Api::V1::Scouting::RegionsController < Api::V1::BaseController
       { code: 'TR', name: 'Turkey', platform: 'TR1' }
     ]
 
-    render_success({ regions: regions })
+    render_success(regions)
   end
 end
