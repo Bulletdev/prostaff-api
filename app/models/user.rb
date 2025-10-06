@@ -10,6 +10,7 @@ class User < ApplicationRecord
   has_many :created_vod_timestamps, class_name: 'VodTimestamp', foreign_key: 'created_by_id', dependent: :nullify
   has_many :assigned_goals, class_name: 'TeamGoal', foreign_key: 'assigned_to_id', dependent: :nullify
   has_many :created_goals, class_name: 'TeamGoal', foreign_key: 'created_by_id', dependent: :nullify
+  has_many :notifications, dependent: :destroy
   has_many :audit_logs, dependent: :destroy
 
   # Validations
