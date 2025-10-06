@@ -11,13 +11,13 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       scope :auth do
-        post 'auth/register', to: 'authentication/auth#register'
-        post 'auth/login', to: 'authentication/auth#login'
-        post 'auth/refresh', to: 'authentication/auth#refresh'
-        post 'auth/logout', to: 'authentication/auth#logout'
-        post 'auth/forgot-password', to: 'authentication/auth#forgot_password'
-        post 'auth/reset-password', to: 'authentication/auth#reset_password'
-        get 'auth/me', to: 'authentication/auth#me'
+        post 'register', to: 'auth#register'
+        post 'login', to: 'auth#login'
+        post 'refresh', to: 'auth#refresh'
+        post 'logout', to: 'auth#logout'
+        post 'forgot-password', to: 'auth#forgot_password'
+        post 'reset-password', to: 'auth#reset_password'
+        get 'me', to: 'auth#me'
       end
 
       # Dashboard

@@ -1,5 +1,4 @@
-class UserSerializer
-  include Blueprinter::Base
+class UserSerializer < Blueprinter::Base
 
   identifier :id
 
@@ -21,30 +20,26 @@ class UserSerializer
   end
 
   field :last_login_display do |user|
-    if user.last_login_at
-      time_ago_in_words(user.last_login_at)
-    else
-      'Never'
-    end
+    user.last_login_at ? time_ago_in_words(user.last_login_at) : 'Never'
   end
 
-  private
-
   def self.time_ago_in_words(time)
-    return 'Never' if time.nil?
-
-    diff = Time.current - time
-    case diff
-    when 0...60
-      "#{diff.to_i} seconds ago"
-    when 60...3600
-      "#{(diff / 60).to_i} minutes ago"
-    when 3600...86400
-      "#{(diff / 3600).to_i} hours ago"
-    when 86400...2592000
-      "#{(diff / 86400).to_i} days ago"
+    if time.nil?
+      'Never'
     else
-      time.strftime('%B %d, %Y')
+      diff = Time.current - time
+      case diff
+      when 0...60
+        "#{diff.to_i} seconds ago"
+      when 60...3600
+        "#{(diff / 60).to_i} minutes ago"
+      when 3600...86400
+        "#{(diff / 3600).to_i} hours ago"
+      when 86400...2592000
+        "#{(diff / 86400).to_i} days ago"
+      else
+        time.strftime('%B %d, %Y')
+      end
     end
   end
 end

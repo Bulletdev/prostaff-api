@@ -1,5 +1,4 @@
-class OrganizationSerializer
-  include Blueprinter::Base
+class OrganizationSerializer < Blueprinter::Base
 
   identifier :id
 
@@ -25,18 +24,21 @@ class OrganizationSerializer
   end
 
   field :tier_display do |org|
-    return 'Not set' if org.tier.blank?
-
-    org.tier.humanize
+    if org.tier.blank?
+      'Not set'
+    else
+      org.tier.humanize
+    end
   end
 
   field :subscription_display do |org|
-    return 'Free' if org.subscription_plan.blank?
-
-    plan = org.subscription_plan.humanize
-    status = org.subscription_status&.humanize || 'Active'
-
-    "#{plan} (#{status})"
+    if org.subscription_plan.blank?
+      'Free'
+    else
+      plan = org.subscription_plan.humanize
+      status = org.subscription_status&.humanize || 'Active'
+      "#{plan} (#{status})"
+    end
   end
 
   field :statistics do |org|
