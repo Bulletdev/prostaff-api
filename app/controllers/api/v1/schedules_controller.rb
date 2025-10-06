@@ -124,9 +124,12 @@ class Api::V1::SchedulesController < Api::V1::BaseController
   def schedule_params
     params.require(:schedule).permit(
       :event_type, :title, :description,
-      :start_time, :end_time, :location, :is_online,
-      :opponent_name, :tournament_name, :stage,
-      :status, :notes, :match_id
+      :start_time, :end_time, :location,
+      :opponent_name, :status, :match_id,
+      :meeting_url, :all_day, :timezone,
+      :color, :is_recurring, :recurrence_rule,
+      :recurrence_end_date, :reminder_minutes,
+      required_players: [], optional_players: [], tags: []
     )
   end
 end

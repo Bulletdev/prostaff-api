@@ -133,7 +133,7 @@ class Schedule < ApplicationRecord
   end
 
   def set_timezone_if_blank
-    self.timezone = organization&.timezone || 'UTC' if timezone.blank?
+    self.timezone = 'UTC' if timezone.blank?
   end
 
   def time_overlap?(other)

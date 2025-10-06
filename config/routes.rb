@@ -38,6 +38,7 @@ Rails.application.routes.draw do
         member do
           get :stats
           get :matches
+          post :sync_from_riot
         end
       end
 

@@ -2,11 +2,11 @@ class MatchSerializer < Blueprinter::Base
   identifier :id
 
   fields :match_type, :game_start, :game_end, :game_duration,
-         :riot_match_id, :patch_version, :tournament_name, :stage,
+         :riot_match_id, :game_version,
          :opponent_name, :opponent_tag, :victory,
          :our_side, :our_score, :opponent_score,
-         :first_blood, :first_tower, :first_baron, :first_dragon,
-         :total_kills, :total_deaths, :total_assists, :total_gold,
+         :our_towers, :opponent_towers, :our_dragons, :opponent_dragons,
+         :our_barons, :opponent_barons, :our_inhibitors, :opponent_inhibitors,
          :vod_url, :replay_file_url, :notes,
          :created_at, :updated_at
 

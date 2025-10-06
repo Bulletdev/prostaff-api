@@ -2,7 +2,7 @@ class PlayerSerializer < Blueprinter::Base
   identifier :id
 
   fields :summoner_name, :real_name, :role, :status,
-         :jersey_number, :birth_date, :country, :nationality,
+         :jersey_number, :birth_date, :country,
          :contract_start_date, :contract_end_date,
          :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
          :solo_queue_wins, :solo_queue_losses,

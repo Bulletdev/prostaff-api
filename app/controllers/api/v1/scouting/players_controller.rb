@@ -25,14 +25,25 @@ class Api::V1::Scouting::PlayersController < Api::V1::BaseController
     # Sorting
     sort_by = params[:sort_by] || 'created_at'
     sort_order = params[:sort_order] || 'desc'
-    targets = targets.order("#{sort_by} #{sort_order}")
+
+    # Map 'rank' to actual column names
+    if sort_by == 'rank'
+      targets = targets.order("current_lp #{sort_order} NULLS LAST")
+    elsif sort_by == 'winrate'
+      targets = targets.order("performance_trend #{sort_order} NULLS LAST")
+    else
+      targets = targets.order("#{sort_by} #{sort_order}")
+    end
 
     # Pagination
     result = paginate(targets)
 
     render_success({
-      scouting_targets: ScoutingTargetSerializer.render_as_hash(result[:data]),
-      pagination: result[:pagination]
+      players: ScoutingTargetSerializer.render_as_hash(result[:data]),
+      total: result[:pagination][:total_count],
+      page: result[:pagination][:current_page],
+      per_page: result[:pagination][:per_page],
+      total_pages: result[:pagination][:total_pages]
     })
   end
 
