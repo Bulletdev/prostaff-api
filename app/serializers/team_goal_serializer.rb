@@ -3,7 +3,7 @@ class TeamGoalSerializer < Blueprinter::Base
 
   fields :title, :description, :category, :metric_type,
          :target_value, :current_value, :start_date, :end_date,
-         :status, :progress, :notes, :created_at, :updated_at
+         :status, :progress, :created_at, :updated_at
 
   field :is_team_goal do |goal|
     goal.is_team_goal?
