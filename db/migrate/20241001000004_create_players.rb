@@ -51,7 +51,6 @@ class CreatePlayers < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :players, :organization_id
     add_index :players, :riot_puuid, unique: true
     add_index :players, :summoner_name
     add_index :players, :status

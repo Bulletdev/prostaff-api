@@ -66,8 +66,6 @@ class CreatePlayerMatchStats < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :player_match_stats, :match_id
-    add_index :player_match_stats, :player_id
     add_index :player_match_stats, [:player_id, :match_id], unique: true
     add_index :player_match_stats, :champion
   end

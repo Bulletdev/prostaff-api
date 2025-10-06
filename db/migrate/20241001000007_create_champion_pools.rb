@@ -25,7 +25,6 @@ class CreateChampionPools < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :champion_pools, :player_id
     add_index :champion_pools, [:player_id, :champion], unique: true
     add_index :champion_pools, :champion
     add_index :champion_pools, :priority

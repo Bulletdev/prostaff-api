@@ -29,8 +29,6 @@ class CreateVodReviews < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :vod_reviews, :organization_id
-    add_index :vod_reviews, :match_id
     add_index :vod_reviews, :status
     add_index :vod_reviews, :share_link, unique: true
   end

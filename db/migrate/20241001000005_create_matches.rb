@@ -45,7 +45,6 @@ class CreateMatches < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :matches, :organization_id
     add_index :matches, :riot_match_id, unique: true
     add_index :matches, :match_type
     add_index :matches, :game_start

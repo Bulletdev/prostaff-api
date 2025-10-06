@@ -21,7 +21,6 @@ class CreateVodTimestamps < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :vod_timestamps, :vod_review_id
     add_index :vod_timestamps, :timestamp_seconds
     add_index :vod_timestamps, :category
     add_index :vod_timestamps, :importance

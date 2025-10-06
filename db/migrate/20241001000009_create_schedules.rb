@@ -44,7 +44,6 @@ class CreateSchedules < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :schedules, :organization_id
     add_index :schedules, :start_time
     add_index :schedules, :event_type
     add_index :schedules, :status

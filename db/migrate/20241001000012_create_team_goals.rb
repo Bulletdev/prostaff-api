@@ -30,8 +30,6 @@ class CreateTeamGoals < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :team_goals, :organization_id
-    add_index :team_goals, :player_id
     add_index :team_goals, :status
     add_index :team_goals, :category
   end

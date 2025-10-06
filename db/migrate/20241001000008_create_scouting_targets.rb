@@ -40,7 +40,6 @@ class CreateScoutingTargets < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :scouting_targets, :organization_id
     add_index :scouting_targets, :riot_puuid
     add_index :scouting_targets, :status
     add_index :scouting_targets, :priority
