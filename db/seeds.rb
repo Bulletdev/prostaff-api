@@ -7,9 +7,7 @@ puts "🌱 Seeding database..."
 org = Organization.find_or_create_by!(slug: 'team-alpha') do |organization|
   organization.name = 'Team Alpha'
   organization.region = 'BR'
-  organization.tier = 'semi_pro'
-  organization.subscription_plan = 'pro'
-  organization.subscription_status = 'active'
+  # Skip tier and subscription for now - will add via Supabase migrations
 end
 
 puts "✅ Created organization: #{org.name}"

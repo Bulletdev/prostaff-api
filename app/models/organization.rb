@@ -14,7 +14,7 @@ class Organization < ApplicationRecord
   validates :slug, presence: true, uniqueness: true, length: { maximum: 100 }
   validates :region, presence: true, inclusion: { in: %w[BR NA EUW KR EUNE EUW1 LAN LAS OCE RU TR JP] }
   validates :tier, inclusion: { in: %w[amateur semi_pro professional] }, allow_blank: true
-  validates :subscription_plan, inclusion: { in: %w[free basic pro enterprise] }, allow_blank: true
+  validates :subscription_plan, inclusion: { in: %w[free amateur semi_pro professional enterprise] }, allow_blank: true
   validates :subscription_status, inclusion: { in: %w[active inactive trial expired] }, allow_blank: true
 
   # Callbacks
