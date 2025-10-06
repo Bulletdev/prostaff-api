@@ -136,6 +136,7 @@ end
     AuditLogModel[AuditLog Model] --> PostgreSQL
     ChampionPoolModel[ChampionPool Model] --> PostgreSQL
     MatchModel[Match Model] --> PostgreSQL
+    NotificationModel[Notification Model] --> PostgreSQL
     OrganizationModel[Organization Model] --> PostgreSQL
     PlayerModel[Player Model] --> PostgreSQL
     PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
