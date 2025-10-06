@@ -1,14 +1,18 @@
-# Use Ruby 3.2 Alpine image for smaller size
-FROM ruby:3.1.7-alpine
+# Use Ruby 3.4.5 slim image (better Windows compatibility)
+FROM ruby:3.4.5-slim
 
 # Install system dependencies
-RUN apk add --no-cache \
-    build-base \
-    postgresql-dev \
+RUN apt-get update -qq && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    libyaml-dev \
     git \
     tzdata \
     nodejs \
-    yarn
+    npm \
+    curl \
+    && npm install -g yarn \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -24,8 +28,8 @@ RUN bundle install --jobs 4 --retry 3
 COPY . .
 
 # Create user to run the application
-RUN addgroup -g 1000 -S app && \
-    adduser -u 1000 -S app -G app
+RUN groupadd -g 1000 app && \
+    useradd -u 1000 -g app -m -s /bin/bash app
 
 # Change ownership of the app directory
 RUN chown -R app:app /app
