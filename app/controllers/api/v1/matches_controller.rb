@@ -146,13 +146,66 @@ class Api::V1::MatchesController < Api::V1::BaseController
   end
 
   def import
-    # This will import match data from Riot API
-    # Will be implemented when Riot API service is ready
-    render_error(
-      message: 'Import functionality not yet implemented',
-      code: 'NOT_IMPLEMENTED',
-      status: :not_implemented
-    )
+    player_id = params[:player_id]
+    count = params[:count]&.to_i || 20
+
+    unless player_id.present?
+      return render_error(
+        message: 'player_id is required',
+        code: 'VALIDATION_ERROR',
+        status: :unprocessable_entity
+      )
+    end
+
+    player = organization_scoped(Player).find(player_id)
+
+    unless player.riot_puuid.present?
+      return render_error(
+        message: 'Player does not have a Riot PUUID. Please sync player from Riot first.',
+        code: 'VALIDATION_ERROR',
+        status: :unprocessable_entity
+      )
+    end
+
+    begin
+      riot_service = RiotApiService.new
+      region = player.region || 'BR'
+
+      match_ids = riot_service.get_match_history(
+        puuid: player.riot_puuid,
+        region: region,
+        count: count
+      )
+
+      imported_count = 0
+      match_ids.each do |match_id|
+        # Check if match already exists
+        next if Match.exists?(riot_match_id: match_id)
+
+        SyncMatchJob.perform_later(match_id, current_organization.id, region)
+        imported_count += 1
+      end
+
+      render_success({
+        message: "Queued #{imported_count} matches for import",
+        total_matches_found: match_ids.count,
+        already_imported: match_ids.count - imported_count,
+        player: PlayerSerializer.render_as_hash(player)
+      })
+
+    rescue RiotApiService::RiotApiError => e
+      render_error(
+        message: "Failed to fetch matches from Riot API: #{e.message}",
+        code: 'RIOT_API_ERROR',
+        status: :bad_gateway
+      )
+    rescue StandardError => e
+      render_error(
+        message: "Failed to import matches: #{e.message}",
+        code: 'IMPORT_ERROR',
+        status: :internal_server_error
+      )
+    end
   end
 
   private
