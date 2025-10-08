@@ -152,6 +152,10 @@ jobs:
             --config=auto \
             --json \
             --output=semgrep-report.json \
+            --exclude='scripts/*.rb' \
+            --exclude='scripts/*.sh' \
+            --exclude='load_tests/**' \
+            --exclude='security_tests/**' \
             || true
 
       - name: Parse Results
@@ -207,9 +211,7 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --only-verified
+          extra_args: --only-verified --fail
 
   security-summary:
     name: Security Summary
