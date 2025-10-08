@@ -1,0 +1,261 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  brakeman:
+    name: Brakeman Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Install Brakeman
+        run: gem install brakeman
+
+      - name: Run Brakeman
+        run: |
+          brakeman --rails7 \
+            --format json \
+            --output brakeman-report.json \
+            --no-exit-on-warn \
+            --no-exit-on-error
+
+      - name: Parse Results
+        id: parse
+        run: |
+          WARNINGS=$(jq '.warnings | length' brakeman-report.json)
+          HIGH=$(jq '[.warnings[] | select(.confidence == "High")] | length' brakeman-report.json)
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: brakeman-report
+          path: brakeman-report.json
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const warnings = '${{ steps.parse.outputs.warnings }}';
+            const high = '${{ steps.parse.outputs.high }}';
+            const body = `## 🔒 Brakeman Security Scan
+
+            - Total warnings: ${warnings}
+            - High confidence: ${high}
+
+            ${high > 0 ? '⚠️ High confidence issues found! Please review.' : '✅ No high confidence issues found.'}
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail on High Confidence Issues
+        if: steps.parse.outputs.high > 0
+        run: |
+          echo "::error::Found ${{ steps.parse.outputs.high }} high confidence security issues!"
+          exit 1
+
+  dependency-check:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Install Bundle Audit
+        run: gem install bundler-audit
+
+      - name: Update Vulnerability Database
+        run: bundle-audit update
+
+      - name: Run Bundle Audit
+        id: audit
+        run: |
+          bundle-audit check --output bundle-audit.txt || echo "vulnerabilities=true" >> $GITHUB_OUTPUT
+          cat bundle-audit.txt
+
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-audit-report
+          path: bundle-audit.txt
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('bundle-audit.txt', 'utf8');
+            const hasVulns = report.includes('Vulnerabilities found');
+            const body = `## 📦 Dependency Security Check
+
+            ${hasVulns ? '⚠️ Vulnerabilities found in dependencies!' : '✅ No known vulnerabilities found.'}
+
+            <details>
+            <summary>View Report</summary>
+
+            \`\`\`
+            ${report}
+            \`\`\`
+            </details>
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail on Vulnerabilities
+        if: steps.audit.outputs.vulnerabilities == 'true'
+        run: |
+          echo "::error::Vulnerable dependencies found!"
+          exit 1
+
+  semgrep:
+    name: Semgrep Static Analysis
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config=auto \
+            --json \
+            --output=semgrep-report.json \
+            || true
+
+      - name: Parse Results
+        id: parse
+        run: |
+          ERRORS=$(jq '.results | map(select(.extra.severity == "ERROR")) | length' semgrep-report.json)
+          WARNINGS=$(jq '.results | map(select(.extra.severity == "WARNING")) | length' semgrep-report.json)
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: semgrep-report
+          path: semgrep-report.json
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const errors = '${{ steps.parse.outputs.errors }}';
+            const warnings = '${{ steps.parse.outputs.warnings }}';
+            const body = `## 🔍 Semgrep Static Analysis
+
+            - Errors: ${errors}
+            - Warnings: ${warnings}
+
+            ${errors > 0 ? '❌ Security errors found! Please fix.' : warnings > 0 ? '⚠️ Warnings found. Please review.' : '✅ No issues found.'}
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail on Errors
+        if: steps.parse.outputs.errors > 0
+        run: |
+          echo "::error::Semgrep found ${{ steps.parse.outputs.errors }} security errors!"
+          exit 1
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [brakeman, dependency-check, semgrep]
+    if: always()
+    steps:
+      - name: Check Results
+        run: |
+          echo "Brakeman: ${{ needs.brakeman.result }}"
+          echo "Dependency Check: ${{ needs.dependency-check.result }}"
+          echo "Semgrep: ${{ needs.semgrep.result }}"
+
+      - name: Post Summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const brakeman = '${{ needs.brakeman.result }}';
+            const deps = '${{ needs.dependency-check.result }}';
+            const semgrep = '${{ needs.semgrep.result }}';
+
+            const status = (result) => {
+              switch(result) {
+                case 'success': return '✅';
+                case 'failure': return '❌';
+                default: return '⚠️';
+              }
+            };
+
+            const body = `## 🔐 Security Scan Summary
+
+            | Check | Status |
+            |-------|--------|
+            | Brakeman | ${status(brakeman)} ${brakeman} |
+            | Dependencies | ${status(deps)} ${deps} |
+            | Semgrep | ${status(semgrep)} ${semgrep} |
+
+            ${brakeman === 'success' && deps === 'success' && semgrep === 'success'
+              ? '✅ All security checks passed!'
+              : '⚠️ Some security checks failed. Please review the details above.'}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

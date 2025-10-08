@@ -1,0 +1,213 @@
+name: Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of load test'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+  schedule:
+    # Run smoke test nightly at 2am UTC
+    - cron: '0 2 * * *'
+
+env:
+  K6_VERSION: '0.47.0'
+
+jobs:
+  load-test:
+    name: K6 Load Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup k6
+        run: |
+          curl -L https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz | tar xvz
+          sudo mv k6-v${K6_VERSION}-linux-amd64/k6 /usr/local/bin/
+
+      - name: Determine Test Parameters
+        id: params
+        run: |
+          # For scheduled runs, use smoke test on staging
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            echo "test_type=smoke" >> $GITHUB_OUTPUT
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "test_type=${{ github.event.inputs.test_type }}" >> $GITHUB_OUTPUT
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set Environment URL
+        id: env
+        run: |
+          if [ "${{ steps.params.outputs.environment }}" == "production" ]; then
+            echo "base_url=https://api.prostaff.gg" >> $GITHUB_OUTPUT
+          else
+            echo "base_url=https://staging-api.prostaff.gg" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Warning for Production
+        if: steps.params.outputs.environment == 'production'
+        run: |
+          echo "::warning::Running load test against PRODUCTION environment!"
+
+      - name: Check API Health
+        run: |
+          curl -f ${{ steps.env.outputs.base_url }}/up || exit 1
+
+      - name: Run k6 Load Test
+        env:
+          BASE_URL: ${{ steps.env.outputs.base_url }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          mkdir -p load_tests/results
+
+          k6 run \
+            --out json=load_tests/results/results.json \
+            --summary-export=load_tests/results/summary.json \
+            -e BASE_URL="$BASE_URL" \
+            -e TEST_EMAIL="$TEST_EMAIL" \
+            -e TEST_PASSWORD="$TEST_PASSWORD" \
+            load_tests/scenarios/${{ steps.params.outputs.test_type }}-test.js
+
+      - name: Parse Results
+        id: results
+        if: always()
+        run: |
+          # Extract key metrics
+          HTTP_REQ_DURATION_P95=$(jq -r '.metrics.http_req_duration.values["p(95)"]' load_tests/results/summary.json)
+          HTTP_REQ_FAILED_RATE=$(jq -r '.metrics.http_req_failed.values.rate' load_tests/results/summary.json)
+          ITERATIONS=$(jq -r '.metrics.iterations.values.count' load_tests/results/summary.json)
+
+          echo "p95=$HTTP_REQ_DURATION_P95" >> $GITHUB_OUTPUT
+          echo "error_rate=$HTTP_REQ_FAILED_RATE" >> $GITHUB_OUTPUT
+          echo "iterations=$ITERATIONS" >> $GITHUB_OUTPUT
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: load-test-results-${{ steps.params.outputs.test_type }}
+          path: load_tests/results/
+
+      - name: Create Performance Report
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const testType = '${{ steps.params.outputs.test_type }}';
+            const env = '${{ steps.params.outputs.environment }}';
+            const p95 = '${{ steps.results.outputs.p95 }}';
+            const errorRate = '${{ steps.results.outputs.error_rate }}';
+            const iterations = '${{ steps.results.outputs.iterations }}';
+
+            const p95Ms = parseFloat(p95);
+            const errorPct = (parseFloat(errorRate) * 100).toFixed(2);
+
+            // Thresholds
+            const p95Threshold = testType === 'stress' ? 2000 : 1000;
+            const errorThreshold = testType === 'stress' ? 10 : 5;
+
+            const p95Status = p95Ms < p95Threshold ? '✅' : '⚠️';
+            const errorStatus = errorPct < errorThreshold ? '✅' : '⚠️';
+
+            const body = `## 📊 Load Test Results
+
+            **Test Type:** ${testType}
+            **Environment:** ${env}
+
+            ### Performance Metrics
+
+            | Metric | Value | Threshold | Status |
+            |--------|-------|-----------|--------|
+            | Response Time (p95) | ${p95Ms.toFixed(0)}ms | < ${p95Threshold}ms | ${p95Status} |
+            | Error Rate | ${errorPct}% | < ${errorThreshold}% | ${errorStatus} |
+            | Total Requests | ${iterations} | - | ℹ️ |
+
+            ${p95Status === '✅' && errorStatus === '✅'
+              ? '✅ Performance metrics within acceptable range!'
+              : '⚠️ Some metrics exceeded thresholds. Review load test results.'}
+
+            <details>
+            <summary>View Full Report</summary>
+
+            Download artifacts for detailed analysis.
+            </details>
+            `;
+
+            // For PRs, comment
+            if (context.payload.pull_request) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+            // Always create job summary
+            await core.summary
+              .addHeading('Load Test Results')
+              .addRaw(body)
+              .write();
+
+      - name: Check Thresholds
+        if: always()
+        run: |
+          P95=${{ steps.results.outputs.p95 }}
+          ERROR_RATE=${{ steps.results.outputs.error_rate }}
+
+          # Different thresholds based on test type
+          if [ "${{ steps.params.outputs.test_type }}" == "stress" ]; then
+            P95_THRESHOLD=2000
+            ERROR_THRESHOLD=0.1
+          else
+            P95_THRESHOLD=1000
+            ERROR_THRESHOLD=0.05
+          fi
+
+          # Check if within thresholds
+          PASS=true
+
+          if (( $(echo "$P95 > $P95_THRESHOLD" | bc -l) )); then
+            echo "::warning::Response time p95 ($P95ms) exceeds threshold ($P95_THRESHOLD ms)"
+            PASS=false
+          fi
+
+          if (( $(echo "$ERROR_RATE > $ERROR_THRESHOLD" | bc -l) )); then
+            echo "::warning::Error rate ($ERROR_RATE) exceeds threshold ($ERROR_THRESHOLD)"
+            PASS=false
+          fi
+
+          if [ "$PASS" == "false" ]; then
+            echo "::error::Load test thresholds exceeded!"
+            exit 1
+          fi
+
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [load-test]
+    if: always() && github.event_name == 'schedule'
+    steps:
+      - name: Send Notification
+        run: |
+          # Customize with your notification service (Slack, Discord, etc.)
+          echo "Load test completed: ${{ needs.load-test.result }}"
+          # Example: curl -X POST $SLACK_WEBHOOK -d '{"text":"Load test: ${{ needs.load-test.result }}"}'

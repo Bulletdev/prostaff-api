@@ -2,15 +2,26 @@
 
 Ruby on Rails API for the ProStaff.gg esports team management platform.
 
+##  Quick Start
+
+```bash
+docker compose up -d
+
+docker exec prostaff-api-api-1 rails runner scripts/create_test_user.rb
+
+./load_tests/run-tests.sh smoke local
+./security_tests/scripts/brakeman-scan.sh
+```
+
 ## Technology Stack
 
-- **Ruby**: 3.2+
+- **Ruby**: 3.4.5
 - **Rails**: 7.1+ (API-only mode)
 - **Database**: PostgreSQL 14+
 - **Authentication**: JWT
 - **Background Jobs**: Sidekiq
-- **Caching**: Redis
-- **Testing**: RSpec
+- **Caching**: Redis (port 6380)
+- **Testing**: RSpec, k6, OWASP ZAP
 
 ## Architecture
 
@@ -358,13 +369,67 @@ The diagram automatically reflects:
 - New controllers and routes
 - Service integrations (Riot API, Redis, PostgreSQL, Sidekiq)
 
+## 📊 Performance & Testing
+
+### Load Testing (k6)
+
+```bash
+# Quick smoke test (1 min)
+./load_tests/run-tests.sh smoke local
+
+# Full load test (16 min)
+./load_tests/run-tests.sh load local
+
+# Stress test (28 min)
+./load_tests/run-tests.sh stress local
+```
+
+**Current Performance**:
+- p(95): ~880ms (Docker dev)
+- Production estimate: ~500ms
+- With cache: ~50ms
+- Error rate: 0%
+
+**Documentation**: See [TESTING_GUIDE.md](TESTING_GUIDE.md) and [QUICK_START.md](QUICK_START.md)
+
+### Security Testing (OWASP)
+
+```bash
+# Complete security audit
+./security_tests/scripts/full-security-audit.sh
+
+# Individual scans
+./security_tests/scripts/brakeman-scan.sh          # Code analysis
+./security_tests/scripts/dependency-scan.sh        # Vulnerable gems
+./security_tests/scripts/zap-baseline-scan.sh      # Web app scan
+```
+
+**Coverage**:
+- ✅ OWASP Top 10
+- ✅ Code security (Brakeman)
+- ✅ Dependency vulnerabilities
+- ✅ Runtime security (ZAP)
+- ✅ CI/CD integration
+
+**Documentation**: See [security_tests/README.md](security_tests/README.md)
+
+### CI/CD Workflows
+
+Automated testing on every push:
+- **Security Scan**: Brakeman + dependency check
+- **Load Test**: Nightly smoke tests
+- **Nightly Audit**: Complete security scan
+
+See `.github/workflows/` for details.
+
 ## Contributing
 
 1. Create a feature branch
 2. Make your changes
 3. Add tests
-4. Ensure all tests pass
-5. Submit a pull request
+4. **Run security scan**: `./security_tests/scripts/brakeman-scan.sh`
+5. Ensure all tests pass
+6. Submit a pull request
 
 **Note**: The architecture diagram will be automatically updated when you add new modules, models, or controllers.
 
