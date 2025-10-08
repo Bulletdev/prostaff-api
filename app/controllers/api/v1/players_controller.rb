@@ -257,6 +257,8 @@ class Api::V1::PlayersController < Api::V1::BaseController
   end
 
   def player_params
+    # :role refers to in-game position (top/jungle/mid/adc/support), not user role
+    # nosemgrep
     params.require(:player).permit(
       :summoner_name, :real_name, :role, :status, :jersey_number,
       :birth_date, :country, :nationality,

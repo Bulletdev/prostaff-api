@@ -140,6 +140,8 @@ class Api::V1::Scouting::PlayersController < Api::V1::BaseController
   end
 
   def scouting_target_params
+    # :role refers to in-game position (top/jungle/mid/adc/support), not user role
+    # nosemgrep
     params.require(:scouting_target).permit(
       :summoner_name, :real_name, :role, :region, :nationality,
       :age, :status, :priority, :current_team,
