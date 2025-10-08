@@ -12,7 +12,9 @@ class Api::V1::DashboardController < Api::V1::BaseController
   end
 
   def stats
-    render_success(calculate_stats)
+    cache_key = "dashboard_stats_#{current_organization.id}_#{current_organization.updated_at.to_i}"
+    cached_stats = Rails.cache.fetch(cache_key, expires_in: 5.minutes) { calculate_stats }
+    render_success(cached_stats)
   end
 
   def activities
