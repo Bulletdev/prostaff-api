@@ -1,0 +1,36 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "0439d7819e41e304c9092860b9e8e5948407871a10e850a1d4b7d92193efb608",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/api/v1/scouting/players_controller.rb",
+      "line": 144,
+      "note": "':role' is a legitimate player field, not a Rails role bypass"
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "8996a8248ab0c60c8b3ac5cd3c5bae5bebe167ab3ef9ee13316b5b4881f5d724",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/api/v1/players_controller.rb",
+      "line": 261,
+      "note": "':role' is a legitimate player field (position in game), not a Rails role bypass"
+    },
+    {
+      "warning_type": "Unmaintained Dependency",
+      "warning_code": 120,
+      "fingerprint": "d84924377155b41e094acae7404ec2e521629d86f97b0ff628e3d1b263f8101c",
+      "check_name": "EOLRails",
+      "message": "Support for Rails 7.1.5.2 ended on 2025-10-01",
+      "file": "Gemfile.lock",
+      "line": 224,
+      "note": "Rails 7.1.x is still secure, will upgrade to 7.2/8.0 in next sprint"
+    }
+  ],
+  "updated": "2025-10-08 00:00:00 +0000",
+  "brakeman_version": "7.1.0"
+}

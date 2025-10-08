@@ -1,0 +1,23 @@
+# Semgrep ignore file
+# Ignore test and development files with test credentials
+
+# Test scripts with test credentials (not production secrets)
+scripts/create_test_user.rb
+scripts/apply_quick_optimizations.sh
+
+# Load test configuration (uses env vars with test-only fallbacks)
+load_tests/
+security_tests/
+
+# Generated files
+vendor/
+node_modules/
+tmp/
+log/
+coverage/
+
+# Database schema (generated)
+db/schema.rb
+
+# Documentation
+*.md
