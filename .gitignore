@@ -191,6 +191,7 @@ FINAL_PERFORMANCE_SUMMARY.md
 OPTIMIZATION_SUMMARY.md
 PERFORMANCE_OPTIMIZATION.md
 QUICK_START.md
+.claude.md
 
 
 
@@ -202,3 +203,9 @@ QUICK_START.md
 /security_tests/reports/
 /security_tests/zap/wrk/*
 !/security_tests/zap/wrk/.keep
+
+# Security scan reports (local)
+brakeman-report.json
+brakeman-report.html
+semgrep-report.json
+bundle-audit.txt
