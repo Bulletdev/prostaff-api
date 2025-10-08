@@ -181,3 +181,24 @@ tramp
 
 # Docker
 .dockerignore
+COMMIT_GUIDE.md
+FRONTEND_SETUP.md
+Implemented.md
+backend_prompt.md
+.claude
+SETUP.md
+FINAL_PERFORMANCE_SUMMARY.md
+OPTIMIZATION_SUMMARY.md
+PERFORMANCE_OPTIMIZATION.md
+QUICK_START.md
+
+
+
+
+# Load testing results
+/load_tests/results/
+
+# Security testing reports
+/security_tests/reports/
+/security_tests/zap/wrk/*
+!/security_tests/zap/wrk/.keep
