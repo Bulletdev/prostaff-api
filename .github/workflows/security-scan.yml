@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload Report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bundle-audit-report
           path: bundle-audit.txt
@@ -163,7 +163,7 @@ jobs:
           echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
 
       - name: Upload Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: semgrep-report
           path: semgrep-report.json
