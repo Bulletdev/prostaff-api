@@ -42,14 +42,18 @@ jobs:
 
       - name: Determine Test Parameters
         id: params
+        env:
+          INPUT_TEST_TYPE: ${{ github.event.inputs.test_type }}
+          INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           # For scheduled runs, use smoke test on staging
-          if [ "${{ github.event_name }}" == "schedule" ]; then
+          if [ "$EVENT_NAME" == "schedule" ]; then
             echo "test_type=smoke" >> $GITHUB_OUTPUT
             echo "environment=staging" >> $GITHUB_OUTPUT
           else
-            echo "test_type=${{ github.event.inputs.test_type }}" >> $GITHUB_OUTPUT
-            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "test_type=$INPUT_TEST_TYPE" >> $GITHUB_OUTPUT
+            echo "environment=$INPUT_ENVIRONMENT" >> $GITHUB_OUTPUT
           fi
 
       - name: Set Environment URL
