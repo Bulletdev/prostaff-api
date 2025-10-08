@@ -1,3 +1,5 @@
+[![Security Scan](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml/badge.svg)](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml)
+
 # ProStaff API
 
 Ruby on Rails API for the ProStaff.gg esports team management platform.
