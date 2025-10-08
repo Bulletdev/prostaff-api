@@ -9,10 +9,15 @@ if org.nil?
   exit 1
 end
 
-user = User.find_or_initialize_by(email: 'test@prostaff.gg')
+# brakeman:ignore:HardcodedSecret
+test_email = ENV['TEST_EMAIL'] || 'test@prostaff.gg'
+# brakeman:ignore:HardcodedSecret
+test_password = ENV['TEST_PASSWORD'] || 'Test123!@#'
+
+user = User.find_or_initialize_by(email: test_email)
 if user.new_record?
-  user.password = 'Test123!@#'
-  user.password_confirmation = 'Test123!@#'
+  user.password = test_password
+  user.password_confirmation = test_password
   user.organization = org
   user.role = 'admin'
   user.save!
@@ -24,7 +29,7 @@ end
 puts "\nTest Credentials:"
 puts "=================="
 puts "Email:        #{user.email}"
-puts "Password:     Test123!@#"
+puts "Password:     #{test_password.gsub(/./, '*')}"
 puts "Organization: #{org.name}"
 puts "Role:         #{user.role}"
 puts "\nReady for load testing! 🚀"

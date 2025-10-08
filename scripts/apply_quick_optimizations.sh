@@ -48,9 +48,14 @@ echo "# Done in code"
 
 # Step 3: Warm up cache
 echo -e "${YELLOW}3/4 Warming up cache...${NC}"
+
+
+TEST_EMAIL="${TEST_EMAIL:-test@prostaff.gg}"
+TEST_PASSWORD="${TEST_PASSWORD:-Test123!@#}"
+
 curl -s http://localhost:3333/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@prostaff.gg","password":"Test123!@#"}' | \
+  -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}" | \
   grep -o '"access_token":"[^"]*"' | \
   sed 's/"access_token":"//' | sed 's/"$//' > /tmp/token.txt
 
