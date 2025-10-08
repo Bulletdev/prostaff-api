@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
+ActiveRecord::Schema[7.1].define(version: 2025_10_07_011315) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -45,6 +45,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.index ["entity_id"], name: "index_audit_logs_on_entity_id"
     t.index ["entity_type", "entity_id"], name: "index_audit_logs_on_entity_type_and_entity_id"
     t.index ["entity_type"], name: "index_audit_logs_on_entity_type"
+    t.index ["organization_id", "created_at"], name: "index_audit_logs_on_org_and_created"
     t.index ["organization_id"], name: "index_audit_logs_on_organization_id"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
   end
@@ -105,6 +106,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.datetime "updated_at", null: false
     t.index ["game_start"], name: "index_matches_on_game_start"
     t.index ["match_type"], name: "index_matches_on_match_type"
+    t.index ["organization_id", "game_start"], name: "idx_matches_org_game_start"
+    t.index ["organization_id", "game_start"], name: "index_matches_on_org_and_game_start"
+    t.index ["organization_id", "victory"], name: "idx_matches_org_victory"
+    t.index ["organization_id", "victory"], name: "index_matches_on_org_and_victory"
     t.index ["organization_id"], name: "index_matches_on_organization_id"
     t.index ["riot_match_id"], name: "index_matches_on_riot_match_id", unique: true
     t.index ["victory"], name: "index_matches_on_victory"
@@ -173,6 +178,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["champion"], name: "index_player_match_stats_on_champion"
+    t.index ["match_id"], name: "idx_player_stats_match"
+    t.index ["match_id"], name: "index_player_match_stats_on_match"
     t.index ["match_id"], name: "index_player_match_stats_on_match_id"
     t.index ["player_id", "match_id"], name: "index_player_match_stats_on_player_id_and_match_id", unique: true
     t.index ["player_id"], name: "index_player_match_stats_on_player_id"
@@ -217,6 +224,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.datetime "last_sync_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["organization_id", "role"], name: "index_players_on_org_and_role"
+    t.index ["organization_id", "status"], name: "idx_players_org_status"
+    t.index ["organization_id", "status"], name: "index_players_on_org_and_status"
     t.index ["organization_id"], name: "index_players_on_organization_id"
     t.index ["riot_puuid"], name: "index_players_on_riot_puuid", unique: true
     t.index ["role"], name: "index_players_on_role"
@@ -253,6 +263,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.index ["created_by_id"], name: "index_schedules_on_created_by_id"
     t.index ["event_type"], name: "index_schedules_on_event_type"
     t.index ["match_id"], name: "index_schedules_on_match_id"
+    t.index ["organization_id", "start_time", "event_type"], name: "index_schedules_on_org_time_type"
+    t.index ["organization_id", "start_time"], name: "idx_schedules_org_time"
     t.index ["organization_id"], name: "index_schedules_on_organization_id"
     t.index ["start_time"], name: "index_schedules_on_start_time"
     t.index ["status"], name: "index_schedules_on_status"
@@ -316,6 +328,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.index ["assigned_to_id"], name: "index_team_goals_on_assigned_to_id"
     t.index ["category"], name: "index_team_goals_on_category"
     t.index ["created_by_id"], name: "index_team_goals_on_created_by_id"
+    t.index ["organization_id", "status"], name: "idx_team_goals_org_status"
+    t.index ["organization_id", "status"], name: "index_team_goals_on_org_and_status"
     t.index ["organization_id"], name: "index_team_goals_on_organization_id"
     t.index ["player_id"], name: "index_team_goals_on_player_id"
     t.index ["status"], name: "index_team_goals_on_status"
@@ -335,9 +349,11 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_000014) do
     t.datetime "last_login_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "supabase_uid"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["role"], name: "index_users_on_role"
+    t.index ["supabase_uid"], name: "index_users_on_supabase_uid"
   end
 
   create_table "vod_reviews", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
