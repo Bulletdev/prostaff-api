@@ -1,406 +1,296 @@
 # ProStaff API - Security Testing Lab
 
-Comprehensive security testing suite for continuous security validation.
+Laboratório completo de testes de segurança para a API ProStaff, incluindo análise estática, análise dinâmica e varredura de vulnerabilidades.
 
-##  Overview
+## Ferramentas Incluídas
 
-This lab provides automated security testing tools to ensure the API remains secure throughout development and in production.
-
-**Key Features:**
-- OWASP Top 10 coverage
-- Automated vulnerability scanning
-- Static code analysis
-- Dependency vulnerability checks
-- Penetration testing tools
+| Ferramenta | Tipo | Descrição |
+|------------|------|-----------|
+| **OWASP ZAP** | DAST | Análise dinâmica de segurança web |
+| **Brakeman** | SAST | Analisador de segurança específico para Rails |
+| **Semgrep** | SAST | Análise estática de código com regras customizáveis |
+| **Trivy** | SCA | Scanner de vulnerabilidades em dependências |
+| **Dependency-Check** | SCA | Análise de vulnerabilidades conhecidas (CVE) |
+| **Nuclei** | DAST | Scanner de vulnerabilidades web rápido |
 
 ##  Quick Start
 
-### 1. Setup the Security Lab
+### 1. Iniciar o Laboratório Completo
+
+\`\`\`bash
+./security_tests/start-security-lab.sh
+\`\`\`
+
+Este comando irá:
+- ✅ Iniciar todos os containers de ferramentas de segurança
+- ✅ Iniciar a aplicação ProStaff API  
+- ✅ Aguardar a API ficar pronta
+- ✅ Conectar tudo na mesma rede Docker
+
+### 2. Executar Todos os Scans
+
+\`\`\`bash
+./security_tests/run-security-scans.sh
+\`\`\`
+
+### 3. Parar o Laboratório
+
+\`\`\`bash
+./security_tests/stop-security-lab.sh
+\`\`\`
+
+## 📊 Relatórios
+
+Após executar os scans, os relatórios estarão disponíveis em:
+
+```
+security_tests/
+├── reports/
+│   ├── brakeman/
+│   │   └── brakeman-report.html
+│   ├── dependency-check/
+│   │   ├── dependency-check-report.html
+│   │   └── dependency-check-report.json
+│   ├── semgrep/
+│   │   └── semgrep-report.json
+│   ├── trivy/
+│   │   └── trivy-report.json
+│   └── nuclei/
+│       └── nuclei-report.json
+└── zap/
+    └── reports/
+        ├── zap-report.html
+        └── zap-report.json
+```
+
+### Visualizar Relatórios
 
 ```bash
-./security_tests/zap-setup.sh
+# Brakeman
+xdg-open security_tests/reports/brakeman/brakeman-report.html
+
+# Dependency Check
+xdg-open security_tests/reports/dependency-check/dependency-check-report.html
+
+# ZAP
+xdg-open security_tests/zap/reports/zap-report.html
+
+# JSON reports
+cat security_tests/reports/semgrep/semgrep-report.json | jq
+cat security_tests/reports/trivy/trivy-report.json | jq
 ```
 
-This installs:
-- OWASP ZAP (web application scanner)
-- Brakeman (Rails security analysis)
-- Semgrep (static analysis)
-- Trivy (container scanning)
-- OWASP Dependency Check
+## Executar Scans Individuais
 
-### 2. Run Quick Security Scan
-
+### Brakeman (já executado automaticamente ao iniciar)
 ```bash
-# Make sure API is running first
-bundle exec rails server
-
-# In another terminal
-./security_tests/scripts/full-security-audit.sh
+docker exec prostaff-brakeman brakeman --rails7 --output /reports/brakeman-report.html --format html
 ```
 
-### 3. Review Results
-
-Reports are generated in `security_tests/reports/audit-TIMESTAMP/`
-
-##  Security Tools
-
-### 1. OWASP ZAP (Web Application Scanner)
-
-**Purpose**: Finds vulnerabilities in running web applications
-
-#### Baseline Scan (Passive)
+### Semgrep
 ```bash
-./security_tests/scripts/zap-baseline-scan.sh http://localhost:3333
+docker exec prostaff-semgrep semgrep \
+  --config=auto \
+  --json \
+  --output=/reports/semgrep-report.json \
+  /src
 ```
 
-**Use**: Safe for production, no aggressive testing
-
-#### API Scan
+### Trivy
 ```bash
-./security_tests/scripts/zap-api-scan.sh \
-  http://localhost:3333 \
-  http://localhost:3333/api-docs/v1/swagger.json
+docker exec prostaff-trivy trivy fs \
+  --format json \
+  --output /reports/trivy-report.json \
+  /app
 ```
 
-**Use**: Tests API endpoints using OpenAPI spec
-
-#### Full Scan (Active) ⚠️
+### Nuclei
 ```bash
-./security_tests/scripts/zap-full-scan.sh http://localhost:3333
+docker exec prostaff-nuclei nuclei \
+  -u http://prostaff-api:3000 \
+  -json \
+  -o /reports/nuclei-report.json
 ```
 
-**Use**: Aggressive testing - **ONLY on local/staging**, never production!
-
-**What it finds:**
-- SQL injection
-- XSS (Cross-Site Scripting)
-- CSRF vulnerabilities
-- Authentication issues
-- Session management flaws
-- Security header misconfigurations
-
-### 2. Brakeman (Rails Security Scanner)
-
-**Purpose**: Static analysis of Rails code for security issues
-
+### OWASP ZAP - Baseline Scan
 ```bash
-./security_tests/scripts/brakeman-scan.sh
+docker exec prostaff-zap zap-baseline.py \
+  -t http://prostaff-api:3000 \
+  -J /zap/reports/zap-report.json \
+  -r /zap/reports/zap-report.html
 ```
 
-**What it finds:**
-- SQL injection risks
-- Command injection
-- Mass assignment vulnerabilities
-- Cross-site scripting
-- Unsafe redirects
-- Session security issues
-
-**Output**: HTML + JSON reports in `security_tests/reports/brakeman/`
-
-### 3. Dependency Vulnerability Scanner
-
-**Purpose**: Checks gems for known vulnerabilities
-
+### OWASP ZAP - Full Scan (mais lento, mais completo)
 ```bash
-./security_tests/scripts/dependency-scan.sh
+docker exec prostaff-zap zap-full-scan.py \
+  -t http://prostaff-api:3000 \
+  -J /zap/reports/zap-full-report.json \
+  -r /zap/reports/zap-full-report.html
 ```
 
-**Tools used:**
-- Bundle Audit (Ruby gems)
-- OWASP Dependency Check (comprehensive)
+## 🌐 Interfaces Web
 
-**What it finds:**
-- Outdated gems with CVEs
-- Known security vulnerabilities
-- Recommended updates
+- **ProStaff API**: http://localhost:3333
+- **ZAP Web Interface**: http://localhost:8087/zap
+- **ZAP API**: http://localhost:8097
 
-### 4. Semgrep (Static Analysis)
+## Comandos Úteis
 
-**Purpose**: Pattern-based code analysis
-
+### Verificar Status dos Containers
 ```bash
-docker-compose -f security_tests/docker-compose.security.yml run semgrep
+docker ps | grep prostaff
 ```
 
-**What it finds:**
-- Hardcoded secrets
-- Insecure crypto usage
-- SSRF vulnerabilities
-- Common security anti-patterns
-
-### 5. Trivy (Container Scanner)
-
-**Purpose**: Scans Docker images for vulnerabilities
-
+### Ver Logs
 ```bash
-docker-compose -f security_tests/docker-compose.security.yml run trivy \
-  image prostaff-api:latest
+# API
+docker logs prostaff-api -f
+
+# ZAP
+docker logs prostaff-zap -f
+
+# Brakeman
+docker logs prostaff-brakeman
+
+# Todos os containers de segurança
+docker compose -f security_tests/docker-compose.security.yml -p security_tests logs -f
 ```
 
-**What it finds:**
-- OS package vulnerabilities
-- Application dependency issues
-- Misconfigurations
-
-### 6. Nuclei (Vulnerability Scanner)
-
-**Purpose**: Fast template-based vulnerability detection
-
+### Reiniciar um Container Específico
 ```bash
-docker-compose -f security_tests/docker-compose.security.yml run nuclei \
-  -u http://localhost:3333 \
-  -t /templates/
+docker restart prostaff-zap
+docker restart prostaff-api
 ```
 
-## 📊 Understanding Reports
-
-### Severity Levels
-
-- **Critical**: Immediate fix required (RCE, SQL injection)
-- **High**: Fix ASAP (authentication bypass, XSS)
-- **Medium**: Fix before production (information disclosure)
-- **Low**: Fix when possible (missing headers)
-- **Info**: Best practices (recommendations)
-
-### ZAP Reports
-
-HTML reports show:
-- **Risk**: Critical/High/Medium/Low
-- **Confidence**: High/Medium/Low (false positive likelihood)
-- **Affected URLs**: Where vulnerability exists
-- **Solution**: How to fix
-
-**Triage Priority**: High Risk + High Confidence first
-
-### Brakeman Reports
-
-```
-Confidence Levels:
-- High: Very likely a real issue
-- Medium: Probably an issue
-- Low: Might be false positive
-```
-
-**Fix High confidence issues first**, review medium/low.
-
-### Dependency Scan
-
-Shows:
-- **CVE ID**: Common Vulnerabilities and Exposures number
-- **CVSS Score**: 0-10 severity (7+ is HIGH, 9+ is CRITICAL)
-- **Affected Version**: Your version
-- **Fixed In**: Version to upgrade to
-
-##  OWASP Top 10 Testing
-
-Comprehensive checklist: [`OWASP_TOP_10_CHECKLIST.md`](./OWASP_TOP_10_CHECKLIST.md)
-
-Quick reference:
-
-| Risk | Tool | Test Command |
-|------|------|--------------|
-| A01 - Broken Access Control | ZAP, Manual | Try accessing other org's data |
-| A02 - Cryptographic Failures | Brakeman, Semgrep | Check for weak crypto |
-| A03 - Injection | ZAP, Brakeman | SQL/Command injection tests |
-| A04 - Insecure Design | Manual, Code Review | Review architecture |
-| A05 - Security Misconfiguration | ZAP, Brakeman | Check headers, configs |
-| A06 - Vulnerable Components | Bundle Audit, OWASP DC | Scan dependencies |
-| A07 - Auth Failures | ZAP, Manual | Test weak passwords, sessions |
-| A08 - Integrity Failures | Semgrep | Check deserialization |
-| A09 - Logging Failures | Manual, Code Review | Review logging |
-| A10 - SSRF | Manual, Nuclei | Test external requests |
-
-## 🔄 CI/CD Integration
-
-### GitHub Actions
-
-See `.github/workflows/security-scan.yml`
-
-```yaml
-name: Security Scan
-on: [push, pull_request]
-jobs:
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Brakeman Scan
-        run: ./security_tests/scripts/brakeman-scan.sh
-      - name: Dependency Check
-        run: ./security_tests/scripts/dependency-scan.sh
-```
-
-### Pre-commit Hook
-
+### Reconstruir a Aplicação
 ```bash
-# .git/hooks/pre-commit
-#!/bin/bash
-./security_tests/scripts/brakeman-scan.sh
-if [ $? -ne 0 ]; then
-  echo "Security issues found! Fix before committing."
-  exit 1
-fi
+docker-compose build api
+docker-compose up -d api
 ```
 
-##  Manual Security Testing
+## Configuração
 
-### 1. Authentication Testing
+### Variáveis de Ambiente (.env)
 
+Crie um arquivo `.env` na raiz do projeto com:
+
+```env
+# Database
+POSTGRES_DB=prostaff_api_development
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+DATABASE_URL=postgresql://postgres:password@postgres:5432/prostaff_api_development
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Rails
+RAILS_ENV=development
+JWT_SECRET_KEY=your_secret_key_here
+
+# API
+CORS_ORIGINS=http://localhost:3000,http://localhost:3333
+
+# External APIs
+RIOT_API_KEY=your_riot_api_key_here
+```
+
+##  Boas Práticas
+
+1. **Execute os scans regularmente**: Idealmente em cada commit ou antes de cada release
+2. **Revise todos os relatórios**: Priorize vulnerabilidades críticas e altas
+3. **Mantenha as ferramentas atualizadas**:
+   ```bash
+   docker compose -f security_tests/docker-compose.security.yml pull
+   ```
+4. **Documente falsos positivos**: Use arquivos de supressão quando apropriado
+5. **Integre ao CI/CD**: Automatize os scans em seu pipeline
+
+## Troubleshooting
+
+### API não está acessível
 ```bash
-# Test weak password
-curl -X POST http://localhost:3333/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"123","organization_name":"Test"}'
+# Verifique se a API está rodando
+docker ps | grep prostaff-api
 
-# Test invalid token
-curl -H "Authorization: Bearer INVALID" \
-     http://localhost:3333/api/v1/dashboard
+# Verifique os logs
+docker logs prostaff-api
 
-# Test expired token (wait 15+ min or forge old token)
-curl -H "Authorization: Bearer EXPIRED_TOKEN" \
-     http://localhost:3333/api/v1/dashboard
+# Teste o health endpoint
+curl http://localhost:3333/up
 ```
 
-### 2. Authorization Testing
+### ZAP pedindo autenticação
+- Acesse: http://localhost:8087/zap (não http://localhost:8087)
+- A autenticação foi desabilitada na configuração
 
+### Nuclei sem resultados
+- Confirme que a API está rodando: `curl http://localhost:3333/up`
+- Verifique se o container está na rede correta: `docker network inspect security_tests_security-net`
+
+### Containers encerrando imediatamente
+- Verifique os logs: `docker logs <container_name>`
+- Confirme que os volumes estão corretos no docker-compose.yml
+- Verifique se a aplicação Rails está no diretório pai: `../`
+
+### Erro de bundle/gems não encontradas
 ```bash
-# Get token for Org A
-TOKEN_A=$(curl -X POST http://localhost:3333/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"orga@test.com","password":"password"}' \
-  | jq -r '.token')
+# Reconstrua a imagem
+docker-compose build api
 
-# Try to access Org B's player
-curl -H "Authorization: Bearer $TOKEN_A" \
-     http://localhost:3333/api/v1/players/ORG_B_PLAYER_ID
-# Should return 404 or 403
+# Force bundle install
+docker-compose run --rm api bundle install
 ```
 
-### 3. Input Validation Testing
+## 📚 Documentação
 
-```bash
-# SQL Injection attempt
-curl "http://localhost:3333/api/v1/players?name=admin'%20OR%20'1'='1"
+- [OWASP ZAP](https://www.zaproxy.org/docs/)
+- [Brakeman](https://brakemanscanner.org/docs/)
+- [Semgrep](https://semgrep.dev/docs/)
+- [Trivy](https://aquasecurity.github.io/trivy/)
+- [Dependency-Check](https://jeremylong.github.io/DependencyCheck/)
+- [Nuclei](https://docs.projectdiscovery.io/tools/nuclei/overview)
 
-# XSS attempt
-curl -X POST http://localhost:3333/api/v1/players \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"<script>alert(1)</script>"}'
+## 🤝 Contribuindo
 
-# Command injection attempt
-curl -X POST http://localhost:3333/api/v1/players \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"summoner_name":"; cat /etc/passwd"}'
+Para adicionar novas ferramentas ou melhorar os scans:
+
+1. Edite `docker-compose.security.yml`
+2. Adicione scripts de execução em `run-security-scans.sh`
+3. Documente as mudanças neste README
+4. Teste completamente antes de commitar
+
+## 🎯 Arquitetura
+
+```
+┌─────────────────────────────────────────────────────┐
+│           Security Testing Lab Network              │
+│                                                      │
+│  ┌──────────────┐      ┌──────────────┐            │
+│  │  ProStaff    │◄─────┤  OWASP ZAP   │  DAST      │
+│  │     API      │      │  (Baseline)  │            │
+│  │              │      └──────────────┘            │
+│  │  Rails 7.2   │                                   │
+│  │  Port: 3333  │      ┌──────────────┐            │
+│  └──────┬───────┘      │    Nuclei    │  DAST      │
+│         │              └──────────────┘            │
+│         │                                           │
+│  ┌──────▼───────────────────────────────┐          │
+│  │     Application Code                 │          │
+│  │                                       │          │
+│  │  ┌───────────┐  ┌────────────┐      │          │
+│  │  │ Brakeman  │  │  Semgrep   │  SAST│          │
+│  │  └───────────┘  └────────────┘      │          │
+│  │                                       │          │
+│  │  ┌───────────┐  ┌────────────┐      │          │
+│  │  │   Trivy   │  │Dependency- │  SCA │          │
+│  │  │           │  │   Check    │      │          │
+│  │  └───────────┘  └────────────┘      │          │
+│  └───────────────────────────────────────┘         │
+│                                                      │
+└─────────────────────────────────────────────────────┘
 ```
 
-### 4. Rate Limiting Testing
+## 📝 Licença
 
-```bash
-# Brute force login
-for i in {1..100}; do
-  curl -X POST http://localhost:3333/api/v1/auth/login \
-    -H "Content-Type: application/json" \
-    -d '{"email":"test@test.com","password":"wrong"}' &
-done
-
-# Should eventually return 429 Too Many Requests
-```
-
-### 5. SSRF Testing
-
-```bash
-# Try to access internal services
-curl -X POST http://localhost:3333/api/v1/players/import \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"api_url":"http://localhost:6379"}'
-
-# Should be blocked
-```
-
-## 📈 Continuous Security
-
-### Daily
-```bash
-# Quick health check
-./security_tests/scripts/brakeman-scan.sh
-```
-
-### Weekly
-```bash
-# Dependency check
-./security_tests/scripts/dependency-scan.sh
-bundle update --patch  # Security patches only
-```
-
-### Before Each Release
-```bash
-# Full audit
-./security_tests/scripts/full-security-audit.sh http://staging-url
-
-# Review all reports
-ls -la security_tests/reports/audit-*/
-```
-
-### Monthly
-```bash
-# Comprehensive testing
-./security_tests/scripts/full-security-audit.sh
-./security_tests/scripts/zap-full-scan.sh http://staging-url
-
-# Third-party penetration test (recommended)
-# Contact security firm
-```
-
-## 🎓 Best Practices
-
-### Before Development
-1. Review OWASP Top 10 checklist
-2. Enable Brakeman in IDE
-3. Set up pre-commit hooks
-
-### During Development
-1. Run Brakeman on file save
-2. Manual security testing for new endpoints
-3. Security-focused code reviews
-
-### Before Deployment
-1. Full security audit
-2. Fix all critical/high issues
-3. Document accepted risks
-4. Update security documentation
-
-### In Production
-1. Monitor security logs
-2. Alert on suspicious activity
-3. Regular penetration testing
-4. Incident response plan ready
-
-## 🚨 Incident Response
-
-If vulnerability found in production:
-
-1. **Assess**: Severity and impact
-2. **Contain**: Disable affected feature if critical
-3. **Fix**: Develop and test patch
-4. **Deploy**: Emergency deployment
-5. **Communicate**: Notify affected users
-6. **Learn**: Post-mortem and prevent recurrence
-
-## 📚 Resources
-
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [Rails Security Guide](https://guides.rubyonrails.org/security.html)
-- [ZAP User Guide](https://www.zaproxy.org/docs/)
-- [Brakeman Documentation](https://brakemanscanner.org/docs/)
-
-## 🔐 Security Contacts
-
-- **Security Issues**: security@prostaff.gg
-- **Bug Bounty**: N/A (consider setting up)
-
----
-
-**Remember**: Security is not a one-time task, it's a continuous process!
+Este laboratório de segurança é parte do projeto ProStaff API.

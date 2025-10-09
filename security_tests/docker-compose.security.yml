@@ -1,14 +1,12 @@
-version: '3.8'
 
 services:
   # OWASP ZAP - Web Application Security Scanner
   zap:
-    image: owasp/zap2docker-stable:latest
+    image: zaproxy/zap-stable:latest
     container_name: prostaff-zap
-    user: zap
     ports:
-      - "8080:8080"      # ZAP Proxy
-      - "8090:8090"      # ZAP API
+      - "8087:8080"      # ZAP Proxy
+      - "8097:8090"      # ZAP API
     volumes:
       - ./zap:/zap/wrk:rw
       - ./zap/reports:/zap/reports:rw
@@ -18,30 +16,27 @@ services:
     command: zap-webswing.sh
     environment:
       - ZAP_PORT=8080
+      - ZAPROXY_SKIP_AUTHENTICATION=true
 
   # OWASP Dependency Check - Scan for vulnerable dependencies
   dependency-check:
     image: owasp/dependency-check:latest
     container_name: prostaff-dependency-check
     volumes:
-      - ./:/src:ro
-      - ./security_tests/reports/dependency-check:/report:rw
+      - ../:/src:ro
+      - ./reports/dependency-check:/report:rw
       - ~/.m2/repository:/usr/share/dependency-check/data:rw
     networks:
       - security-net
-    command: >
-      --scan /src
-      --format ALL
-      --project "ProStaff API"
-      --out /report
+    command: ["--scan", "/src", "--format", "ALL", "--project", "ProStaff API", "--out", "/report"]
 
   # Trivy - Container & Filesystem vulnerability scanner
   trivy:
     image: aquasec/trivy:latest
     container_name: prostaff-trivy
     volumes:
-      - ./:/app:ro
-      - ./security_tests/reports/trivy:/reports:rw
+      - ../:/app:ro
+      - ./reports/trivy:/reports:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - security-net
@@ -53,39 +48,33 @@ services:
     image: presidentbeef/brakeman:latest
     container_name: prostaff-brakeman
     volumes:
-      - ./:/app:ro
-      - ./security_tests/reports/brakeman:/reports:rw
+      - ../:/app:ro
+      - ./reports/brakeman:/reports:rw
     networks:
       - security-net
     working_dir: /app
-    command: >
-      --rails7
-      --output /reports/brakeman-report.html
-      --format html
-      --summary
+    command: ["--rails7", "--output", "/reports/brakeman-report.html", "--format", "html", "--summary"]
 
   # Semgrep - Static analysis security tool
   semgrep:
     image: returntocorp/semgrep:latest
     container_name: prostaff-semgrep
     volumes:
-      - ./:/src:ro
-      - ./security_tests/reports/semgrep:/reports:rw
+      - ../:/src:ro
+      - ./reports/semgrep:/reports:rw
     networks:
       - security-net
     working_dir: /src
-    command: >
-      --config=auto
-      --json
-      --output=/reports/semgrep-report.json
+    entrypoint: []
+    command: ["sleep", "infinity"]
 
   # Nuclei - Fast vulnerability scanner
   nuclei:
     image: projectdiscovery/nuclei:latest
     container_name: prostaff-nuclei
     volumes:
-      - ./security_tests/nuclei-templates:/templates:ro
-      - ./security_tests/reports/nuclei:/reports:rw
+      - ./nuclei-templates:/templates:ro
+      - ./reports/nuclei:/reports:rw
     networks:
       - security-net
     command: ["sleep", "infinity"]
