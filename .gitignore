@@ -204,8 +204,25 @@ QUICK_START.md
 /security_tests/zap/wrk/*
 !/security_tests/zap/wrk/.keep
 
+# ZAP certificates and keys (NEVER commit!)
+/security_tests/zap/*.cer
+/security_tests/zap/*.key
+/security_tests/zap/*.pem
+/security_tests/zap/config/webswing.config
+
 # Security scan reports (local)
 brakeman-report.json
 brakeman-report.html
 semgrep-report.json
 bundle-audit.txt
+security_tests/security_tests/reports
+
+#INTERN DOCS
+DOCS/JIRA_IMPORT.csv
+DOCS/JIRA_IMPORT_FIXED.csv
+DOCS/JIRA_IMPORT_MINIMAL.csv
+DOCS/RIOT_INTEGRATION_IMPLEMENTATION_PLAN.md
+DOCS/FRONTEND_RIOT_INTEGRATION_PLAN.md
+DOCS/FRONTEND_RIOT_MISSING_FEATURES.md
+DOCS/JIRA_TASKS.md
+
