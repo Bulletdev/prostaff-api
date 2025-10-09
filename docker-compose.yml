@@ -32,6 +32,7 @@ services:
   # Rails API
   api:
     build: .
+    container_name: prostaff-api
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
@@ -47,8 +48,12 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - default
+      - security_tests_security-net
     command: >
       sh -c "
+        bundle check || bundle install &&
         rm -f tmp/pids/server.pid &&
         bundle exec rails db:migrate &&
         bundle exec rails server -b 0.0.0.0 -p 3000
@@ -76,3 +81,7 @@ volumes:
   postgres_data:
   redis_data:
   bundle_cache:
+
+networks:
+  security_tests_security-net:
+    external: true
