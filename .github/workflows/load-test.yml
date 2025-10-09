@@ -105,7 +105,7 @@ jobs:
 
       - name: Upload Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: load-test-results-${{ steps.params.outputs.test_type }}
           path: load_tests/results/
