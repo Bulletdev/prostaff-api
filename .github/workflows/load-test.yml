@@ -21,9 +21,10 @@ on:
           - staging
           - production
 
-  schedule:
-    # Run smoke test nightly at 2am UTC
-    - cron: '0 2 * * *'
+  # TODO: Reativar quando em produção
+  # schedule:
+  #   # Run smoke test nightly at 2am UTC
+  #   - cron: '0 2 * * *'
 
 env:
   K6_VERSION: '0.47.0'
@@ -72,7 +73,13 @@ jobs:
 
       - name: Check API Health
         run: |
-          curl -f ${{ steps.env.outputs.base_url }}/up || exit 1
+          echo "Checking API health at ${{ steps.env.outputs.base_url }}/up"
+          if ! curl -f --connect-timeout 10 --max-time 30 ${{ steps.env.outputs.base_url }}/up; then
+            echo "::error::API is not accessible at ${{ steps.env.outputs.base_url }}"
+            echo "::warning::This environment may not be deployed yet."
+            exit 1
+          fi
+          echo "✅ API is healthy"
 
       - name: Run k6 Load Test
         env:

@@ -1,9 +1,10 @@
 name: Nightly Security Audit
 
 on:
-  schedule:
-    # Run every night at 1am UTC
-    - cron: '0 1 * * *'
+  # TODO: Reativar quando em produção
+  # schedule:
+  #   # Run every night at 1am UTC
+  #   - cron: '0 1 * * *'
   workflow_dispatch:
 
 jobs:
@@ -65,7 +66,7 @@ jobs:
       - name: Install Security Tools
         run: |
           gem install brakeman bundler-audit
-          docker pull owasp/zap2docker-stable
+          docker pull zaproxy/zap-stable
 
       - name: Create Reports Directory
         run: mkdir -p security_tests/reports/nightly
@@ -88,7 +89,7 @@ jobs:
         run: |
           docker run --rm --network="host" \
             -v $(pwd)/security_tests/reports/nightly:/zap/wrk:rw \
-            owasp/zap2docker-stable \
+            zaproxy/zap-stable \
             zap-baseline.py \
             -t http://localhost:3333 \
             -r zap-baseline.html \
@@ -98,7 +99,7 @@ jobs:
         run: |
           docker run --rm --network="host" \
             -v $(pwd)/security_tests/reports/nightly:/zap/wrk:rw \
-            owasp/zap2docker-stable \
+            zaproxy/zap-stable \
             zap-api-scan.py \
             -t http://localhost:3333/api-docs/v1/swagger.json \
             -f openapi \
@@ -128,13 +129,6 @@ jobs:
           echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
           echo "zap_high=$ZAP_HIGH" >> $GITHUB_OUTPUT
           echo "zap_medium=$ZAP_MEDIUM" >> $GITHUB_OUTPUT
-
-      - name: Upload Reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-security-reports-${{ github.run_number }}
-          path: security_tests/reports/nightly/
 
       - name: Generate Summary
         if: always()
@@ -174,6 +168,18 @@ jobs:
           - [Bundle Audit Report](bundle-audit.txt)
           EOF
 
+      - name: Job Summary
+        if: always()
+        run: |
+          cat security_tests/reports/nightly/SUMMARY.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-security-reports-${{ github.run_number }}
+          path: security_tests/reports/nightly/
+
       - name: Create GitHub Issue on Failure
         if: steps.parse.outputs.brakeman_high > 0 || steps.parse.outputs.vulnerabilities == 'true' || steps.parse.outputs.zap_high > 0
         uses: actions/github-script@v6
@@ -209,11 +215,6 @@ jobs:
                 labels: ['security', 'automated', 'critical']
               });
             }
-
-      - name: Job Summary
-        if: always()
-        run: |
-          cat security_tests/reports/nightly/SUMMARY.md >> $GITHUB_STEP_SUMMARY
 
       - name: Fail on Critical Issues
         if: steps.parse.outputs.brakeman_high > 0 || steps.parse.outputs.vulnerabilities == 'true' || steps.parse.outputs.zap_high > 0

@@ -5,9 +5,10 @@ on:
     branches: [ master, develop ]
   pull_request:
     branches: [ master, develop ]
-  schedule:
-    # Run weekly on Monday at 9am UTC
-    - cron: '0 9 * * 1'
+  # TODO: Reativar quando em produção
+  # schedule:
+  #   # Run weekly on Monday at 9am UTC
+  #   - cron: '0 9 * * 1'
 
 jobs:
   brakeman:
