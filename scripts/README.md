@@ -1,8 +1,58 @@
-# Architecture Diagram Auto-Update System
+# Scripts do Projeto
 
-## Overview
+Este diretório contém scripts úteis para desenvolvimento, segurança, e manutenção do projeto.
 
-This directory contains the automated system for keeping the architecture diagram in the README.md synchronized with the actual project structure.
+---
+
+## 🔒 Security Validation Script
+
+### `validate-security.sh`
+
+Script para validar segurança do código **antes de fazer commit**. Roda Semgrep localmente e verifica vulnerabilidades críticas.
+
+#### Uso
+
+```bash
+./scripts/validate-security.sh
+```
+
+#### O que ele faz:
+
+✅ Roda Semgrep com Docker (não precisa instalar nada)
+✅ Analisa código buscando vulnerabilidades
+✅ Mostra apenas erros **CRÍTICOS** (severity ERROR)
+✅ Retorna exit code apropriado (0 = passou, 1 = falhou)
+
+#### Output de exemplo:
+
+```
+================================================
+🔒 Security Validation Script
+================================================
+
+🔍 Rodando Semgrep...
+
+📋 Resumo:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Erros (CRITICAL):  0
+⚠️  Warnings:          21
+ℹ️  Info:             0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ PASSOU - Sem erros críticos encontrados!
+   Você pode fazer o commit com segurança.
+================================================
+```
+
+**Recomendação:** Execute antes de todo commit!
+
+---
+
+## 🏗️ Architecture Diagram Auto-Update System
+
+### Overview
+
+Sistema automatizado para manter o diagrama de arquitetura no README.md sincronizado com a estrutura do projeto.
 
 ## How It Works
 
