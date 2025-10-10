@@ -81,7 +81,7 @@ Comprehensive performance testing to evaluate if GraphQL is needed.
 ⚠️ N+1 query issues visible
 ```
 
-**Detailed Guide**: [load_tests/README.md](load_tests/README.md)
+**Detailed Guide**: [load_tests/README.md](../../load_tests/README.md)
 
 ## 🔒 Security Testing
 
@@ -101,7 +101,7 @@ Continuous security validation following OWASP Top 10.
 
 ### OWASP Top 10 Checklist
 
-Interactive checklist: [security_tests/OWASP_TOP_10_CHECKLIST.md](security_tests/OWASP_TOP_10_CHECKLIST.md)
+Interactive checklist: [security_tests/OWASP_TOP_10_CHECKLIST.md](../../security_tests/OWASP_TOP_10_CHECKLIST.md)
 
 **Before Production:**
 - [ ] All critical/high Brakeman issues fixed
@@ -125,7 +125,7 @@ Interactive checklist: [security_tests/OWASP_TOP_10_CHECKLIST.md](security_tests
 | **Semgrep** | Static analysis | Every PR |
 | **TruffleHog** | Secret detection | Every commit |
 
-**Detailed Guide**: [security_tests/README.md](security_tests/README.md)
+**Detailed Guide**: [security_tests/README.md](../../security_tests/README.md)
 
 ##  CI/CD Integration
 
@@ -495,9 +495,9 @@ bundle update --minor (if safe)
 
 ## 📚 Additional Resources
 
-- [Load Testing Guide](load_tests/README.md)
-- [Security Testing Guide](security_tests/README.md)
-- [OWASP Top 10 Checklist](security_tests/OWASP_TOP_10_CHECKLIST.md)
+- [Load Testing Guide](../../load_tests/README.md)
+- [Security Testing Guide](../../security_tests/README.md)
+- [OWASP Top 10 Checklist](../../security_tests/OWASP_TOP_10_CHECKLIST.md)
 - [Rails Security Guide](https://guides.rubyonrails.org/security.html)
 - [k6 Documentation](https://k6.io/docs/)
 - [OWASP ZAP User Guide](https://www.zaproxy.org/docs/)

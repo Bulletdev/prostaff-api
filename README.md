@@ -397,7 +397,7 @@ The diagram automatically reflects:
 - With cache: ~50ms
 - Error rate: 0%
 
-**Documentation**: See [TESTING_GUIDE.md](TESTING_GUIDE.md) and [QUICK_START.md](QUICK_START.md)
+**Documentation**: See [TESTING_GUIDE.md](DOCS/tests/TESTING_GUIDE.md) and [QUICK_START.md](DOCS/setup/QUICK_START.md)
 
 ### Security Testing (OWASP)
 

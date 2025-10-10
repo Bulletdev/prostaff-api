@@ -434,7 +434,7 @@ docker pull returntocorp/semgrep:latest
 docker pull trufflesecurity/trufflehog:latest
 ```
 
-### Agendar Scans Automáticos
+### Agendar Scans Automático
 
 Os workflows do GitHub Actions já estão configurados para rodar:
 

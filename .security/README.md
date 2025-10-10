@@ -82,4 +82,4 @@ docker run --rm -v $(pwd):/src returntocorp/semgrep semgrep scan --config=auto
 
 ## Questions?
 
-See [TESTING_GUIDE.md](../TESTING_GUIDE.md) for complete security testing documentation.
+See [TESTING_GUIDE.md](../DOCS/tests/TESTING_GUIDE.md) for complete security testing documentation.

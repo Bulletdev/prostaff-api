@@ -182,15 +182,15 @@ tramp
 # Docker
 .dockerignore
 COMMIT_GUIDE.md
-FRONTEND_SETUP.md
-Implemented.md
+DOCS/setup/FRONTEND_SETUP.md
+DOCS/Implemented.md
 backend_prompt.md
 .claude
 SETUP.md
-FINAL_PERFORMANCE_SUMMARY.md
-OPTIMIZATION_SUMMARY.md
-PERFORMANCE_OPTIMIZATION.md
-QUICK_START.md
+DOCS/optimization/FINAL_PERFORMANCE_SUMMARY.md
+DOCS/optimization/OPTIMIZATION_SUMMARY.md
+DOCS/optimization/PERFORMANCE_OPTIMIZATION.md
+DOCS/setup/QUICK_START.md
 .claude.md
 
 
@@ -216,6 +216,14 @@ brakeman-report.html
 semgrep-report.json
 bundle-audit.txt
 security_tests/security_tests/reports
+
+# Production & Deployment
+/deploy/ssl/*
+!/deploy/ssl/.keep
+/backups/*
+!/backups/.keep
+.env.staging
+.env.production
 
 #INTERN DOCS
 DOCS/JIRA_IMPORT.csv
