@@ -439,13 +439,18 @@ See `.github/workflows/` for details.
 6. Submit a pull request
 
 **Note**: The architecture diagram will be automatically updated when you add new modules, models, or controllers.
-
 ## License
 
-This project is proprietary software for ProStaff.gg.
+Copyright e Licenciamento
 
+© 2025 ProStaff.gg. Todos os direitos reservados.
 
-Shield: 
+Este repositório contém o código-fonte oficial da API para a plataforma de e-sports ProStaff.gg.
+
+O código-fonte contido aqui é disponibilizado sob a licença Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+Você pode encontrar o texto completo da licença no arquivo [LICENSE](license.md) neste repositório.
+
+Shield:
 
 [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
