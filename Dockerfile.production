@@ -1,0 +1,89 @@
+# syntax=docker/dockerfile:1
+# ProStaff API - Production Dockerfile
+# Multi-stage build for optimized image size
+
+# Stage 1: Base
+FROM ruby:3.4.5-slim as base
+
+# Install system dependencies
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+    curl \
+    libpq-dev \
+    libyaml-dev \
+    tzdata && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Set production environment
+ENV RAILS_ENV=production \
+    BUNDLE_DEPLOYMENT=1 \
+    BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_WITHOUT=development:test
+
+WORKDIR /app
+
+# Stage 2: Build
+FROM base as build
+
+# Install build dependencies
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+    build-essential \
+    git \
+    nodejs \
+    npm && \
+    npm install -g yarn && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Copy Gemfile
+COPY Gemfile Gemfile.lock ./
+
+# Install gems
+RUN bundle install --jobs 4 --retry 3 && \
+    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
+
+# Copy application code
+COPY . .
+
+# Precompile bootsnap code for faster boot times
+RUN bundle exec bootsnap precompile --gemfile app/ lib/
+
+# Precompile assets (if any)
+RUN if [ -f "bin/rails" ]; then \
+      SECRET_KEY_BASE=placeholder bundle exec rails assets:precompile || true; \
+    fi
+
+# Stage 3: Production
+FROM base
+
+# Copy built artifacts
+COPY --from=build /usr/local/bundle /usr/local/bundle
+COPY --from=build /app /app
+
+# Create non-root user
+RUN groupadd --system --gid 1000 rails && \
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    chown -R rails:rails /app /usr/local/bundle
+
+# Create necessary directories
+RUN mkdir -p /app/tmp/pids /app/tmp/cache /app/tmp/sockets /app/log && \
+    chown -R rails:rails /app/tmp /app/log
+
+# Switch to non-root user
+USER rails:rails
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/up || exit 1
+
+# Entry point for database migration
+COPY --chown=rails:rails deploy/scripts/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Start server
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
