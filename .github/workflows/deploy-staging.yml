@@ -1,0 +1,324 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy even if tests fail'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prostaff_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: |
+          bundle config set --local without 'development'
+          bundle install --jobs 4 --retry 3
+
+      - name: Setup database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+
+      - name: Run RSpec tests
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+          COVERAGE: true
+        run: bundle exec rspec --format documentation
+        continue-on-error: ${{ github.event.inputs.force_deploy == 'true' }}
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel
+        continue-on-error: true
+
+      - name: Run Brakeman security scan
+        run: bundle exec brakeman -q -w2
+        continue-on-error: true
+
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: success() || github.event.inputs.force_deploy == 'true'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=staging-
+            type=raw,value=staging-latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            RAILS_ENV=staging
+
+  deploy:
+    name: Deploy to Staging Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: success() || github.event.inputs.force_deploy == 'true'
+
+    environment:
+      name: staging
+      url: https://staging-api.prostaff.gg
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to staging server
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh ${STAGING_USER}@${STAGING_HOST} << 'ENDSSH'
+            set -e
+
+            echo "🚀 Starting deployment to staging..."
+
+            # Navigate to project directory
+            cd /var/www/prostaff-api || exit 1
+
+            # Pull latest changes
+            echo "📥 Pulling latest changes..."
+            git fetch origin
+            git checkout develop
+            git pull origin develop
+
+            # Login to GitHub Container Registry
+            echo "🔐 Logging in to container registry..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull latest images
+            echo "📦 Pulling latest images..."
+            docker-compose -f docker-compose.production.yml pull
+
+            # Backup database
+            echo "💾 Creating database backup..."
+            docker-compose -f docker-compose.production.yml run --rm backup || echo "⚠️ Backup failed, continuing..."
+
+            # Deploy with zero downtime
+            echo "🔄 Deploying new version..."
+            docker-compose -f docker-compose.production.yml up -d --remove-orphans
+
+            # Wait for services to be healthy
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 10
+
+            # Run migrations
+            echo "📊 Running database migrations..."
+            docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+
+            # Health check
+            echo "🏥 Running health check..."
+            for i in {1..10}; do
+              if curl -f -s https://staging-api.prostaff.gg/up > /dev/null; then
+                echo "✅ Application is healthy!"
+                break
+              else
+                echo "  Attempt $i/10 failed, waiting..."
+                sleep 5
+              fi
+
+              if [ $i -eq 10 ]; then
+                echo "❌ Health check failed after 10 attempts"
+                exit 1
+              fi
+            done
+
+            # Cleanup
+            echo "🧹 Cleaning up old images..."
+            docker image prune -af --filter "until=48h"
+
+            echo "✅ Deployment completed successfully!"
+          ENDSSH
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Staging deployment successful!"
+            echo "🌐 URL: https://staging-api.prostaff.gg"
+          else
+            echo "❌ Staging deployment failed!"
+            exit 1
+          fi
+
+      - name: Post deployment checks
+        run: |
+          echo "Running post-deployment checks..."
+
+          # Check API health
+          curl -f https://staging-api.prostaff.gg/up || exit 1
+
+          # Check API version
+          curl -s https://staging-api.prostaff.gg/api/health | jq '.' || true
+
+          echo "✅ All checks passed!"
+
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+
+    steps:
+      - name: Prepare notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "STATUS=✅ Success" >> $GITHUB_ENV
+            echo "MESSAGE=Staging deployment completed successfully" >> $GITHUB_ENV
+          else
+            echo "STATUS=❌ Failed" >> $GITHUB_ENV
+            echo "MESSAGE=Staging deployment failed - please check logs" >> $GITHUB_ENV
+          fi
+
+      - name: Display notification
+        run: |
+          echo "======================================"
+          echo "${{ env.STATUS }}"
+          echo "${{ env.MESSAGE }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          echo "URL: https://staging-api.prostaff.gg"
+          echo "======================================"
+
+      - name: Slack notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "🧪 Staging Deployment ${{ needs.deploy.result == 'success' && '✅ Success' || '❌ Failed' }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ needs.deploy.result == 'success' && '✅ Staging Deployed' || '❌ Staging Deploy Failed' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Deployed by:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\nStaging"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*URL:*\n<https://staging-api.prostaff.gg|staging-api.prostaff.gg>"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Deployment Logs>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

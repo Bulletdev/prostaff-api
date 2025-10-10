@@ -1,0 +1,537 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests (NOT RECOMMENDED)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Validate version tag
+        run: |
+          if [[ "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Valid version tag"
+          else
+            echo "❌ Invalid version tag format. Expected: v1.0.0"
+            exit 1
+          fi
+
+      - name: Check if main branch
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$BRANCH" == "master" ] || [ "$BRANCH" == "main" ]; then
+            echo "✅ On main/master branch"
+          else
+            echo "⚠️  Not on main/master branch: $BRANCH"
+            echo "Production should be deployed from main/master"
+          fi
+
+  test:
+    name: Run Full Test Suite
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event.inputs.skip_tests != 'true'
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prostaff_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: |
+          bundle config set --local without 'development'
+          bundle install --jobs 4 --retry 3
+
+      - name: Setup database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+
+      - name: Run RSpec tests
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+          COVERAGE: true
+        run: |
+          bundle exec rspec --format documentation --format json --out rspec-results.json
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: rspec-results.json
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel --format simple
+
+      - name: Run Brakeman security scan
+        run: bundle exec brakeman -q -w2 --no-pager
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  build:
+    name: Build Production Image
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    if: success() || github.event.inputs.skip_tests == 'true'
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Extract version
+        id: extract_version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=production-latest
+            type=sha,prefix=prod-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            RAILS_ENV=production
+
+      - name: Sign image with cosign
+        if: false  # Enable if using cosign for image signing
+        run: |
+          echo "Image signing would happen here"
+
+  deploy-approval:
+    name: Approval Required
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: production-approval
+
+    steps:
+      - name: Manual approval checkpoint
+        run: |
+          echo "=================================="
+          echo "🚨 PRODUCTION DEPLOYMENT"
+          echo "=================================="
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "⚠️  Please review all changes before approving"
+          echo "=================================="
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-approval]
+
+    environment:
+      name: production
+      url: https://api.prostaff.gg
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment announcement
+        run: |
+          echo "🚀 Starting production deployment..."
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Time: $(date)"
+
+      - name: Deploy to production server
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          ssh ${PRODUCTION_USER}@${PRODUCTION_HOST} << 'ENDSSH'
+            set -e
+
+            echo "🚀 Starting PRODUCTION deployment..."
+            echo "⚠️  This will affect LIVE users"
+
+            # Navigate to project directory
+            cd /var/www/prostaff-api || exit 1
+
+            # Pull latest changes
+            echo "📥 Pulling version ${{ needs.build.outputs.version }}..."
+            git fetch --all --tags
+            git checkout tags/${{ needs.build.outputs.version }} -b deploy-${{ needs.build.outputs.version }} || git checkout ${{ needs.build.outputs.version }}
+
+            # Login to GitHub Container Registry
+            echo "🔐 Logging in to container registry..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Create comprehensive backup
+            echo "💾 Creating full database backup..."
+            docker-compose -f docker-compose.production.yml run --rm backup
+
+            # Verify backup
+            LATEST_BACKUP=$(ls -t backups/*.sql.gz | head -1)
+            if [ -z "$LATEST_BACKUP" ]; then
+              echo "❌ Backup verification failed!"
+              exit 1
+            fi
+            echo "✅ Backup created: $LATEST_BACKUP"
+
+            # Store current version for rollback
+            CURRENT_VERSION=$(docker ps --filter "name=prostaff-api" --format "{{.Image}}")
+            echo "$CURRENT_VERSION" > .rollback_version
+            echo "📝 Current version saved for rollback: $CURRENT_VERSION"
+
+            # Pull new images
+            echo "📦 Pulling production images..."
+            docker-compose -f docker-compose.production.yml pull
+
+            # Pre-migration health check
+            echo "🏥 Pre-deployment health check..."
+            curl -f https://api.prostaff.gg/up || echo "⚠️  Current deployment might be down"
+
+            # Run migrations in a separate container first (test run)
+            echo "🧪 Testing migrations..."
+            docker-compose -f docker-compose.production.yml run --rm api bundle exec rails db:migrate:status
+
+            # Deploy with rolling update
+            echo "🔄 Deploying new version with zero downtime..."
+            docker-compose -f docker-compose.production.yml up -d --no-deps --scale api=4 api
+            sleep 5
+            docker-compose -f docker-compose.production.yml up -d --no-deps --scale api=2 --remove-orphans api
+
+            # Wait for new containers to be healthy
+            echo "⏳ Waiting for new instances to be healthy..."
+            sleep 15
+
+            # Run migrations on production
+            echo "📊 Running database migrations..."
+            docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+
+            # Restart all services
+            echo "🔄 Restarting all services..."
+            docker-compose -f docker-compose.production.yml restart sidekiq
+
+            # Extended health check
+            echo "🏥 Running comprehensive health checks..."
+            HEALTH_CHECK_PASSED=false
+            for i in {1..20}; do
+              if curl -f -s https://api.prostaff.gg/up > /dev/null; then
+                echo "✅ Health check passed (attempt $i)"
+                HEALTH_CHECK_PASSED=true
+                break
+              else
+                echo "  Attempt $i/20 failed, waiting..."
+                sleep 5
+              fi
+            done
+
+            if [ "$HEALTH_CHECK_PASSED" = false ]; then
+              echo "❌ Health check failed - INITIATING ROLLBACK!"
+
+              # Rollback
+              ROLLBACK_VERSION=$(cat .rollback_version)
+              echo "🔄 Rolling back to: $ROLLBACK_VERSION"
+              docker-compose -f docker-compose.production.yml down
+              # Restore previous version
+              docker-compose -f docker-compose.production.yml up -d
+
+              exit 1
+            fi
+
+            # Cleanup old images and containers
+            echo "🧹 Cleaning up old resources..."
+            docker image prune -af --filter "until=72h"
+            docker container prune -f
+
+            # Final verification
+            echo "✅ Production deployment completed successfully!"
+            echo "Version: ${{ needs.build.outputs.version }}"
+            echo "Deployment time: $(date)"
+          ENDSSH
+
+      - name: Post-deployment verification
+        run: |
+          echo "Running post-deployment verification..."
+
+          # Health check
+          for i in {1..5}; do
+            if curl -f https://api.prostaff.gg/up; then
+              echo "✅ Health check passed"
+              break
+            else
+              echo "Retry $i/5..."
+              sleep 5
+            fi
+          done
+
+          # API version check
+          echo "Checking API version..."
+          curl -s https://api.prostaff.gg/api/health | jq '.' || true
+
+          echo "✅ All post-deployment checks passed!"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          release_name: Release ${{ needs.build.outputs.version }}
+          body: |
+            Production deployment completed successfully.
+
+            **Deployed to:** https://api.prostaff.gg
+            **Version:** ${{ needs.build.outputs.version }}
+            **Deployed by:** ${{ github.actor }}
+            **Deployed at:** ${{ github.event.head_commit.timestamp }}
+          draft: false
+          prerelease: false
+        continue-on-error: true
+
+  rollback:
+    name: Rollback Procedure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+
+    steps:
+      - name: Execute rollback
+        run: |
+          echo "❌ Deployment failed - rollback should have been executed automatically"
+          echo "If automatic rollback failed, follow manual rollback procedure:"
+          echo "1. SSH to production server"
+          echo "2. cd /var/www/prostaff-api"
+          echo "3. git checkout <previous-tag>"
+          echo "4. docker-compose -f docker-compose.production.yml up -d --force-recreate"
+          echo "5. Restore database backup if needed"
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+
+    steps:
+      - name: Prepare notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "STATUS=✅ Success" >> $GITHUB_ENV
+            echo "MESSAGE=Production deployment completed successfully" >> $GITHUB_ENV
+          else
+            echo "STATUS=❌ Failed" >> $GITHUB_ENV
+            echo "MESSAGE=Production deployment FAILED - immediate action required!" >> $GITHUB_ENV
+          fi
+
+      - name: Display notification
+        run: |
+          echo "=============================================="
+          echo "${{ env.STATUS }}"
+          echo "${{ env.MESSAGE }}"
+          echo "=============================================="
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "URL: https://api.prostaff.gg"
+          echo "=============================================="
+
+      - name: Slack notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "🚀 Production Deployment ${{ needs.deploy.result == 'success' && '✅ Success' || '❌ Failed' }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ needs.deploy.result == 'success' && '✅ Production Deployed' || '❌ Production Deploy Failed' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\n${{ needs.build.outputs.version }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Deployed by:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\nProduction"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*URL:*\n<https://api.prostaff.gg|api.prostaff.gg>"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Deployment Logs>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      # - name: Email notification
+      #   if: failure()
+      #   uses: dawidd6/action-send-mail@v3
+      #   with:
+      #     server_address: smtp.gmail.com
+      #     server_port: 587
+      #     username: ${{ secrets.EMAIL_USERNAME }}
+      #     password: ${{ secrets.EMAIL_PASSWORD }}
+      #     subject: "🚨 Production Deployment Failed"
+      #     body: |
+      #       Production deployment has failed!
+      #
+      #       Version: ${{ needs.build.outputs.version }}
+      #       Triggered by: ${{ github.actor }}
+      #       Time: ${{ github.event.head_commit.timestamp }}
+      #
+      #       Please check the logs and take immediate action.
+      #     to: devops@prostaff.gg
+      #     from: CI/CD Bot

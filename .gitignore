@@ -234,3 +234,7 @@ DOCS/FRONTEND_RIOT_INTEGRATION_PLAN.md
 DOCS/FRONTEND_RIOT_MISSING_FEATURES.md
 DOCS/JIRA_TASKS.md
 
+# Travis CI (deprecated - using GitHub Actions)
+travis.yml
+.travis.yml
+
