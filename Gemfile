@@ -12,6 +12,9 @@ gem "pg", "~> 1.1"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", "~> 6.0"
 
+# Security: Force Rack to safe version to fix CVE-2025-61780 and CVE-2025-61919
+gem "rack", "~> 3.1.18"
+
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 # gem "jbuilder"
 
