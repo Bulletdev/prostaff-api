@@ -38,6 +38,18 @@ class Player < ApplicationRecord
     where(contract_end_date: Date.current..Date.current + days.days)
   }
   scope :by_tier, ->(tier) { where(solo_queue_tier: tier) }
+  scope :ordered_by_role, -> {
+    order(Arel.sql(
+      "CASE role
+        WHEN 'top' THEN 1
+        WHEN 'jungle' THEN 2
+        WHEN 'mid' THEN 3
+        WHEN 'adc' THEN 4
+        WHEN 'support' THEN 5
+        ELSE 6
+      END"
+    ))
+  }
 
   # Instance methods
   def current_rank_display

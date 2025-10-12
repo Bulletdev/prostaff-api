@@ -14,8 +14,8 @@ class Api::V1::PlayersController < Api::V1::BaseController
       players = players.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
     end
 
-    # Pagination
-    result = paginate(players.order(:role, :summoner_name))
+    # Pagination - order by role (top, jungle, mid, adc, support) then by name
+    result = paginate(players.ordered_by_role.order(:summoner_name))
 
     render_success({
       players: PlayerSerializer.render_as_hash(result[:data]),
