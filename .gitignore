@@ -238,3 +238,7 @@ DOCS/JIRA_TASKS.md
 travis.yml
 .travis.yml
 
+#reports
+
+security_tests/scripts/security_tests/reports
+./security_tests/scripts/security_tests/reports
