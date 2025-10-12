@@ -10,7 +10,7 @@ class PlayerSerializer < Blueprinter::Base
          :peak_tier, :peak_rank, :peak_season,
          :riot_puuid, :riot_summoner_id,
          :twitter_handle, :twitch_channel, :instagram_handle,
-         :notes, :last_sync_at, :created_at, :updated_at
+         :notes, :sync_status, :last_sync_at, :created_at, :updated_at
 
   field :age do |player|
     player.age

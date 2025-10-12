@@ -157,12 +157,118 @@ class Api::V1::PlayersController < Api::V1::BaseController
   end
 
   def import
-    # This will be implemented when Riot API is ready
-    render_error(
-      message: 'Import functionality not yet implemented',
-      code: 'NOT_IMPLEMENTED',
-      status: :not_implemented
-    )
+    summoner_name = params[:summoner_name]
+    role = params[:role]
+    region = params[:region] || 'br1'
+
+    # Validate required params
+    unless summoner_name.present? && role.present?
+      return render_error(
+        message: 'Summoner name and role are required',
+        code: 'MISSING_PARAMETERS',
+        status: :unprocessable_entity
+      )
+    end
+
+    # Validate role
+    unless %w[top jungle mid adc support].include?(role)
+      return render_error(
+        message: 'Invalid role',
+        code: 'INVALID_ROLE',
+        status: :unprocessable_entity
+      )
+    end
+
+    # Check if player already exists
+    existing_player = organization_scoped(Player).find_by(summoner_name: summoner_name)
+    if existing_player
+      return render_error(
+        message: 'Player already exists in your organization',
+        code: 'PLAYER_EXISTS',
+        status: :unprocessable_entity
+      )
+    end
+
+    # Get Riot API key
+    riot_api_key = ENV['RIOT_API_KEY']
+    unless riot_api_key.present?
+      return render_error(
+        message: 'Riot API key not configured',
+        code: 'RIOT_API_NOT_CONFIGURED',
+        status: :service_unavailable
+      )
+    end
+
+    begin
+      # Fetch summoner data from Riot API
+      summoner_data = fetch_summoner_by_name(summoner_name, region, riot_api_key)
+      ranked_data = fetch_ranked_stats(summoner_data['id'], region, riot_api_key)
+
+      # Prepare player data
+      player_data = {
+        summoner_name: summoner_name,
+        role: role,
+        status: 'active',
+        riot_puuid: summoner_data['puuid'],
+        riot_summoner_id: summoner_data['id'],
+        summoner_level: summoner_data['summonerLevel'],
+        profile_icon_id: summoner_data['profileIconId'],
+        sync_status: 'success',
+        last_sync_at: Time.current
+      }
+
+      # Add ranked stats if available
+      solo_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
+      if solo_queue
+        player_data.merge!({
+          solo_queue_tier: solo_queue['tier'],
+          solo_queue_rank: solo_queue['rank'],
+          solo_queue_lp: solo_queue['leaguePoints'],
+          solo_queue_wins: solo_queue['wins'],
+          solo_queue_losses: solo_queue['losses']
+        })
+      end
+
+      flex_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_FLEX_SR' }
+      if flex_queue
+        player_data.merge!({
+          flex_queue_tier: flex_queue['tier'],
+          flex_queue_rank: flex_queue['rank'],
+          flex_queue_lp: flex_queue['leaguePoints']
+        })
+      end
+
+      # Create player
+      player = organization_scoped(Player).create!(player_data)
+
+      log_user_action(
+        action: 'import_riot',
+        entity_type: 'Player',
+        entity_id: player.id,
+        new_values: player_data
+      )
+
+      render_created({
+        player: PlayerSerializer.render_as_hash(player),
+        message: "Player #{summoner_name} imported successfully from Riot API"
+      })
+
+    rescue ActiveRecord::RecordInvalid => e
+      render_error(
+        message: "Failed to create player: #{e.message}",
+        code: 'VALIDATION_ERROR',
+        status: :unprocessable_entity
+      )
+    rescue StandardError => e
+      Rails.logger.error "Riot API import error: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+
+      render_error(
+        message: "Failed to import from Riot API: #{e.message}",
+        code: 'RIOT_API_ERROR',
+        status: :service_unavailable
+      )
+    end
   end
 
   def sync_from_riot
@@ -226,6 +332,9 @@ class Api::V1::PlayersController < Api::V1::BaseController
         })
       end
 
+      update_data[:sync_status] = 'success'
+      update_data[:last_sync_at] = Time.current
+
       @player.update!(update_data)
 
       log_user_action(
@@ -242,12 +351,54 @@ class Api::V1::PlayersController < Api::V1::BaseController
 
     rescue StandardError => e
       Rails.logger.error "Riot API sync error: #{e.message}"
+
+      # Update sync status to error
+      @player.update(sync_status: 'error', last_sync_at: Time.current)
+
       render_error(
         message: "Failed to sync with Riot API: #{e.message}",
         code: 'RIOT_API_ERROR',
         status: :service_unavailable
       )
     end
+  end
+
+  def bulk_sync
+    status = params[:status] || 'active'
+
+    # Get players to sync
+    players = organization_scoped(Player).where(status: status)
+
+    if players.empty?
+      return render_error(
+        message: "No #{status} players found to sync",
+        code: 'NO_PLAYERS_FOUND',
+        status: :not_found
+      )
+    end
+
+    # Check if Riot API is configured
+    riot_api_key = ENV['RIOT_API_KEY']
+    unless riot_api_key.present?
+      return render_error(
+        message: 'Riot API key not configured',
+        code: 'RIOT_API_NOT_CONFIGURED',
+        status: :service_unavailable
+      )
+    end
+
+    # Queue all players for sync (mark as syncing)
+    players.update_all(sync_status: 'syncing')
+
+    # Perform sync in background
+    players.each do |player|
+      SyncPlayerFromRiotJob.perform_later(player.id)
+    end
+
+    render_success({
+      message: "#{players.count} players queued for sync",
+      players_count: players.count
+    })
   end
 
   private

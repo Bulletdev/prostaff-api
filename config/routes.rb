@@ -34,12 +34,18 @@ Rails.application.routes.draw do
         collection do
           get :stats
           post :import
+          post :bulk_sync
         end
         member do
           get :stats
           get :matches
           post :sync_from_riot
         end
+      end
+
+      # Riot Integration
+      scope :riot_integration, controller: 'riot_integration' do
+        get :sync_status
       end
 
       # Scouting

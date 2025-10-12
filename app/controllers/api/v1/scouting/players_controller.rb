@@ -10,6 +10,12 @@ class Api::V1::Scouting::PlayersController < Api::V1::BaseController
     targets = targets.by_priority(params[:priority]) if params[:priority].present?
     targets = targets.by_region(params[:region]) if params[:region].present?
 
+    # Age range filter
+    if params[:age_range].present? && params[:age_range].is_a?(Array)
+      min_age, max_age = params[:age_range]
+      targets = targets.where(age: min_age..max_age) if min_age && max_age
+    end
+
     # Special filters
     targets = targets.active if params[:active] == 'true'
     targets = targets.high_priority if params[:high_priority] == 'true'

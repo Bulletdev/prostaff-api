@@ -1,27 +1,35 @@
 class ScoutingTargetSerializer < Blueprinter::Base
   identifier :id
 
-  fields :summoner_name, :real_name, :role, :current_team,
-         :region, :nationality, :age, :status,
-         :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
-         :peak_tier, :peak_rank,
-         :riot_puuid, :riot_summoner_id,
-         :scouting_notes, :interest_level, :contacted,
-         :contact_notes, :availability, :salary_expectations,
-         :twitter_handle, :twitch_channel,
-         :last_sync_at, :created_at, :updated_at
+  fields :summoner_name, :role, :region, :status, :priority, :age
 
-  field :interest_level_text do |target|
-    case target.interest_level
-    when 1 then 'Low'
-    when 2 then 'Medium'
-    when 3 then 'High'
-    when 4 then 'Very High'
-    when 5 then 'Priority'
-    else 'Not Rated'
-    end
+  fields :riot_puuid
+
+  fields :current_tier, :current_rank, :current_lp
+
+  fields :champion_pool, :playstyle, :strengths, :weaknesses
+
+  fields :recent_performance, :performance_trend
+
+  fields :email, :phone, :discord_username, :twitter_handle
+
+  fields :notes, :metadata
+
+  fields :last_reviewed, :created_at, :updated_at
+
+  field :priority_text do |target|
+    target.priority&.titleize || 'Not Set'
+  end
+
+  field :status_text do |target|
+    target.status&.titleize || 'Watching'
+  end
+
+  field :current_rank_display do |target|
+    target.current_rank_display
   end
 
   association :organization, blueprint: OrganizationSerializer
   association :added_by, blueprint: UserSerializer
+  association :assigned_to, blueprint: UserSerializer
 end
