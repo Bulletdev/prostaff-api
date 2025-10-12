@@ -157,7 +157,7 @@ class Api::V1::PlayersController < Api::V1::BaseController
   end
 
   def import
-    summoner_name = params[:summoner_name]
+    summoner_name = params[:summoner_name]&.strip
     role = params[:role]
     region = params[:region] || 'br1'
 
@@ -166,7 +166,10 @@ class Api::V1::PlayersController < Api::V1::BaseController
       return render_error(
         message: 'Summoner name and role are required',
         code: 'MISSING_PARAMETERS',
-        status: :unprocessable_entity
+        status: :unprocessable_entity,
+        details: {
+          hint: 'Format: "GameName#TAG" or "GameName-TAG" (e.g., "Faker#KR1" or "Faker-KR1")'
+        }
       )
     end
 
@@ -200,11 +203,48 @@ class Api::V1::PlayersController < Api::V1::BaseController
     end
 
     begin
-      # Fetch summoner data from Riot API
-      summoner_data = fetch_summoner_by_name(summoner_name, region, riot_api_key)
+      # Try to fetch summoner data from Riot API with multiple tag variations
+      summoner_data = nil
+      game_name, tag_line = parse_riot_id(summoner_name, region)
+
+      # Try different tag variations
+      tag_variations = [
+        tag_line,                    # Original parsed tag (e.g., 'FLP' from 'veigh baby uhh-flp')
+        tag_line&.downcase,          # lowercase (e.g., 'flp')
+        tag_line&.upcase,            # UPPERCASE (e.g., 'FLP')
+        tag_line&.capitalize,        # Capitalized (e.g., 'Flp')
+        region.upcase,               # BR1
+        region[0..1].upcase,         # BR
+        'BR1', 'BRSL', 'BR', 'br1', 'LAS', 'LAN'  # Common tags
+      ].compact.uniq
+
+      last_error = nil
+      account_data = nil
+      tag_variations.each do |tag|
+        begin
+          Rails.logger.info "Trying Riot ID: #{game_name}##{tag}"
+          account_data = fetch_summoner_by_riot_id(game_name, tag, region, riot_api_key)
+
+          puuid = account_data['puuid']
+          summoner_data = fetch_summoner_by_puuid(puuid, region, riot_api_key)
+
+          summoner_name = "#{account_data['gameName']}##{account_data['tagLine']}"
+
+          Rails.logger.info "✅ Found player: #{summoner_name}"
+          break
+        rescue => e
+          last_error = e
+          Rails.logger.debug "Tag '#{tag}' failed: #{e.message}"
+          next
+        end
+      end
+
+      unless summoner_data
+        raise "Player not found. Tried: #{tag_variations.map { |t| "#{game_name}##{t}" }.join(', ')}. Original error: #{last_error&.message}"
+      end
+
       ranked_data = fetch_ranked_stats(summoner_data['puuid'], region, riot_api_key)
 
-      # Prepare player data
       player_data = {
         summoner_name: summoner_name,
         role: role,
@@ -218,7 +258,6 @@ class Api::V1::PlayersController < Api::V1::BaseController
         last_sync_at: Time.current
       }
 
-      # Add ranked stats if available
       solo_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
       if solo_queue
         player_data.merge!({
@@ -239,7 +278,6 @@ class Api::V1::PlayersController < Api::V1::BaseController
         })
       end
 
-      # Create player
       player = organization_scoped(Player).create!(player_data)
 
       log_user_action(
@@ -364,6 +402,104 @@ class Api::V1::PlayersController < Api::V1::BaseController
     end
   end
 
+  def search_riot_id
+    summoner_name = params[:summoner_name]&.strip
+    region = params[:region] || 'br1'
+
+    unless summoner_name.present?
+      return render_error(
+        message: 'Summoner name is required',
+        code: 'MISSING_PARAMETERS',
+        status: :unprocessable_entity
+      )
+    end
+
+    riot_api_key = ENV['RIOT_API_KEY']
+    unless riot_api_key.present?
+      return render_error(
+        message: 'Riot API key not configured',
+        code: 'RIOT_API_NOT_CONFIGURED',
+        status: :service_unavailable
+      )
+    end
+
+    begin
+      # Parse the summoner name
+      game_name, tag_line = parse_riot_id(summoner_name, region)
+
+      # If tagline was provided, try exact match first
+      if summoner_name.include?('#') || summoner_name.include?('-')
+        begin
+          summoner_data = fetch_summoner_by_riot_id(game_name, tag_line, region, riot_api_key)
+          return render_success({
+            found: true,
+            game_name: summoner_data['gameName'],
+            tag_line: summoner_data['tagLine'],
+            puuid: summoner_data['puuid'],
+            riot_id: "#{summoner_data['gameName']}##{summoner_data['tagLine']}"
+          })
+        rescue => e
+          Rails.logger.info "Exact match failed: #{e.message}"
+        end
+      end
+
+      # Try common tagline variations
+      common_tags = [
+        tag_line,                    # Original parsed tag
+        tag_line&.downcase,          # lowercase
+        tag_line&.upcase,            # UPPERCASE
+        tag_line&.capitalize,        # Capitalized
+        region.upcase,               # BR1
+        region[0..1].upcase,         # BR
+        'BR1', 'BRSL', 'BR', 'br1', 'LAS', 'LAN'  # Common tags
+      ].compact.uniq
+
+      results = []
+      common_tags.each do |tag|
+        begin
+          summoner_data = fetch_summoner_by_riot_id(game_name, tag, region, riot_api_key)
+          results << {
+            game_name: summoner_data['gameName'],
+            tag_line: summoner_data['tagLine'],
+            puuid: summoner_data['puuid'],
+            riot_id: "#{summoner_data['gameName']}##{summoner_data['tagLine']}"
+          }
+          break
+        rescue => e
+          Rails.logger.debug "Tag '#{tag}' not found: #{e.message}"
+          next
+        end
+      end
+
+      if results.any?
+        render_success({
+          found: true,
+          **results.first,
+          message: "Player found! Use this Riot ID: #{results.first[:riot_id]}"
+        })
+      else
+        render_error(
+          message: "Player not found. Tried game name '#{game_name}' with tags: #{common_tags.join(', ')}",
+          code: 'PLAYER_NOT_FOUND',
+          status: :not_found,
+          details: {
+            game_name: game_name,
+            tried_tags: common_tags,
+            hint: 'Please verify the exact Riot ID in the League client (Settings > Account > Riot ID)'
+          }
+        )
+      end
+
+    rescue StandardError => e
+      Rails.logger.error "Riot ID search error: #{e.message}"
+      render_error(
+        message: "Failed to search Riot ID: #{e.message}",
+        code: 'SEARCH_ERROR',
+        status: :service_unavailable
+      )
+    end
+  end
+
   def bulk_sync
     status = params[:status] || 'active'
 
@@ -406,6 +542,47 @@ class Api::V1::PlayersController < Api::V1::BaseController
 
   def set_player
     @player = organization_scoped(Player).find(params[:id])
+  end
+
+  def parse_riot_id(summoner_name, region)
+    if summoner_name.include?('#')
+      game_name, tag_line = summoner_name.split('#', 2)
+    elsif summoner_name.include?('-')
+      parts = summoner_name.rpartition('-')
+      game_name = parts[0]
+      tag_line = parts[2]
+    else
+      game_name = summoner_name
+      tag_line = nil
+    end
+
+    tag_line ||= region.upcase
+    tag_line = tag_line.strip.upcase if tag_line
+
+    [game_name, tag_line]
+  end
+  def riot_url_encode(string)
+    URI.encode_www_form_component(string).gsub('+', '%20')
+  end
+
+  def fetch_summoner_by_riot_id(game_name, tag_line, region, api_key)
+    require 'net/http'
+    require 'json'
+
+    account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{riot_url_encode(game_name)}/#{riot_url_encode(tag_line)}"
+    account_uri = URI(account_url)
+    account_request = Net::HTTP::Get.new(account_uri)
+    account_request['X-Riot-Token'] = api_key
+
+    account_response = Net::HTTP.start(account_uri.hostname, account_uri.port, use_ssl: true) do |http|
+      http.request(account_request)
+    end
+
+    unless account_response.is_a?(Net::HTTPSuccess)
+      raise "Not found: #{game_name}##{tag_line}"
+    end
+
+    JSON.parse(account_response.body)
   end
 
   def player_params
@@ -471,27 +648,61 @@ class Api::V1::PlayersController < Api::V1::BaseController
     require 'net/http'
     require 'json'
 
-    # Riot API v4 - Get summoner by name
-    # Note: Name must be URL encoded (game name + tagline)
-    # Example: "Player#BR1" should be split into gameName and tagLine
-    game_name, tag_line = summoner_name.split('#')
-    tag_line ||= region.upcase # Default tagline to region if not provided
+    # Parse the Riot ID
+    game_name, tag_line = parse_riot_id(summoner_name, region)
 
-    # First, get PUUID from Riot ID
-    account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{URI.encode_www_form_component(game_name)}/#{URI.encode_www_form_component(tag_line)}"
-    account_uri = URI(account_url)
-    account_request = Net::HTTP::Get.new(account_uri)
-    account_request['X-Riot-Token'] = api_key
+    # Try different tag variations (same as create_from_riot)
+    tag_variations = [
+      tag_line,                    # Original parsed tag
+      tag_line&.downcase,          # lowercase
+      tag_line&.upcase,            # UPPERCASE
+      tag_line&.capitalize,        # Capitalized
+      region.upcase,               # BR1
+      region[0..1].upcase,         # BR
+      'BR1', 'BRSL', 'BR', 'br1', 'LAS', 'LAN'  # Common tags
+    ].compact.uniq
 
-    account_response = Net::HTTP.start(account_uri.hostname, account_uri.port, use_ssl: true) do |http|
-      http.request(account_request)
+    last_error = nil
+    account_data = nil
+
+    tag_variations.each do |tag|
+      begin
+        Rails.logger.info "Trying Riot ID: #{game_name}##{tag}"
+
+        # First, get PUUID from Riot ID
+        account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{riot_url_encode(game_name)}/#{riot_url_encode(tag)}"
+        account_uri = URI(account_url)
+        account_request = Net::HTTP::Get.new(account_uri)
+        account_request['X-Riot-Token'] = api_key
+
+        account_response = Net::HTTP.start(account_uri.hostname, account_uri.port, use_ssl: true) do |http|
+          http.request(account_request)
+        end
+
+        if account_response.is_a?(Net::HTTPSuccess)
+          account_data = JSON.parse(account_response.body)
+          Rails.logger.info "✅ Found player: #{game_name}##{tag}"
+          break
+        else
+          Rails.logger.debug "Tag '#{tag}' failed: #{account_response.code}"
+          next
+        end
+      rescue => e
+        last_error = e
+        Rails.logger.debug "Tag '#{tag}' failed: #{e.message}"
+        next
+      end
     end
 
-    unless account_response.is_a?(Net::HTTPSuccess)
-      raise "Riot API Error: #{account_response.code} - #{account_response.body}"
+    unless account_data
+      # Log the attempted search for debugging
+      Rails.logger.error "Failed to find Riot ID after trying all variations"
+      Rails.logger.error "Tried tags: #{tag_variations.join(', ')}"
+
+      error_msg = "Player not found with Riot ID '#{game_name}'. Tried tags: #{tag_variations.map { |t| "#{game_name}##{t}" }.join(', ')}. Original error: #{last_error&.message}"
+      raise error_msg
     end
 
-    account_data = JSON.parse(account_response.body)
     puuid = account_data['puuid']
 
     # Now get summoner by PUUID
