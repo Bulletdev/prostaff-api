@@ -35,6 +35,7 @@ Rails.application.routes.draw do
           get :stats
           post :import
           post :bulk_sync
+          get :search_riot_id
         end
         member do
           get :stats
