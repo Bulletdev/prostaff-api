@@ -26,6 +26,11 @@ on:
   #   # Run smoke test nightly at 2am UTC
   #   - cron: '0 2 * * *'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 env:
   K6_VERSION: '0.47.0'
 
