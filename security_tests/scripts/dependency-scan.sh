@@ -4,7 +4,12 @@
 
 set -e
 
-REPORT_DIR="./security_tests/reports/dependency-check"
+# Find project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+REPORT_DIR="$PROJECT_ROOT/security_tests/reports/dependency-check"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 GREEN='\033[0;32m'

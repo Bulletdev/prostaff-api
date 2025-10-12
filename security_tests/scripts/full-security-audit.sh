@@ -3,6 +3,11 @@
 
 set -e
 
+# Find project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
@@ -11,7 +16,7 @@ NC='\033[0m'
 
 TARGET_URL=${1:-"http://localhost:3333"}
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-REPORT_DIR="./security_tests/reports/audit-${TIMESTAMP}"
+REPORT_DIR="$PROJECT_ROOT/security_tests/reports/audit-${TIMESTAMP}"
 
 mkdir -p "$REPORT_DIR"
 
@@ -38,16 +43,16 @@ echo -e "${GREEN}✅ API is running${NC}\n"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}[1/6] Running Brakeman (Rails Security Scanner)${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-./security_tests/scripts/brakeman-scan.sh
-cp security_tests/reports/brakeman/brakeman-*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
+"$SCRIPT_DIR/brakeman-scan.sh"
+cp "$PROJECT_ROOT/security_tests/reports/brakeman/brakeman-"*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
 echo ""
 
 # 2. Dependency Vulnerabilities
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}[2/6] Checking Dependencies for Vulnerabilities${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-./security_tests/scripts/dependency-scan.sh || true
-cp security_tests/reports/dependency-check/* "$REPORT_DIR/" 2>/dev/null || true
+"$SCRIPT_DIR/dependency-scan.sh" || true
+cp "$PROJECT_ROOT/security_tests/reports/dependency-check/"* "$REPORT_DIR/" 2>/dev/null || true
 echo ""
 
 # 3. Secret Detection
@@ -86,16 +91,16 @@ echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}[4/6] OWASP ZAP Baseline Scan${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-./security_tests/scripts/zap-baseline-scan.sh "$TARGET_URL" || true
-cp security_tests/reports/zap/baseline-scan-*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
+"$SCRIPT_DIR/zap-baseline-scan.sh" "$TARGET_URL" || true
+cp "$PROJECT_ROOT/security_tests/reports/zap/baseline-scan-"*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
 echo ""
 
 # 5. ZAP API Scan
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}[5/6] OWASP ZAP API Scan${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-./security_tests/scripts/zap-api-scan.sh "$TARGET_URL" "${TARGET_URL}/api-docs/v1/swagger.json" || true
-cp security_tests/reports/zap/api-scan-*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
+"$SCRIPT_DIR/zap-api-scan.sh" "$TARGET_URL" "${TARGET_URL}/api-docs/v1/swagger.json" || true
+cp "$PROJECT_ROOT/security_tests/reports/zap/api-scan-"*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
 echo ""
 
 # 6. Security Headers Check
