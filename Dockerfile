@@ -31,8 +31,8 @@ COPY . .
 RUN groupadd -g 1000 app && \
     useradd -u 1000 -g app -m -s /bin/bash app
 
-# Change ownership of the app directory
-RUN chown -R app:app /app
+# Change ownership of the app directory and bundle directory
+RUN chown -R app:app /app /usr/local/bundle
 
 # Switch to the app user
 USER app
