@@ -109,8 +109,11 @@ class Api::V1::DashboardController < Api::V1::BaseController
   def roster_status_data
     players = organization_scoped(Player).includes(:champion_pools)
 
+    # Order by role to ensure consistent order in by_role hash
+    by_role_ordered = players.ordered_by_role.group(:role).count
+
     {
-      by_role: players.group(:role).count,
+      by_role: by_role_ordered,
       by_status: players.group(:status).count,
       contracts_expiring: players.contracts_expiring_soon.count
     }
