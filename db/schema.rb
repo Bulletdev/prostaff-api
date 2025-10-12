@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_12_022035) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_12_033201) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -225,6 +225,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_12_022035) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "sync_status"
+    t.string "region"
     t.index ["organization_id", "role"], name: "index_players_on_org_and_role"
     t.index ["organization_id", "status"], name: "idx_players_org_status"
     t.index ["organization_id", "status"], name: "index_players_on_org_and_status"

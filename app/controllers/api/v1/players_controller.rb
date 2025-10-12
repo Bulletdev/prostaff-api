@@ -202,12 +202,13 @@ class Api::V1::PlayersController < Api::V1::BaseController
     begin
       # Fetch summoner data from Riot API
       summoner_data = fetch_summoner_by_name(summoner_name, region, riot_api_key)
-      ranked_data = fetch_ranked_stats(summoner_data['id'], region, riot_api_key)
+      ranked_data = fetch_ranked_stats(summoner_data['puuid'], region, riot_api_key)
 
       # Prepare player data
       player_data = {
         summoner_name: summoner_name,
         role: role,
+        region: region,
         status: 'active',
         riot_puuid: summoner_data['puuid'],
         riot_summoner_id: summoner_data['id'],
@@ -302,8 +303,8 @@ class Api::V1::PlayersController < Api::V1::BaseController
         summoner_data = fetch_summoner_by_name(@player.summoner_name, region, riot_api_key)
       end
 
-      # Get ranked stats
-      ranked_data = fetch_ranked_stats(summoner_data['id'], region, riot_api_key)
+      # Get ranked stats using PUUID
+      ranked_data = fetch_ranked_stats(summoner_data['puuid'], region, riot_api_key)
 
       # Update player with fresh data
       update_data = {
@@ -411,7 +412,7 @@ class Api::V1::PlayersController < Api::V1::BaseController
     # :role refers to in-game position (top/jungle/mid/adc/support), not user role
     # nosemgrep
     params.require(:player).permit(
-      :summoner_name, :real_name, :role, :status, :jersey_number,
+      :summoner_name, :real_name, :role, :region, :status, :jersey_number,
       :birth_date, :country, :nationality,
       :contract_start_date, :contract_end_date,
       :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
@@ -517,11 +518,12 @@ class Api::V1::PlayersController < Api::V1::BaseController
     JSON.parse(response.body)
   end
 
-  def fetch_ranked_stats(summoner_id, region, api_key)
+  def fetch_ranked_stats(puuid, region, api_key)
     require 'net/http'
     require 'json'
 
-    url = "https://#{region}.api.riotgames.com/lol/league/v4/entries/by-summoner/#{summoner_id}"
+    # Riot API v4 now uses PUUID instead of summoner ID
+    url = "https://#{region}.api.riotgames.com/lol/league/v4/entries/by-puuid/#{puuid}"
     uri = URI(url)
     request = Net::HTTP::Get.new(uri)
     request['X-Riot-Token'] = api_key
