@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_07_011315) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_12_022035) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -224,6 +224,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_07_011315) do
     t.datetime "last_sync_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "sync_status"
     t.index ["organization_id", "role"], name: "index_players_on_org_and_role"
     t.index ["organization_id", "status"], name: "idx_players_org_status"
     t.index ["organization_id", "status"], name: "index_players_on_org_and_status"
@@ -298,6 +299,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_07_011315) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "age"
     t.index ["added_by_id"], name: "index_scouting_targets_on_added_by_id"
     t.index ["assigned_to_id"], name: "index_scouting_targets_on_assigned_to_id"
     t.index ["organization_id"], name: "index_scouting_targets_on_organization_id"
