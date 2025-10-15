@@ -2,17 +2,17 @@ class Api::V1::VodReviewsController < Api::V1::BaseController
   before_action :set_vod_review, only: [:show, :update, :destroy]
 
   def index
-    vod_reviews = organization_scoped(VodReview).includes(:match, :reviewed_by)
+    authorize VodReview
+    vod_reviews = organization_scoped(VodReview).includes(:match, :reviewer)
 
     # Apply filters
     vod_reviews = vod_reviews.where(status: params[:status]) if params[:status].present?
-    vod_reviews = vod_reviews.where(vod_platform: params[:platform]) if params[:platform].present?
 
     # Match filter
     vod_reviews = vod_reviews.where(match_id: params[:match_id]) if params[:match_id].present?
 
     # Reviewed by filter
-    vod_reviews = vod_reviews.where(reviewed_by_id: params[:reviewed_by_id]) if params[:reviewed_by_id].present?
+    vod_reviews = vod_reviews.where(reviewer_id: params[:reviewer_id]) if params[:reviewer_id].present?
 
     # Search by title
     if params[:search].present?
@@ -35,6 +35,7 @@ class Api::V1::VodReviewsController < Api::V1::BaseController
   end
 
   def show
+    authorize @vod_review
     vod_review_data = VodReviewSerializer.render_as_hash(@vod_review)
     timestamps = VodTimestampSerializer.render_as_hash(
       @vod_review.vod_timestamps.includes(:target_player, :created_by).order(:timestamp_seconds)
@@ -47,9 +48,10 @@ class Api::V1::VodReviewsController < Api::V1::BaseController
   end
 
   def create
+    authorize VodReview
     vod_review = organization_scoped(VodReview).new(vod_review_params)
     vod_review.organization = current_organization
-    vod_review.reviewed_by = current_user
+    vod_review.reviewer = current_user
 
     if vod_review.save
       log_user_action(
@@ -73,6 +75,7 @@ class Api::V1::VodReviewsController < Api::V1::BaseController
   end
 
   def update
+    authorize @vod_review
     old_values = @vod_review.attributes.dup
 
     if @vod_review.update(vod_review_params)
@@ -98,6 +101,7 @@ class Api::V1::VodReviewsController < Api::V1::BaseController
   end
 
   def destroy
+    authorize @vod_review
     if @vod_review.destroy
       log_user_action(
         action: 'delete',
@@ -124,8 +128,10 @@ class Api::V1::VodReviewsController < Api::V1::BaseController
 
   def vod_review_params
     params.require(:vod_review).permit(
-      :title, :vod_url, :vod_platform, :game_start_timestamp,
-      :status, :notes, :match_id
+      :title, :description, :review_type, :review_date,
+      :video_url, :thumbnail_url, :duration,
+      :status, :is_public, :match_id,
+      tags: [], shared_with_players: []
     )
   end
 end
