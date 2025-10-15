@@ -47,6 +47,7 @@ gem "blueprinter"
 
 # Background jobs
 gem "sidekiq", "~> 7.0"
+gem "sidekiq-scheduler"
 
 # Environment variables
 gem "dotenv-rails"

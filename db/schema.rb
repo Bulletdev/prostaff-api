@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_12_033201) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_15_204948) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -129,6 +129,21 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_12_033201) do
     t.index ["region"], name: "index_organizations_on_region"
     t.index ["slug"], name: "index_organizations_on_slug", unique: true
     t.index ["subscription_plan"], name: "index_organizations_on_subscription_plan"
+  end
+
+  create_table "password_reset_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "token", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_password_reset_tokens_on_expires_at"
+    t.index ["token"], name: "index_password_reset_tokens_on_token", unique: true
+    t.index ["user_id", "used_at"], name: "index_password_reset_tokens_on_user_id_and_used_at"
+    t.index ["user_id"], name: "index_password_reset_tokens_on_user_id"
   end
 
   create_table "player_match_stats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -338,6 +353,15 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_12_033201) do
     t.index ["status"], name: "index_team_goals_on_status"
   end
 
+  create_table "token_blacklists", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "jti", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_token_blacklists_on_expires_at"
+    t.index ["jti"], name: "index_token_blacklists_on_jti", unique: true
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "email", null: false
@@ -410,6 +434,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_12_033201) do
   add_foreign_key "audit_logs", "users"
   add_foreign_key "champion_pools", "players"
   add_foreign_key "matches", "organizations"
+  add_foreign_key "password_reset_tokens", "users"
   add_foreign_key "player_match_stats", "matches"
   add_foreign_key "player_match_stats", "players"
   add_foreign_key "players", "organizations"

@@ -21,6 +21,8 @@ module Api
             user_agent: request.user_agent
           )
 
+          UserMailer.welcome(user).deliver_later
+
           render_created(
             {
               user: JSON.parse(UserSerializer.render(user)),
@@ -44,7 +46,6 @@ module Api
           tokens = Authentication::Services::JwtService.generate_tokens(user)
           user.update_last_login!
 
-          # Log audit action with user's organization
           AuditLog.create!(
             organization: user.organization,
             user: user,
@@ -98,8 +99,9 @@ module Api
 
       # POST /api/v1/auth/logout
       def logout
-        # For JWT, we don't need to do anything server-side for logout
-        # The client should remove the token
+        # Blacklist the current access token
+        token = request.headers['Authorization']&.split(' ')&.last
+        Authentication::Services::JwtService.blacklist_token(token) if token
 
         log_user_action(
           action: 'logout',
@@ -125,11 +127,12 @@ module Api
         user = User.find_by(email: email)
 
         if user
-          # Generate password reset token
-          reset_token = generate_reset_token(user)
+          reset_token = user.password_reset_tokens.create!(
+            ip_address: request.remote_ip,
+            user_agent: request.user_agent
+          )
 
-          # Here you would send an email with the reset token
-          # For now, we'll just return success
+          UserMailer.password_reset(user, reset_token).deliver_later
 
           AuditLog.create!(
             organization: user.organization,
@@ -142,7 +145,6 @@ module Api
           )
         end
 
-        # Always return success to prevent email enumeration
         render_success(
           {},
           message: 'If the email exists, a password reset link has been sent'
@@ -171,10 +173,15 @@ module Api
           )
         end
 
-        user = verify_reset_token(token)
+        reset_token = PasswordResetToken.valid.find_by(token: token)
 
-        if user
+        if reset_token
+          user = reset_token.user
           user.update!(password: new_password)
+
+          reset_token.mark_as_used!
+
+          UserMailer.password_reset_confirmation(user).deliver_later
 
           AuditLog.create!(
             organization: user.organization,
@@ -237,31 +244,6 @@ module Api
         params.require(:user).permit(:email, :password, :full_name, :timezone, :language)
       end
 
-      def generate_reset_token(user)
-        # In a real app, you'd store this token in the database or Redis
-        # For now, we'll use JWT with a short expiration
-        payload = {
-          user_id: user.id,
-          type: 'password_reset',
-          exp: 1.hour.from_now.to_i,
-          iat: Time.current.to_i
-        }
-
-        JWT.encode(payload, Authentication::Services::JwtService::SECRET_KEY, 'HS256')
-      end
-
-      def verify_reset_token(token)
-        begin
-          decoded = JWT.decode(token, Authentication::Services::JwtService::SECRET_KEY, true, { algorithm: 'HS256' })
-          payload = HashWithIndifferentAccess.new(decoded[0])
-
-          return nil unless payload[:type] == 'password_reset'
-
-          User.find(payload[:user_id])
-        rescue JWT::DecodeError, JWT::ExpiredSignature, ActiveRecord::RecordNotFound
-          nil
-        end
-      end
     end
   end
 end

@@ -1,0 +1,27 @@
+---
+# Sidekiq Configuration File
+
+:concurrency: 5
+:timeout: 25
+:verbose: true
+:queues:
+  - default
+  - mailers
+  - critical
+  - high
+  - low
+
+# Sidekiq Scheduler Configuration
+:schedule:
+  # Cleanup expired tokens daily at 2 AM
+  cleanup_expired_tokens:
+    cron: '0 2 * * *'
+    class: CleanupExpiredTokensJob
+    description: 'Clean up expired password reset tokens and blacklisted JWT tokens'
+
+  # Additional scheduled jobs can be added here
+  # Example:
+  # sync_riot_data:
+  #   every: '30m'
+  #   class: SyncRiotDataJob
+  #   description: 'Sync player data from Riot API'

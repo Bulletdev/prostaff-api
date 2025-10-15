@@ -6,7 +6,7 @@ module Authentication
 
       class << self
         def encode(payload)
-          # Add expiration and issued at time
+          payload[:jti] ||= SecureRandom.uuid
           payload[:exp] = EXPIRATION_HOURS.hours.from_now.to_i
           payload[:iat] = Time.current.to_i
 
@@ -15,7 +15,13 @@ module Authentication
 
         def decode(token)
           decoded = JWT.decode(token, SECRET_KEY, true, { algorithm: 'HS256' })
-          HashWithIndifferentAccess.new(decoded[0])
+          payload = HashWithIndifferentAccess.new(decoded[0])
+
+          if payload[:jti].present? && TokenBlacklist.blacklisted?(payload[:jti])
+            raise AuthenticationError, 'Token has been revoked'
+          end
+
+          payload
         rescue JWT::DecodeError => e
           raise AuthenticationError, "Invalid token: #{e.message}"
         rescue JWT::ExpiredSignature
@@ -23,7 +29,11 @@ module Authentication
         end
 
         def generate_tokens(user)
+          access_jti = SecureRandom.uuid
+          refresh_jti = SecureRandom.uuid
+
           access_payload = {
+            jti: access_jti,
             user_id: user.id,
             organization_id: user.organization_id,
             role: user.role,
@@ -32,6 +42,7 @@ module Authentication
           }
 
           refresh_payload = {
+            jti: refresh_jti,
             user_id: user.id,
             organization_id: user.organization_id,
             type: 'refresh',
@@ -53,7 +64,14 @@ module Authentication
 
           raise AuthenticationError, 'Invalid refresh token' unless payload[:type] == 'refresh'
 
+          if payload[:jti].present? && TokenBlacklist.blacklisted?(payload[:jti])
+            raise AuthenticationError, 'Refresh token has been revoked'
+          end
+
           user = User.find(payload[:user_id])
+
+          blacklist_token(refresh_token)
+
           generate_tokens(user)
         rescue JWT::DecodeError => e
           raise AuthenticationError, "Invalid refresh token: #{e.message}"
@@ -68,6 +86,20 @@ module Authentication
           User.find(payload[:user_id])
         rescue ActiveRecord::RecordNotFound
           raise AuthenticationError, 'User not found'
+        end
+
+        def blacklist_token(token)
+          decoded = JWT.decode(token, SECRET_KEY, true, { algorithm: 'HS256' })
+          payload = HashWithIndifferentAccess.new(decoded[0])
+
+          return unless payload[:jti].present?
+
+          expires_at = Time.at(payload[:exp]) if payload[:exp]
+          expires_at ||= EXPIRATION_HOURS.hours.from_now
+
+          TokenBlacklist.add_to_blacklist(payload[:jti], expires_at)
+        rescue JWT::DecodeError, JWT::ExpiredSignature
+          nil
         end
       end
 
