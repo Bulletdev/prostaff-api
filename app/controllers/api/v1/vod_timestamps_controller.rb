@@ -3,6 +3,7 @@ class Api::V1::VodTimestampsController < Api::V1::BaseController
   before_action :set_vod_timestamp, only: [:update, :destroy]
 
   def index
+    authorize @vod_review, :show?
     timestamps = @vod_review.vod_timestamps
                  .includes(:target_player, :created_by)
                  .order(:timestamp_seconds)
@@ -18,6 +19,7 @@ class Api::V1::VodTimestampsController < Api::V1::BaseController
   end
 
   def create
+    authorize @vod_review, :update?
     timestamp = @vod_review.vod_timestamps.new(vod_timestamp_params)
     timestamp.created_by = current_user
 
@@ -43,6 +45,7 @@ class Api::V1::VodTimestampsController < Api::V1::BaseController
   end
 
   def update
+    authorize @timestamp.vod_review, :update?
     old_values = @timestamp.attributes.dup
 
     if @timestamp.update(vod_timestamp_params)
@@ -68,6 +71,7 @@ class Api::V1::VodTimestampsController < Api::V1::BaseController
   end
 
   def destroy
+    authorize @timestamp.vod_review, :update?
     if @timestamp.destroy
       log_user_action(
         action: 'delete',
@@ -101,7 +105,7 @@ class Api::V1::VodTimestampsController < Api::V1::BaseController
   def vod_timestamp_params
     params.require(:vod_timestamp).permit(
       :timestamp_seconds, :category, :importance,
-      :title, :description, :target_player_id
+      :title, :description, :target_type, :target_player_id
     )
   end
 end
