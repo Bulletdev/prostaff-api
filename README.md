@@ -156,11 +156,13 @@ end
     MatchModel[Match Model] --> PostgreSQL
     NotificationModel[Notification Model] --> PostgreSQL
     OrganizationModel[Organization Model] --> PostgreSQL
+    PasswordResetTokenModel[PasswordResetToken Model] --> PostgreSQL
     PlayerModel[Player Model] --> PostgreSQL
     PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
     ScheduleModel[Schedule Model] --> PostgreSQL
     ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
     TeamGoalModel[TeamGoal Model] --> PostgreSQL
+    TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
     UserModel[User Model] --> PostgreSQL
     VodReviewModel[VodReview Model] --> PostgreSQL
     VodTimestampModel[VodTimestamp Model] --> PostgreSQL
