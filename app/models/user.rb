@@ -12,6 +12,7 @@ class User < ApplicationRecord
   has_many :created_goals, class_name: 'TeamGoal', foreign_key: 'created_by_id', dependent: :nullify
   has_many :notifications, dependent: :destroy
   has_many :audit_logs, dependent: :destroy
+  has_many :password_reset_tokens, dependent: :destroy
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
