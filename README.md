@@ -66,6 +66,33 @@ subgraph "Authentication Module"
     JWTService[JWT Service]
     UserModel[User Model]
 end
+subgraph "Analytics Module"
+    AnalyticsController[Analytics Controller]
+end
+subgraph "Dashboard Module"
+    DashboardController[Dashboard Controller]
+end
+subgraph "Matches Module"
+    MatchesController[Matches Controller]
+end
+subgraph "Players Module"
+    PlayersController[Players Controller]
+end
+subgraph "Riot_integration Module"
+    Riot_integrationController[Riot_integration Controller]
+end
+subgraph "Schedules Module"
+    SchedulesController[Schedules Controller]
+end
+subgraph "Scouting Module"
+    ScoutingController[Scouting Controller]
+end
+subgraph "Team_goals Module"
+    Team_goalsController[Team_goals Controller]
+end
+subgraph "Vod_reviews Module"
+    Vod_reviewsController[Vod_reviews Controller]
+end
 subgraph "Dashboard Module"
     DashboardController[Dashboard Controller]
     DashStats[Statistics Service]
