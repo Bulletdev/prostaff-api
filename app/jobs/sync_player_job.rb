@@ -148,12 +148,6 @@ class SyncPlayerJob < ApplicationJob
   end
 
   def load_champion_id_map
-    # This is a simplified version. In production, you would load this from Data Dragon
-    # or cache it in Redis
-    Rails.cache.fetch('riot:champion_id_map', expires_in: 1.week) do
-      # Fetch from Data Dragon API or use a static file
-      # For now, return an empty hash
-      {}
-    end
+    DataDragonService.new.champion_id_map
   end
 end

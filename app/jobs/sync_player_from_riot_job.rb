@@ -20,7 +20,8 @@ class SyncPlayerFromRiotJob < ApplicationJob
     end
 
     begin
-      region = 'br1' # TODO: Make this configurable per player
+      # Use player's region or default to BR1
+      region = player.region.presence&.downcase || 'br1'
 
       # Fetch summoner data
       if player.riot_puuid.present?

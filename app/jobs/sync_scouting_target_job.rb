@@ -108,8 +108,6 @@ class SyncScoutingTargetJob < ApplicationJob
   end
 
   def load_champion_id_map
-    Rails.cache.fetch('riot:champion_id_map', expires_in: 1.week) do
-      {}
-    end
+    DataDragonService.new.champion_id_map
   end
 end
