@@ -26,7 +26,9 @@ class SyncPlayerFromRiotJob < ApplicationJob
         summoner_data = fetch_summoner_by_name(player.summoner_name, region, riot_api_key)
       end
 
-      ranked_data = fetch_ranked_stats(summoner_data['id'], region, riot_api_key)
+      # Use PUUID for league endpoint (workaround for Riot API bug where summoner_data['id'] is nil)
+      # See: https://github.com/RiotGames/developer-relations/issues/1092
+      ranked_data = fetch_ranked_stats_by_puuid(player.riot_puuid, region, riot_api_key)
 
       update_data = {
         riot_puuid: summoner_data['puuid'],
@@ -122,6 +124,26 @@ class SyncPlayerFromRiotJob < ApplicationJob
     require 'json'
 
     url = "https://#{region}.api.riotgames.com/lol/league/v4/entries/by-summoner/#{summoner_id}"
+    uri = URI(url)
+    request = Net::HTTP::Get.new(uri)
+    request['X-Riot-Token'] = api_key
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+      http.request(request)
+    end
+
+    unless response.is_a?(Net::HTTPSuccess)
+      raise "Riot API Error: #{response.code} - #{response.body}"
+    end
+
+    JSON.parse(response.body)
+  end
+
+  def fetch_ranked_stats_by_puuid(puuid, region, api_key)
+    require 'net/http'
+    require 'json'
+
+    url = "https://#{region}.api.riotgames.com/lol/league/v4/entries/by-puuid/#{puuid}"
     uri = URI(url)
     request = Net::HTTP::Get.new(uri)
     request['X-Riot-Token'] = api_key

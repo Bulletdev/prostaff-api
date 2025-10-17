@@ -67,7 +67,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: bundle exec sidekiq
+    command: bundle exec sidekiq -C config/sidekiq.yml
 
 volumes:
   postgres_data:
