@@ -38,7 +38,7 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
       avg_deaths_per_game: stats.average(:deaths)&.round(1),
       avg_assists_per_game: stats.average(:assists)&.round(1),
       avg_gold_per_game: stats.average(:gold_earned)&.round(0),
-      avg_damage_per_game: stats.average(:total_damage_dealt)&.round(0),
+      avg_damage_per_game: stats.average(:damage_dealt_total)&.round(0),
       avg_vision_score: stats.average(:vision_score)&.round(1)
     }
   end
@@ -70,7 +70,7 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
       'AVG(player_match_stats.deaths) as avg_deaths',
       'AVG(player_match_stats.assists) as avg_assists',
       'AVG(player_match_stats.gold_earned) as avg_gold',
-      'AVG(player_match_stats.total_damage_dealt) as avg_damage',
+      'AVG(player_match_stats.damage_dealt_total) as avg_damage',
       'AVG(player_match_stats.vision_score) as avg_vision'
     ).map do |stat|
       {

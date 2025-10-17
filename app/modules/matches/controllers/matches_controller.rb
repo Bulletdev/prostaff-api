@@ -1,5 +1,9 @@
-class Api::V1::MatchesController < Api::V1::BaseController
-  before_action :set_match, only: [:show, :update, :destroy, :stats]
+# frozen_string_literal: true
+
+module Matches
+  module Controllers
+    class MatchesController < Api::V1::BaseController
+      before_action :set_match, only: [:show, :update, :destroy, :stats]
 
   def index
     matches = organization_scoped(Match).includes(:player_match_stats, :players)
@@ -255,5 +259,7 @@ class Api::V1::MatchesController < Api::V1::BaseController
 
     deaths = total_deaths.zero? ? 1 : total_deaths
     ((total_kills + total_assists).to_f / deaths).round(2)
+      end
+    end
   end
 end
