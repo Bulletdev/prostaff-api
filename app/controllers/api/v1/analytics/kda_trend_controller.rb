@@ -4,7 +4,7 @@ class Api::V1::Analytics::KdaTrendController < Api::V1::BaseController
 
     # Get recent matches for the player
     stats = PlayerMatchStat.joins(:match)
-                          .where(player: player, match: { organization: current_organization })
+                          .where(player: player, matches: { organization_id: current_organization.id })
                           .order('matches.game_start DESC')
                           .limit(50)
                           .includes(:match)

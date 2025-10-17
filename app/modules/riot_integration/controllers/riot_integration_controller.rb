@@ -1,5 +1,9 @@
-class Api::V1::RiotIntegrationController < Api::V1::BaseController
-  def sync_status
+# frozen_string_literal: true
+
+module RiotIntegration
+  module Controllers
+    class RiotIntegrationController < Api::V1::BaseController
+      def sync_status
     players = organization_scoped(Player)
 
     total_players = players.count
@@ -36,6 +40,8 @@ class Api::V1::RiotIntegrationController < Api::V1::BaseController
         needs_sync: needs_sync
       },
       recent_syncs: recent_syncs
-    })
+        })
+      end
+    end
   end
 end
