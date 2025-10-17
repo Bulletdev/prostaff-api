@@ -40,7 +40,9 @@ RSpec.configure do |config|
   # Include request helpers
   config.include RequestSpecHelper, type: :request
 
-  # Database cleaner
+  # Database cleaner - allow remote URLs for test environment
+  DatabaseCleaner.allow_remote_database_url = true
+
   config.before(:suite) do
     DatabaseCleaner.clean_with(:truncation)
   end
@@ -59,9 +61,14 @@ RSpec.configure do |config|
 end
 
 # Shoulda Matchers configuration
-Shoulda::Matchers.configure do |config|
-  config.integrate do |with|
-    with.test_framework :rspec
-    with.library :rails
+begin
+  require 'shoulda/matchers'
+  Shoulda::Matchers.configure do |config|
+    config.integrate do |with|
+      with.test_framework :rspec
+      with.library :rails
+    end
   end
+rescue LoadError
+  # Shoulda matchers not available
 end

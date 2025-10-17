@@ -49,6 +49,18 @@ Rails.application.routes.draw do
         get :sync_status
       end
 
+      # Riot Data (Data Dragon)
+      scope 'riot-data', controller: 'riot_data' do
+        get 'champions', to: 'riot_data#champions'
+        get 'champions/:champion_key', to: 'riot_data#champion_details'
+        get 'all-champions', to: 'riot_data#all_champions'
+        get 'items', to: 'riot_data#items'
+        get 'summoner-spells', to: 'riot_data#summoner_spells'
+        get 'version', to: 'riot_data#version'
+        post 'clear-cache', to: 'riot_data#clear_cache'
+        post 'update-cache', to: 'riot_data#update_cache'
+      end
+
       # Scouting
       namespace :scouting do
         resources :players do
