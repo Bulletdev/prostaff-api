@@ -141,11 +141,15 @@ class RiotApiService
   end
 
   def platform_for_region(region)
-    REGIONS.dig(region.upcase, :platform) || raise(RiotApiError, "Unknown region: #{region}")
+    # Handle both 'BR' and 'br1' formats
+    clean_region = region.to_s.upcase.gsub(/\d+/, '')
+    REGIONS.dig(clean_region, :platform) || raise(RiotApiError, "Unknown region: #{region}")
   end
 
   def regional_route_for_region(region)
-    REGIONS.dig(region.upcase, :region) || raise(RiotApiError, "Unknown region: #{region}")
+    # Handle both 'BR' and 'br1' formats
+    clean_region = region.to_s.upcase.gsub(/\d+/, '')
+    REGIONS.dig(clean_region, :region) || raise(RiotApiError, "Unknown region: #{region}")
   end
 
   def parse_summoner_response(response)

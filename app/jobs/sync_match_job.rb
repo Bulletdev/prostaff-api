@@ -45,16 +45,25 @@ class SyncMatchJob < ApplicationJob
       game_start: match_data[:game_creation],
       game_end: match_data[:game_creation] + match_data[:game_duration].seconds,
       game_duration: match_data[:game_duration],
-      patch_version: match_data[:game_version],
+      game_version: match_data[:game_version],
       victory: determine_team_victory(match_data[:participants], organization)
     )
   end
 
   def create_player_match_stats(match, participants, organization)
+    Rails.logger.info "Creating stats for #{participants.count} participants"
+    created_count = 0
+
     participants.each do |participant_data|
       # Find player by PUUID
       player = organization.players.find_by(riot_puuid: participant_data[:puuid])
-      next unless player
+
+      if player.nil?
+        Rails.logger.debug "Participant PUUID #{participant_data[:puuid][0..20]}... not found in organization"
+        next
+      end
+
+      Rails.logger.info "Creating stat for player: #{player.summoner_name}"
 
       PlayerMatchStat.create!(
         match: match,
@@ -65,22 +74,25 @@ class SyncMatchJob < ApplicationJob
         deaths: participant_data[:deaths],
         assists: participant_data[:assists],
         gold_earned: participant_data[:gold_earned],
-        total_damage_dealt: participant_data[:total_damage_dealt],
-        total_damage_taken: participant_data[:total_damage_taken],
-        minions_killed: participant_data[:minions_killed],
-        jungle_minions_killed: participant_data[:neutral_minions_killed],
+        damage_dealt_champions: participant_data[:total_damage_dealt],
+        damage_dealt_total: participant_data[:total_damage_dealt],
+        damage_taken: participant_data[:total_damage_taken],
+        cs: participant_data[:minions_killed].to_i + participant_data[:neutral_minions_killed].to_i,
         vision_score: participant_data[:vision_score],
         wards_placed: participant_data[:wards_placed],
-        wards_killed: participant_data[:wards_killed],
-        champion_level: participant_data[:champion_level],
-        first_blood_kill: participant_data[:first_blood_kill],
+        wards_destroyed: participant_data[:wards_killed],
+        first_blood: participant_data[:first_blood_kill],
         double_kills: participant_data[:double_kills],
         triple_kills: participant_data[:triple_kills],
         quadra_kills: participant_data[:quadra_kills],
         penta_kills: participant_data[:penta_kills],
         performance_score: calculate_performance_score(participant_data)
       )
+      created_count += 1
+      Rails.logger.info "Stat created successfully for #{player.summoner_name}"
     end
+
+    Rails.logger.info "Created #{created_count} player match stats"
   end
 
   def determine_match_type(game_mode)

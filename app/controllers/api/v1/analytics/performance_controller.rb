@@ -7,6 +7,15 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
     # Date range filter
     if params[:start_date].present? && params[:end_date].present?
       matches = matches.in_date_range(params[:start_date], params[:end_date])
+    elsif params[:time_period].present?
+      # Handle time_period parameter from frontend
+      days = case params[:time_period]
+             when 'week' then 7
+             when 'month' then 30
+             when 'season' then 90
+             else 30
+             end
+      matches = matches.where('game_start >= ?', days.days.ago)
     else
       matches = matches.recent(30) # Default to last 30 days
     end
@@ -18,6 +27,14 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
       best_performers: identify_best_performers(players, matches),
       match_type_breakdown: calculate_match_type_breakdown(matches)
     }
+
+    # Add individual player stats if player_id is provided
+    if params[:player_id].present?
+      player = organization_scoped(Player).find_by(id: params[:player_id])
+      if player
+        performance_data[:player_stats] = calculate_player_stats(player, matches)
+      end
+    end
 
     render_success(performance_data)
   end
@@ -134,5 +151,51 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
 
     deaths = total_deaths.zero? ? 1 : total_deaths
     ((total_kills + total_assists).to_f / deaths).round(2)
+  end
+
+  def calculate_player_stats(player, matches)
+    stats = PlayerMatchStat.where(player: player, match: matches)
+
+    return nil if stats.empty?
+
+    total_kills = stats.sum(:kills)
+    total_deaths = stats.sum(:deaths)
+    total_assists = stats.sum(:assists)
+    games_played = stats.count
+
+    # Calculate win rate as decimal (0-1) for frontend
+    wins = stats.joins(:match).where(matches: { victory: true }).count
+    win_rate = games_played.zero? ? 0.0 : (wins.to_f / games_played)
+
+    # Calculate KDA
+    deaths = total_deaths.zero? ? 1 : total_deaths
+    kda = ((total_kills + total_assists).to_f / deaths).round(2)
+
+    # Calculate CS per min
+    total_cs = stats.sum(:cs)
+    total_duration = matches.where(id: stats.pluck(:match_id)).sum(:game_duration)
+    cs_per_min = total_duration.zero? ? 0.0 : (total_cs.to_f / (total_duration / 60.0)).round(1)
+
+    # Calculate gold per min
+    total_gold = stats.sum(:gold_earned)
+    gold_per_min = total_duration.zero? ? 0.0 : (total_gold.to_f / (total_duration / 60.0)).round(0)
+
+    # Calculate vision score
+    vision_score = stats.average(:vision_score)&.round(1) || 0.0
+
+    {
+      player_id: player.id,
+      summoner_name: player.summoner_name,
+      games_played: games_played,
+      win_rate: win_rate,
+      kda: kda,
+      cs_per_min: cs_per_min,
+      gold_per_min: gold_per_min,
+      vision_score: vision_score,
+      damage_share: 0.0, # Would need total team damage to calculate
+      avg_kills: (total_kills.to_f / games_played).round(1),
+      avg_deaths: (total_deaths.to_f / games_played).round(1),
+      avg_assists: (total_assists.to_f / games_played).round(1)
+    }
   end
 end
