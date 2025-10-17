@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Authentication
   module Controllers
     class AuthController < Api::V1::BaseController
@@ -10,18 +12,22 @@ module Authentication
           user = create_user!(organization)
           tokens = Authentication::Services::JwtService.generate_tokens(user)
 
-          log_user_action(
+          AuditLog.create!(
+            organization: organization,
+            user: user,
             action: 'register',
             entity_type: 'User',
-            entity_id: user.id
+            entity_id: user.id,
+            ip_address: request.remote_ip,
+            user_agent: request.user_agent
           )
 
           UserMailer.welcome(user).deliver_later
 
           render_created(
             {
-              user: UserSerializer.new(user).serializable_hash[:data][:attributes],
-              organization: OrganizationSerializer.new(organization).serializable_hash[:data][:attributes],
+              user: JSON.parse(UserSerializer.render(user)),
+              organization: JSON.parse(OrganizationSerializer.render(organization)),
               **tokens
             },
             message: 'Registration successful'
@@ -41,16 +47,20 @@ module Authentication
           tokens = Authentication::Services::JwtService.generate_tokens(user)
           user.update_last_login!
 
-          log_user_action(
+          AuditLog.create!(
+            organization: user.organization,
+            user: user,
             action: 'login',
             entity_type: 'User',
-            entity_id: user.id
+            entity_id: user.id,
+            ip_address: request.remote_ip,
+            user_agent: request.user_agent
           )
 
           render_success(
             {
-              user: UserSerializer.new(user).serializable_hash[:data][:attributes],
-              organization: OrganizationSerializer.new(user.organization).serializable_hash[:data][:attributes],
+              user: JSON.parse(UserSerializer.render(user)),
+              organization: JSON.parse(OrganizationSerializer.render(user.organization)),
               **tokens
             },
             message: 'Login successful'
@@ -90,6 +100,7 @@ module Authentication
 
       # POST /api/v1/auth/logout
       def logout
+        # Blacklist the current access token
         token = request.headers['Authorization']&.split(' ')&.last
         Authentication::Services::JwtService.blacklist_token(token) if token
 
@@ -124,10 +135,14 @@ module Authentication
 
           UserMailer.password_reset(user, reset_token).deliver_later
 
-          log_user_action(
+          AuditLog.create!(
+            organization: user.organization,
+            user: user,
             action: 'password_reset_requested',
             entity_type: 'User',
-            entity_id: user.id
+            entity_id: user.id,
+            ip_address: request.remote_ip,
+            user_agent: request.user_agent
           )
         end
 
@@ -169,10 +184,14 @@ module Authentication
 
           UserMailer.password_reset_confirmation(user).deliver_later
 
-          log_user_action(
+          AuditLog.create!(
+            organization: user.organization,
+            user: user,
             action: 'password_reset_completed',
             entity_type: 'User',
-            entity_id: user.id
+            entity_id: user.id,
+            ip_address: request.remote_ip,
+            user_agent: request.user_agent
           )
 
           render_success({}, message: 'Password reset successful')
@@ -189,8 +208,8 @@ module Authentication
       def me
         render_success(
           {
-            user: UserSerializer.new(current_user).serializable_hash[:data][:attributes],
-            organization: OrganizationSerializer.new(current_organization).serializable_hash[:data][:attributes]
+            user: JSON.parse(UserSerializer.render(current_user)),
+            organization: JSON.parse(OrganizationSerializer.render(current_organization))
           }
         )
       end
@@ -225,7 +244,6 @@ module Authentication
       def user_params
         params.require(:user).permit(:email, :password, :full_name, :timezone, :language)
       end
-
     end
   end
 end
