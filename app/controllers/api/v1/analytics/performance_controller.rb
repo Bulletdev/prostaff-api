@@ -1,46 +1,77 @@
+# Performance Analytics Controller
+#
+# Provides endpoints for viewing team and player performance metrics.
+# Delegates complex calculations to PerformanceAnalyticsService.
+#
+# Features:
+# - Team overview statistics (wins, losses, KDA, etc.)
+# - Win rate trends over time
+# - Performance breakdown by role
+# - Top performer identification
+# - Individual player statistics
+#
+# @example Get team performance for last 30 days
+#   GET /api/v1/analytics/performance
+#
+# @example Get performance with player stats
+#   GET /api/v1/analytics/performance?player_id=123
+#
 class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
+  include Analytics::Concerns::AnalyticsCalculations
+
+  # Returns performance analytics for the organization
+  #
+  # Supports filtering by date range and includes individual player stats if requested.
+  #
+  # GET /api/v1/analytics/performance
+  #
+  # @param start_date [Date] Start date for filtering (optional)
+  # @param end_date [Date] End date for filtering (optional)
+  # @param time_period [String] Predefined period: week, month, or season (optional)
+  # @param player_id [Integer] Player ID for individual stats (optional)
+  # @return [JSON] Performance analytics data
   def index
-    # Team performance analytics
-    matches = organization_scoped(Match)
+    matches = apply_date_filters(organization_scoped(Match))
     players = organization_scoped(Player).active
 
-    # Date range filter
-    if params[:start_date].present? && params[:end_date].present?
-      matches = matches.in_date_range(params[:start_date], params[:end_date])
-    elsif params[:time_period].present?
-      # Handle time_period parameter from frontend
-      days = case params[:time_period]
-             when 'week' then 7
-             when 'month' then 30
-             when 'season' then 90
-             else 30
-             end
-      matches = matches.where('game_start >= ?', days.days.ago)
-    else
-      matches = matches.recent(30) # Default to last 30 days
-    end
-
-    performance_data = {
-      overview: calculate_team_overview(matches),
-      win_rate_trend: calculate_win_rate_trend(matches),
-      performance_by_role: calculate_performance_by_role(matches),
-      best_performers: identify_best_performers(players, matches),
-      match_type_breakdown: calculate_match_type_breakdown(matches)
-    }
-
-    # Add individual player stats if player_id is provided
-    if params[:player_id].present?
-      player = organization_scoped(Player).find_by(id: params[:player_id])
-      if player
-        performance_data[:player_stats] = calculate_player_stats(player, matches)
-      end
-    end
+    service = Analytics::Services::PerformanceAnalyticsService.new(matches, players)
+    performance_data = service.calculate_performance_data(player_id: params[:player_id])
 
     render_success(performance_data)
   end
 
   private
 
+  # Applies date range filters to matches based on params
+  #
+  # @param matches [ActiveRecord::Relation] Matches relation to filter
+  # @return [ActiveRecord::Relation] Filtered matches
+  def apply_date_filters(matches)
+    if params[:start_date].present? && params[:end_date].present?
+      matches.in_date_range(params[:start_date], params[:end_date])
+    elsif params[:time_period].present?
+      days = time_period_to_days(params[:time_period])
+      matches.where('game_start >= ?', days.days.ago)
+    else
+      matches.recent(30) # Default to last 30 days
+    end
+  end
+
+  # Converts time period string to number of days
+  #
+  # @param period [String] Time period (week, month, season)
+  # @return [Integer] Number of days
+  def time_period_to_days(period)
+    case period
+    when 'week' then 7
+    when 'month' then 30
+    when 'season' then 90
+    else 30
+    end
+  end
+
+  # Legacy method - kept for backwards compatibility
+  # TODO: Remove after migrating all callers to PerformanceAnalyticsService
   def calculate_team_overview(matches)
     stats = PlayerMatchStat.where(match: matches)
 
@@ -60,21 +91,12 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
     }
   end
 
-  def calculate_win_rate_trend(matches)
-    # Calculate win rate for each week
-    matches.group_by { |m| m.game_start.beginning_of_week }.map do |week, week_matches|
-      wins = week_matches.count(&:victory?)
-      total = week_matches.size
-      win_rate = total.zero? ? 0 : ((wins.to_f / total) * 100).round(1)
+  # Legacy methods - moved to PerformanceAnalyticsService
+  # Kept for backwards compatibility
+  # TODO: Remove after confirming no external dependencies
 
-      {
-        week: week.strftime('%Y-%m-%d'),
-        matches: total,
-        wins: wins,
-        losses: total - wins,
-        win_rate: win_rate
-      }
-    end.sort_by { |d| d[:week] }
+  def calculate_win_rate_trend(matches)
+    super(matches, group_by: :week)
   end
 
   def calculate_performance_by_role(matches)
@@ -137,21 +159,9 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
     end
   end
 
-  def calculate_win_rate(matches)
-    return 0 if matches.empty?
-    ((matches.victories.count.to_f / matches.count) * 100).round(1)
-  end
-
-  def calculate_avg_kda(stats)
-    return 0 if stats.empty?
-
-    total_kills = stats.sum(:kills)
-    total_deaths = stats.sum(:deaths)
-    total_assists = stats.sum(:assists)
-
-    deaths = total_deaths.zero? ? 1 : total_deaths
-    ((total_kills + total_assists).to_f / deaths).round(2)
-  end
+  # Methods moved to Analytics::Concerns::AnalyticsCalculations:
+  # - calculate_win_rate
+  # - calculate_avg_kda
 
   def calculate_player_stats(player, matches)
     stats = PlayerMatchStat.where(player: player, match: matches)
@@ -174,11 +184,11 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
     # Calculate CS per min
     total_cs = stats.sum(:cs)
     total_duration = matches.where(id: stats.pluck(:match_id)).sum(:game_duration)
-    cs_per_min = total_duration.zero? ? 0.0 : (total_cs.to_f / (total_duration / 60.0)).round(1)
+    cs_per_min = calculate_cs_per_min(total_cs, total_duration)
 
     # Calculate gold per min
     total_gold = stats.sum(:gold_earned)
-    gold_per_min = total_duration.zero? ? 0.0 : (total_gold.to_f / (total_duration / 60.0)).round(0)
+    gold_per_min = calculate_gold_per_min(total_gold, total_duration)
 
     # Calculate vision score
     vision_score = stats.average(:vision_score)&.round(1) || 0.0

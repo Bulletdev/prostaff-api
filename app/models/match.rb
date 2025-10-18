@@ -1,3 +1,33 @@
+# Represents a League of Legends match/game
+#
+# Matches store game data including results, statistics, and metadata.
+# They can be official competitive matches, scrims, or tournament games.
+# Match data can be imported from Riot API or created manually.
+#
+# @attr [String] match_type Type of match: official, scrim, or tournament
+# @attr [DateTime] game_start When the match started
+# @attr [DateTime] game_end When the match ended
+# @attr [Integer] game_duration Duration in seconds
+# @attr [String] riot_match_id Riot's unique match identifier
+# @attr [String] patch_version Game patch version (e.g., "13.24")
+# @attr [String] opponent_name Name of the opposing team
+# @attr [Boolean] victory Whether the organization won the match
+# @attr [String] our_side Which side the team played on: blue or red
+# @attr [Integer] our_score Team's score (kills or games won in series)
+# @attr [Integer] opponent_score Opponent's score
+# @attr [String] vod_url Link to video recording of the match
+#
+# @example Creating a match
+#   match = Match.create!(
+#     organization: org,
+#     match_type: "scrim",
+#     game_start: Time.current,
+#     victory: true
+#   )
+#
+# @example Finding recent victories
+#   recent_wins = Match.victories.recent(7)
+#
 class Match < ApplicationRecord
   # Associations
   belongs_to :organization

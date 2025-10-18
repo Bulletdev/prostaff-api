@@ -2,10 +2,39 @@
 
 module Authentication
   module Controllers
+    # Authentication Controller
+    #
+    # Handles all authentication-related operations including user registration,
+    # login, logout, token refresh, and password reset flows.
+    #
+    # Features:
+    # - JWT-based authentication with access and refresh tokens
+    # - Secure password reset via email
+    # - Audit logging for all auth events
+    # - Token blacklisting for logout
+    #
+    # @example Register a new user
+    #   POST /api/v1/auth/register
+    #   {
+    #     "user": { "email": "user@example.com", "password": "secret" },
+    #     "organization": { "name": "My Team", "region": "BR" }
+    #   }
+    #
+    # @example Login
+    #   POST /api/v1/auth/login
+    #   { "email": "user@example.com", "password": "secret" }
+    #
     class AuthController < Api::V1::BaseController
       skip_before_action :authenticate_request!, only: [:register, :login, :forgot_password, :reset_password, :refresh]
 
+      # Registers a new user and organization
+      #
+      # Creates a new organization and assigns the user as the owner.
+      # Sends a welcome email and returns JWT tokens for immediate authentication.
+      #
       # POST /api/v1/auth/register
+      #
+      # @return [JSON] User, organization, and JWT tokens
       def register
         ActiveRecord::Base.transaction do
           organization = create_organization!
@@ -39,7 +68,14 @@ module Authentication
         render_error(message: 'Registration failed', code: 'REGISTRATION_ERROR')
       end
 
+      # Authenticates a user and returns JWT tokens
+      #
+      # Validates credentials and generates access/refresh tokens.
+      # Updates the user's last login timestamp and logs the event.
+      #
       # POST /api/v1/auth/login
+      #
+      # @return [JSON] User, organization, and JWT tokens
       def login
         user = authenticate_user!
 
@@ -74,7 +110,14 @@ module Authentication
         end
       end
 
+      # Refreshes an access token using a refresh token
+      #
+      # Validates the refresh token and generates a new access token.
+      #
       # POST /api/v1/auth/refresh
+      #
+      # @param refresh_token [String] The refresh token from previous authentication
+      # @return [JSON] New access token and refresh token
       def refresh
         refresh_token = params[:refresh_token]
 
@@ -98,7 +141,14 @@ module Authentication
         end
       end
 
+      # Logs out the current user
+      #
+      # Blacklists the current access token to prevent further use.
+      # The user must login again to obtain new tokens.
+      #
       # POST /api/v1/auth/logout
+      #
+      # @return [JSON] Success message
       def logout
         # Blacklist the current access token
         token = request.headers['Authorization']&.split(' ')&.last
@@ -113,7 +163,15 @@ module Authentication
         render_success({}, message: 'Logout successful')
       end
 
+      # Initiates password reset flow
+      #
+      # Generates a password reset token and sends it via email.
+      # Always returns success to prevent email enumeration.
+      #
       # POST /api/v1/auth/forgot-password
+      #
+      # @param email [String] User's email address
+      # @return [JSON] Success message
       def forgot_password
         email = params[:email]&.downcase&.strip
 
@@ -152,7 +210,17 @@ module Authentication
         )
       end
 
+      # Resets user password using reset token
+      #
+      # Validates the reset token and updates the user's password.
+      # Marks the token as used and sends a confirmation email.
+      #
       # POST /api/v1/auth/reset-password
+      #
+      # @param token [String] Password reset token from email
+      # @param password [String] New password
+      # @param password_confirmation [String] Password confirmation
+      # @return [JSON] Success or error message
       def reset_password
         token = params[:token]
         new_password = params[:password]
@@ -204,7 +272,11 @@ module Authentication
         end
       end
 
+      # Returns current authenticated user information
+      #
       # GET /api/v1/auth/me
+      #
+      # @return [JSON] Current user and organization data
       def me
         render_success(
           {
