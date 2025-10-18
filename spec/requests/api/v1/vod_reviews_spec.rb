@@ -19,7 +19,7 @@ RSpec.describe 'VOD Reviews API', type: :request do
       end
 
       it 'filters by status' do
-        published_review = create(:vod_review, :published, organization: organization)
+        create(:vod_review, :published, organization: organization)
 
         get '/api/v1/vod-reviews', params: { status: 'published' }, headers: auth_headers(user)
 
@@ -29,7 +29,7 @@ RSpec.describe 'VOD Reviews API', type: :request do
 
       it 'filters by match_id' do
         match = create(:match, organization: organization)
-        match_review = create(:vod_review, match: match, organization: organization)
+        create(:vod_review, match: match, organization: organization)
 
         get '/api/v1/vod-reviews', params: { match_id: match.id }, headers: auth_headers(user)
 

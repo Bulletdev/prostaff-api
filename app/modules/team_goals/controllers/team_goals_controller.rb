@@ -16,9 +16,13 @@ class Api::V1::TeamGoalsController < Api::V1::BaseController
 
     goals = goals.where(assigned_to_id: params[:assigned_to_id]) if params[:assigned_to_id].present?
 
-    sort_by = params[:sort_by] || 'created_at'
-    sort_order = params[:sort_order] || 'desc'
-    goals = goals.order("#{sort_by} #{sort_order}")
+    # Whitelist for sort parameters to prevent SQL injection
+    allowed_sort_fields = %w[created_at updated_at title status category start_date end_date progress]
+    allowed_sort_orders = %w[asc desc]
+
+    sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
+    sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'desc'
+    goals = goals.order(sort_by => sort_order)
 
     result = paginate(goals)
 

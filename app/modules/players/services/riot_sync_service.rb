@@ -33,13 +33,37 @@ module Players
       require 'net/http'
       require 'json'
 
+      # Whitelist of valid Riot API regions to prevent host injection
+      VALID_REGIONS = %w[
+        br1 eun1 euw1 jp1 kr la1 la2 na1 oc1 tr1 ru ph2 sg2 th2 tw2 vn2
+      ].freeze
+
       attr_reader :player, :region, :api_key
 
       def initialize(player, region: nil, api_key: nil)
         @player = player
-        @region = region || player.region.presence&.downcase || 'br1'
+        @region = sanitize_region(region || player&.region || 'br1')
         @api_key = api_key || ENV['RIOT_API_KEY']
       end
+
+      private
+
+      # Sanitizes and validates region to prevent host injection
+      #
+      # @param region [String] Region code to sanitize
+      # @return [String] Sanitized region code
+      # @raise [ArgumentError] if region is invalid
+      def sanitize_region(region)
+        normalized = region.to_s.downcase.strip
+
+        unless VALID_REGIONS.include?(normalized)
+          raise ArgumentError, "Invalid region: #{region}. Must be one of: #{VALID_REGIONS.join(', ')}"
+        end
+
+        normalized
+      end
+
+      public
 
       def self.import(summoner_name:, role:, region:, organization:, api_key: nil)
         new(nil, region: region, api_key: api_key)

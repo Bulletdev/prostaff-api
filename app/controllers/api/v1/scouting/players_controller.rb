@@ -28,17 +28,20 @@ class Api::V1::Scouting::PlayersController < Api::V1::BaseController
       targets = targets.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
     end
 
-    # Sorting
-    sort_by = params[:sort_by] || 'created_at'
-    sort_order = params[:sort_order] || 'desc'
+    # Whitelist for sort parameters to prevent SQL injection
+    allowed_sort_fields = %w[created_at updated_at summoner_name current_tier priority status role region age]
+    allowed_sort_orders = %w[asc desc]
 
-    # Map 'rank' to actual column names
-    if sort_by == 'rank'
-      targets = targets.order("current_lp #{sort_order} NULLS LAST")
-    elsif sort_by == 'winrate'
-      targets = targets.order("performance_trend #{sort_order} NULLS LAST")
+    sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
+    sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'desc'
+
+    # Handle special sort fields
+    if params[:sort_by] == 'rank'
+      targets = targets.order(Arel.sql("current_lp #{sort_order} NULLS LAST"))
+    elsif params[:sort_by] == 'winrate'
+      targets = targets.order(Arel.sql("performance_trend #{sort_order} NULLS LAST"))
     else
-      targets = targets.order("#{sort_by} #{sort_order}")
+      targets = targets.order(sort_by => sort_order)
     end
 
     # Pagination

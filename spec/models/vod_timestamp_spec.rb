@@ -45,9 +45,9 @@ RSpec.describe VodTimestamp, type: :model do
 
     describe '.chronological' do
       it 'orders by timestamp_seconds' do
-        ts1 = create(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 100)
-        ts2 = create(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 50)
-        ts3 = create(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 200)
+        create(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 100)
+        create(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 50)
+        create(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 200)
 
         expect(VodTimestamp.chronological.pluck(:timestamp_seconds)).to eq([50, 100, 200])
       end
