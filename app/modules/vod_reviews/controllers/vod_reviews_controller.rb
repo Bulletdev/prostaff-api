@@ -20,9 +20,13 @@ module VodReviews
       vod_reviews = vod_reviews.where('title ILIKE ?', search_term)
       end
       
-      sort_by = params[:sort_by] || 'created_at'
-      sort_order = params[:sort_order] || 'desc'
-      vod_reviews = vod_reviews.order("#{sort_by} #{sort_order}")
+      # Whitelist for sort parameters to prevent SQL injection
+      allowed_sort_fields = %w[created_at updated_at title status reviewed_at]
+      allowed_sort_orders = %w[asc desc]
+
+      sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
+      sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'desc'
+      vod_reviews = vod_reviews.order(sort_by => sort_order)
       
       result = paginate(vod_reviews)
       

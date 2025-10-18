@@ -96,9 +96,17 @@ class Api::V1::VodTimestampsController < Api::V1::BaseController
   end
 
   def set_vod_timestamp
-    @timestamp = VodTimestamp.joins(:vod_review)
-                             .where(vod_reviews: { organization: current_organization })
-                             .find(params[:id])
+    # Scope to organization through vod_review to prevent cross-org access
+    @timestamp = VodTimestamp
+                   .joins(:vod_review)
+                   .where(vod_reviews: { organization_id: current_organization.id })
+                   .find_by!(id: params[:id])
+  rescue ActiveRecord::RecordNotFound
+    render_error(
+      message: 'Timestamp not found',
+      code: 'NOT_FOUND',
+      status: :not_found
+    )
   end
 
   def vod_timestamp_params

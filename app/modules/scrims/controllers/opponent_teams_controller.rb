@@ -1,8 +1,15 @@
 module Scrims
+  # OpponentTeams Controller
+  #
+  # Manages opponent team records which are shared across organizations.
+  # Security note: Update and delete operations are restricted to organizations
+  # that have used this opponent team in scrims.
+  #
   class OpponentTeamsController < ApplicationController
     include TierAuthorization
 
     before_action :set_opponent_team, only: [:show, :update, :destroy, :scrim_history]
+    before_action :verify_team_usage!, only: [:update, :destroy]
 
     # GET /api/v1/scrims/opponent_teams
     def index
@@ -75,16 +82,41 @@ module Scrims
 
     # DELETE /api/v1/scrims/opponent_teams/:id
     def destroy
+      # Check if team has scrims from other organizations before deleting
+      other_org_scrims = @opponent_team.scrims.where.not(organization_id: current_organization.id).exists?
+
+      if other_org_scrims
+        return render json: {
+          error: 'Cannot delete opponent team that is used by other organizations'
+        }, status: :unprocessable_entity
+      end
+
       @opponent_team.destroy
       head :no_content
     end
 
     private
 
+    # Finds opponent team by ID
+    # Security Note: OpponentTeam is a shared resource across organizations.
+    # Deletion is restricted to teams without cross-org usage (see destroy action).
+    # Consider adding organization_id in future for proper multi-tenancy.
     def set_opponent_team
       @opponent_team = OpponentTeam.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: 'Opponent team not found' }, status: :not_found
+    end
+
+    # Verifies that current organization has used this opponent team
+    # Prevents organizations from modifying/deleting teams they haven't interacted with
+    def verify_team_usage!
+      has_scrims = current_organization.scrims.exists?(opponent_team_id: @opponent_team.id)
+
+      unless has_scrims
+        render json: {
+          error: 'You cannot modify this opponent team. Your organization has not played against them.'
+        }, status: :forbidden
+      end
     end
 
     def opponent_team_params

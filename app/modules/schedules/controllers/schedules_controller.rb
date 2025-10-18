@@ -27,8 +27,10 @@ module Schedules
       schedules = schedules.where(start_time: Time.current.beginning_of_week..Time.current.end_of_week)
       end
       
-      sort_order = params[:sort_order] || 'asc'
-      schedules = schedules.order("start_time #{sort_order}")
+      # Whitelist for sort parameters to prevent SQL injection
+      allowed_sort_orders = %w[asc desc]
+      sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'asc'
+      schedules = schedules.order(start_time: sort_order)
       
       result = paginate(schedules)
       

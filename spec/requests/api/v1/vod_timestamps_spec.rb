@@ -20,7 +20,7 @@ RSpec.describe 'VOD Timestamps API', type: :request do
       end
 
       it 'filters by category' do
-        mistake = create(:vod_timestamp, :mistake, vod_review: vod_review)
+        create(:vod_timestamp, :mistake, vod_review: vod_review)
 
         get "/api/v1/vod-reviews/#{vod_review.id}/timestamps",
             params: { category: 'mistake' },
@@ -31,7 +31,7 @@ RSpec.describe 'VOD Timestamps API', type: :request do
       end
 
       it 'filters by importance' do
-        critical = create(:vod_timestamp, :critical, vod_review: vod_review)
+        create(:vod_timestamp, :critical, vod_review: vod_review)
 
         get "/api/v1/vod-reviews/#{vod_review.id}/timestamps",
             params: { importance: 'critical' },
