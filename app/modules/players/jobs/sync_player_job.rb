@@ -1,4 +1,6 @@
 class SyncPlayerJob < ApplicationJob
+  include RankComparison
+
   queue_as :default
 
   retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
@@ -112,24 +114,6 @@ class SyncPlayerJob < ApplicationJob
         last_played_at: mastery[:last_played]
       )
     end
-  end
-
-  def should_update_peak?(player, new_tier, new_rank)
-    return true if player.peak_tier.blank?
-
-    tier_values = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER]
-    rank_values = %w[IV III II I]
-
-    current_tier_index = tier_values.index(player.peak_tier&.upcase) || 0
-    new_tier_index = tier_values.index(new_tier&.upcase) || 0
-
-    return true if new_tier_index > current_tier_index
-    return false if new_tier_index < current_tier_index
-
-    current_rank_index = rank_values.index(player.peak_rank&.upcase) || 0
-    new_rank_index = rank_values.index(new_rank&.upcase) || 0
-
-    new_rank_index > current_rank_index
   end
 
   def current_season

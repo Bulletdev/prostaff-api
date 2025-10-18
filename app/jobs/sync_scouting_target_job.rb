@@ -1,4 +1,6 @@
 class SyncScoutingTargetJob < ApplicationJob
+  include RankComparison
+
   queue_as :default
 
   retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
@@ -86,25 +88,6 @@ class SyncScoutingTargetJob < ApplicationJob
     end.compact
 
     target.update!(champion_pool: champion_names)
-  end
-
-  def should_update_peak?(target, new_tier, new_rank)
-    return true if target.peak_tier.blank?
-
-    tier_values = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER]
-    rank_values = %w[IV III II I]
-
-    current_tier_index = tier_values.index(target.peak_tier&.upcase) || 0
-    new_tier_index = tier_values.index(new_tier&.upcase) || 0
-
-    return true if new_tier_index > current_tier_index
-    return false if new_tier_index < current_tier_index
-
-    # Same tier, compare ranks
-    current_rank_index = rank_values.index(target.peak_rank&.upcase) || 0
-    new_rank_index = rank_values.index(new_rank&.upcase) || 0
-
-    new_rank_index > current_rank_index
   end
 
   def load_champion_id_map

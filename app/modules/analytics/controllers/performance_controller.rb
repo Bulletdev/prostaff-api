@@ -3,6 +3,8 @@
 module Analytics
   module Controllers
         class PerformanceController < Api::V1::BaseController
+        include Analytics::Concerns::AnalyticsCalculations
+
         def index
           # Team performance analytics
           matches = organization_scoped(Match)
@@ -18,7 +20,7 @@ module Analytics
           performance_data = {
             overview: calculate_team_overview(matches),
             win_rate_trend: calculate_win_rate_trend(matches),
-            performance_by_role: calculate_performance_by_role(matches),
+            performance_by_role: calculate_performance_by_role(matches, damage_field: :total_damage_dealt),
             best_performers: identify_best_performers(players, matches),
             match_type_breakdown: calculate_match_type_breakdown(matches)
           }
@@ -45,51 +47,6 @@ module Analytics
             avg_damage_per_game: stats.average(:total_damage_dealt)&.round(0),
             avg_vision_score: stats.average(:vision_score)&.round(1)
           }
-        end
-      
-        def calculate_win_rate_trend(matches)
-          # Calculate win rate for each week
-          matches.group_by { |m| m.game_start.beginning_of_week }.map do |week, week_matches|
-            wins = week_matches.count(&:victory?)
-            total = week_matches.size
-            win_rate = total.zero? ? 0 : ((wins.to_f / total) * 100).round(1)
-      
-            {
-              week: week.strftime('%Y-%m-%d'),
-              matches: total,
-              wins: wins,
-              losses: total - wins,
-              win_rate: win_rate
-            }
-          end.sort_by { |d| d[:week] }
-        end
-      
-        def calculate_performance_by_role(matches)
-          stats = PlayerMatchStat.joins(:player).where(match: matches)
-      
-          stats.group('players.role').select(
-            'players.role',
-            'COUNT(*) as games',
-            'AVG(player_match_stats.kills) as avg_kills',
-            'AVG(player_match_stats.deaths) as avg_deaths',
-            'AVG(player_match_stats.assists) as avg_assists',
-            'AVG(player_match_stats.gold_earned) as avg_gold',
-            'AVG(player_match_stats.total_damage_dealt) as avg_damage',
-            'AVG(player_match_stats.vision_score) as avg_vision'
-          ).map do |stat|
-            {
-              role: stat.role,
-              games: stat.games,
-              avg_kda: {
-                kills: stat.avg_kills&.round(1) || 0,
-                deaths: stat.avg_deaths&.round(1) || 0,
-                assists: stat.avg_assists&.round(1) || 0
-              },
-              avg_gold: stat.avg_gold&.round(0) || 0,
-              avg_damage: stat.avg_damage&.round(0) || 0,
-              avg_vision: stat.avg_vision&.round(1) || 0
-            }
-          end
         end
       
         def identify_best_performers(players, matches)
@@ -122,22 +79,6 @@ module Analytics
               win_rate: win_rate
             }
           end
-        end
-      
-        def calculate_win_rate(matches)
-          return 0 if matches.empty?
-          ((matches.victories.count.to_f / matches.count) * 100).round(1)
-        end
-      
-        def calculate_avg_kda(stats)
-          return 0 if stats.empty?
-      
-          total_kills = stats.sum(:kills)
-          total_deaths = stats.sum(:deaths)
-          total_assists = stats.sum(:assists)
-      
-          deaths = total_deaths.zero? ? 1 : total_deaths
-          ((total_kills + total_assists).to_f / deaths).round(2)
         end
       end
   end
