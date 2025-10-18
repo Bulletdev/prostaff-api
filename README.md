@@ -87,6 +87,9 @@ end
 subgraph "Scouting Module"
     ScoutingController[Scouting Controller]
 end
+subgraph "Scrims Module"
+    ScrimsController[Scrims Controller]
+end
 subgraph "Team_goals Module"
     Team_goalsController[Team_goals Controller]
 end
@@ -190,6 +193,7 @@ end
     PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
     ScheduleModel[Schedule Model] --> PostgreSQL
     ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
+    ScrimModel[Scrim Model] --> PostgreSQL
     TeamGoalModel[TeamGoal Model] --> PostgreSQL
     TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
     UserModel[User Model] --> PostgreSQL
