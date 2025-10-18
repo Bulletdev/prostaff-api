@@ -1,3 +1,4 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/c0c6d39c8ef94ef28a15807ad03afc7d)](https://app.codacy.com/gh/Bulletdev/prostaff-api?utm_source=github.com&utm_medium=referral&utm_content=Bulletdev/prostaff-api&utm_campaign=Badge_Grade)
 [![Security Scan](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml/badge.svg)](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml)
 [![Ruby Version](https://img.shields.io/badge/ruby-3.4.5-red.svg)](https://www.ruby-lang.org/)
 [![Rails Version](https://img.shields.io/badge/rails-7.2-red.svg)](https://rubyonrails.org/)
