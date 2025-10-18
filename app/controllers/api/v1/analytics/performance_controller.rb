@@ -91,41 +91,9 @@ class Api::V1::Analytics::PerformanceController < Api::V1::BaseController
     }
   end
 
-  # Legacy methods - moved to PerformanceAnalyticsService
-  # Kept for backwards compatibility
+  # Legacy methods - moved to PerformanceAnalyticsService and AnalyticsCalculations
+  # These methods now delegate to the concern
   # TODO: Remove after confirming no external dependencies
-
-  def calculate_win_rate_trend(matches)
-    super(matches, group_by: :week)
-  end
-
-  def calculate_performance_by_role(matches)
-    stats = PlayerMatchStat.joins(:player).where(match: matches)
-
-    stats.group('players.role').select(
-      'players.role',
-      'COUNT(*) as games',
-      'AVG(player_match_stats.kills) as avg_kills',
-      'AVG(player_match_stats.deaths) as avg_deaths',
-      'AVG(player_match_stats.assists) as avg_assists',
-      'AVG(player_match_stats.gold_earned) as avg_gold',
-      'AVG(player_match_stats.damage_dealt_total) as avg_damage',
-      'AVG(player_match_stats.vision_score) as avg_vision'
-    ).map do |stat|
-      {
-        role: stat.role,
-        games: stat.games,
-        avg_kda: {
-          kills: stat.avg_kills&.round(1) || 0,
-          deaths: stat.avg_deaths&.round(1) || 0,
-          assists: stat.avg_assists&.round(1) || 0
-        },
-        avg_gold: stat.avg_gold&.round(0) || 0,
-        avg_damage: stat.avg_damage&.round(0) || 0,
-        avg_vision: stat.avg_vision&.round(1) || 0
-      }
-    end
-  end
 
   def identify_best_performers(players, matches)
     players.map do |player|

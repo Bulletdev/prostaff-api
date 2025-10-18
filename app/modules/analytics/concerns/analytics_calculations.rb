@@ -9,12 +9,7 @@ module Analytics
 
       # Calculates win rate percentage from a collection of matches
       #
-      # @param matches [ActiveRecord::Relation, Array] Collection of Match records
-      # @return [Float] Win rate as percentage (0-100), or 0 if no matches
-      #
-      # @example
-      #   calculate_win_rate(Match.where(organization: org))
-      #   # => 65.5
+
       def calculate_win_rate(matches)
         return 0.0 if matches.empty?
 
@@ -25,13 +20,7 @@ module Analytics
       end
 
       # Calculates average KDA (Kill/Death/Assist ratio) from player stats
-      #
-      # @param stats [ActiveRecord::Relation, Array] Collection of PlayerMatchStat records
-      # @return [Float] Average KDA ratio, or 0 if no stats
-      #
-      # @example
-      #   calculate_avg_kda(PlayerMatchStat.where(match: matches))
-      #   # => 3.25
+
       def calculate_avg_kda(stats)
         return 0.0 if stats.empty?
 
@@ -43,82 +32,34 @@ module Analytics
         ((total_kills + total_assists).to_f / deaths).round(2)
       end
 
-      # Calculates KDA for a specific set of kills, deaths, and assists
-      #
-      # @param kills [Integer] Number of kills
-      # @param deaths [Integer] Number of deaths
-      # @param assists [Integer] Number of assists
-      # @return [Float] KDA ratio
-      #
-      # @example
-      #   calculate_kda(10, 5, 15)
-      #   # => 5.0
       def calculate_kda(kills, deaths, assists)
         deaths_divisor = deaths.zero? ? 1 : deaths
         ((kills + assists).to_f / deaths_divisor).round(2)
       end
 
-      # Formats recent match results as a string (e.g., "WWLWL")
-      #
-      # @param matches [Array<Match>] Collection of matches (should be ordered)
-      # @return [String] String of W/L characters representing wins/losses
-      #
-      # @example
-      #   calculate_recent_form(recent_matches)
-      #   # => "WWLWW"
       def calculate_recent_form(matches)
         matches.map { |m| m.victory? ? 'W' : 'L' }.join('')
       end
 
-      # Calculates CS (creep score) per minute
-      #
-      # @param total_cs [Integer] Total minions killed
-      # @param game_duration_seconds [Integer] Game duration in seconds
-      # @return [Float] CS per minute, or 0 if duration is 0
-      #
-      # @example
-      #   calculate_cs_per_min(300, 1800)
-      #   # => 10.0
       def calculate_cs_per_min(total_cs, game_duration_seconds)
         return 0.0 if game_duration_seconds.zero?
 
         (total_cs.to_f / (game_duration_seconds / 60.0)).round(1)
       end
 
-      # Calculates gold per minute
-      #
-      # @param total_gold [Integer] Total gold earned
-      # @param game_duration_seconds [Integer] Game duration in seconds
-      # @return [Float] Gold per minute, or 0 if duration is 0
-      #
-      # @example
-      #   calculate_gold_per_min(15000, 1800)
-      #   # => 500.0
       def calculate_gold_per_min(total_gold, game_duration_seconds)
         return 0.0 if game_duration_seconds.zero?
 
         (total_gold.to_f / (game_duration_seconds / 60.0)).round(0)
       end
 
-      # Calculates damage per minute
-      #
-      # @param total_damage [Integer] Total damage dealt
-      # @param game_duration_seconds [Integer] Game duration in seconds
-      # @return [Float] Damage per minute, or 0 if duration is 0
+
       def calculate_damage_per_min(total_damage, game_duration_seconds)
         return 0.0 if game_duration_seconds.zero?
 
         (total_damage.to_f / (game_duration_seconds / 60.0)).round(0)
       end
 
-      # Formats game duration from seconds to MM:SS format
-      #
-      # @param duration_seconds [Integer] Duration in seconds
-      # @return [String] Formatted duration string
-      #
-      # @example
-      #   format_duration(1845)
-      #   # => "30:45"
       def format_duration(duration_seconds)
         return '00:00' if duration_seconds.nil? || duration_seconds.zero?
 
@@ -127,11 +68,6 @@ module Analytics
         "#{minutes}:#{seconds.to_s.rjust(2, '0')}"
       end
 
-      # Calculates win rate trend grouped by time period
-      #
-      # @param matches [ActiveRecord::Relation] Collection of Match records
-      # @param group_by [Symbol] Time period to group by (:week, :day, :month)
-      # @return [Array<Hash>] Array of hashes with period, matches, wins, losses, win_rate
       def calculate_win_rate_trend(matches, group_by: :week)
         grouped = matches.group_by do |match|
           case group_by
@@ -157,6 +93,47 @@ module Analytics
             win_rate: win_rate
           }
         end.sort_by { |data| data[:period] }
+      end
+
+      def calculate_performance_by_role(matches, damage_field: :damage_dealt_total)
+        stats = PlayerMatchStat.joins(:player).where(match: matches)
+        grouped_stats = group_stats_by_role(stats, damage_field)
+
+        grouped_stats.map { |stat| format_role_stat(stat) }
+      end
+
+      private
+
+      def group_stats_by_role(stats, damage_field)
+        stats.group('players.role').select(
+          'players.role',
+          'COUNT(*) as games',
+          'AVG(player_match_stats.kills) as avg_kills',
+          'AVG(player_match_stats.deaths) as avg_deaths',
+          'AVG(player_match_stats.assists) as avg_assists',
+          'AVG(player_match_stats.gold_earned) as avg_gold',
+          "AVG(player_match_stats.#{damage_field}) as avg_damage",
+          'AVG(player_match_stats.vision_score) as avg_vision'
+        )
+      end
+
+      def format_role_stat(stat)
+        {
+          role: stat.role,
+          games: stat.games,
+          avg_kda: format_avg_kda(stat),
+          avg_gold: stat.avg_gold&.round(0) || 0,
+          avg_damage: stat.avg_damage&.round(0) || 0,
+          avg_vision: stat.avg_vision&.round(1) || 0
+        }
+      end
+
+      def format_avg_kda(stat)
+        {
+          kills: stat.avg_kills&.round(1) || 0,
+          deaths: stat.avg_deaths&.round(1) || 0,
+          assists: stat.avg_assists&.round(1) || 0
+        }
       end
     end
   end

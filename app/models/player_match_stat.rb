@@ -1,26 +1,21 @@
 class PlayerMatchStat < ApplicationRecord
-  # Associations
   belongs_to :match
   belongs_to :player
 
-  # Validations
   validates :champion, presence: true
   validates :kills, :deaths, :assists, :cs, numericality: { greater_than_or_equal_to: 0 }
   validates :player_id, uniqueness: { scope: :match_id }
 
-  # Callbacks
   before_save :calculate_derived_stats
   after_create :update_champion_pool
   after_update :log_audit_trail, if: :saved_changes?
 
-  # Scopes
   scope :by_champion, ->(champion) { where(champion: champion) }
   scope :by_role, ->(role) { where(role: role) }
   scope :recent, ->(days = 30) { joins(:match).where(matches: { game_start: days.days.ago..Time.current }) }
   scope :victories, -> { joins(:match).where(matches: { victory: true }) }
   scope :defeats, -> { joins(:match).where(matches: { victory: false }) }
 
-  # Instance methods
   def kda_ratio
     return 0 if deaths.zero?
 
@@ -53,59 +48,12 @@ class PlayerMatchStat < ApplicationRecord
     double_kills + triple_kills + quadra_kills + penta_kills
   end
 
+
   def grade_performance
-    # Simple performance grading based on KDA, CS, and damage
-    score = 0
+    total_score = kda_score + cs_score + damage_score + vision_performance_score
+    average_score = total_score / 4.0
 
-    # KDA scoring
-    kda = kda_ratio
-    score += case kda
-             when 0...1 then 1
-             when 1...2 then 2
-             when 2...3 then 3
-             when 3...4 then 4
-             else 5
-             end
-
-    # CS scoring (assuming 10 CS per minute is excellent)
-    cs_per_min_value = cs_per_min || 0
-    score += case cs_per_min_value
-             when 0...4 then 1
-             when 4...6 then 2
-             when 6...8 then 3
-             when 8...10 then 4
-             else 5
-             end
-
-    # Damage share scoring
-    damage_percentage = damage_share_percentage
-    score += case damage_percentage
-             when 0...15 then 1
-             when 15...20 then 2
-             when 20...25 then 3
-             when 25...30 then 4
-             else 5
-             end
-
-    # Vision scoring
-    vision_per_min = match.game_duration.present? ? vision_score.to_f / (match.game_duration / 60.0) : 0
-    score += case vision_per_min
-             when 0...1 then 1
-             when 1...1.5 then 2
-             when 1.5...2 then 3
-             when 2...2.5 then 4
-             else 5
-             end
-
-    # Average and convert to letter grade
-    average = score / 4.0
-    case average
-    when 0...1.5 then 'D'
-    when 1.5...2.5 then 'C'
-    when 2.5...3.5 then 'B'
-    when 3.5...4.5 then 'A'
-    else 'S'
-    end
+    score_to_grade(average_score)
   end
 
   def item_names
@@ -121,6 +69,58 @@ class PlayerMatchStat < ApplicationRecord
   end
 
   private
+
+  def kda_score
+    case kda_ratio
+    when 0...1 then 1
+    when 1...2 then 2
+    when 2...3 then 3
+    when 3...4 then 4
+    else 5
+    end
+  end
+
+  def cs_score
+    cs_value = cs_per_min || 0
+    case cs_value
+    when 0...4 then 1
+    when 4...6 then 2
+    when 6...8 then 3
+    when 8...10 then 4
+    else 5
+    end
+  end
+
+  def damage_score
+    case damage_share_percentage
+    when 0...15 then 1
+    when 15...20 then 2
+    when 20...25 then 3
+    when 25...30 then 4
+    else 5
+    end
+  end
+
+  def vision_performance_score
+    vision_per_min = match&.game_duration.present? ? vision_score.to_f / (match.game_duration / 60.0) : 0
+    case vision_per_min
+    when 0...1 then 1
+    when 1...1.5 then 2
+    when 1.5...2 then 3
+    when 2...2.5 then 4
+    else 5
+    end
+  end
+
+  def score_to_grade(average)
+    case average
+    when 0...1.5 then 'D'
+    when 1.5...2.5 then 'C'
+    when 2.5...3.5 then 'B'
+    when 3.5...4.5 then 'A'
+    else 'S'
+    end
+  end
 
   def calculate_derived_stats
     if match&.game_duration.present? && match.game_duration > 0
@@ -166,7 +166,6 @@ class PlayerMatchStat < ApplicationRecord
     pool.games_played += 1
     pool.games_won += 1 if match.victory?
 
-    # Update averages
     pool.average_kda = calculate_average_for_champion(:kda_ratio)
     pool.average_cs_per_min = calculate_average_for_champion(:cs_per_min)
     pool.average_damage_share = calculate_average_for_champion(:damage_share)

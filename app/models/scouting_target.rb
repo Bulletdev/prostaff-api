@@ -131,38 +131,12 @@ class ScoutingTarget < ApplicationRecord
     end
   end
 
+  # Calculates overall scouting score (0-130)
+  #
+  # @return [Integer] Scouting score based on rank, trend, and champion pool
   def scouting_score
-    score = 0
-
-    # Rank scoring
-    score += case current_tier&.upcase
-             when 'CHALLENGER' then 100
-             when 'GRANDMASTER' then 90
-             when 'MASTER' then 80
-             when 'DIAMOND' then 60
-             when 'EMERALD' then 40
-             when 'PLATINUM' then 25
-             else 10
-             end
-
-    # Performance trend
-    score += case performance_trend
-             when 'improving' then 20
-             when 'stable' then 10
-             when 'declining' then -10
-             else 0
-             end
-
-    # Champion pool diversity
-    pool_size = champion_pool.size
-    score += case pool_size
-             when 0..2 then -10
-             when 3..5 then 0
-             when 6..8 then 10
-             else 5
-             end
-
-    [score, 0].max
+    total = rank_score + trend_score + pool_diversity_score
+    [total, 0].max
   end
 
   def mark_as_reviewed!(user = nil)
@@ -184,6 +158,39 @@ class ScoutingTarget < ApplicationRecord
   end
 
   private
+
+  # Scores based on current rank (10-100 points)
+  def rank_score
+    case current_tier&.upcase
+    when 'CHALLENGER' then 100
+    when 'GRANDMASTER' then 90
+    when 'MASTER' then 80
+    when 'DIAMOND' then 60
+    when 'EMERALD' then 40
+    when 'PLATINUM' then 25
+    else 10
+    end
+  end
+
+  # Scores based on performance trend (-10 to 20 points)
+  def trend_score
+    case performance_trend
+    when 'improving' then 20
+    when 'stable' then 10
+    when 'declining' then -10
+    else 0
+    end
+  end
+
+  # Scores based on champion pool diversity (-10 to 10 points)
+  def pool_diversity_score
+    case champion_pool.size
+    when 0..2 then -10
+    when 3..5 then 0
+    when 6..8 then 10
+    else 5
+    end
+  end
 
   def normalize_summoner_name
     self.summoner_name = summoner_name.strip if summoner_name.present?

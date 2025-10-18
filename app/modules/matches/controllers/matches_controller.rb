@@ -2,11 +2,7 @@
 
 module Matches
   module Controllers
-    # Matches Controller
-    #
-    # Handles CRUD operations for matches and importing from Riot API.
-    # Includes filtering, pagination, and statistics endpoints.
-    #
+
     class MatchesController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
       include ParameterValidation
@@ -15,30 +11,8 @@ module Matches
 
   def index
     matches = organization_scoped(Match).includes(:player_match_stats, :players)
-
-    matches = matches.by_type(params[:match_type]) if params[:match_type].present?
-    matches = matches.victories if params[:result] == 'victory'
-    matches = matches.defeats if params[:result] == 'defeat'
-
-    if params[:start_date].present? && params[:end_date].present?
-      matches = matches.in_date_range(params[:start_date], params[:end_date])
-    elsif params[:days].present?
-      matches = matches.recent(params[:days].to_i)
-    end
-
-    matches = matches.with_opponent(params[:opponent]) if params[:opponent].present?
-
-    if params[:tournament].present?
-      matches = matches.where('tournament_name ILIKE ?', "%#{params[:tournament]}%")
-    end
-
-    # Whitelist for sort parameters to prevent SQL injection
-    allowed_sort_fields = %w[game_start game_duration match_type victory created_at]
-    allowed_sort_orders = %w[asc desc]
-
-    sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'game_start'
-    sort_order = allowed_sort_orders.include?(params[:sort_order]) ? params[:sort_order] : 'desc'
-    matches = matches.order(sort_by => sort_order)
+    matches = apply_match_filters(matches)
+    matches = apply_match_sorting(matches)
 
     result = paginate(matches)
 
@@ -154,11 +128,6 @@ module Matches
     render_success(stats_data)
   end
 
-  # Imports matches from Riot API for a player
-  #
-  # @param player_id [Integer] Required player ID
-  # @param count [Integer] Number of matches to import (default: 20, max: 100)
-  # @return [JSON] Import status with queued match count
   def import
     player_id = validate_required_param!(:player_id)
     count = integer_param(:count, default: 20, min: 1, max: 100)
@@ -215,6 +184,50 @@ module Matches
 
   private
 
+  def apply_match_filters(matches)
+    matches = apply_basic_match_filters(matches)
+    matches = apply_date_filters_to_matches(matches)
+    matches = apply_opponent_filter(matches)
+    apply_tournament_filter(matches)
+  end
+
+  def apply_basic_match_filters(matches)
+    matches = matches.by_type(params[:match_type]) if params[:match_type].present?
+    matches = matches.victories if params[:result] == 'victory'
+    matches = matches.defeats if params[:result] == 'defeat'
+    matches
+  end
+
+  def apply_date_filters_to_matches(matches)
+    if params[:start_date].present? && params[:end_date].present?
+      matches.in_date_range(params[:start_date], params[:end_date])
+    elsif params[:days].present?
+      matches.recent(params[:days].to_i)
+    else
+      matches
+    end
+  end
+
+  def apply_opponent_filter(matches)
+    params[:opponent].present? ? matches.with_opponent(params[:opponent]) : matches
+  end
+
+  def apply_tournament_filter(matches)
+    return matches unless params[:tournament].present?
+
+    matches.where('tournament_name ILIKE ?', "%#{params[:tournament]}%")
+  end
+
+  def apply_match_sorting(matches)
+    allowed_sort_fields = %w[game_start game_duration match_type victory created_at]
+    allowed_sort_orders = %w[asc desc]
+
+    sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'game_start'
+    sort_order = allowed_sort_orders.include?(params[:sort_order]) ? params[:sort_order] : 'desc'
+
+    matches.order(sort_by => sort_order)
+  end
+
   def set_match
     @match = organization_scoped(Match).find(params[:id])
   end
@@ -242,9 +255,6 @@ module Matches
     }
   end
 
-  # Methods moved to Analytics::Concerns::AnalyticsCalculations:
-  # - calculate_win_rate
-  # - calculate_avg_kda
 
   def calculate_team_stats(stats)
     {
