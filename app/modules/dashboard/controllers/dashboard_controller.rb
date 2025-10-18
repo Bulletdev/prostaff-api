@@ -3,6 +3,7 @@
 module Dashboard
   module Controllers
     class DashboardController < Api::V1::BaseController
+      include Analytics::Concerns::AnalyticsCalculations
       def index
       dashboard_data = {
       stats: calculate_stats,
@@ -56,33 +57,17 @@ module Dashboard
       losses: matches.defeats.count,
       win_rate: calculate_win_rate(matches),
       recent_form: calculate_recent_form(matches.order(game_start: :desc).limit(5)),
-      avg_kda: calculate_average_kda(matches),
+      avg_kda: calculate_avg_kda(PlayerMatchStat.where(match: matches)),
       active_goals: organization_scoped(TeamGoal).active.count,
       completed_goals: organization_scoped(TeamGoal).where(status: 'completed').count,
       upcoming_matches: organization_scoped(Schedule).where('start_time >= ? AND event_type = ?', Time.current, 'match').count
       }
       end
       
-      def calculate_win_rate(matches)
-      return 0 if matches.empty?
-      ((matches.victories.count.to_f / matches.count) * 100).round(1)
-      end
-      
-      def calculate_recent_form(matches)
-      matches.map { |m| m.victory? ? 'W' : 'L' }.join('')
-      end
-      
-      def calculate_average_kda(matches)
-      stats = PlayerMatchStat.where(match: matches)
-      return 0 if stats.empty?
-      
-      total_kills = stats.sum(:kills)
-      total_deaths = stats.sum(:deaths)
-      total_assists = stats.sum(:assists)
-      
-      deaths = total_deaths.zero? ? 1 : total_deaths
-      ((total_kills + total_assists).to_f / deaths).round(2)
-      end
+      # Methods moved to Analytics::Concerns::AnalyticsCalculations
+      # - calculate_win_rate
+      # - calculate_recent_form
+      # - calculate_avg_kda (renamed from calculate_average_kda)
       
       def recent_matches_data
       matches = organization_scoped(Match)

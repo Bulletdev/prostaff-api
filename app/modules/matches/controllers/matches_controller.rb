@@ -2,7 +2,15 @@
 
 module Matches
   module Controllers
+    # Matches Controller
+    #
+    # Handles CRUD operations for matches and importing from Riot API.
+    # Includes filtering, pagination, and statistics endpoints.
+    #
     class MatchesController < Api::V1::BaseController
+      include Analytics::Concerns::AnalyticsCalculations
+      include ParameterValidation
+
       before_action :set_match, only: [:show, :update, :destroy, :stats]
 
   def index
@@ -24,9 +32,13 @@ module Matches
       matches = matches.where('tournament_name ILIKE ?', "%#{params[:tournament]}%")
     end
 
-    sort_by = params[:sort_by] || 'game_start'
-    sort_order = params[:sort_order] || 'desc'
-    matches = matches.order("#{sort_by} #{sort_order}")
+    # Whitelist for sort parameters to prevent SQL injection
+    allowed_sort_fields = %w[game_start game_duration match_type victory created_at]
+    allowed_sort_orders = %w[asc desc]
+
+    sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'game_start'
+    sort_order = allowed_sort_orders.include?(params[:sort_order]) ? params[:sort_order] : 'desc'
+    matches = matches.order(sort_by => sort_order)
 
     result = paginate(matches)
 
@@ -142,17 +154,14 @@ module Matches
     render_success(stats_data)
   end
 
+  # Imports matches from Riot API for a player
+  #
+  # @param player_id [Integer] Required player ID
+  # @param count [Integer] Number of matches to import (default: 20, max: 100)
+  # @return [JSON] Import status with queued match count
   def import
-    player_id = params[:player_id]
-    count = params[:count]&.to_i || 20
-
-    unless player_id.present?
-      return render_error(
-        message: 'player_id is required',
-        code: 'VALIDATION_ERROR',
-        status: :unprocessable_entity
-      )
-    end
+    player_id = validate_required_param!(:player_id)
+    count = integer_param(:count, default: 20, min: 1, max: 100)
 
     player = organization_scoped(Player).find(player_id)
 
@@ -233,10 +242,9 @@ module Matches
     }
   end
 
-  def calculate_win_rate(matches)
-    return 0 if matches.empty?
-    ((matches.victories.count.to_f / matches.count) * 100).round(1)
-  end
+  # Methods moved to Analytics::Concerns::AnalyticsCalculations:
+  # - calculate_win_rate
+  # - calculate_avg_kda
 
   def calculate_team_stats(stats)
     {
@@ -248,17 +256,6 @@ module Matches
       total_cs: stats.sum(:minions_killed),
       total_vision_score: stats.sum(:vision_score)
     }
-  end
-
-  def calculate_avg_kda(stats)
-    return 0 if stats.empty?
-
-    total_kills = stats.sum(:kills)
-    total_deaths = stats.sum(:deaths)
-    total_assists = stats.sum(:assists)
-
-    deaths = total_deaths.zero? ? 1 : total_deaths
-    ((total_kills + total_assists).to_f / deaths).round(2)
       end
     end
   end

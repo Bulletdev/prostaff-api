@@ -1,3 +1,31 @@
+# Service for interacting with the Riot Games API
+#
+# Handles all communication with Riot's League of Legends APIs including:
+# - Summoner data retrieval
+# - Ranked stats and league information
+# - Match history and details
+# - Champion mastery data
+#
+# Features:
+# - Automatic rate limiting (20/sec, 100/2min)
+# - Regional routing (platform vs regional endpoints)
+# - Error handling with custom exceptions
+# - Automatic retries for transient failures
+#
+# @example Initialize and fetch summoner data
+#   service = RiotApiService.new
+#   summoner = service.get_summoner_by_name(
+#     summoner_name: "Faker",
+#     region: "KR"
+#   )
+#
+# @example Get match history
+#   matches = service.get_match_history(
+#     puuid: player.riot_puuid,
+#     region: "BR",
+#     count: 20
+#   )
+#
 class RiotApiService
   RATE_LIMITS = {
     per_second: 20,
@@ -29,6 +57,14 @@ class RiotApiService
   end
 
   # Summoner endpoints
+
+  # Retrieves summoner information by summoner name
+  #
+  # @param summoner_name [String] The summoner's in-game name
+  # @param region [String] The region code (e.g., 'BR', 'NA', 'EUW')
+  # @return [Hash] Summoner data including puuid, summoner_id, level
+  # @raise [NotFoundError] If summoner is not found
+  # @raise [RiotApiError] For other API errors
   def get_summoner_by_name(summoner_name:, region:)
     platform = platform_for_region(region)
     url = "https://#{platform}.api.riotgames.com/lol/summoner/v4/summoners/by-name/#{ERB::Util.url_encode(summoner_name)}"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_16_000001) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_17_194806) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -73,6 +73,42 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_000001) do
     t.index ["priority"], name: "index_champion_pools_on_priority"
   end
 
+  create_table "competitive_matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "tournament_name", null: false
+    t.string "tournament_stage"
+    t.string "tournament_region"
+    t.string "external_match_id"
+    t.datetime "match_date"
+    t.string "match_format"
+    t.integer "game_number"
+    t.string "our_team_name"
+    t.string "opponent_team_name"
+    t.uuid "opponent_team_id"
+    t.boolean "victory"
+    t.string "series_score"
+    t.jsonb "our_bans", default: []
+    t.jsonb "opponent_bans", default: []
+    t.jsonb "our_picks", default: []
+    t.jsonb "opponent_picks", default: []
+    t.string "side"
+    t.uuid "match_id"
+    t.jsonb "game_stats", default: {}
+    t.string "patch_version"
+    t.text "meta_champions", default: [], array: true
+    t.string "vod_url"
+    t.string "external_stats_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_match_id"], name: "index_competitive_matches_on_external_match_id", unique: true
+    t.index ["match_date"], name: "index_competitive_matches_on_match_date"
+    t.index ["opponent_team_id"], name: "index_competitive_matches_on_opponent_team_id"
+    t.index ["organization_id", "tournament_name"], name: "idx_comp_matches_org_tournament"
+    t.index ["organization_id"], name: "index_competitive_matches_on_organization_id"
+    t.index ["patch_version"], name: "index_competitive_matches_on_patch_version"
+    t.index ["tournament_region", "match_date"], name: "idx_comp_matches_region_date"
+  end
+
   create_table "matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "match_type", null: false
@@ -113,6 +149,32 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_000001) do
     t.index ["organization_id"], name: "index_matches_on_organization_id"
     t.index ["riot_match_id"], name: "index_matches_on_riot_match_id", unique: true
     t.index ["victory"], name: "index_matches_on_victory"
+  end
+
+  create_table "opponent_teams", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "tag"
+    t.string "region"
+    t.string "tier"
+    t.string "league"
+    t.string "logo_url"
+    t.text "known_players", default: [], array: true
+    t.jsonb "recent_performance", default: {}
+    t.integer "total_scrims", default: 0
+    t.integer "scrims_won", default: 0
+    t.integer "scrims_lost", default: 0
+    t.text "playstyle_notes"
+    t.text "strengths", default: [], array: true
+    t.text "weaknesses", default: [], array: true
+    t.jsonb "preferred_champions", default: {}
+    t.string "contact_email"
+    t.string "discord_server"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["league"], name: "index_opponent_teams_on_league"
+    t.index ["name"], name: "index_opponent_teams_on_name"
+    t.index ["region"], name: "index_opponent_teams_on_region"
+    t.index ["tier"], name: "index_opponent_teams_on_tier"
   end
 
   create_table "organizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -325,6 +387,32 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_000001) do
     t.index ["status"], name: "index_scouting_targets_on_status"
   end
 
+  create_table "scrims", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "match_id"
+    t.uuid "opponent_team_id"
+    t.datetime "scheduled_at"
+    t.string "scrim_type"
+    t.string "focus_area"
+    t.text "pre_game_notes"
+    t.text "post_game_notes"
+    t.boolean "is_confidential", default: true
+    t.string "visibility"
+    t.integer "games_planned"
+    t.integer "games_completed"
+    t.jsonb "game_results", default: []
+    t.jsonb "objectives", default: {}
+    t.jsonb "outcomes", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["match_id"], name: "index_scrims_on_match_id"
+    t.index ["opponent_team_id"], name: "index_scrims_on_opponent_team_id"
+    t.index ["organization_id", "scheduled_at"], name: "idx_scrims_org_scheduled"
+    t.index ["organization_id"], name: "index_scrims_on_organization_id"
+    t.index ["scheduled_at"], name: "index_scrims_on_scheduled_at"
+    t.index ["scrim_type"], name: "index_scrims_on_scrim_type"
+  end
+
   create_table "team_goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "player_id"
@@ -433,6 +521,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_000001) do
   add_foreign_key "audit_logs", "organizations"
   add_foreign_key "audit_logs", "users"
   add_foreign_key "champion_pools", "players"
+  add_foreign_key "competitive_matches", "matches"
+  add_foreign_key "competitive_matches", "opponent_teams"
+  add_foreign_key "competitive_matches", "organizations"
   add_foreign_key "matches", "organizations"
   add_foreign_key "password_reset_tokens", "users"
   add_foreign_key "player_match_stats", "matches"
@@ -444,6 +535,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_000001) do
   add_foreign_key "scouting_targets", "organizations"
   add_foreign_key "scouting_targets", "users", column: "added_by_id"
   add_foreign_key "scouting_targets", "users", column: "assigned_to_id"
+  add_foreign_key "scrims", "matches"
+  add_foreign_key "scrims", "opponent_teams"
+  add_foreign_key "scrims", "organizations"
   add_foreign_key "team_goals", "organizations"
   add_foreign_key "team_goals", "players"
   add_foreign_key "team_goals", "users", column: "assigned_to_id"

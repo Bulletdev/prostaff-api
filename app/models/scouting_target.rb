@@ -28,11 +28,13 @@ class ScoutingTarget < ApplicationRecord
   scope :assigned_to_user, ->(user_id) { where(assigned_to_id: user_id) }
 
   # Instance methods
+  # Returns formatted display of current ranked status
+  # @return [String] Formatted rank (e.g., "Diamond II (75 LP)" or "Unranked")
   def current_rank_display
     return 'Unranked' if current_tier.blank?
 
-    rank_part = current_rank.present? ? " #{current_rank}" : ""
-    lp_part = current_lp.present? ? " (#{current_lp} LP)" : ""
+    rank_part = current_rank&.then { |r| " #{r}" } || ""
+    lp_part = current_lp&.then { |lp| " (#{lp} LP)" } || ""
 
     "#{current_tier.titleize}#{rank_part}#{lp_part}"
   end
@@ -92,13 +94,15 @@ class ScoutingTarget < ApplicationRecord
     end
   end
 
+  # Returns hash of contact information for the target
+  # @return [Hash] Contact details (only includes present values)
   def contact_info
-    info = {}
-    info[:email] = email if email.present?
-    info[:phone] = phone if phone.present?
-    info[:discord] = discord_username if discord_username.present?
-    info[:twitter] = "https://twitter.com/#{twitter_handle}" if twitter_handle.present?
-    info
+    {
+      email: email,
+      phone: phone,
+      discord: discord_username,
+      twitter: twitter_handle&.then { |h| "https://twitter.com/#{h}" }
+    }.compact
   end
 
   def main_champions

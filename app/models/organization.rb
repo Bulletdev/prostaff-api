@@ -1,4 +1,36 @@
+# Represents a League of Legends esports organization
+#
+# Organizations are the top-level entities in the system. Each organization
+# has players, matches, schedules, and is associated with a specific tier
+# that determines available features and limits.
+#
+# The tier system controls access to features:
+# - tier_3_amateur: Basic features for amateur teams
+# - tier_2_semi_pro: Advanced features including scrim tracking
+# - tier_1_professional: Full feature set with competitive data
+#
+# @attr [String] name Organization's full name (required)
+# @attr [String] slug URL-friendly unique identifier (auto-generated)
+# @attr [String] region Server region (BR, NA, EUW, etc.)
+# @attr [String] tier Access tier determining available features
+# @attr [String] subscription_plan Current subscription plan
+# @attr [String] subscription_status Subscription status: active, inactive, trial, or expired
+#
+# @example Creating a new organization
+#   org = Organization.create!(
+#     name: "T1 Esports",
+#     region: "KR",
+#     tier: "tier_1_professional"
+#   )
+#
+# @example Checking feature access
+#   org.can_access_scrims? # => true for tier_2+
+#   org.can_access_competitive_data? # => true for tier_1 only
+#
 class Organization < ApplicationRecord
+  # Concerns
+  include TierFeatures
+
   # Associations
   has_many :users, dependent: :destroy
   has_many :players, dependent: :destroy
@@ -9,11 +41,15 @@ class Organization < ApplicationRecord
   has_many :team_goals, dependent: :destroy
   has_many :audit_logs, dependent: :destroy
 
+  # New tier-based associations
+  has_many :scrims, dependent: :destroy
+  has_many :competitive_matches, dependent: :destroy
+
   # Validations
   validates :name, presence: true, length: { maximum: 255 }
   validates :slug, presence: true, uniqueness: true, length: { maximum: 100 }
   validates :region, presence: true, inclusion: { in: %w[BR NA EUW KR EUNE EUW1 LAN LAS OCE RU TR JP] }
-  validates :tier, inclusion: { in: %w[amateur semi_pro professional] }, allow_blank: true
+  validates :tier, inclusion: { in: %w[tier_3_amateur tier_2_semi_pro tier_1_professional] }, allow_blank: true
   validates :subscription_plan, inclusion: { in: %w[free amateur semi_pro professional enterprise] }, allow_blank: true
   validates :subscription_status, inclusion: { in: %w[active inactive trial expired] }, allow_blank: true
 

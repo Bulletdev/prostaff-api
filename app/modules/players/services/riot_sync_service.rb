@@ -2,8 +2,33 @@
 
 module Players
   module Services
-    # Service responsible for syncing player data from Riot API
-    # Extracted from PlayersController to follow Single Responsibility Principle
+    # Service for syncing player data with Riot Games API
+    #
+    # Handles importing new players and updating existing player data from
+    # the Riot API. Manages the complexity of Riot ID format changes and
+    # tag variations across different regions.
+    #
+    # Key features:
+    # - Auto-detect and try multiple tag variations (e.g., BR, BR1, BRSL)
+    # - Import new players by summoner name
+    # - Sync existing players to update rank and stats
+    # - Search for players with fuzzy tag matching
+    #
+    # @example Import a new player
+    #   result = RiotSyncService.import(
+    #     summoner_name: "PlayerName#BR1",
+    #     role: "mid",
+    #     region: "br1",
+    #     organization: org
+    #   )
+    #
+    # @example Sync existing player
+    #   service = RiotSyncService.new(player)
+    #   result = service.sync
+    #
+    # @example Search for a player
+    #   result = RiotSyncService.search_riot_id("PlayerName", region: "br1")
+    #
     class RiotSyncService
       require 'net/http'
       require 'json'
@@ -56,48 +81,83 @@ module Players
         service.search_player(summoner_name)
       end
 
+      # Searches for a player on Riot's servers with fuzzy tag matching
+      #
+      # @param summoner_name [String] Summoner name with optional tag (e.g., "Player#BR1" or "Player")
+      # @return [Hash] Search result with success status and player data if found
       def search_player(summoner_name)
         validate_api_key!
 
         game_name, tag_line = parse_riot_id(summoner_name)
 
-        if summoner_name.include?('#') || summoner_name.include?('-')
-          begin
-            account_data = fetch_account_by_riot_id(game_name, tag_line)
-            return {
-              success: true,
-              found: true,
-              game_name: account_data['gameName'],
-              tag_line: account_data['tagLine'],
-              puuid: account_data['puuid'],
-              riot_id: "#{account_data['gameName']}##{account_data['tagLine']}"
-            }
-          rescue StandardError => e
-            Rails.logger.info "Exact match failed: #{e.message}"
-          end
-        end
+        # Try exact match first if tag is provided
+        exact_match = try_exact_match(summoner_name, game_name, tag_line)
+        return exact_match if exact_match
 
+        # Fall back to tag variations
+        try_fuzzy_search(game_name, tag_line)
+      rescue StandardError => e
+        { success: false, error: e.message, code: 'SEARCH_ERROR' }
+      end
+
+      # Attempts to find player with exact tag match
+      #
+      # @return [Hash, nil] Player data if found, nil otherwise
+      def try_exact_match(summoner_name, game_name, tag_line)
+        return nil unless summoner_name.include?('#') || summoner_name.include?('-')
+
+        account_data = fetch_account_by_riot_id(game_name, tag_line)
+        build_success_response(account_data)
+      rescue StandardError => e
+        Rails.logger.info "Exact match failed: #{e.message}"
+        nil
+      end
+
+      # Attempts to find player using tag variations
+      #
+      # @return [Hash] Search result with success status
+      def try_fuzzy_search(game_name, tag_line)
         tag_variations = build_tag_variations(tag_line)
         result = try_tag_variations(game_name, tag_variations)
 
         if result
-          {
-            success: true,
-            found: true,
-            **result,
-            message: "Player found! Use this Riot ID: #{result[:riot_id]}"
-          }
+          build_success_response_with_message(result)
         else
-          {
-            success: false,
-            found: false,
-            error: "Player not found. Tried game name '#{game_name}' with tags: #{tag_variations.join(', ')}",
-            game_name: game_name,
-            tried_tags: tag_variations
-          }
+          build_not_found_response(game_name, tag_variations)
         end
-      rescue StandardError => e
-        { success: false, error: e.message, code: 'SEARCH_ERROR' }
+      end
+
+      # Builds a successful search response
+      def build_success_response(account_data)
+        {
+          success: true,
+          found: true,
+          game_name: account_data['gameName'],
+          tag_line: account_data['tagLine'],
+          puuid: account_data['puuid'],
+          riot_id: "#{account_data['gameName']}##{account_data['tagLine']}"
+        }
+      end
+
+      # Builds a successful fuzzy search response with message
+      def build_success_response_with_message(result)
+        {
+          success: true,
+          found: true,
+          **result,
+          message: "Player found! Use this Riot ID: #{result[:riot_id]}"
+        }
+      end
+
+      # Builds a not found response
+      def build_not_found_response(game_name, tag_variations)
+        {
+          success: false,
+          found: false,
+          error: "Player not found. Tried game name '#{game_name}' with tags: #{tag_variations.join(', ')}",
+          game_name: game_name,
+          tried_tags: tag_variations
+        }
       end
 
       private

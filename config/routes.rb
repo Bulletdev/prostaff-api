@@ -104,6 +104,28 @@ Rails.application.routes.draw do
 
       # Team Goals
       resources :team_goals, path: 'team-goals'
+
+      # Scrims Module (Tier 2+)
+      namespace :scrims do
+        resources :scrims do
+          member do
+            post :add_game
+          end
+          collection do
+            get :calendar
+            get :analytics
+          end
+        end
+
+        resources :opponent_teams, path: 'opponent-teams' do
+          member do
+            get :scrim_history, path: 'scrim-history'
+          end
+        end
+      end
+
+      # Competitive Matches (Tier 1)
+      resources :competitive_matches, path: 'competitive-matches', only: [:index, :show]
     end
   end
 

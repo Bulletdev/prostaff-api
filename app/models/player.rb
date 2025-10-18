@@ -1,3 +1,33 @@
+# Represents a player (athlete) in a League of Legends organization
+#
+# Players are the core entities in the roster management system. Each player
+# belongs to an organization and has associated match statistics, champion pools,
+# and rank information synced from the Riot Games API.
+#
+# @attr [String] summoner_name The player's in-game summoner name (required)
+# @attr [String] real_name The player's real legal name (optional)
+# @attr [String] role The player's primary position: top, jungle, mid, adc, or support
+# @attr [String] status Player's roster status: active, inactive, benched, or trial
+# @attr [String] riot_puuid Riot's universal unique identifier for the player
+# @attr [String] riot_summoner_id Riot's summoner ID for API calls
+# @attr [Integer] jersey_number Player's team jersey number (unique per organization)
+# @attr [String] solo_queue_tier Current ranked tier (IRON to CHALLENGER)
+# @attr [String] solo_queue_rank Current ranked division (I to IV)
+# @attr [Integer] solo_queue_lp Current League Points in ranked
+# @attr [Date] contract_start_date Contract start date
+# @attr [Date] contract_end_date Contract end date
+#
+# @example Creating a new player
+#   player = Player.create!(
+#     summoner_name: "Faker",
+#     role: "mid",
+#     organization: org,
+#     status: "active"
+#   )
+#
+# @example Finding active players by role
+#   mid_laners = Player.active.by_role("mid")
+#
 class Player < ApplicationRecord
   # Associations
   belongs_to :organization
@@ -52,20 +82,24 @@ class Player < ApplicationRecord
   }
 
   # Instance methods
+  # Returns formatted display of current ranked status
+  # @return [String] Formatted rank (e.g., "Diamond II (75 LP)" or "Unranked")
   def current_rank_display
     return 'Unranked' if solo_queue_tier.blank?
 
-    rank_part = solo_queue_rank.present? ? " #{solo_queue_rank}" : ""
-    lp_part = solo_queue_lp.present? ? " (#{solo_queue_lp} LP)" : ""
+    rank_part = solo_queue_rank&.then { |r| " #{r}" } || ""
+    lp_part = solo_queue_lp&.then { |lp| " (#{lp} LP)" } || ""
 
     "#{solo_queue_tier.titleize}#{rank_part}#{lp_part}"
   end
 
+  # Returns formatted display of peak rank achieved
+  # @return [String] Formatted peak rank (e.g., "Master I (S13)" or "No peak recorded")
   def peak_rank_display
     return 'No peak recorded' if peak_tier.blank?
 
-    rank_part = peak_rank.present? ? " #{peak_rank}" : ""
-    season_part = peak_season.present? ? " (S#{peak_season})" : ""
+    rank_part = peak_rank&.then { |r| " #{r}" } || ""
+    season_part = peak_season&.then { |s| " (S#{s})" } || ""
 
     "#{peak_tier.titleize}#{rank_part}#{season_part}"
   end
@@ -103,12 +137,14 @@ class Player < ApplicationRecord
     last_sync_at.blank? || last_sync_at < 1.hour.ago
   end
 
+  # Returns hash of social media links for the player
+  # @return [Hash] Social media URLs (only includes present handles)
   def social_links
-    links = {}
-    links[:twitter] = "https://twitter.com/#{twitter_handle}" if twitter_handle.present?
-    links[:twitch] = "https://twitch.tv/#{twitch_channel}" if twitch_channel.present?
-    links[:instagram] = "https://instagram.com/#{instagram_handle}" if instagram_handle.present?
-    links
+    {
+      twitter: twitter_handle&.then { |h| "https://twitter.com/#{h}" },
+      twitch: twitch_channel&.then { |c| "https://twitch.tv/#{c}" },
+      instagram: instagram_handle&.then { |h| "https://instagram.com/#{h}" }
+    }.compact
   end
 
   private
