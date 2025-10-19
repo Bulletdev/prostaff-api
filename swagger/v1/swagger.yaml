@@ -13,6 +13,499 @@ servers:
 - url: https://api.prostaff.gg
   description: Production server
 paths:
+  "/api/v1/analytics/performance":
+    get:
+      summary: Get team performance analytics
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Returns comprehensive team and player performance metrics
+      parameters:
+      - name: start_date
+        in: query
+        required: false
+        description: Start date (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        description: End date (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: time_period
+        in: query
+        required: false
+        description: Predefined period (week, month, season)
+        schema:
+          type: string
+      - name: player_id
+        in: query
+        required: false
+        description: Player ID for individual stats
+        schema:
+          type: string
+      responses:
+        '200':
+          description: performance data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      team_overview:
+                        type: object
+                        properties:
+                          total_matches:
+                            type: integer
+                          wins:
+                            type: integer
+                          losses:
+                            type: integer
+                          win_rate:
+                            type: number
+                            format: float
+                          avg_game_duration:
+                            type: integer
+                          avg_kda:
+                            type: number
+                            format: float
+                          avg_kills_per_game:
+                            type: number
+                            format: float
+                          avg_deaths_per_game:
+                            type: number
+                            format: float
+                          avg_assists_per_game:
+                            type: number
+                            format: float
+                      best_performers:
+                        type: array
+                      win_rate_trend:
+                        type: array
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/analytics/team-comparison":
+    get:
+      summary: Compare team players performance
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Provides side-by-side comparison of all team players
+      parameters:
+      - name: start_date
+        in: query
+        required: false
+        description: Start date (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        description: End date (YYYY-MM-DD)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: comparison data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      players:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            player:
+                              "$ref": "#/components/schemas/Player"
+                            games_played:
+                              type: integer
+                            kda:
+                              type: number
+                              format: float
+                            avg_damage:
+                              type: integer
+                            avg_gold:
+                              type: integer
+                            avg_cs:
+                              type: number
+                              format: float
+                            avg_vision_score:
+                              type: number
+                              format: float
+                            avg_performance_score:
+                              type: number
+                              format: float
+                            multikills:
+                              type: object
+                              properties:
+                                double:
+                                  type: integer
+                                triple:
+                                  type: integer
+                                quadra:
+                                  type: integer
+                                penta:
+                                  type: integer
+                      team_averages:
+                        type: object
+                      role_rankings:
+                        type: object
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/analytics/champions/{player_id}":
+    parameters:
+    - name: player_id
+      in: path
+      description: Player ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get player champion statistics
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Returns champion pool and performance statistics for a specific
+        player
+      responses:
+        '200':
+          description: champion stats retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        "$ref": "#/components/schemas/Player"
+                      champion_stats:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            champion:
+                              type: string
+                            games_played:
+                              type: integer
+                            win_rate:
+                              type: number
+                              format: float
+                            avg_kda:
+                              type: number
+                              format: float
+                            mastery_grade:
+                              type: string
+                              enum:
+                              - S
+                              - A
+                              - B
+                              - C
+                              - D
+                      top_champions:
+                        type: array
+                      champion_diversity:
+                        type: object
+                        properties:
+                          total_champions:
+                            type: integer
+                          highly_played:
+                            type: integer
+                          average_games:
+                            type: number
+                            format: float
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/analytics/kda-trend/{player_id}":
+    parameters:
+    - name: player_id
+      in: path
+      description: Player ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get player KDA trend over recent matches
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Shows KDA performance trend for the last 50 matches
+      responses:
+        '200':
+          description: KDA trend retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        "$ref": "#/components/schemas/Player"
+                      kda_by_match:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            match_id:
+                              type: string
+                            date:
+                              type: string
+                              format: date-time
+                            kills:
+                              type: integer
+                            deaths:
+                              type: integer
+                            assists:
+                              type: integer
+                            kda:
+                              type: number
+                              format: float
+                            champion:
+                              type: string
+                            victory:
+                              type: boolean
+                      averages:
+                        type: object
+                        properties:
+                          last_10_games:
+                            type: number
+                            format: float
+                          last_20_games:
+                            type: number
+                            format: float
+                          overall:
+                            type: number
+                            format: float
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/analytics/laning/{player_id}":
+    parameters:
+    - name: player_id
+      in: path
+      description: Player ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get player laning phase statistics
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Returns CS and gold performance metrics for laning phase
+      responses:
+        '200':
+          description: laning stats retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        "$ref": "#/components/schemas/Player"
+                      cs_performance:
+                        type: object
+                        properties:
+                          avg_cs_total:
+                            type: number
+                            format: float
+                          avg_cs_per_min:
+                            type: number
+                            format: float
+                          best_cs_game:
+                            type: integer
+                          worst_cs_game:
+                            type: integer
+                      gold_performance:
+                        type: object
+                        properties:
+                          avg_gold:
+                            type: integer
+                          best_gold_game:
+                            type: integer
+                          worst_gold_game:
+                            type: integer
+                      cs_by_match:
+                        type: array
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/analytics/teamfights/{player_id}":
+    parameters:
+    - name: player_id
+      in: path
+      description: Player ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get player teamfight performance
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Returns damage dealt/taken and teamfight participation metrics
+      responses:
+        '200':
+          description: teamfight stats retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        "$ref": "#/components/schemas/Player"
+                      damage_performance:
+                        type: object
+                        properties:
+                          avg_damage_dealt:
+                            type: integer
+                          avg_damage_taken:
+                            type: integer
+                          best_damage_game:
+                            type: integer
+                          avg_damage_per_min:
+                            type: integer
+                      participation:
+                        type: object
+                        properties:
+                          avg_kills:
+                            type: number
+                            format: float
+                          avg_assists:
+                            type: number
+                            format: float
+                          avg_deaths:
+                            type: number
+                            format: float
+                          multikill_stats:
+                            type: object
+                            properties:
+                              double_kills:
+                                type: integer
+                              triple_kills:
+                                type: integer
+                              quadra_kills:
+                                type: integer
+                              penta_kills:
+                                type: integer
+                      by_match:
+                        type: array
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/analytics/vision/{player_id}":
+    parameters:
+    - name: player_id
+      in: path
+      description: Player ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get player vision control statistics
+      tags:
+      - Analytics
+      security:
+      - bearerAuth: []
+      description: Returns ward placement, vision score, and vision control metrics
+      responses:
+        '200':
+          description: vision stats retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        "$ref": "#/components/schemas/Player"
+                      vision_stats:
+                        type: object
+                        properties:
+                          avg_vision_score:
+                            type: number
+                            format: float
+                          avg_wards_placed:
+                            type: number
+                            format: float
+                          avg_wards_killed:
+                            type: number
+                            format: float
+                          best_vision_game:
+                            type: integer
+                          total_wards_placed:
+                            type: integer
+                          total_wards_killed:
+                            type: integer
+                      vision_per_min:
+                        type: number
+                        format: float
+                      by_match:
+                        type: array
+                      role_comparison:
+                        type: object
+                        properties:
+                          player_avg:
+                            type: number
+                            format: float
+                          role_avg:
+                            type: number
+                            format: float
+                          percentile:
+                            type: integer
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/v1/auth/register":
     post:
       summary: Register new organization and admin user
@@ -494,6 +987,392 @@ paths:
                         type: array
                       count:
                         type: integer
+  "/api/v1/matches":
+    get:
+      summary: List all matches
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: Items per page
+        schema:
+          type: integer
+      - name: match_type
+        in: query
+        required: false
+        description: Filter by match type (official, scrim, tournament)
+        schema:
+          type: string
+      - name: result
+        in: query
+        required: false
+        description: Filter by result (victory, defeat)
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        required: false
+        description: Start date for filtering (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        description: End date for filtering (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: days
+        in: query
+        required: false
+        description: Filter recent matches (e.g., 7, 30, 90 days)
+        schema:
+          type: integer
+      - name: opponent
+        in: query
+        required: false
+        description: Filter by opponent name
+        schema:
+          type: string
+      - name: tournament
+        in: query
+        required: false
+        description: Filter by tournament name
+        schema:
+          type: string
+      - name: sort_by
+        in: query
+        required: false
+        description: Sort field (game_start, game_duration, match_type, victory)
+        schema:
+          type: string
+      - name: sort_order
+        in: query
+        required: false
+        description: Sort order (asc, desc)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: matches found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      matches:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/Match"
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+                      summary:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          victories:
+                            type: integer
+                          defeats:
+                            type: integer
+                          win_rate:
+                            type: number
+                            format: float
+                          by_type:
+                            type: object
+                          avg_duration:
+                            type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a match
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: match created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        "$ref": "#/components/schemas/Match"
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                match:
+                  type: object
+                  properties:
+                    match_type:
+                      type: string
+                      enum:
+                      - official
+                      - scrim
+                      - tournament
+                    game_start:
+                      type: string
+                      format: date-time
+                    game_end:
+                      type: string
+                      format: date-time
+                    game_duration:
+                      type: integer
+                      description: Duration in seconds
+                    opponent_name:
+                      type: string
+                    opponent_tag:
+                      type: string
+                    victory:
+                      type: boolean
+                    our_side:
+                      type: string
+                      enum:
+                      - blue
+                      - red
+                    our_score:
+                      type: integer
+                    opponent_score:
+                      type: integer
+                    tournament_name:
+                      type: string
+                    stage:
+                      type: string
+                    patch_version:
+                      type: string
+                    vod_url:
+                      type: string
+                    notes:
+                      type: string
+                  required:
+                  - match_type
+                  - game_start
+                  - victory
+  "/api/v1/matches/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Match ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show match details
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: match found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        "$ref": "#/components/schemas/Match"
+                      player_stats:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/PlayerMatchStat"
+                      team_composition:
+                        type: object
+                      mvp:
+                        "$ref": "#/components/schemas/Player"
+                        nullable: true
+        '404':
+          description: match not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a match
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: match updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        "$ref": "#/components/schemas/Match"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                match:
+                  type: object
+                  properties:
+                    match_type:
+                      type: string
+                    victory:
+                      type: boolean
+                    notes:
+                      type: string
+                    vod_url:
+                      type: string
+    delete:
+      summary: Delete a match
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: match deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/matches/{id}/stats":
+    parameters:
+    - name: id
+      in: path
+      description: Match ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get match statistics
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      match:
+                        "$ref": "#/components/schemas/Match"
+                      team_stats:
+                        type: object
+                        properties:
+                          total_kills:
+                            type: integer
+                          total_deaths:
+                            type: integer
+                          total_assists:
+                            type: integer
+                          total_gold:
+                            type: integer
+                          total_damage:
+                            type: integer
+                          total_cs:
+                            type: integer
+                          total_vision_score:
+                            type: integer
+                          avg_kda:
+                            type: number
+                            format: float
+  "/api/v1/matches/import":
+    post:
+      summary: Import matches from Riot API
+      tags:
+      - Matches
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: import started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      job_id:
+                        type: string
+                      player_id:
+                        type: string
+                      count:
+                        type: integer
+        '400':
+          description: player missing PUUID
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                player_id:
+                  type: string
+                  description: Player ID to import matches for
+                count:
+                  type: integer
+                  description: Number of matches to import (1-100)
+                  default: 20
+              required:
+              - player_id
   "/api/v1/players":
     get:
       summary: List all players
@@ -742,6 +1621,1685 @@ paths:
                         type: array
                       performance_by_role:
                         type: array
+  "/api/v1/riot-data/champions":
+    get:
+      summary: Get champions ID map
+      tags:
+      - Riot Data
+      responses:
+        '200':
+          description: champions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      champions:
+                        type: object
+                      count:
+                        type: integer
+        '503':
+          description: service unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/champions/{champion_key}":
+    parameters:
+    - name: champion_key
+      in: path
+      description: Champion key (e.g., "266" for Aatrox)
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get champion details by key
+      tags:
+      - Riot Data
+      responses:
+        '200':
+          description: champion found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      champion:
+                        type: object
+        '404':
+          description: champion not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/all-champions":
+    get:
+      summary: Get all champions details
+      tags:
+      - Riot Data
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: champions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      champions:
+                        type: array
+                        items:
+                          type: object
+                      count:
+                        type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/items":
+    get:
+      summary: Get all items
+      tags:
+      - Riot Data
+      responses:
+        '200':
+          description: items retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: object
+                      count:
+                        type: integer
+        '503':
+          description: service unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/summoner-spells":
+    get:
+      summary: Get all summoner spells
+      tags:
+      - Riot Data
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: summoner spells retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      summoner_spells:
+                        type: object
+                      count:
+                        type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/version":
+    get:
+      summary: Get current Data Dragon version
+      tags:
+      - Riot Data
+      responses:
+        '200':
+          description: version retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+        '503':
+          description: service unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/clear-cache":
+    post:
+      summary: Clear Data Dragon cache
+      tags:
+      - Riot Data
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: cache cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+        '403':
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-data/update-cache":
+    post:
+      summary: Update Data Dragon cache
+      tags:
+      - Riot Data
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: cache updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      version:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          champions:
+                            type: integer
+                          items:
+                            type: integer
+                          summoner_spells:
+                            type: integer
+        '403':
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/riot-integration/sync-status":
+    get:
+      summary: Get Riot API synchronization status
+      tags:
+      - Riot Integration
+      security:
+      - bearerAuth: []
+      description: Returns statistics about player data synchronization with Riot
+        API
+      responses:
+        '200':
+          description: sync status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      stats:
+                        type: object
+                        properties:
+                          total_players:
+                            type: integer
+                            description: Total number of players in the organization
+                          synced_players:
+                            type: integer
+                            description: Players successfully synced
+                          pending_sync:
+                            type: integer
+                            description: Players pending synchronization
+                          failed_sync:
+                            type: integer
+                            description: Players with failed sync
+                          recently_synced:
+                            type: integer
+                            description: Players synced in the last 24 hours
+                          needs_sync:
+                            type: integer
+                            description: Players that need to be synced
+                      recent_syncs:
+                        type: array
+                        description: List of 10 most recently synced players
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            summoner_name:
+                              type: string
+                            last_sync_at:
+                              type: string
+                              format: date-time
+                            sync_status:
+                              type: string
+                              enum:
+                              - pending
+                              - success
+                              - error
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/schedules":
+    get:
+      summary: List all schedules
+      tags:
+      - Schedules
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: Items per page
+        schema:
+          type: integer
+      - name: event_type
+        in: query
+        required: false
+        description: Filter by event type (match, scrim, practice, meeting, other)
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        description: Filter by status (scheduled, ongoing, completed, cancelled)
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        required: false
+        description: Start date for filtering (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        description: End date for filtering (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: upcoming
+        in: query
+        required: false
+        description: Filter upcoming events
+        schema:
+          type: boolean
+      - name: past
+        in: query
+        required: false
+        description: Filter past events
+        schema:
+          type: boolean
+      - name: today
+        in: query
+        required: false
+        description: Filter today's events
+        schema:
+          type: boolean
+      - name: this_week
+        in: query
+        required: false
+        description: Filter this week's events
+        schema:
+          type: boolean
+      - name: sort_order
+        in: query
+        required: false
+        description: Sort order (asc, desc)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: schedules found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      schedules:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/Schedule"
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a schedule
+      tags:
+      - Schedules
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: schedule created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      schedule:
+                        "$ref": "#/components/schemas/Schedule"
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule:
+                  type: object
+                  properties:
+                    event_type:
+                      type: string
+                      enum:
+                      - match
+                      - scrim
+                      - practice
+                      - meeting
+                      - other
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    start_time:
+                      type: string
+                      format: date-time
+                    end_time:
+                      type: string
+                      format: date-time
+                    location:
+                      type: string
+                    opponent_name:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                      - scheduled
+                      - ongoing
+                      - completed
+                      - cancelled
+                      default: scheduled
+                    match_id:
+                      type: string
+                    meeting_url:
+                      type: string
+                    all_day:
+                      type: boolean
+                    timezone:
+                      type: string
+                    color:
+                      type: string
+                    is_recurring:
+                      type: boolean
+                    recurrence_rule:
+                      type: string
+                    recurrence_end_date:
+                      type: string
+                      format: date
+                    reminder_minutes:
+                      type: integer
+                    required_players:
+                      type: array
+                      items:
+                        type: string
+                    optional_players:
+                      type: array
+                      items:
+                        type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                  required:
+                  - event_type
+                  - title
+                  - start_time
+                  - end_time
+  "/api/v1/schedules/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Schedule ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show schedule details
+      tags:
+      - Schedules
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: schedule found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      schedule:
+                        "$ref": "#/components/schemas/Schedule"
+        '404':
+          description: schedule not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a schedule
+      tags:
+      - Schedules
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: schedule updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      schedule:
+                        "$ref": "#/components/schemas/Schedule"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    status:
+                      type: string
+                    location:
+                      type: string
+                    meeting_url:
+                      type: string
+    delete:
+      summary: Delete a schedule
+      tags:
+      - Schedules
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: schedule deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/scouting/players":
+    get:
+      summary: List all scouting targets
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: Items per page
+        schema:
+          type: integer
+      - name: role
+        in: query
+        required: false
+        description: Filter by role (top, jungle, mid, adc, support)
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        description: Filter by status (watching, contacted, negotiating, rejected,
+          signed)
+        schema:
+          type: string
+      - name: priority
+        in: query
+        required: false
+        description: Filter by priority (low, medium, high, critical)
+        schema:
+          type: string
+      - name: region
+        in: query
+        required: false
+        description: Filter by region
+        schema:
+          type: string
+      - name: active
+        in: query
+        required: false
+        description: Filter active targets only
+        schema:
+          type: boolean
+      - name: high_priority
+        in: query
+        required: false
+        description: Filter high priority targets only
+        schema:
+          type: boolean
+      - name: needs_review
+        in: query
+        required: false
+        description: Filter targets needing review
+        schema:
+          type: boolean
+      - name: assigned_to_id
+        in: query
+        required: false
+        description: Filter by assigned user
+        schema:
+          type: string
+      - name: search
+        in: query
+        required: false
+        description: Search by summoner name or real name
+        schema:
+          type: string
+      - name: sort_by
+        in: query
+        required: false
+        description: Sort field
+        schema:
+          type: string
+      - name: sort_order
+        in: query
+        required: false
+        description: Sort order (asc, desc)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: scouting targets found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      players:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/ScoutingTarget"
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      total_pages:
+                        type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a scouting target
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: scouting target created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      scouting_target:
+                        "$ref": "#/components/schemas/ScoutingTarget"
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scouting_target:
+                  type: object
+                  properties:
+                    summoner_name:
+                      type: string
+                    real_name:
+                      type: string
+                    role:
+                      type: string
+                      enum:
+                      - top
+                      - jungle
+                      - mid
+                      - adc
+                      - support
+                    region:
+                      type: string
+                      enum:
+                      - BR
+                      - NA
+                      - EUW
+                      - KR
+                      - EUNE
+                      - LAN
+                      - LAS
+                      - OCE
+                      - RU
+                      - TR
+                      - JP
+                    nationality:
+                      type: string
+                    age:
+                      type: integer
+                    status:
+                      type: string
+                      enum:
+                      - watching
+                      - contacted
+                      - negotiating
+                      - rejected
+                      - signed
+                      default: watching
+                    priority:
+                      type: string
+                      enum:
+                      - low
+                      - medium
+                      - high
+                      - critical
+                      default: medium
+                    current_team:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    phone:
+                      type: string
+                    discord_username:
+                      type: string
+                    twitter_handle:
+                      type: string
+                    scouting_notes:
+                      type: string
+                    contact_notes:
+                      type: string
+                    availability:
+                      type: string
+                    salary_expectations:
+                      type: string
+                    assigned_to_id:
+                      type: string
+                  required:
+                  - summoner_name
+                  - region
+                  - role
+  "/api/v1/scouting/players/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Scouting Target ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show scouting target details
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: scouting target found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      scouting_target:
+                        "$ref": "#/components/schemas/ScoutingTarget"
+        '404':
+          description: scouting target not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a scouting target
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: scouting target updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      scouting_target:
+                        "$ref": "#/components/schemas/ScoutingTarget"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scouting_target:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    priority:
+                      type: string
+                    scouting_notes:
+                      type: string
+                    contact_notes:
+                      type: string
+    delete:
+      summary: Delete a scouting target
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: scouting target deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/scouting/regions":
+    get:
+      summary: Get scouting statistics by region
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: regional statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      regions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            region:
+                              type: string
+                            total_targets:
+                              type: integer
+                            by_status:
+                              type: object
+                            by_priority:
+                              type: object
+                            avg_tier:
+                              type: string
+  "/api/v1/scouting/watchlist":
+    get:
+      summary: Get watchlist (active scouting targets)
+      tags:
+      - Scouting
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: assigned_to_me
+        in: query
+        required: false
+        description: Filter targets assigned to current user
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: watchlist retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      watchlist:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/ScoutingTarget"
+                      stats:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          needs_review:
+                            type: integer
+                          high_priority:
+                            type: integer
+  "/api/v1/team-goals":
+    get:
+      summary: List all team goals
+      tags:
+      - Team Goals
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: Items per page
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: Filter by status (not_started, in_progress, completed, cancelled)
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        description: Filter by category (performance, training, tournament, development,
+          team_building, other)
+        schema:
+          type: string
+      - name: player_id
+        in: query
+        required: false
+        description: Filter by player ID
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: false
+        description: Filter by type (team, player)
+        schema:
+          type: string
+      - name: active
+        in: query
+        required: false
+        description: Filter active goals only
+        schema:
+          type: boolean
+      - name: overdue
+        in: query
+        required: false
+        description: Filter overdue goals only
+        schema:
+          type: boolean
+      - name: expiring_soon
+        in: query
+        required: false
+        description: Filter goals expiring soon
+        schema:
+          type: boolean
+      - name: expiring_days
+        in: query
+        required: false
+        description: 'Days threshold for expiring soon (default: 7)'
+        schema:
+          type: integer
+      - name: assigned_to_id
+        in: query
+        required: false
+        description: Filter by assigned user ID
+        schema:
+          type: string
+      - name: sort_by
+        in: query
+        required: false
+        description: Sort field (created_at, updated_at, title, status, category,
+          start_date, end_date, progress)
+        schema:
+          type: string
+      - name: sort_order
+        in: query
+        required: false
+        description: Sort order (asc, desc)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: team goals found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      goals:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/TeamGoal"
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+                      summary:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          by_status:
+                            type: object
+                          by_category:
+                            type: object
+                          active_count:
+                            type: integer
+                          completed_count:
+                            type: integer
+                          overdue_count:
+                            type: integer
+                          avg_progress:
+                            type: number
+                            format: float
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a team goal
+      tags:
+      - Team Goals
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: team goal created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      goal:
+                        "$ref": "#/components/schemas/TeamGoal"
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_goal:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    category:
+                      type: string
+                      enum:
+                      - performance
+                      - training
+                      - tournament
+                      - development
+                      - team_building
+                      - other
+                    metric_type:
+                      type: string
+                      enum:
+                      - percentage
+                      - number
+                      - kda
+                      - win_rate
+                      - rank
+                      - other
+                    target_value:
+                      type: number
+                      format: float
+                    current_value:
+                      type: number
+                      format: float
+                    start_date:
+                      type: string
+                      format: date
+                    end_date:
+                      type: string
+                      format: date
+                    status:
+                      type: string
+                      enum:
+                      - not_started
+                      - in_progress
+                      - completed
+                      - cancelled
+                      default: not_started
+                    progress:
+                      type: integer
+                      description: Progress percentage (0-100)
+                    notes:
+                      type: string
+                    player_id:
+                      type: string
+                      description: Player ID if this is a player-specific goal
+                    assigned_to_id:
+                      type: string
+                      description: User ID responsible for tracking this goal
+                  required:
+                  - title
+                  - category
+                  - metric_type
+                  - target_value
+                  - start_date
+                  - end_date
+  "/api/v1/team-goals/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: Team Goal ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show team goal details
+      tags:
+      - Team Goals
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: team goal found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      goal:
+                        "$ref": "#/components/schemas/TeamGoal"
+        '404':
+          description: team goal not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a team goal
+      tags:
+      - Team Goals
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: team goal updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      goal:
+                        "$ref": "#/components/schemas/TeamGoal"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_goal:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    status:
+                      type: string
+                    current_value:
+                      type: number
+                      format: float
+                    progress:
+                      type: integer
+                    notes:
+                      type: string
+    delete:
+      summary: Delete a team goal
+      tags:
+      - Team Goals
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: team goal deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/vod-reviews":
+    get:
+      summary: List all VOD reviews
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: Items per page
+        schema:
+          type: integer
+      - name: match_id
+        in: query
+        required: false
+        description: Filter by match ID
+        schema:
+          type: string
+      - name: reviewed_by_id
+        in: query
+        required: false
+        description: Filter by reviewer ID
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        description: Filter by status (draft, published, archived)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: VOD reviews found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      vod_reviews:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/VodReview"
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a VOD review
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: VOD review created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      vod_review:
+                        "$ref": "#/components/schemas/VodReview"
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vod_review:
+                  type: object
+                  properties:
+                    match_id:
+                      type: string
+                    title:
+                      type: string
+                    vod_url:
+                      type: string
+                    vod_platform:
+                      type: string
+                      enum:
+                      - youtube
+                      - twitch
+                      - gdrive
+                      - other
+                    summary:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                      - draft
+                      - published
+                      - archived
+                      default: draft
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                  required:
+                  - title
+                  - vod_url
+  "/api/v1/vod-reviews/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: VOD Review ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show VOD review details
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: VOD review found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      vod_review:
+                        "$ref": "#/components/schemas/VodReview"
+                      timestamps:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/VodTimestamp"
+        '404':
+          description: VOD review not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a VOD review
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: VOD review updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      vod_review:
+                        "$ref": "#/components/schemas/VodReview"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vod_review:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    summary:
+                      type: string
+                    status:
+                      type: string
+    delete:
+      summary: Delete a VOD review
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: VOD review deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/vod-reviews/{vod_review_id}/timestamps":
+    parameters:
+    - name: vod_review_id
+      in: path
+      description: VOD Review ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: List timestamps for a VOD review
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: category
+        in: query
+        required: false
+        description: Filter by category (mistake, good_play, objective, teamfight,
+          other)
+        schema:
+          type: string
+      - name: importance
+        in: query
+        required: false
+        description: Filter by importance (low, medium, high, critical)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: timestamps found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      timestamps:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/VodTimestamp"
+    post:
+      summary: Create a timestamp
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: timestamp created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      timestamp:
+                        "$ref": "#/components/schemas/VodTimestamp"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vod_timestamp:
+                  type: object
+                  properties:
+                    timestamp_seconds:
+                      type: integer
+                      description: Timestamp in seconds
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    category:
+                      type: string
+                      enum:
+                      - mistake
+                      - good_play
+                      - objective
+                      - teamfight
+                      - other
+                    importance:
+                      type: string
+                      enum:
+                      - low
+                      - medium
+                      - high
+                      - critical
+                    target_type:
+                      type: string
+                      enum:
+                      - team
+                      - player
+                      description: Who this timestamp is about
+                    target_player_id:
+                      type: string
+                      description: Player ID if target_type is player
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                  required:
+                  - timestamp_seconds
+                  - title
+                  - category
+                  - importance
+  "/api/v1/vod-timestamps/{id}":
+    parameters:
+    - name: id
+      in: path
+      description: VOD Timestamp ID
+      required: true
+      schema:
+        type: string
+    patch:
+      summary: Update a timestamp
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: timestamp updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      timestamp:
+                        "$ref": "#/components/schemas/VodTimestamp"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vod_timestamp:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    importance:
+                      type: string
+    delete:
+      summary: Delete a timestamp
+      tags:
+      - VOD Reviews
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: timestamp deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
 components:
   securitySchemes:
     bearerAuth:
