@@ -5,32 +5,114 @@
 [![Rails Version](https://img.shields.io/badge/rails-7.2-CC342D?logo=rubyonrails)](https://rubyonrails.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg?logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-6+-red.svg?logo=redis)](https://redis.io/)
+[![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger)](http://localhost:3333/api-docs)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](http://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 # ProStaff API
 
-Ruby on Rails API for the ProStaff.gg esports team management platform.
+> Ruby on Rails API for the ProStaff.gg esports team management platform.
 
-##  Quick Start
+<details>
+<summary>Key Features (Click to show details) </summary>
+
+-  **JWT Authentication** with refresh tokens and token blacklisting
+-  **Interactive Swagger Documentation** (107 endpoints documented)
+-  **Riot Games API Integration** for automatic match import and player sync
+-  **Advanced Analytics** (KDA trends, champion pools, vision control, etc.)
+-  **Scouting System** with talent discovery and watchlist management
+-  **VOD Review System** with timestamp annotations
+- ️ **Schedule Management** for matches, scrims, and team events
+-  **Goal Tracking** for team and player performance objectives
+-  **Background Jobs** with Sidekiq for async processing
+- ️ **Security Hardened** (OWASP Top 10, Brakeman, ZAP tested)
+-  **High Performance** (p95: ~500ms, with cache: ~50ms)
+- ️ **Modular Monolith** architecture for scalability
+</details>
+
+##  Table of Contents
+
+- [Quick Start](#quick-start)
+- [Technology Stack](#technology-stack)
+- [Architecture](#architecture)
+- [Setup](#setup)
+- [Development Tools](#️-development-tools)
+- [API Documentation](#-api-documentation)
+- [Testing](#-testing)
+- [Performance & Load Testing](#-performance--testing)
+- [Security](#security-testing-owasp)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
+
+<details>
+<summary> Quick Start (Click to show details) </summary>
+
+### Option 1: With Docker (Recommended)
 
 ```bash
+# Start all services (API, PostgreSQL, Redis, Sidekiq)
 docker compose up -d
 
+# Create test user
 docker exec prostaff-api-api-1 rails runner scripts/create_test_user.rb
 
+# Get JWT token for testing
+./scripts/get-token.sh
+
+# Access API docs
+open http://localhost:3333/api-docs
+
+# Run smoke tests
 ./load_tests/run-tests.sh smoke local
+
+# Run security scan
 ./security_tests/scripts/brakeman-scan.sh
 ```
+
+### Option 2: Without Docker (Local Development)
+
+```bash
+# Install dependencies
+bundle install
+
+# Generate secrets
+./scripts/generate_secrets.sh  # Copy output to .env
+
+# Setup database
+rails db:create db:migrate db:seed
+
+# Start Redis (in separate terminal)
+redis-server
+
+# Start Sidekiq (in separate terminal)
+bundle exec sidekiq
+
+# Start Rails server
+rails server -p 3333
+
+# Get JWT token for testing
+./scripts/get-token.sh
+
+# Access API docs
+open http://localhost:3333/api-docs
+```
+
+**API will be available at:** `http://localhost:3333`
+**Swagger Docs:** `http://localhost:3333/api-docs`
+</details>
 
 ## Technology Stack
 
 - **Ruby**: 3.4.5
-- **Rails**: 7.1+ (API-only mode)
+- **Rails**: 7.2.0 (API-only mode)
 - **Database**: PostgreSQL 14+
-- **Authentication**: JWT
+- **Authentication**: JWT (with refresh tokens)
 - **Background Jobs**: Sidekiq
 - **Caching**: Redis (port 6380)
-- **Testing**: RSpec, k6, OWASP ZAP
+- **API Documentation**: Swagger/OpenAPI 3.0 (rswag)
+- **Testing**: RSpec, Integration Specs, k6, OWASP ZAP
+- **Authorization**: Pundit
+- **Serialization**: Blueprinter
 
 ## Architecture
 
@@ -291,7 +373,78 @@ rails server
 
 The API will be available at `http://localhost:3333`
 
-## API Documentation
+##  Development Tools
+
+### Generate Secrets
+
+Generate secure secrets for your `.env` file:
+
+```bash
+./scripts/generate_secrets.sh
+```
+
+This will generate:
+- `SECRET_KEY_BASE` - Rails secret key
+- `JWT_SECRET_KEY` - JWT signing key
+
+### Get JWT Token (for API testing)
+
+Generate a JWT token for testing the API:
+
+```bash
+./scripts/get-token.sh
+```
+
+This will:
+1. Create or find a test user (`test@prostaff.gg`)
+2. Generate a valid JWT token
+3. Show instructions on how to use it
+
+**Quick usage:**
+```bash
+# Export to environment variable
+export BEARER_TOKEN=$(./scripts/get-token.sh | grep -oP 'eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*')
+
+# Use in curl
+curl -H "Authorization: Bearer $BEARER_TOKEN" http://localhost:3333/api/v1/players
+```
+
+**Custom credentials:**
+```bash
+TEST_EMAIL="admin@example.com" TEST_PASSWORD="MyPass123!" ./scripts/get-token.sh
+```
+<details>
+<summary> 📚 API Documentation (Click to show details) </summary>
+
+### Interactive Documentation (Swagger UI)
+
+The API provides interactive documentation powered by Swagger/OpenAPI 3.0:
+
+**Access the docs:**
+```
+http://localhost:3333/api-docs
+```
+
+**Features:**
+- ✅ Try out endpoints directly from the browser
+- ✅ See request/response schemas
+- ✅ Authentication support (Bearer token)
+- ✅ Complete parameter documentation
+- ✅ Example requests and responses
+
+### Generating/Updating Documentation
+
+The Swagger documentation is automatically generated from RSpec integration tests:
+
+```bash
+# Run integration specs and generate Swagger docs
+bundle exec rake rswag:specs:swaggerize
+
+# Or run specs individually
+bundle exec rspec spec/integration/
+```
+
+The generated documentation file is located at `swagger/v1/swagger.yaml`.
 
 ### Base URL
 ```
@@ -304,6 +457,29 @@ All endpoints (except auth endpoints) require a Bearer token in the Authorizatio
 
 ```
 Authorization: Bearer <your-jwt-token>
+```
+
+**Token Details:**
+- **Access Token**: Expires in 24 hours (configurable via `JWT_EXPIRATION_HOURS`)
+- **Refresh Token**: Expires in 7 days
+- **Token Type**: Bearer (JWT)
+
+**Getting a token:**
+```bash
+# Option 1: Use the script
+./scripts/get-token.sh
+
+# Option 2: Login via API
+curl -X POST http://localhost:3333/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@prostaff.gg","password":"Test123!@#"}'
+```
+
+**Refreshing a token:**
+```bash
+curl -X POST http://localhost:3333/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"your-refresh-token"}'
 ```
 
 ### Authentication Endpoints
@@ -345,16 +521,113 @@ Authorization: Bearer <your-jwt-token>
 - `POST /scouting/players` - Add scouting target
 
 #### Analytics
-- `GET /analytics/performance` - Player performance data
-- `GET /analytics/champions/:player_id` - Champion statistics
-- `GET /analytics/kda-trend/:player_id` - KDA trend analysis
+- `GET /analytics/performance` - Team performance analytics
+- `GET /analytics/team-comparison` - Compare all players
+- `GET /analytics/champions/:player_id` - Champion pool statistics
+- `GET /analytics/kda-trend/:player_id` - KDA trend over time
+- `GET /analytics/laning/:player_id` - Laning phase performance
+- `GET /analytics/teamfights/:player_id` - Teamfight performance
+- `GET /analytics/vision/:player_id` - Vision control statistics
 
-## Testing
+#### Schedules
+- `GET /schedules` - List all scheduled events
+- `GET /schedules/:id` - Get schedule details
+- `POST /schedules` - Create new event
+- `PATCH /schedules/:id` - Update event
+- `DELETE /schedules/:id` - Delete event
 
-Run the test suite:
+#### Team Goals
+- `GET /team-goals` - List all goals
+- `GET /team-goals/:id` - Get goal details
+- `POST /team-goals` - Create new goal
+- `PATCH /team-goals/:id` - Update goal progress
+- `DELETE /team-goals/:id` - Delete goal
+
+#### VOD Reviews
+- `GET /vod-reviews` - List VOD reviews
+- `GET /vod-reviews/:id` - Get review details
+- `POST /vod-reviews` - Create new review
+- `PATCH /vod-reviews/:id` - Update review
+- `DELETE /vod-reviews/:id` - Delete review
+- `GET /vod-reviews/:id/timestamps` - List timestamps
+- `POST /vod-reviews/:id/timestamps` - Create timestamp
+- `PATCH /vod-timestamps/:id` - Update timestamp
+- `DELETE /vod-timestamps/:id` - Delete timestamp
+
+#### Riot Data
+- `GET /riot-data/champions` - Get champions ID map
+- `GET /riot-data/champions/:key` - Get champion details
+- `GET /riot-data/all-champions` - Get all champions data
+- `GET /riot-data/items` - Get all items
+- `GET /riot-data/summoner-spells` - Get summoner spells
+- `GET /riot-data/version` - Get current Data Dragon version
+- `POST /riot-data/clear-cache` - Clear Data Dragon cache (owner only)
+- `POST /riot-data/update-cache` - Update Data Dragon cache (owner only)
+
+#### Riot Integration
+- `GET /riot-integration/sync-status` - Get sync status for all players
+
+**For complete endpoint documentation with request/response examples, visit `/api-docs`**
+
+</details>
+
+## 🧪 Testing
+
+### Unit & Request Tests
+
+Run the complete test suite:
 
 ```bash
 bundle exec rspec
+```
+
+Run specific test types:
+```bash
+# Unit tests (models, services)
+bundle exec rspec spec/models
+bundle exec rspec spec/services
+
+# Request tests (controllers)
+bundle exec rspec spec/requests
+
+# Integration tests (Swagger documentation)
+bundle exec rspec spec/integration
+```
+
+### Integration Tests (Swagger Documentation)
+
+Integration tests serve dual purpose:
+1. **Test API endpoints** with real HTTP requests
+2. **Generate Swagger documentation** automatically
+
+```bash
+# Run integration tests and generate Swagger docs
+bundle exec rake rswag:specs:swaggerize
+
+# Run specific integration spec
+bundle exec rspec spec/integration/players_spec.rb
+```
+
+**Current coverage:**
+- ✅ Authentication (8 endpoints)
+- ✅ Players (9 endpoints)
+- ✅ Matches (11 endpoints)
+- ✅ Scouting (10 endpoints)
+- ✅ Schedules (8 endpoints)
+- ✅ Team Goals (8 endpoints)
+- ✅ VOD Reviews (11 endpoints)
+- ✅ Analytics (7 endpoints)
+- ✅ Riot Data (14 endpoints)
+- ✅ Riot Integration (1 endpoint)
+- ✅ Dashboard (4 endpoints)
+
+**Total:** 107 endpoints documented
+
+### Code Coverage
+
+View coverage report after running tests:
+```bash
+open coverage/index.html
 ```
 
 ## Deployment
