@@ -54,9 +54,9 @@ class Api::V1::Analytics::TeamComparisonController < Api::V1::BaseController
       player: PlayerSerializer.render_as_hash(player),
       games_played: stats.count,
       kda: calculate_kda(stats),
-      avg_damage: stats.average(:total_damage_dealt)&.round(0) || 0,
+      avg_damage: stats.average(:damage_dealt_total)&.round(0) || 0,
       avg_gold: stats.average(:gold_earned)&.round(0) || 0,
-      avg_cs: stats.average('minions_killed + jungle_minions_killed')&.round(1) || 0,
+      avg_cs: stats.average(:cs)&.round(1) || 0,
       avg_vision_score: stats.average(:vision_score)&.round(1) || 0,
       avg_performance_score: stats.average(:performance_score)&.round(1) || 0,
       multikills: build_multikills(stats)
@@ -86,9 +86,9 @@ class Api::V1::Analytics::TeamComparisonController < Api::V1::BaseController
 
     {
       avg_kda: calculate_kda(all_stats),
-      avg_damage: all_stats.average(:total_damage_dealt)&.round(0) || 0,
+      avg_damage: all_stats.average(:damage_dealt_total)&.round(0) || 0,
       avg_gold: all_stats.average(:gold_earned)&.round(0) || 0,
-      avg_cs: all_stats.average('minions_killed + jungle_minions_killed')&.round(1) || 0,
+      avg_cs: all_stats.average(:cs)&.round(1) || 0,
       avg_vision_score: all_stats.average(:vision_score)&.round(1) || 0
     }
   end
