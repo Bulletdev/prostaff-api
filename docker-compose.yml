@@ -45,7 +45,7 @@ services:
         condition: service_healthy
     networks:
       - default
-      - security_tests_security-net
+      - security-net
     command: >
       sh -c "
         bundle check || bundle install &&
@@ -75,5 +75,5 @@ volumes:
   bundle_cache:
 
 networks:
-  security_tests_security-net:
-    external: true
+  security-net:
+    driver: bridge
