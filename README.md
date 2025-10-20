@@ -153,6 +153,9 @@ end
 subgraph "Analytics Module"
     AnalyticsController[Analytics Controller]
 end
+subgraph "Competitive Module"
+    CompetitiveController[Competitive Controller]
+end
 subgraph "Dashboard Module"
     DashboardController[Dashboard Controller]
 end
