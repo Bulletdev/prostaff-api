@@ -153,7 +153,7 @@ module Competitive
       # @return [String] Cache key
       def cache_key(endpoint, params)
         normalized_endpoint = endpoint.gsub('/', ':')
-        param_hash = Digest::MD5.hexdigest(params.to_json)
+        param_hash = Digest::SHA256.hexdigest(params.to_json)
         "pandascore:#{normalized_endpoint}:#{param_hash}"
       end
 

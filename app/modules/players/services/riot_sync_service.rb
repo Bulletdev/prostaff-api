@@ -242,6 +242,7 @@ module Players
       end
 
       def fetch_summoner_by_puuid(puuid)
+        # Region already validated in initialize via sanitize_region
         url = "https://#{region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/#{puuid}"
         response = make_request(url)
 

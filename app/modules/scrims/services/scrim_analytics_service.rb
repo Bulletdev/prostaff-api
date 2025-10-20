@@ -160,7 +160,8 @@ module Scrims
     end
 
     def completion_rate(scrims)
-      completed = scrims.select { |s| s.status == 'completed' }.count
+      # Use count block instead of select.count for better performance
+      completed = scrims.count { |s| s.status == 'completed' }
       return 0 if scrims.count.zero?
 
       ((completed.to_f / scrims.count) * 100).round(2)
@@ -179,7 +180,7 @@ module Scrims
       "#{minutes}:#{seconds.to_s.rjust(2, '0')}"
     end
 
-    def successful_compositions(scrims)
+    def successful_compositions(_scrims)
       # This would require match data integration
       # For now, return placeholder
       []

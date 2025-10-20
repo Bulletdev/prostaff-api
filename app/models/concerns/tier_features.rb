@@ -212,8 +212,6 @@ module TierFeatures
           'Meta analysis'
         ]
       }
-    else
-      nil
     end
   end
 

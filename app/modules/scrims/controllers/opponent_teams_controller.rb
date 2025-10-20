@@ -105,8 +105,10 @@ module Api
 
     # Finds opponent team by ID
     # Security Note: OpponentTeam is a shared resource across organizations.
-    # Deletion is restricted to teams without cross-org usage (see destroy action).
-    # Consider adding organization_id in future for proper multi-tenancy.
+    # Access control is enforced via verify_team_usage! before_action for
+    # sensitive operations (update/destroy). This ensures organizations can
+    # only modify teams they have scrims with.
+    # Read operations (index/show) are allowed for all teams to enable discovery.
     def set_opponent_team
       @opponent_team = OpponentTeam.find(params[:id])
     rescue ActiveRecord::RecordNotFound

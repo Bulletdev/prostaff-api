@@ -20,7 +20,8 @@ module Competitive
         )
       end
 
-      def compare_draft(our_picks:, opponent_picks:, our_bans:, opponent_bans:, patch:, organization:)
+      # Note: opponent_bans parameter reserved for future ban analysis
+      def compare_draft(our_picks:, opponent_picks:, our_bans:, _opponent_bans:, patch:, organization:)
         # Find similar professional matches
         similar_matches = find_similar_matches(
           champions: our_picks,
@@ -234,7 +235,8 @@ module Competitive
       end
 
       # Generate strategic insights based on analysis
-      def generate_insights(our_picks:, opponent_picks:, our_bans:, similar_matches:, meta_score:, patch:)
+      # Note: our_picks parameter reserved for future use
+      def generate_insights(_our_picks:, opponent_picks:, our_bans:, similar_matches:, meta_score:, patch:)
         insights = []
 
         # Meta relevance

@@ -64,11 +64,11 @@ class Player < ApplicationRecord
   scope :by_status, ->(status) { where(status: status) }
   scope :active, -> { where(status: 'active') }
   scope :with_contracts, -> { where.not(contract_start_date: nil) }
-  scope :contracts_expiring_soon, ->(days = 30) {
+  scope :contracts_expiring_soon, lambda { |days = 30|
     where(contract_end_date: Date.current..Date.current + days.days)
   }
   scope :by_tier, ->(tier) { where(solo_queue_tier: tier) }
-  scope :ordered_by_role, -> {
+  scope :ordered_by_role, lambda {
     order(Arel.sql(
       "CASE role
         WHEN 'top' THEN 1
