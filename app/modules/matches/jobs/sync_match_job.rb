@@ -115,14 +115,23 @@ class SyncMatchJob < ApplicationJob
     # Simple performance score calculation
     # This can be made more sophisticated
     # future work
-    kda = participant_data[:deaths].zero? ?
-          (participant_data[:kills] + participant_data[:assists]).to_f :
-          (participant_data[:kills] + participant_data[:assists]).to_f / participant_data[:deaths]
+    kda = calculate_kda(
+      kills: participant_data[:kills],
+      deaths: participant_data[:deaths],
+      assists: participant_data[:assists]
+    )
 
     base_score = kda * 10
     damage_score = (participant_data[:total_damage_dealt] / 1000.0)
     vision_score = participant_data[:vision_score] || 0
 
     (base_score + damage_score * 0.1 + vision_score).round(2)
+  end
+
+  def calculate_kda(kills:, deaths:, assists:)
+    total = (kills + assists).to_f
+    return total if deaths.zero?
+
+    total / deaths
   end
 end

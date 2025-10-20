@@ -41,7 +41,7 @@ class Rack::Attack
   end
 
   # Log blocked requests
-  ActiveSupport::Notifications.subscribe('rack.attack') do |name, start, finish, request_id, payload|
+  ActiveSupport::Notifications.subscribe('rack.attack') do |_name, _start, _finish, _request_id, payload|
     req = payload[:request]
     Rails.logger.warn "[Rack::Attack] Blocked #{req.env['REQUEST_METHOD']} #{req.url} from #{req.ip} at #{Time.current}"
   end
