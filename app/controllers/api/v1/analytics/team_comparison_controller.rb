@@ -1,45 +1,76 @@
 class Api::V1::Analytics::TeamComparisonController < Api::V1::BaseController
   def index
     players = organization_scoped(Player).active.includes(:player_match_stats)
+    matches = build_matches_query
 
-    # Get matches in date range
-    matches = organization_scoped(Match)
-    if params[:start_date].present? && params[:end_date].present?
-      matches = matches.in_date_range(params[:start_date], params[:end_date])
-    else
-      matches = matches.recent(30)
-    end
+    comparison_data = build_comparison_data(players, matches)
 
-    comparison_data = {
-      players: players.map do |player|
-        stats = PlayerMatchStat.where(player: player, match: matches)
-        next if stats.empty?
-
-        {
-          player: PlayerSerializer.render_as_hash(player),
-          games_played: stats.count,
-          kda: calculate_kda(stats),
-          avg_damage: stats.average(:total_damage_dealt)&.round(0) || 0,
-          avg_gold: stats.average(:gold_earned)&.round(0) || 0,
-          avg_cs: stats.average('minions_killed + jungle_minions_killed')&.round(1) || 0,
-          avg_vision_score: stats.average(:vision_score)&.round(1) || 0,
-          avg_performance_score: stats.average(:performance_score)&.round(1) || 0,
-          multikills: {
-            double: stats.sum(:double_kills),
-            triple: stats.sum(:triple_kills),
-            quadra: stats.sum(:quadra_kills),
-            penta: stats.sum(:penta_kills)
-          }
-        }
-      end.compact.sort_by { |p| -p[:avg_performance_score] },
-      team_averages: calculate_team_averages(matches),
-      role_rankings: calculate_role_rankings(players, matches)
-    }
-
-    render_success(comparison_data)
+    render json: { data: comparison_data }
   end
 
   private
+
+  def build_matches_query
+    matches = organization_scoped(Match)
+
+    matches = apply_date_filter(matches)
+
+    matches = matches.where(opponent_team_id: params[:opponent_team_id]) if params[:opponent_team_id].present?
+
+    matches = matches.where(match_type: params[:match_type]) if params[:match_type].present?
+
+    matches
+  end
+
+  def apply_date_filter(matches)
+    if params[:start_date].present? && params[:end_date].present?
+      matches.in_date_range(params[:start_date], params[:end_date])
+    elsif params[:days].present?
+      matches.recent(params[:days].to_i)
+    else
+      matches.recent(30)
+    end
+  end
+
+  def build_comparison_data(players, matches)
+    {
+      players: build_player_comparisons(players, matches),
+      team_averages: calculate_team_averages(matches),
+      role_rankings: calculate_role_rankings(players, matches)
+    }
+  end
+
+  def build_player_comparisons(players, matches)
+    players.map do |player|
+      build_player_stats(player, matches)
+    end.compact.sort_by { |p| -p[:avg_performance_score] }
+  end
+
+  def build_player_stats(player, matches)
+    stats = PlayerMatchStat.where(player: player, match: matches)
+    return nil if stats.empty?
+
+    {
+      player: PlayerSerializer.render_as_hash(player),
+      games_played: stats.count,
+      kda: calculate_kda(stats),
+      avg_damage: stats.average(:total_damage_dealt)&.round(0) || 0,
+      avg_gold: stats.average(:gold_earned)&.round(0) || 0,
+      avg_cs: stats.average('minions_killed + jungle_minions_killed')&.round(1) || 0,
+      avg_vision_score: stats.average(:vision_score)&.round(1) || 0,
+      avg_performance_score: stats.average(:performance_score)&.round(1) || 0,
+      multikills: build_multikills(stats)
+    }
+  end
+
+  def build_multikills(stats)
+    {
+      double: stats.sum(:double_kills),
+      triple: stats.sum(:triple_kills),
+      quadra: stats.sum(:quadra_kills),
+      penta: stats.sum(:penta_kills)
+    }
+  end
 
   def calculate_kda(stats)
     total_kills = stats.sum(:kills)
