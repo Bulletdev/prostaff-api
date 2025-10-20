@@ -126,6 +126,25 @@ Rails.application.routes.draw do
 
       # Competitive Matches (Tier 1)
       resources :competitive_matches, path: 'competitive-matches', only: [:index, :show]
+
+      # Competitive Module - PandaScore Integration
+      namespace :competitive do
+        # Pro Matches from PandaScore
+        resources :pro_matches, path: 'pro-matches', only: [:index, :show] do
+          collection do
+            get :upcoming
+            get :past
+            post :refresh
+            post :import
+          end
+        end
+
+        # Draft Comparison & Meta Analysis
+        post 'draft-comparison', to: 'draft_comparison#compare'
+        get 'meta/:role', to: 'draft_comparison#meta_by_role'
+        get 'composition-winrate', to: 'draft_comparison#composition_winrate'
+        get 'counters', to: 'draft_comparison#suggest_counters'
+      end
     end
   end
 

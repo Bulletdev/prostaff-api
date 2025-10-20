@@ -50,4 +50,27 @@ class OrganizationSerializer < Blueprinter::Base
       total_users: org.users.count
     }
   end
+
+  # Tier features and capabilities
+  field :features do |org|
+    {
+      can_access_scrims: org.can_access_scrims?,
+      can_access_competitive_data: org.can_access_competitive_data?,
+      can_access_predictive_analytics: org.can_access_predictive_analytics?,
+      available_features: org.available_features,
+      available_data_sources: org.available_data_sources,
+      available_analytics: org.available_analytics
+    }
+  end
+
+  field :limits do |org|
+    {
+      max_players: org.tier_limits[:max_players],
+      max_matches_per_month: org.tier_limits[:max_matches_per_month],
+      current_players: org.tier_limits[:current_players],
+      current_monthly_matches: org.tier_limits[:current_monthly_matches],
+      players_remaining: org.tier_limits[:players_remaining],
+      matches_remaining: org.tier_limits[:matches_remaining]
+    }
+  end
 end

@@ -37,7 +37,7 @@ module Api
 
       render json: {
         data: {
-          scrims: scrims.map { |scrim| Scrims::Serializers::ScrimSerializer.new(scrim).as_json },
+          scrims: scrims.map { |scrim| ScrimSerializer.new(scrim).as_json },
           meta: pagination_meta(scrims)
         }
       }
@@ -54,15 +54,17 @@ module Api
                                    .order(scheduled_at: :asc)
 
       render json: {
-        scrims: scrims.map { |scrim| ScrimSerializer.new(scrim, calendar_view: true).as_json },
-        start_date: start_date,
-        end_date: end_date
+        data: {
+          scrims: scrims.map { |scrim| ScrimSerializer.new(scrim, calendar_view: true).as_json },
+          start_date: start_date,
+          end_date: end_date
+        }
       }
     end
 
     # GET /api/v1/scrims/analytics
     def analytics
-      service = Scrims::ScrimAnalyticsService.new(current_organization)
+      service = ::Scrims::Services::ScrimAnalyticsService.new(current_organization)
       date_range = (params[:days]&.to_i || 30).days
 
       render json: {
@@ -76,7 +78,7 @@ module Api
 
     # GET /api/v1/scrims/:id
     def show
-      render json: ScrimSerializer.new(@scrim, detailed: true).as_json
+      render json: { data: ScrimSerializer.new(@scrim, detailed: true).as_json }
     end
 
     # POST /api/v1/scrims
@@ -92,7 +94,7 @@ module Api
       scrim = current_organization.scrims.new(scrim_params)
 
       if scrim.save
-        render json: ScrimSerializer.new(scrim).as_json, status: :created
+        render json: { data: ScrimSerializer.new(scrim).as_json }, status: :created
       else
         render json: { errors: scrim.errors.full_messages }, status: :unprocessable_entity
       end
@@ -101,7 +103,7 @@ module Api
     # PATCH /api/v1/scrims/:id
     def update
       if @scrim.update(scrim_params)
-        render json: ScrimSerializer.new(@scrim).as_json
+        render json: { data: ScrimSerializer.new(@scrim).as_json }
       else
         render json: { errors: @scrim.errors.full_messages }, status: :unprocessable_entity
       end
@@ -125,7 +127,7 @@ module Api
           @scrim.opponent_team.update_scrim_stats!(victory: victory)
         end
 
-        render json: ScrimSerializer.new(@scrim.reload).as_json
+        render json: { data: ScrimSerializer.new(@scrim.reload).as_json }
       else
         render json: { errors: @scrim.errors.full_messages }, status: :unprocessable_entity
       end
