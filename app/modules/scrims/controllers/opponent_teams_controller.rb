@@ -1,12 +1,14 @@
-module Scrims
-  # OpponentTeams Controller
-  #
-  # Manages opponent team records which are shared across organizations.
-  # Security note: Update and delete operations are restricted to organizations
-  # that have used this opponent team in scrims.
-  #
-  class OpponentTeamsController < ApplicationController
-    include TierAuthorization
+module Api
+  module V1
+    module Scrims
+      # OpponentTeams Controller
+      #
+      # Manages opponent team records which are shared across organizations.
+      # Security note: Update and delete operations are restricted to organizations
+      # that have used this opponent team in scrims.
+      #
+      class OpponentTeamsController < Api::V1::BaseController
+        include TierAuthorization
 
     before_action :set_opponent_team, only: [:show, :update, :destroy, :scrim_history]
     before_action :verify_team_usage!, only: [:update, :destroy]
@@ -33,14 +35,16 @@ module Scrims
       teams = teams.page(page).per(per_page)
 
       render json: {
-        opponent_teams: teams.map { |team| OpponentTeamSerializer.new(team).as_json },
-        meta: pagination_meta(teams)
+        data: {
+          opponent_teams: teams.map { |team| ScrimOpponentTeamSerializer.new(team).as_json },
+          meta: pagination_meta(teams)
+        }
       }
     end
 
     # GET /api/v1/scrims/opponent_teams/:id
     def show
-      render json: OpponentTeamSerializer.new(@opponent_team, detailed: true).as_json
+      render json: { data: ScrimOpponentTeamSerializer.new(@opponent_team, detailed: true).as_json }
     end
 
     # GET /api/v1/scrims/opponent_teams/:id/scrim_history
@@ -54,9 +58,11 @@ module Scrims
       opponent_stats = service.opponent_performance(@opponent_team.id)
 
       render json: {
-        opponent_team: OpponentTeamSerializer.new(@opponent_team).as_json,
-        scrims: scrims.map { |scrim| ScrimSerializer.new(scrim).as_json },
-        stats: opponent_stats
+        data: {
+          opponent_team: ScrimOpponentTeamSerializer.new(@opponent_team).as_json,
+          scrims: scrims.map { |scrim| ScrimSerializer.new(scrim).as_json },
+          stats: opponent_stats
+        }
       }
     end
 
@@ -65,7 +71,7 @@ module Scrims
       team = OpponentTeam.new(opponent_team_params)
 
       if team.save
-        render json: OpponentTeamSerializer.new(team).as_json, status: :created
+        render json: { data: ScrimOpponentTeamSerializer.new(team).as_json }, status: :created
       else
         render json: { errors: team.errors.full_messages }, status: :unprocessable_entity
       end
@@ -74,7 +80,7 @@ module Scrims
     # PATCH /api/v1/scrims/opponent_teams/:id
     def update
       if @opponent_team.update(opponent_team_params)
-        render json: OpponentTeamSerializer.new(@opponent_team).as_json
+        render json: { data: ScrimOpponentTeamSerializer.new(@opponent_team).as_json }
       else
         render json: { errors: @opponent_team.errors.full_messages }, status: :unprocessable_entity
       end
@@ -145,6 +151,8 @@ module Scrims
         total_count: collection.total_count,
         per_page: collection.limit_value
       }
+    end
+      end
     end
   end
 end

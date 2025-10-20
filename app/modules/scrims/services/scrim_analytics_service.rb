@@ -1,8 +1,9 @@
 module Scrims
-  class ScrimAnalyticsService
-    def initialize(organization)
-      @organization = organization
-    end
+  module Services
+    class ScrimAnalyticsService
+      def initialize(organization)
+        @organization = organization
+      end
 
     # Overall scrim statistics
     def overall_stats(date_range: 30.days)
@@ -21,9 +22,9 @@ module Scrims
 
     # Stats grouped by opponent
     def stats_by_opponent
-      scrims = @organization.scrims.includes(:opponent_team)
+      scrims = @organization.scrims.includes(:opponent_team).to_a
 
-      scrims.group(:opponent_team_id).map do |opponent_id, opponent_scrims|
+      scrims.group_by(&:opponent_team_id).map do |opponent_id, opponent_scrims|
         next if opponent_id.nil?
 
         opponent_team = OpponentTeam.find(opponent_id)
@@ -258,6 +259,7 @@ module Scrims
       return 0 if percentages.empty?
 
       (percentages.sum / percentages.size).round(2)
+    end
     end
   end
 end

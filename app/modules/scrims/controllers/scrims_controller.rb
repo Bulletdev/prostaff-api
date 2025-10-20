@@ -1,8 +1,10 @@
-module Scrims
-  class ScrimsController < ApplicationController
-    include TierAuthorization
+module Api
+  module V1
+    module Scrims
+      class ScrimsController < Api::V1::BaseController
+        include TierAuthorization
 
-    before_action :set_scrim, only: [:show, :update, :destroy, :add_game]
+        before_action :set_scrim, only: [:show, :update, :destroy, :add_game]
 
     # GET /api/v1/scrims
     def index
@@ -34,8 +36,10 @@ module Scrims
       scrims = scrims.page(page).per(per_page)
 
       render json: {
-        scrims: scrims.map { |scrim| ScrimSerializer.new(scrim).as_json },
-        meta: pagination_meta(scrims)
+        data: {
+          scrims: scrims.map { |scrim| Scrims::Serializers::ScrimSerializer.new(scrim).as_json },
+          meta: pagination_meta(scrims)
+        }
       }
     end
 
@@ -161,6 +165,8 @@ module Scrims
         total_count: collection.total_count,
         per_page: collection.limit_value
       }
+    end
+      end
     end
   end
 end

@@ -33,7 +33,7 @@ class Scrim < ApplicationRecord
   scope :completed, -> { where.not(games_completed: nil).where('games_completed >= games_planned') }
   scope :in_progress, -> { where.not(games_completed: nil).where('games_completed < games_planned') }
   scope :confidential, -> { where(is_confidential: true) }
-  scope :public, -> { where(is_confidential: false) }
+  scope :publicly_visible, -> { where(is_confidential: false) }
   scope :recent, ->(days = 30) { where('scheduled_at > ?', days.days.ago).order(scheduled_at: :desc) }
 
   # Instance methods
