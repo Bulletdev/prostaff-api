@@ -8,12 +8,21 @@ class PlayerSerializer < Blueprinter::Base
          :solo_queue_wins, :solo_queue_losses,
          :flex_queue_tier, :flex_queue_rank, :flex_queue_lp,
          :peak_tier, :peak_rank, :peak_season,
-         :riot_puuid, :riot_summoner_id,
+         :riot_puuid, :riot_summoner_id, :profile_icon_id,
          :twitter_handle, :twitch_channel, :instagram_handle,
          :notes, :sync_status, :last_sync_at, :created_at, :updated_at
 
   field :age do |player|
     player.age
+  end
+
+  field :avatar_url do |player|
+    if player.profile_icon_id.present?
+      # Use latest patch version from Data Dragon
+      "https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/#{player.profile_icon_id}.png"
+    else
+      nil
+    end
   end
 
   field :win_rate do |player|
