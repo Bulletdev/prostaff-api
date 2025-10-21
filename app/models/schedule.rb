@@ -1,4 +1,7 @@
 class Schedule < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   belongs_to :match, optional: true
@@ -6,9 +9,9 @@ class Schedule < ApplicationRecord
 
   # Validations
   validates :title, presence: true, length: { maximum: 255 }
-  validates :event_type, presence: true, inclusion: { in: %w[match scrim practice meeting review] }
+  validates :event_type, presence: true, inclusion: { in: Constants::Schedule::EVENT_TYPES }
   validates :start_time, :end_time, presence: true
-  validates :status, inclusion: { in: %w[scheduled ongoing completed cancelled] }
+  validates :status, inclusion: { in: Constants::Schedule::STATUSES }
   validate :end_time_after_start_time
 
   # Callbacks

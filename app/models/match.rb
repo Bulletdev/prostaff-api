@@ -29,6 +29,9 @@
 #   recent_wins = Match.victories.recent(7)
 #
 class Match < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   has_many :player_match_stats, dependent: :destroy
@@ -37,9 +40,9 @@ class Match < ApplicationRecord
   has_many :vod_reviews, dependent: :destroy
 
   # Validations
-  validates :match_type, presence: true, inclusion: { in: %w[official scrim tournament] }
+  validates :match_type, presence: true, inclusion: { in: Constants::Match::TYPES }
   validates :riot_match_id, uniqueness: true, allow_blank: true
-  validates :our_side, inclusion: { in: %w[blue red] }, allow_blank: true
+  validates :our_side, inclusion: { in: Constants::Match::SIDES }, allow_blank: true
   validates :game_duration, numericality: { greater_than: 0 }, allow_blank: true
 
   # Callbacks

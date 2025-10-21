@@ -29,6 +29,9 @@
 #   mid_laners = Player.active.by_role("mid")
 #
 class Player < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   has_many :player_match_stats, dependent: :destroy
@@ -40,20 +43,16 @@ class Player < ApplicationRecord
   # Validations
   validates :summoner_name, presence: true, length: { maximum: 100 }
   validates :real_name, length: { maximum: 255 }
-  validates :role, presence: true, inclusion: { in: %w[top jungle mid adc support] }
+  validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
   validates :country, length: { maximum: 2 }
-  validates :status, inclusion: { in: %w[active inactive benched trial] }
+  validates :status, inclusion: { in: Constants::Player::STATUSES }
   validates :riot_puuid, uniqueness: true, allow_blank: true
   validates :riot_summoner_id, uniqueness: true, allow_blank: true
   validates :jersey_number, uniqueness: { scope: :organization_id }, allow_blank: true
-  validates :solo_queue_tier, inclusion: {
-    in: %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER]
-  }, allow_blank: true
-  validates :solo_queue_rank, inclusion: { in: %w[I II III IV] }, allow_blank: true
-  validates :flex_queue_tier, inclusion: {
-    in: %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER]
-  }, allow_blank: true
-  validates :flex_queue_rank, inclusion: { in: %w[I II III IV] }, allow_blank: true
+  validates :solo_queue_tier, inclusion: { in: Constants::Player::QUEUE_TIERS }, allow_blank: true
+  validates :solo_queue_rank, inclusion: { in: Constants::Player::QUEUE_RANKS }, allow_blank: true
+  validates :flex_queue_tier, inclusion: { in: Constants::Player::QUEUE_TIERS }, allow_blank: true
+  validates :flex_queue_rank, inclusion: { in: Constants::Player::QUEUE_RANKS }, allow_blank: true
 
   # Callbacks
   before_save :normalize_summoner_name

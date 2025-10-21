@@ -1,6 +1,9 @@
 class User < ApplicationRecord
   has_secure_password
 
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   has_many :added_scouting_targets, class_name: 'ScoutingTarget', foreign_key: 'added_by_id', dependent: :nullify
@@ -17,7 +20,7 @@ class User < ApplicationRecord
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :full_name, length: { maximum: 255 }
-  validates :role, presence: true, inclusion: { in: %w[owner admin coach analyst viewer] }
+  validates :role, presence: true, inclusion: { in: Constants::User::ROLES }
   validates :timezone, length: { maximum: 100 }
   validates :language, length: { maximum: 10 }
 

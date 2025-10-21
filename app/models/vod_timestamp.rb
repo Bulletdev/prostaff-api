@@ -1,4 +1,7 @@
 class VodTimestamp < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :vod_review
   belongs_to :target_player, class_name: 'Player', optional: true
@@ -7,9 +10,9 @@ class VodTimestamp < ApplicationRecord
   # Validations
   validates :timestamp_seconds, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :title, presence: true, length: { maximum: 255 }
-  validates :category, inclusion: { in: %w[mistake good_play team_fight objective laning] }, allow_blank: true
-  validates :importance, inclusion: { in: %w[low normal high critical] }
-  validates :target_type, inclusion: { in: %w[player team opponent] }, allow_blank: true
+  validates :category, inclusion: { in: Constants::VodTimestamp::CATEGORIES }, allow_blank: true
+  validates :importance, inclusion: { in: Constants::VodTimestamp::IMPORTANCE_LEVELS }
+  validates :target_type, inclusion: { in: Constants::VodTimestamp::TARGET_TYPES }, allow_blank: true
 
   # Scopes
   scope :by_category, ->(category) { where(category: category) }
