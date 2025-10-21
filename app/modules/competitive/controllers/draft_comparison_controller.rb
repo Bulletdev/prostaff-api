@@ -1,7 +1,6 @@
-module Api
-  module V1
-    module Competitive
-      class DraftComparisonController < Api::V1::BaseController
+module Competitive
+  module Controllers
+    class DraftComparisonController < Api::V1::BaseController
         # POST /api/v1/competitive/draft-comparison
         # Compare user's draft with professional meta
         def compare
@@ -138,4 +137,4 @@ module Api
       end
     end
   end
-end
+
