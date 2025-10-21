@@ -1,4 +1,7 @@
 class ChampionPool < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :player
 
@@ -6,8 +9,8 @@ class ChampionPool < ApplicationRecord
   validates :champion, presence: true
   validates :player_id, uniqueness: { scope: :champion }
   validates :games_played, :games_won, numericality: { greater_than_or_equal_to: 0 }
-  validates :mastery_level, inclusion: { in: 1..7 }
-  validates :priority, inclusion: { in: 1..10 }
+  validates :mastery_level, inclusion: { in: Constants::ChampionPool::MASTERY_LEVELS }
+  validates :priority, inclusion: { in: Constants::ChampionPool::PRIORITY_LEVELS }
 
   # Scopes
   scope :comfort_picks, -> { where(is_comfort_pick: true) }

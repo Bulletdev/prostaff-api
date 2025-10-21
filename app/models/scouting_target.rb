@@ -1,4 +1,7 @@
 class ScoutingTarget < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   belongs_to :added_by, class_name: 'User', optional: true
@@ -6,10 +9,10 @@ class ScoutingTarget < ApplicationRecord
 
   # Validations
   validates :summoner_name, presence: true, length: { maximum: 100 }
-  validates :region, presence: true, inclusion: { in: %w[BR NA EUW KR EUNE LAN LAS OCE RU TR JP] }
-  validates :role, presence: true, inclusion: { in: %w[top jungle mid adc support] }
-  validates :status, inclusion: { in: %w[watching contacted negotiating rejected signed] }
-  validates :priority, inclusion: { in: %w[low medium high critical] }
+  validates :region, presence: true, inclusion: { in: Constants::REGIONS }
+  validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
+  validates :status, inclusion: { in: Constants::ScoutingTarget::STATUSES }
+  validates :priority, inclusion: { in: Constants::ScoutingTarget::PRIORITIES }
   validates :riot_puuid, uniqueness: true, allow_blank: true
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
 

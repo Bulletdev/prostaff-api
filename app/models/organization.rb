@@ -30,6 +30,7 @@
 class Organization < ApplicationRecord
   # Concerns
   include TierFeatures
+  include Constants
 
   # Associations
   has_many :users, dependent: :destroy
@@ -48,10 +49,10 @@ class Organization < ApplicationRecord
   # Validations
   validates :name, presence: true, length: { maximum: 255 }
   validates :slug, presence: true, uniqueness: true, length: { maximum: 100 }
-  validates :region, presence: true, inclusion: { in: %w[BR NA EUW KR EUNE EUW1 LAN LAS OCE RU TR JP] }
-  validates :tier, inclusion: { in: %w[tier_3_amateur tier_2_semi_pro tier_1_professional] }, allow_blank: true
-  validates :subscription_plan, inclusion: { in: %w[free amateur semi_pro professional enterprise] }, allow_blank: true
-  validates :subscription_status, inclusion: { in: %w[active inactive trial expired] }, allow_blank: true
+  validates :region, presence: true, inclusion: { in: Constants::REGIONS }
+  validates :tier, inclusion: { in: Constants::Organization::TIERS }, allow_blank: true
+  validates :subscription_plan, inclusion: { in: Constants::Organization::SUBSCRIPTION_PLANS }, allow_blank: true
+  validates :subscription_status, inclusion: { in: Constants::Organization::SUBSCRIPTION_STATUSES }, allow_blank: true
 
   # Callbacks
   before_validation :generate_slug, on: :create
@@ -70,7 +71,7 @@ class Organization < ApplicationRecord
     counter = 1
     generated_slug = base_slug
 
-    while Organization.exists?(slug: generated_slug)
+    while ::Organization.exists?(slug: generated_slug)
       generated_slug = "#{base_slug}-#{counter}"
       counter += 1
     end

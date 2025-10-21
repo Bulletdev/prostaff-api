@@ -1,4 +1,7 @@
 class Scrim < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   belongs_to :match, optional: true
@@ -6,17 +9,17 @@ class Scrim < ApplicationRecord
 
   # Validations
   validates :scrim_type, inclusion: {
-    in: %w[practice vod_review tournament_prep],
+    in: Constants::Scrim::TYPES,
     message: "%{value} is not a valid scrim type"
   }, allow_blank: true
 
   validates :focus_area, inclusion: {
-    in: %w[draft macro teamfight laning objectives vision communication],
+    in: Constants::Scrim::FOCUS_AREAS,
     message: "%{value} is not a valid focus area"
   }, allow_blank: true
 
   validates :visibility, inclusion: {
-    in: %w[internal_only coaching_staff full_team],
+    in: Constants::Scrim::VISIBILITY_LEVELS,
     message: "%{value} is not a valid visibility level"
   }, allow_blank: true
 

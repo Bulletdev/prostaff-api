@@ -9,6 +9,9 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      # Constants (public)
+      get 'constants', to: 'constants#index'
+
       # Auth
       scope :auth do
         post 'register', to: 'auth#register'

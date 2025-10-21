@@ -1,4 +1,7 @@
 class OpponentTeam < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   has_many :scrims, dependent: :nullify
   has_many :competitive_matches, dependent: :nullify
@@ -8,12 +11,12 @@ class OpponentTeam < ApplicationRecord
   validates :tag, length: { maximum: 10 }
 
   validates :region, inclusion: {
-    in: %w[BR NA EUW EUNE KR JP OCE LAN LAS RU TR],
+    in: Constants::REGIONS,
     message: "%{value} is not a valid region"
   }, allow_blank: true
 
   validates :tier, inclusion: {
-    in: %w[tier_1 tier_2 tier_3],
+    in: Constants::OpponentTeam::TIERS,
     message: "%{value} is not a valid tier"
   }, allow_blank: true
 

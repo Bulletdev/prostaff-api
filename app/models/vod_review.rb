@@ -1,4 +1,7 @@
 class VodReview < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   belongs_to :match, optional: true
@@ -8,8 +11,8 @@ class VodReview < ApplicationRecord
   # Validations
   validates :title, presence: true, length: { maximum: 255 }
   validates :video_url, presence: true, format: { with: URI::DEFAULT_PARSER.make_regexp }
-  validates :review_type, inclusion: { in: %w[team individual opponent] }, allow_blank: true
-  validates :status, inclusion: { in: %w[draft published archived] }
+  validates :review_type, inclusion: { in: Constants::VodReview::TYPES }, allow_blank: true
+  validates :status, inclusion: { in: Constants::VodReview::STATUSES }
   validates :share_link, uniqueness: true, allow_blank: true
 
   # Callbacks

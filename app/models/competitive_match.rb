@@ -1,4 +1,7 @@
 class CompetitiveMatch < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   belongs_to :opponent_team, optional: true
@@ -9,12 +12,12 @@ class CompetitiveMatch < ApplicationRecord
   validates :external_match_id, uniqueness: true, allow_blank: true
 
   validates :match_format, inclusion: {
-    in: %w[BO1 BO3 BO5],
+    in: Constants::CompetitiveMatch::FORMATS,
     message: "%{value} is not a valid match format"
   }, allow_blank: true
 
   validates :side, inclusion: {
-    in: %w[blue red],
+    in: Constants::CompetitiveMatch::SIDES,
     message: "%{value} is not a valid side"
   }, allow_blank: true
 

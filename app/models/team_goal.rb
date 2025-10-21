@@ -1,4 +1,7 @@
 class TeamGoal < ApplicationRecord
+  # Concerns
+  include Constants
+
   # Associations
   belongs_to :organization
   belongs_to :player, optional: true
@@ -7,10 +10,10 @@ class TeamGoal < ApplicationRecord
 
   # Validations
   validates :title, presence: true, length: { maximum: 255 }
-  validates :category, inclusion: { in: %w[performance rank tournament skill] }, allow_blank: true
-  validates :metric_type, inclusion: { in: %w[win_rate kda cs_per_min vision_score damage_share rank_climb] }, allow_blank: true
+  validates :category, inclusion: { in: Constants::TeamGoal::CATEGORIES }, allow_blank: true
+  validates :metric_type, inclusion: { in: Constants::TeamGoal::METRIC_TYPES }, allow_blank: true
   validates :start_date, :end_date, presence: true
-  validates :status, inclusion: { in: %w[active completed failed cancelled] }
+  validates :status, inclusion: { in: Constants::TeamGoal::STATUSES }
   validates :progress, numericality: { in: 0..100 }
   validate :end_date_after_start_date
 
