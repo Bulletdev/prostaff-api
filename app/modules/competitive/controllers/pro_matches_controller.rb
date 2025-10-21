@@ -1,7 +1,6 @@
-module Api
-  module V1
-    module Competitive
-      class ProMatchesController < Api::V1::BaseController
+module Competitive
+  module Controllers
+    class ProMatchesController < Api::V1::BaseController
         before_action :set_pandascore_service
 
         # GET /api/v1/competitive/pro-matches
@@ -204,4 +203,3 @@ module Api
       end
     end
   end
-end
