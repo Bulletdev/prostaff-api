@@ -2,260 +2,163 @@
 
 module Players
   module Services
-    # Service for syncing player data with Riot Games API
-    #
-    # Handles importing new players and updating existing player data from
-    # the Riot API. Manages the complexity of Riot ID format changes and
-    # tag variations across different regions.
-    #
-    # Key features:
-    # - Auto-detect and try multiple tag variations (e.g., BR, BR1, BRSL)
-    # - Import new players by summoner name
-    # - Sync existing players to update rank and stats
-    # - Search for players with fuzzy tag matching
-    #
-    # @example Import a new player
-    #   result = RiotSyncService.import(
-    #     summoner_name: "PlayerName#BR1",
-    #     role: "mid",
-    #     region: "br1",
-    #     organization: org
-    #   )
-    #
-    # @example Sync existing player
-    #   service = RiotSyncService.new(player)
-    #   result = service.sync
-    #
-    # @example Search for a player
-    #   result = RiotSyncService.search_riot_id("PlayerName", region: "br1")
-    #
     class RiotSyncService
-      require 'net/http'
-      require 'json'
+      VALID_REGIONS = %w[br1 na1 euw1 kr eune1 lan las1 oce1 ru tr1 jp1].freeze
+      AMERICAS = %w[br1 na1 lan las1].freeze
+      EUROPE = %w[euw1 eune1 ru tr1].freeze
+      ASIA = %w[kr jp1 oce1].freeze
 
-      # Whitelist of valid Riot API regions to prevent host injection
-      VALID_REGIONS = %w[
-        br1 eun1 euw1 jp1 kr la1 la2 na1 oc1 tr1 ru ph2 sg2 th2 tw2 vn2
-      ].freeze
+      attr_reader :organization, :api_key, :region
 
-      attr_reader :player, :region, :api_key
+      def initialize(organization, region = nil)
+        @organization = organization
+        @api_key = ENV['RIOT_API_KEY']
+        @region = sanitize_region(region || organization.region || 'br1')
 
-      def initialize(player, region: nil, api_key: nil)
-        @player = player
-        @region = sanitize_region(region || player&.region || 'br1')
-        @api_key = api_key || ENV['RIOT_API_KEY']
+        raise 'Riot API key not configured' if @api_key.blank?
       end
 
-      private
+      # Main sync method
+      def sync_player(player, import_matches: true)
+        return { success: false, error: 'Player missing PUUID' } if player.puuid.blank?
 
-      # Sanitizes and validates region to prevent host injection
-      #
-      # @param region [String] Region code to sanitize
-      # @return [String] Sanitized region code
-      # @raise [ArgumentError] if region is invalid
-      def sanitize_region(region)
-        normalized = region.to_s.downcase.strip
+        begin
+          # 1. Fetch current rank and profile
+          summoner_data = fetch_summoner_by_puuid(player.puuid)
+          rank_data = fetch_rank_data(summoner_data['id'])
 
-        unless VALID_REGIONS.include?(normalized)
-          raise ArgumentError, "Invalid region: #{region}. Must be one of: #{VALID_REGIONS.join(', ')}"
+          # 2. Update player with fresh data
+          update_player_from_riot(player, summoner_data, rank_data)
+
+          # 3. Optionally fetch recent matches
+          matches_imported = 0
+          if import_matches
+            matches_imported = import_player_matches(player, count: 20)
+          end
+
+          {
+            success: true,
+            player: player,
+            matches_imported: matches_imported,
+            message: 'Player synchronized successfully'
+          }
+        rescue StandardError => e
+          Rails.logger.error("RiotSync Error for #{player.summoner_name}: #{e.message}")
+          {
+            success: false,
+            error: e.message,
+            player: player
+          }
+        end
+      end
+
+      # Fetch summoner by PUUID
+      def fetch_summoner_by_puuid(puuid)
+        # Region already validated in initialize via sanitize_region
+        # Use URI building to safely construct URL and avoid direct interpolation
+        uri = URI::HTTPS.build(
+          host: "#{region}.api.riotgames.com",
+          path: "/lol/summoner/v4/summoners/by-puuid/#{CGI.escape(puuid)}"
+        )
+        response = make_request(uri.to_s)
+        JSON.parse(response.body)
+      end
+
+      # Fetch rank data for a summoner
+      def fetch_rank_data(summoner_id)
+        uri = URI::HTTPS.build(
+          host: "#{region}.api.riotgames.com",
+          path: "/lol/league/v4/entries/by-summoner/#{CGI.escape(summoner_id)}"
+        )
+        response = make_request(uri.to_s)
+        data = JSON.parse(response.body)
+
+        # Find RANKED_SOLO_5x5 queue
+        solo_queue = data.find { |entry| entry['queueType'] == 'RANKED_SOLO_5x5' }
+        solo_queue || {}
+      end
+
+      # Import recent matches for a player
+      def import_player_matches(player, count: 20)
+        return 0 if player.puuid.blank?
+
+        # 1. Get match IDs
+        match_ids = fetch_match_ids(player.puuid, count)
+        return 0 if match_ids.empty?
+
+        # 2. Import each match
+        imported = 0
+        match_ids.each do |match_id|
+          next if organization.matches.exists?(riot_match_id: match_id)
+
+          match_details = fetch_match_details(match_id)
+          if import_match(match_details, player)
+            imported += 1
+          end
+        rescue StandardError => e
+          Rails.logger.error("Failed to import match #{match_id}: #{e.message}")
         end
 
-        normalized
+        imported
       end
 
-      public
+      # Search for a player by Riot ID (GameName#TagLine)
+      def search_riot_id(game_name, tag_line)
+        regional_endpoint = get_regional_endpoint(region)
+        
+        uri = URI::HTTPS.build(
+          host: "#{regional_endpoint}.api.riotgames.com",
+          path: "/riot/account/v1/accounts/by-riot-id/#{CGI.escape(game_name)}/#{CGI.escape(tag_line)}"
+        )
+        response = make_request(uri.to_s)
+        account_data = JSON.parse(response.body)
 
-      def self.import(summoner_name:, role:, region:, organization:, api_key: nil)
-        new(nil, region: region, api_key: api_key)
-          .import_player(summoner_name, role, organization)
-      end
+        # Now fetch summoner data using PUUID
+        summoner_data = fetch_summoner_by_puuid(account_data['puuid'])
+        rank_data = fetch_rank_data(summoner_data['id'])
 
-      def sync
-        validate_player!
-        validate_api_key!
-
-        summoner_data = fetch_summoner_data
-        ranked_data = fetch_ranked_stats(summoner_data['puuid'])
-
-        update_player_data(summoner_data, ranked_data)
-
-        { success: true, player: player }
+        {
+          puuid: account_data['puuid'],
+          game_name: account_data['gameName'],
+          tag_line: account_data['tagLine'],
+          summoner_name: summoner_data['name'],
+          summoner_level: summoner_data['summonerLevel'],
+          profile_icon_id: summoner_data['profileIconId'],
+          rank_data: rank_data
+        }
       rescue StandardError => e
-        handle_sync_error(e)
-      end
-
-      def import_player(summoner_name, role, organization)
-        validate_api_key!
-
-        summoner_data, account_data = fetch_summoner_by_name(summoner_name)
-        ranked_data = fetch_ranked_stats(summoner_data['puuid'])
-
-        player_data = build_player_data(summoner_data, ranked_data, account_data, role)
-        player = organization.players.create!(player_data)
-
-        { success: true, player: player, summoner_name: "#{account_data['gameName']}##{account_data['tagLine']}" }
-      rescue ActiveRecord::RecordInvalid => e
-        { success: false, error: e.message, code: 'VALIDATION_ERROR' }
-      rescue StandardError => e
-        { success: false, error: e.message, code: 'RIOT_API_ERROR' }
-      end
-
-      def self.search_riot_id(summoner_name, region: 'br1', api_key: nil)
-        service = new(nil, region: region, api_key: api_key || ENV['RIOT_API_KEY'])
-        service.search_player(summoner_name)
-      end
-
-      # Searches for a player on Riot's servers with fuzzy tag matching
-      #
-      # @param summoner_name [String] Summoner name with optional tag (e.g., "Player#BR1" or "Player")
-      # @return [Hash] Search result with success status and player data if found
-      def search_player(summoner_name)
-        validate_api_key!
-
-        game_name, tag_line = parse_riot_id(summoner_name)
-
-        # Try exact match first if tag is provided
-        exact_match = try_exact_match(summoner_name, game_name, tag_line)
-        return exact_match if exact_match
-
-        # Fall back to tag variations
-        try_fuzzy_search(game_name, tag_line)
-      rescue StandardError => e
-        { success: false, error: e.message, code: 'SEARCH_ERROR' }
-      end
-
-      # Attempts to find player with exact tag match
-      #
-      # @return [Hash, nil] Player data if found, nil otherwise
-      def try_exact_match(summoner_name, game_name, tag_line)
-        return nil unless summoner_name.include?('#') || summoner_name.include?('-')
-
-        account_data = fetch_account_by_riot_id(game_name, tag_line)
-        build_success_response(account_data)
-      rescue StandardError => e
-        Rails.logger.info "Exact match failed: #{e.message}"
+        Rails.logger.error("Failed to search Riot ID #{game_name}##{tag_line}: #{e.message}")
         nil
       end
 
-      # Attempts to find player using tag variations
-      #
-      # @return [Hash] Search result with success status
-      def try_fuzzy_search(game_name, tag_line)
-        tag_variations = build_tag_variations(tag_line)
-        result = try_tag_variations(game_name, tag_variations)
-
-        if result
-          build_success_response_with_message(result)
-        else
-          build_not_found_response(game_name, tag_variations)
-        end
-      end
-
-      # Builds a successful search response
-      def build_success_response(account_data)
-        {
-          success: true,
-          found: true,
-          game_name: account_data['gameName'],
-          tag_line: account_data['tagLine'],
-          puuid: account_data['puuid'],
-          riot_id: "#{account_data['gameName']}##{account_data['tagLine']}"
-        }
-      end
-
-      # Builds a successful fuzzy search response with message
-      def build_success_response_with_message(result)
-        {
-          success: true,
-          found: true,
-          **result,
-          message: "Player found! Use this Riot ID: #{result[:riot_id]}"
-        }
-      end
-
-      # Builds a not found response
-      def build_not_found_response(game_name, tag_variations)
-        {
-          success: false,
-          found: false,
-          error: "Player not found. Tried game name '#{game_name}' with tags: #{tag_variations.join(', ')}",
-          game_name: game_name,
-          tried_tags: tag_variations
-        }
-      end
-
       private
 
-      def validate_player!
-        return if player.riot_puuid.present? || player.summoner_name.present?
-
-        raise 'Player must have either Riot PUUID or summoner name to sync'
-      end
-
-      def validate_api_key!
-        return if api_key.present?
-
-        raise 'Riot API key not configured'
-      end
-
-      def fetch_summoner_data
-        if player.riot_puuid.present?
-          fetch_summoner_by_puuid(player.riot_puuid)
-        else
-          fetch_summoner_by_name(player.summoner_name).first
-        end
-      end
-
-      def fetch_summoner_by_name(summoner_name)
-        game_name, tag_line = parse_riot_id(summoner_name)
-
-        tag_variations = build_tag_variations(tag_line)
-
-        account_data = nil
-        tag_variations.each do |tag|
-          begin
-            Rails.logger.info "Trying Riot ID: #{game_name}##{tag}"
-            account_data = fetch_account_by_riot_id(game_name, tag)
-            Rails.logger.info "✅ Found player: #{game_name}##{tag}"
-            break
-          rescue StandardError => e
-            Rails.logger.debug "Tag '#{tag}' failed: #{e.message}"
-            next
-          end
-        end
-
-        unless account_data
-          raise "Player not found. Tried: #{tag_variations.map { |t| "#{game_name}##{t}" }.join(', ')}"
-        end
-
-        puuid = account_data['puuid']
-        summoner_data = fetch_summoner_by_puuid(puuid)
-
-        [summoner_data, account_data]
-      end
-
-      def fetch_account_by_riot_id(game_name, tag_line)
-        url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{riot_url_encode(game_name)}/#{riot_url_encode(tag_line)}"
-        response = make_request(url)
-
+      # Fetch match IDs
+      def fetch_match_ids(puuid, count = 20)
+        regional_endpoint = get_regional_endpoint(region)
+        
+        uri = URI::HTTPS.build(
+          host: "#{regional_endpoint}.api.riotgames.com",
+          path: "/lol/match/v5/matches/by-puuid/#{CGI.escape(puuid)}/ids",
+          query: URI.encode_www_form(count: count)
+        )
+        response = make_request(uri.to_s)
         JSON.parse(response.body)
       end
 
-      def fetch_summoner_by_puuid(puuid)
-        # Region already validated in initialize via sanitize_region
-        url = "https://#{region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/#{puuid}"
-        response = make_request(url)
-
+      # Fetch match details
+      def fetch_match_details(match_id)
+        regional_endpoint = get_regional_endpoint(region)
+        
+        uri = URI::HTTPS.build(
+          host: "#{regional_endpoint}.api.riotgames.com",
+          path: "/lol/match/v5/matches/#{CGI.escape(match_id)}"
+        )
+        response = make_request(uri.to_s)
         JSON.parse(response.body)
       end
 
-      def fetch_ranked_stats(puuid)
-        url = "https://#{region}.api.riotgames.com/lol/league/v4/entries/by-puuid/#{puuid}"
-        response = make_request(url)
-
-        JSON.parse(response.body)
-      end
-
+      # Make HTTP request to Riot API
       def make_request(url)
         uri = URI(url)
         request = Net::HTTP::Get.new(uri)
@@ -272,120 +175,100 @@ module Players
         response
       end
 
-      def update_player_data(summoner_data, ranked_data)
-        update_data = {
-          riot_puuid: summoner_data['puuid'],
-          riot_summoner_id: summoner_data['id'],
-          sync_status: 'success',
-          last_sync_at: Time.current
-        }
-
-        update_data.merge!(extract_ranked_stats(ranked_data))
-
-        player.update!(update_data)
-      end
-
-      def build_player_data(summoner_data, ranked_data, account_data, role)
-        player_data = {
-          summoner_name: "#{account_data['gameName']}##{account_data['tagLine']}",
-          role: role,
-          region: region,
-          status: 'active',
-          riot_puuid: summoner_data['puuid'],
-          riot_summoner_id: summoner_data['id'],
+      # Update player with Riot data
+      def update_player_from_riot(player, summoner_data, rank_data)
+        player.update!(
           summoner_level: summoner_data['summonerLevel'],
           profile_icon_id: summoner_data['profileIconId'],
-          sync_status: 'success',
-          last_sync_at: Time.current
-        }
-
-        player_data.merge!(extract_ranked_stats(ranked_data))
+          solo_queue_tier: rank_data['tier'],
+          solo_queue_rank: rank_data['rank'],
+          solo_queue_lp: rank_data['leaguePoints'],
+          wins: rank_data['wins'],
+          losses: rank_data['losses'],
+          last_sync_at: Time.current,
+          sync_status: 'success'
+        )
       end
 
-      def extract_ranked_stats(ranked_data)
-        stats = {}
+      # Import a match from Riot data
+      def import_match(match_data, player)
+        info = match_data['info']
+        metadata = match_data['metadata']
 
-        solo_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
-        if solo_queue
-          stats.merge!({
-            solo_queue_tier: solo_queue['tier'],
-            solo_queue_rank: solo_queue['rank'],
-            solo_queue_lp: solo_queue['leaguePoints'],
-            solo_queue_wins: solo_queue['wins'],
-            solo_queue_losses: solo_queue['losses']
-          })
+        # Find player's participant
+        participant = info['participants'].find do |p|
+          p['puuid'] == player.puuid
         end
 
-        flex_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_FLEX_SR' }
-        if flex_queue
-          stats.merge!({
-            flex_queue_tier: flex_queue['tier'],
-            flex_queue_rank: flex_queue['rank'],
-            flex_queue_lp: flex_queue['leaguePoints']
-          })
+        return false unless participant
+
+        # Determine if it was a victory
+        victory = participant['win']
+
+        # Create match
+        match = organization.matches.create!(
+          riot_match_id: metadata['matchId'],
+          match_type: 'official',
+          game_start: Time.zone.at(info['gameStartTimestamp'] / 1000),
+          game_end: Time.zone.at(info['gameEndTimestamp'] / 1000),
+          game_duration: info['gameDuration'],
+          victory: victory,
+          patch_version: info['gameVersion'],
+          our_side: participant['teamId'] == 100 ? 'blue' : 'red'
+        )
+
+        # Create player stats
+        create_player_stats(match, player, participant)
+
+        true
+      end
+
+      # Create player match stats
+      def create_player_stats(match, player, participant)
+        match.player_match_stats.create!(
+          player: player,
+          champion: participant['championName'],
+          role: participant['teamPosition']&.downcase || player.role,
+          kills: participant['kills'],
+          deaths: participant['deaths'],
+          assists: participant['assists'],
+          total_damage_dealt: participant['totalDamageDealtToChampions'],
+          total_damage_taken: participant['totalDamageTaken'],
+          gold_earned: participant['goldEarned'],
+          total_cs: participant['totalMinionsKilled'] + participant['neutralMinionsKilled'],
+          vision_score: participant['visionScore'],
+          wards_placed: participant['wardsPlaced'],
+          wards_killed: participant['wardsKilled'],
+          first_blood: participant['firstBloodKill'],
+          double_kills: participant['doubleKills'],
+          triple_kills: participant['tripleKills'],
+          quadra_kills: participant['quadraKills'],
+          penta_kills: participant['pentaKills']
+        )
+      end
+
+      # Validate and normalize region
+      def sanitize_region(region)
+        normalized = region.to_s.downcase.strip
+
+        unless VALID_REGIONS.include?(normalized)
+          raise ArgumentError, "Invalid region: #{region}. Must be one of: #{VALID_REGIONS.join(', ')}"
         end
 
-        stats
+        normalized
       end
 
-      def handle_sync_error(error)
-        Rails.logger.error "Riot API sync error: #{error.message}"
-        player&.update(sync_status: 'error', last_sync_at: Time.current)
-
-        { success: false, error: error.message, code: 'RIOT_API_ERROR' }
-      end
-
-      def parse_riot_id(summoner_name)
-        if summoner_name.include?('#')
-          game_name, tag_line = summoner_name.split('#', 2)
-        elsif summoner_name.include?('-')
-          parts = summoner_name.rpartition('-')
-          game_name = parts[0]
-          tag_line = parts[2]
+      # Get regional endpoint for match/account APIs
+      def get_regional_endpoint(platform_region)
+        if AMERICAS.include?(platform_region)
+          'americas'
+        elsif EUROPE.include?(platform_region)
+          'europe'
+        elsif ASIA.include?(platform_region)
+          'asia'
         else
-          game_name = summoner_name
-          tag_line = nil
+          'americas' # Default fallback
         end
-
-        tag_line ||= region.upcase
-        tag_line = tag_line.strip.upcase if tag_line
-
-        [game_name, tag_line]
-      end
-
-      def build_tag_variations(tag_line)
-        [
-          tag_line,                    # Original parsed tag
-          tag_line&.downcase,          # lowercase
-          tag_line&.upcase,            # UPPERCASE
-          tag_line&.capitalize,        # Capitalized
-          region.upcase,               # BR1
-          region[0..1].upcase,         # BR
-          'BR1', 'BRSL', 'BR', 'br1', 'LAS', 'LAN'  # Common tags
-        ].compact.uniq
-      end
-
-      def try_tag_variations(game_name, tag_variations)
-        tag_variations.each do |tag|
-          begin
-            account_data = fetch_account_by_riot_id(game_name, tag)
-            return {
-              game_name: account_data['gameName'],
-              tag_line: account_data['tagLine'],
-              puuid: account_data['puuid'],
-              riot_id: "#{account_data['gameName']}##{account_data['tagLine']}"
-            }
-          rescue StandardError => e
-            Rails.logger.debug "Tag '#{tag}' not found: #{e.message}"
-            next
-          end
-        end
-
-        nil
-      end
-
-      def riot_url_encode(string)
-        URI.encode_www_form_component(string).gsub('+', '%20')
       end
     end
   end
