@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Scrims
   class CompetitiveMatchSerializer
     def initialize(competitive_match, options = {})

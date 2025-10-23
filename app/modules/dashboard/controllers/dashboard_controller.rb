@@ -5,139 +5,141 @@ module Dashboard
     class DashboardController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
       def index
-      dashboard_data = {
-      stats: calculate_stats,
-      recent_matches: recent_matches_data,
-      upcoming_events: upcoming_events_data,
-      active_goals: active_goals_data,
-      roster_status: roster_status_data
-      }
-      
-      render_success(dashboard_data)
+        dashboard_data = {
+          stats: calculate_stats,
+          recent_matches: recent_matches_data,
+          upcoming_events: upcoming_events_data,
+          active_goals: active_goals_data,
+          roster_status: roster_status_data
+        }
+
+        render_success(dashboard_data)
       end
-      
+
       def stats
-      cache_key = "dashboard_stats_#{current_organization.id}_#{current_organization.updated_at.to_i}"
-      cached_stats = Rails.cache.fetch(cache_key, expires_in: 5.minutes) { calculate_stats }
-      render_success(cached_stats)
+        cache_key = "dashboard_stats_#{current_organization.id}_#{current_organization.updated_at.to_i}"
+        cached_stats = Rails.cache.fetch(cache_key, expires_in: 5.minutes) { calculate_stats }
+        render_success(cached_stats)
       end
-      
+
       def activities
-      recent_activities = fetch_recent_activities
-      
-      render_success({
-      activities: recent_activities,
-      count: recent_activities.size
-      })
+        recent_activities = fetch_recent_activities
+
+        render_success({
+                         activities: recent_activities,
+                         count: recent_activities.size
+                       })
       end
-      
+
       def schedule
-      events = organization_scoped(Schedule)
-      .where('start_time >= ?', Time.current)
-      .order(start_time: :asc)
-      .limit(10)
-      
-      render_success({
-      events: ScheduleSerializer.render_as_hash(events),
-      count: events.size
-      })
+        events = organization_scoped(Schedule)
+                 .where('start_time >= ?', Time.current)
+                 .order(start_time: :asc)
+                 .limit(10)
+
+        render_success({
+                         events: ScheduleSerializer.render_as_hash(events),
+                         count: events.size
+                       })
       end
-      
+
       private
-      
+
       def calculate_stats
-      matches = organization_scoped(Match).recent(30)
-      players = organization_scoped(Player).active
-      
-      {
-      total_players: players.count,
-      active_players: players.where(status: 'active').count,
-      total_matches: matches.count,
-      wins: matches.victories.count,
-      losses: matches.defeats.count,
-      win_rate: calculate_win_rate(matches),
-      recent_form: calculate_recent_form(matches.order(game_start: :desc).limit(5)),
-      avg_kda: calculate_avg_kda(PlayerMatchStat.where(match: matches)),
-      active_goals: organization_scoped(TeamGoal).active.count,
-      completed_goals: organization_scoped(TeamGoal).where(status: 'completed').count,
-      upcoming_matches: organization_scoped(Schedule).where('start_time >= ? AND event_type = ?', Time.current, 'match').count
-      }
+        matches = organization_scoped(Match).recent(30)
+        players = organization_scoped(Player).active
+
+        {
+          total_players: players.count,
+          active_players: players.where(status: 'active').count,
+          total_matches: matches.count,
+          wins: matches.victories.count,
+          losses: matches.defeats.count,
+          win_rate: calculate_win_rate(matches),
+          recent_form: calculate_recent_form(matches.order(game_start: :desc).limit(5)),
+          avg_kda: calculate_avg_kda(PlayerMatchStat.where(match: matches)),
+          active_goals: organization_scoped(TeamGoal).active.count,
+          completed_goals: organization_scoped(TeamGoal).where(status: 'completed').count,
+          upcoming_matches: organization_scoped(Schedule).where('start_time >= ? AND event_type = ?', Time.current,
+                                                                'match').count
+        }
       end
-      
+
       # Methods moved to Analytics::Concerns::AnalyticsCalculations
       # - calculate_win_rate
       # - calculate_recent_form
       # - calculate_avg_kda (renamed from calculate_average_kda)
-      
+
       def recent_matches_data
-      matches = organization_scoped(Match)
-      .order(game_start: :desc)
-      .limit(5)
-      
-      MatchSerializer.render_as_hash(matches)
+        matches = organization_scoped(Match)
+                  .order(game_start: :desc)
+                  .limit(5)
+
+        MatchSerializer.render_as_hash(matches)
       end
-      
+
       def upcoming_events_data
-      events = organization_scoped(Schedule)
-      .where('start_time >= ?', Time.current)
-      .order(start_time: :asc)
-      .limit(5)
-      
-      ScheduleSerializer.render_as_hash(events)
+        events = organization_scoped(Schedule)
+                 .where('start_time >= ?', Time.current)
+                 .order(start_time: :asc)
+                 .limit(5)
+
+        ScheduleSerializer.render_as_hash(events)
       end
-      
+
       def active_goals_data
-      goals = organization_scoped(TeamGoal)
-      .active
-      .order(end_date: :asc)
-      .limit(5)
-      
-      TeamGoalSerializer.render_as_hash(goals)
+        goals = organization_scoped(TeamGoal)
+                .active
+                .order(end_date: :asc)
+                .limit(5)
+
+        TeamGoalSerializer.render_as_hash(goals)
       end
-      
+
       def roster_status_data
-      players = organization_scoped(Player).includes(:champion_pools)
-      
-      # Order by role to ensure consistent order in by_role hash
-      by_role_ordered = players.ordered_by_role.group(:role).count
-      
-      {
-      by_role: by_role_ordered,
-      by_status: players.group(:status).count,
-      contracts_expiring: players.contracts_expiring_soon.count
-      }
+        players = organization_scoped(Player).includes(:champion_pools)
+
+        # Order by role to ensure consistent order in by_role hash
+        by_role_ordered = players.ordered_by_role.group(:role).count
+
+        {
+          by_role: by_role_ordered,
+          by_status: players.group(:status).count,
+          contracts_expiring: players.contracts_expiring_soon.count
+        }
       end
-      
+
       def fetch_recent_activities
-      # Fetch recent audit logs and format them
-      activities = AuditLog
-      .where(organization: current_organization)
-      .order(created_at: :desc)
-      .limit(20)
-      
-      activities.map do |log|
-      {
-      id: log.id,
-      action: log.action,
-      entity_type: log.entity_type,
-      entity_id: log.entity_id,
-      user: log.user&.email,
-      timestamp: log.created_at,
-      changes: summarize_changes(log)
-      }
+        # Fetch recent audit logs and format them
+        activities = AuditLog
+                     .where(organization: current_organization)
+                     .order(created_at: :desc)
+                     .limit(20)
+
+        activities.map do |log|
+          {
+            id: log.id,
+            action: log.action,
+            entity_type: log.entity_type,
+            entity_id: log.entity_id,
+            user: log.user&.email,
+            timestamp: log.created_at,
+            changes: summarize_changes(log)
+          }
+        end
       end
-      end
-      
+
       def summarize_changes(log)
-      return nil unless log.new_values.present?
-      
-      # Only show important field changes
-      important_fields = %w[status role summoner_name title victory]
-      changes = log.new_values.slice(*important_fields)
-      
-      return nil if changes.empty?
-      changes
+        return nil unless log.new_values.present?
+
+        # Only show important field changes
+        important_fields = %w[status role summoner_name title victory]
+        changes = log.new_values.slice(*important_fields)
+
+        return nil if changes.empty?
+
+        changes
       end
-      end
+    end
   end
 end

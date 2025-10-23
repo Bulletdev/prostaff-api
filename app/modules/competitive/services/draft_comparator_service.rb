@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Competitive
   module Services
     class DraftComparatorService
@@ -9,7 +11,7 @@ module Competitive
       # @param patch [String] Patch version (e.g., '14.20')
       # @param organization [Organization] User's organization for scope
       # @return [Hash] Comparison results with insights
-      def self.compare_draft(our_picks:, opponent_picks:, our_bans: [], opponent_bans: [], patch: nil, organization:)
+      def self.compare_draft(our_picks:, opponent_picks:, organization:, our_bans: [], opponent_bans: [], patch: nil)
         new.compare_draft(
           our_picks: our_picks,
           opponent_picks: opponent_picks,
@@ -20,7 +22,7 @@ module Competitive
         )
       end
 
-      # Note: opponent_bans parameter reserved for future ban analysis
+      # NOTE: opponent_bans parameter reserved for future ban analysis
       def compare_draft(our_picks:, opponent_picks:, our_bans:, _opponent_bans:, patch:, organization:)
         # Find similar professional matches
         similar_matches = find_similar_matches(
@@ -69,9 +71,9 @@ module Competitive
 
         # Find matches where at least 3 of our champions were picked
         matches = CompetitiveMatch
-          .where.not(our_picks: nil)
-          .where.not(our_picks: [])
-          .limit(limit * 3) # Get more for filtering
+                  .where.not(our_picks: nil)
+                  .where.not(our_picks: [])
+                  .limit(limit * 3) # Get more for filtering
 
         # Filter by patch if provided
         matches = matches.by_patch(patch) if patch.present?
@@ -139,20 +141,20 @@ module Competitive
         {
           role: role,
           patch: patch,
-          top_picks: pick_frequency.map { |champion, count|
+          top_picks: pick_frequency.map do |champion, count|
             {
               champion: champion,
               picks: count,
               pick_rate: ((count.to_f / picks.size) * 100).round(2)
             }
-          },
-          top_bans: ban_frequency.map { |champion, count|
+          end,
+          top_bans: ban_frequency.map do |champion, count|
             {
               champion: champion,
               bans: count,
               ban_rate: ((count.to_f / bans.size) * 100).round(2)
             }
-          },
+          end,
           total_matches: matches.size
         }
       end
@@ -240,13 +242,13 @@ module Competitive
         insights = []
 
         # Meta relevance
-        if meta_score >= 70
-          insights << "✅ Composição altamente meta (#{meta_score}% alinhada com picks profissionais)"
-        elsif meta_score >= 40
-          insights << "⚠️ Composição moderadamente meta (#{meta_score}% alinhada)"
-        else
-          insights << "❌ Composição off-meta (#{meta_score}% alinhada). Considere picks mais populares."
-        end
+        insights << if meta_score >= 70
+                      "✅ Composição altamente meta (#{meta_score}% alinhada com picks profissionais)"
+                    elsif meta_score >= 40
+                      "⚠️ Composição moderadamente meta (#{meta_score}% alinhada)"
+                    else
+                      "❌ Composição off-meta (#{meta_score}% alinhada). Considere picks mais populares."
+                    end
 
         # Similar matches performance
         if similar_matches.any?
@@ -259,14 +261,14 @@ module Competitive
         end
 
         # Synergy check (placeholder - can be enhanced)
-        insights << "💡 Analise sinergia entre seus picks antes do jogo começar"
+        insights << '💡 Analise sinergia entre seus picks antes do jogo começar'
 
         # Patch relevance
-        if patch.present?
-          insights << "📊 Análise baseada no patch #{patch}"
-        else
-          insights << "⚠️ Análise cross-patch - considere o patch atual para maior precisão"
-        end
+        insights << if patch.present?
+                      "📊 Análise baseada no patch #{patch}"
+                    else
+                      '⚠️ Análise cross-patch - considere o patch atual para maior precisão'
+                    end
 
         insights
       end
