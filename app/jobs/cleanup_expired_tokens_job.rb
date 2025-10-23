@@ -7,7 +7,7 @@ class CleanupExpiredTokensJob < ApplicationJob
   # You can use cron, sidekiq-scheduler, or a similar tool to schedule this job
 
   def perform
-    Rails.logger.info "Starting cleanup of expired tokens..."
+    Rails.logger.info 'Starting cleanup of expired tokens...'
 
     # Cleanup expired password reset tokens
     password_reset_deleted = PasswordResetToken.cleanup_old_tokens
@@ -17,8 +17,8 @@ class CleanupExpiredTokensJob < ApplicationJob
     blacklist_deleted = TokenBlacklist.cleanup_expired
     Rails.logger.info "Cleaned up #{blacklist_deleted} expired blacklisted tokens"
 
-    Rails.logger.info "Token cleanup completed successfully"
-  rescue => e
+    Rails.logger.info 'Token cleanup completed successfully'
+  rescue StandardError => e
     Rails.logger.error "Error during token cleanup: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
     raise e

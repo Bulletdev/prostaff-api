@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class JwtAuthentication
   def initialize(app)
     @app = app
@@ -32,7 +34,6 @@ class JwtAuthentication
     env['rack.jwt.payload'] = payload
     env['current_user'] = user
     env['current_organization'] = user.organization
-
   rescue ActiveRecord::RecordNotFound
     raise Authentication::Services::JwtService::AuthenticationError, 'User not found'
   end
@@ -54,7 +55,7 @@ class JwtAuthentication
       '/api/v1/auth/register',
       '/api/v1/auth/forgot-password',
       '/api/v1/auth/reset-password',
-      '/up', # Health check
+      '/up' # Health check
     ]
 
     skip_paths.any? { |skip_path| path.start_with?(skip_path) }
