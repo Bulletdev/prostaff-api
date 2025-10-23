@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 # Seeds file for ProStaff API
 # This file should contain all the record creation needed to seed the database with its default values.
 
-puts "🌱 Seeding database..."
+puts '🌱 Seeding database...'
 
 # Create sample organization
 org = Organization.find_or_create_by!(slug: 'team-alpha') do |organization|
@@ -61,7 +63,7 @@ players_data = [
     solo_queue_lp: 234,
     solo_queue_wins: 127,
     solo_queue_losses: 89,
-    champion_pool: ['Garen', 'Darius', 'Sett', 'Renekton', 'Camille'],
+    champion_pool: %w[Garen Darius Sett Renekton Camille],
     playstyle_tags: ['Tank', 'Engage', 'Team Fighter'],
     jersey_number: 1,
     contract_start_date: 1.year.ago,
@@ -97,12 +99,12 @@ players_data = [
     solo_queue_lp: 1247,
     solo_queue_wins: 234,
     solo_queue_losses: 145,
-    champion_pool: ['Azir', 'Syndra', 'Orianna', 'Yasuo', 'LeBlanc'],
+    champion_pool: %w[Azir Syndra Orianna Yasuo LeBlanc],
     playstyle_tags: ['Control Mage', 'Playmaker', 'Late Game'],
     jersey_number: 3,
     contract_start_date: 6.months.ago,
     contract_end_date: 18.months.from_now,
-    salary: 10000.00
+    salary: 10_000.00
   },
   {
     summoner_name: 'ADCMain',
@@ -133,7 +135,7 @@ players_data = [
     solo_queue_lp: 345,
     solo_queue_wins: 143,
     solo_queue_losses: 107,
-    champion_pool: ['Thresh', 'Nautilus', 'Leona', 'Braum', 'Alistar'],
+    champion_pool: %w[Thresh Nautilus Leona Braum Alistar],
     playstyle_tags: ['Engage', 'Vision Control', 'Shotcaller'],
     jersey_number: 5,
     contract_start_date: 4.months.ago,
@@ -178,12 +180,12 @@ end
     organization: org,
     riot_match_id: "BR_MATCH_#{1000 + i}"
   ) do |m|
-    m.match_type = ['official', 'scrim'].sample
+    m.match_type = %w[official scrim].sample
     m.game_version = '14.19'
     m.game_start = (i + 1).days.ago
-    m.game_duration = 1800 + rand(1200) # 30-50 minutes
-    m.our_side = ['blue', 'red'].sample
-    m.opponent_name = "Team #{['Beta', 'Gamma', 'Delta'][i]}"
+    m.game_duration = rand(1800..2999) # 30-50 minutes
+    m.our_side = %w[blue red].sample
+    m.opponent_name = "Team #{%w[Beta Gamma Delta][i]}"
     m.victory = [true, false].sample
     m.our_score = rand(5..25)
     m.opponent_score = rand(5..25)
@@ -209,12 +211,12 @@ end
       stat.deaths = rand(0..10)
       stat.assists = rand(0..20)
       stat.cs = rand(150..300)
-      stat.gold_earned = rand(10000..20000)
-      stat.damage_dealt_champions = rand(15000..35000)
+      stat.gold_earned = rand(10_000..20_000)
+      stat.damage_dealt_champions = rand(15_000..35_000)
       stat.vision_score = rand(20..80)
       stat.items = Array.new(6) { rand(1000..4000) }
       stat.summoner_spell_1 = 'Flash'
-      stat.summoner_spell_2 = ['Teleport', 'Ignite', 'Heal', 'Barrier'].sample
+      stat.summoner_spell_2 = %w[Teleport Ignite Heal Barrier].sample
     end
   end
 end
@@ -228,7 +230,7 @@ scouting_targets_data = [
     current_tier: 'GRANDMASTER',
     current_rank: 'II',
     current_lp: 678,
-    champion_pool: ['Fiora', 'Jax', 'Irelia'],
+    champion_pool: %w[Fiora Jax Irelia],
     playstyle: 'aggressive',
     strengths: ['Mechanical skill', 'Lane dominance'],
     weaknesses: ['Team fighting', 'Communication'],
@@ -243,7 +245,7 @@ scouting_targets_data = [
     current_tier: 'MASTER',
     current_rank: 'I',
     current_lp: 423,
-    champion_pool: ['Pyke', 'Bard', 'Rakan'],
+    champion_pool: %w[Pyke Bard Rakan],
     playstyle: 'calculated',
     strengths: ['Vision control', 'Roaming'],
     weaknesses: ['Consistency', 'Champion pool'],
@@ -307,7 +309,7 @@ org.players.limit(2).each_with_index do |player, index|
   goal_data = [
     {
       title: "Improve #{player.summoner_name} CS/min",
-      description: "Target 8.0+ CS per minute average",
+      description: 'Target 8.0+ CS per minute average',
       category: 'skill',
       metric_type: 'cs_per_min',
       target_value: 8.0,
@@ -316,7 +318,7 @@ org.players.limit(2).each_with_index do |player, index|
     },
     {
       title: "Increase #{player.summoner_name} Vision Score",
-      description: "Target 2.5+ vision score per minute",
+      description: 'Target 2.5+ vision score per minute',
       category: 'performance',
       metric_type: 'vision_score',
       target_value: 2.5,
@@ -349,6 +351,6 @@ puts "   • Matches: #{org.matches.count}"
 puts "   • Scouting Targets: #{org.scouting_targets.count}"
 puts "   • Team Goals: #{org.team_goals.count}"
 puts "\n🔐 Login credentials:"
-puts "   • Admin: admin@teamalpha.gg / password123"
-puts "   • Coach: coach@teamalpha.gg / password123"
-puts "   • Analyst: analyst@teamalpha.gg / password123"
+puts '   • Admin: admin@teamalpha.gg / password123'
+puts '   • Coach: coach@teamalpha.gg / password123'
+puts '   • Analyst: analyst@teamalpha.gg / password123'

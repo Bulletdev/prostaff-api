@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateAuditLogs < ActiveRecord::Migration[7.1]
   def change
     create_table :audit_logs, id: :uuid do |t|
@@ -23,6 +25,6 @@ class CreateAuditLogs < ActiveRecord::Migration[7.1]
     add_index :audit_logs, :entity_type
     add_index :audit_logs, :entity_id
     add_index :audit_logs, :created_at
-    add_index :audit_logs, [:entity_type, :entity_id]
+    add_index :audit_logs, %i[entity_type entity_id]
   end
 end
