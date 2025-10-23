@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SyncPlayerFromRiotJob < ApplicationJob
   queue_as :default
 
@@ -13,18 +15,18 @@ class SyncPlayerFromRiotJob < ApplicationJob
     riot_api_key = ENV['RIOT_API_KEY']
     unless riot_api_key.present?
       player.update(sync_status: 'error', last_sync_at: Time.current)
-      Rails.logger.error "Riot API key not configured"
+      Rails.logger.error 'Riot API key not configured'
       return
     end
 
     begin
       region = player.region.presence&.downcase || 'br1'
 
-      if player.riot_puuid.present?
-        summoner_data = fetch_summoner_by_puuid(player.riot_puuid, region, riot_api_key)
-      else
-        summoner_data = fetch_summoner_by_name(player.summoner_name, region, riot_api_key)
-      end
+      summoner_data = if player.riot_puuid.present?
+                        fetch_summoner_by_puuid(player.riot_puuid, region, riot_api_key)
+                      else
+                        fetch_summoner_by_name(player.summoner_name, region, riot_api_key)
+                      end
 
       # Use PUUID for league endpoint (workaround for Riot API bug where summoner_data['id'] is nil)
       # See: https://github.com/RiotGames/developer-relations/issues/1092
@@ -42,27 +44,26 @@ class SyncPlayerFromRiotJob < ApplicationJob
       solo_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
       if solo_queue
         update_data.merge!({
-          solo_queue_tier: solo_queue['tier'],
-          solo_queue_rank: solo_queue['rank'],
-          solo_queue_lp: solo_queue['leaguePoints'],
-          solo_queue_wins: solo_queue['wins'],
-          solo_queue_losses: solo_queue['losses']
-        })
+                             solo_queue_tier: solo_queue['tier'],
+                             solo_queue_rank: solo_queue['rank'],
+                             solo_queue_lp: solo_queue['leaguePoints'],
+                             solo_queue_wins: solo_queue['wins'],
+                             solo_queue_losses: solo_queue['losses']
+                           })
       end
 
       flex_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_FLEX_SR' }
       if flex_queue
         update_data.merge!({
-          flex_queue_tier: flex_queue['tier'],
-          flex_queue_rank: flex_queue['rank'],
-          flex_queue_lp: flex_queue['leaguePoints']
-        })
+                             flex_queue_tier: flex_queue['tier'],
+                             flex_queue_rank: flex_queue['rank'],
+                             flex_queue_lp: flex_queue['leaguePoints']
+                           })
       end
 
       player.update!(update_data)
 
       Rails.logger.info "Successfully synced player #{player_id} from Riot API"
-
     rescue StandardError => e
       Rails.logger.error "Failed to sync player #{player_id}: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
@@ -112,9 +113,7 @@ class SyncPlayerFromRiotJob < ApplicationJob
       http.request(request)
     end
 
-    unless response.is_a?(Net::HTTPSuccess)
-      raise "Riot API Error: #{response.code} - #{response.body}"
-    end
+    raise "Riot API Error: #{response.code} - #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
     JSON.parse(response.body)
   end
@@ -132,9 +131,7 @@ class SyncPlayerFromRiotJob < ApplicationJob
       http.request(request)
     end
 
-    unless response.is_a?(Net::HTTPSuccess)
-      raise "Riot API Error: #{response.code} - #{response.body}"
-    end
+    raise "Riot API Error: #{response.code} - #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
     JSON.parse(response.body)
   end
@@ -152,9 +149,7 @@ class SyncPlayerFromRiotJob < ApplicationJob
       http.request(request)
     end
 
-    unless response.is_a?(Net::HTTPSuccess)
-      raise "Riot API Error: #{response.code} - #{response.body}"
-    end
+    raise "Riot API Error: #{response.code} - #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
     JSON.parse(response.body)
   end

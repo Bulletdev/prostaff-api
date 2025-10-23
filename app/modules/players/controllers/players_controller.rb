@@ -5,7 +5,7 @@ module Players
     # Controller for managing players within an organization
     # Business logic extracted to Services for better organization
     class PlayersController < Api::V1::BaseController
-      before_action :set_player, only: [:show, :update, :destroy, :stats, :matches, :sync_from_riot]
+      before_action :set_player, only: %i[show update destroy stats matches sync_from_riot]
 
       # GET /api/v1/players
       def index
@@ -22,16 +22,16 @@ module Players
         result = paginate(players.ordered_by_role.order(:summoner_name))
 
         render_success({
-          players: PlayerSerializer.render_as_hash(result[:data]),
-          pagination: result[:pagination]
-        })
+                         players: PlayerSerializer.render_as_hash(result[:data]),
+                         pagination: result[:pagination]
+                       })
       end
 
       # GET /api/v1/players/:id
       def show
         render_success({
-          player: PlayerSerializer.render_as_hash(@player)
-        })
+                         player: PlayerSerializer.render_as_hash(@player)
+                       })
       end
 
       # POST /api/v1/players
@@ -48,8 +48,8 @@ module Players
           )
 
           render_created({
-            player: PlayerSerializer.render_as_hash(player)
-          }, message: 'Player created successfully')
+                           player: PlayerSerializer.render_as_hash(player)
+                         }, message: 'Player created successfully')
         else
           render_error(
             message: 'Failed to create player',
@@ -74,8 +74,8 @@ module Players
           )
 
           render_updated({
-            player: PlayerSerializer.render_as_hash(@player)
-          })
+                           player: PlayerSerializer.render_as_hash(@player)
+                         })
         else
           render_error(
             message: 'Failed to update player',
@@ -112,19 +112,19 @@ module Players
         stats_data = stats_service.calculate_stats
 
         render_success({
-          player: PlayerSerializer.render_as_hash(stats_data[:player]),
-          overall: stats_data[:overall],
-          recent_form: stats_data[:recent_form],
-          champion_pool: ChampionPoolSerializer.render_as_hash(stats_data[:champion_pool]),
-          performance_by_role: stats_data[:performance_by_role]
-        })
+                         player: PlayerSerializer.render_as_hash(stats_data[:player]),
+                         overall: stats_data[:overall],
+                         recent_form: stats_data[:recent_form],
+                         champion_pool: ChampionPoolSerializer.render_as_hash(stats_data[:champion_pool]),
+                         performance_by_role: stats_data[:performance_by_role]
+                       })
       end
 
       # GET /api/v1/players/:id/matches
       def matches
         matches = @player.matches
-                  .includes(:player_match_stats)
-                  .order(game_start: :desc)
+                         .includes(:player_match_stats)
+                         .order(game_start: :desc)
 
         if params[:start_date].present? && params[:end_date].present?
           matches = matches.in_date_range(params[:start_date], params[:end_date])
@@ -141,9 +141,9 @@ module Players
         end
 
         render_success({
-          matches: matches_with_stats,
-          pagination: result[:pagination]
-        })
+                         matches: matches_with_stats,
+                         pagination: result[:pagination]
+                       })
       end
 
       # POST /api/v1/players/import
@@ -196,9 +196,9 @@ module Players
           )
 
           render_created({
-            player: PlayerSerializer.render_as_hash(result[:player]),
-            message: "Player #{result[:summoner_name]} imported successfully from Riot API"
-          })
+                           player: PlayerSerializer.render_as_hash(result[:player]),
+                           message: "Player #{result[:summoner_name]} imported successfully from Riot API"
+                         })
         else
           render_error(
             message: "Failed to import from Riot API: #{result[:error]}",
@@ -222,9 +222,9 @@ module Players
           )
 
           render_success({
-            player: PlayerSerializer.render_as_hash(@player.reload),
-            message: 'Player synced successfully from Riot API'
-          })
+                           player: PlayerSerializer.render_as_hash(@player.reload),
+                           message: 'Player synced successfully from Riot API'
+                         })
         else
           render_error(
             message: "Failed to sync with Riot API: #{result[:error]}",
@@ -301,9 +301,9 @@ module Players
         end
 
         render_success({
-          message: "#{players.count} players queued for sync",
-          players_count: players.count
-        })
+                         message: "#{players.count} players queued for sync",
+                         players_count: players.count
+                       })
       end
 
       private

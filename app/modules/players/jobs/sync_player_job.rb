@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SyncPlayerJob < ApplicationJob
   include RankComparison
 
@@ -21,7 +23,6 @@ class SyncPlayerJob < ApplicationJob
     sync_champion_mastery(player, riot_service, region) if player.riot_puuid.present?
 
     player.update!(last_sync_at: Time.current)
-
   rescue RiotApiService::NotFoundError => e
     Rails.logger.error("Player not found in Riot API: #{player.summoner_name} - #{e.message}")
   rescue RiotApiService::UnauthorizedError => e
@@ -51,9 +52,9 @@ class SyncPlayerJob < ApplicationJob
       region: region
     )
 
-    if player.summoner_name != summoner_data[:summoner_name]
-      player.update!(summoner_name: summoner_data[:summoner_name])
-    end
+    return unless player.summoner_name != summoner_data[:summoner_name]
+
+    player.update!(summoner_name: summoner_data[:summoner_name])
   end
 
   def sync_rank_info(player, riot_service, region)
