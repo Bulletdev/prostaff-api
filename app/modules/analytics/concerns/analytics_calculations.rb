@@ -53,7 +53,6 @@ module Analytics
         (total_gold.to_f / (game_duration_seconds / 60.0)).round(0)
       end
 
-
       def calculate_damage_per_min(total_damage, game_duration_seconds)
         return 0.0 if game_duration_seconds.zero?
 

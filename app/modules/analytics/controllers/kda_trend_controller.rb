@@ -8,10 +8,10 @@ module Analytics
 
         # Get recent matches for the player
         stats = PlayerMatchStat.joins(:match)
-                              .where(player: player, match: { organization: current_organization })
-                              .order('matches.game_start DESC')
-                              .limit(50)
-                              .includes(:match)
+                               .where(player: player, match: { organization: current_organization })
+                               .order('matches.game_start DESC')
+                               .limit(50)
+                               .includes(:match)
 
         trend_data = {
           player: PlayerSerializer.render_as_hash(player),
