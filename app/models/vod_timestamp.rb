@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class VodTimestamp < ApplicationRecord
   # Concerns
   include Constants
@@ -28,7 +30,7 @@ class VodTimestamp < ApplicationRecord
     minutes = (timestamp_seconds % 3600) / 60
     seconds = timestamp_seconds % 60
 
-    if hours > 0
+    if hours.positive?
       "#{hours}:#{minutes.to_s.rjust(2, '0')}:#{seconds.to_s.rjust(2, '0')}"
     else
       "#{minutes}:#{seconds.to_s.rjust(2, '0')}"
@@ -120,15 +122,15 @@ class VodTimestamp < ApplicationRecord
 
   def next_timestamp
     vod_review.vod_timestamps
-      .where('timestamp_seconds > ?', timestamp_seconds)
-      .order(:timestamp_seconds)
-      .first
+              .where('timestamp_seconds > ?', timestamp_seconds)
+              .order(:timestamp_seconds)
+              .first
   end
 
   def previous_timestamp
     vod_review.vod_timestamps
-      .where('timestamp_seconds < ?', timestamp_seconds)
-      .order(:timestamp_seconds)
-      .last
+              .where('timestamp_seconds < ?', timestamp_seconds)
+              .order(:timestamp_seconds)
+              .last
   end
 end

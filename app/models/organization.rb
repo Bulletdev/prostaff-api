@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Represents a League of Legends esports organization
 #
 # Organizations are the top-level entities in the system. Each organization

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Notification < ApplicationRecord
   # Associations
   belongs_to :user
@@ -7,7 +9,7 @@ class Notification < ApplicationRecord
   validates :message, presence: true
   validates :type, presence: true, inclusion: {
     in: %w[info success warning error match schedule system],
-    message: "%{value} is not a valid notification type"
+    message: '%<value>s is not a valid notification type'
   }
 
   # Scopes

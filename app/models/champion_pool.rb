@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ChampionPool < ApplicationRecord
   # Concerns
   include Constants
@@ -55,9 +57,9 @@ class ChampionPool < ApplicationRecord
   def mastery_display
     case mastery_level
     when 1..4 then "Mastery #{mastery_level}"
-    when 5 then "Mastery 5"
-    when 6 then "Mastery 6"
-    when 7 then "Mastery 7"
+    when 5 then 'Mastery 5'
+    when 6 then 'Mastery 6'
+    when 7 then 'Mastery 7'
     end
   end
 

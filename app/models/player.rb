@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Represents a player (athlete) in a League of Legends organization
 #
 # Players are the core entities in the roster management system. Each player
@@ -69,7 +71,7 @@ class Player < ApplicationRecord
   scope :by_tier, ->(tier) { where(solo_queue_tier: tier) }
   scope :ordered_by_role, lambda {
     order(Arel.sql(
-      "CASE role
+            "CASE role
         WHEN 'top' THEN 1
         WHEN 'jungle' THEN 2
         WHEN 'mid' THEN 3
@@ -77,7 +79,7 @@ class Player < ApplicationRecord
         WHEN 'support' THEN 5
         ELSE 6
       END"
-    ))
+          ))
   }
 
   # Instance methods
@@ -86,8 +88,8 @@ class Player < ApplicationRecord
   def current_rank_display
     return 'Unranked' if solo_queue_tier.blank?
 
-    rank_part = solo_queue_rank&.then { |r| " #{r}" } || ""
-    lp_part = solo_queue_lp&.then { |lp| " (#{lp} LP)" } || ""
+    rank_part = solo_queue_rank&.then { |r| " #{r}" } || ''
+    lp_part = solo_queue_lp&.then { |lp| " (#{lp} LP)" } || ''
 
     "#{solo_queue_tier.titleize}#{rank_part}#{lp_part}"
   end
@@ -97,8 +99,8 @@ class Player < ApplicationRecord
   def peak_rank_display
     return 'No peak recorded' if peak_tier.blank?
 
-    rank_part = peak_rank&.then { |r| " #{r}" } || ""
-    season_part = peak_season&.then { |s| " (S#{s})" } || ""
+    rank_part = peak_rank&.then { |r| " #{r}" } || ''
+    season_part = peak_season&.then { |s| " (S#{s})" } || ''
 
     "#{peak_tier.titleize}#{rank_part}#{season_part}"
   end
@@ -122,7 +124,7 @@ class Player < ApplicationRecord
   end
 
   def win_rate
-    return 0 if solo_queue_wins.to_i + solo_queue_losses.to_i == 0
+    return 0 if (solo_queue_wins.to_i + solo_queue_losses.to_i).zero?
 
     total_games = solo_queue_wins.to_i + solo_queue_losses.to_i
     (solo_queue_wins.to_f / total_games * 100).round(1)

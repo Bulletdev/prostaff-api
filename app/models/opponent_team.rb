@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class OpponentTeam < ApplicationRecord
   # Concerns
   include Constants
@@ -12,12 +14,12 @@ class OpponentTeam < ApplicationRecord
 
   validates :region, inclusion: {
     in: Constants::REGIONS,
-    message: "%{value} is not a valid region"
+    message: '%<value>s is not a valid region'
   }, allow_blank: true
 
   validates :tier, inclusion: {
     in: Constants::OpponentTeam::TIERS,
-    message: "%{value} is not a valid tier"
+    message: '%<value>s is not a valid tier'
   }, allow_blank: true
 
   # Callbacks

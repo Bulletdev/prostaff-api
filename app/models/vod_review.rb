@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class VodReview < ApplicationRecord
   # Concerns
   include Constants
@@ -35,7 +37,7 @@ class VodReview < ApplicationRecord
     minutes = (duration % 3600) / 60
     seconds = duration % 60
 
-    if hours > 0
+    if hours.positive?
       "#{hours}:#{minutes.to_s.rjust(2, '0')}:#{seconds.to_s.rjust(2, '0')}"
     else
       "#{minutes}:#{seconds.to_s.rjust(2, '0')}"

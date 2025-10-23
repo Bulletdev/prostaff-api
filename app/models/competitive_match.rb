@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CompetitiveMatch < ApplicationRecord
   # Concerns
   include Constants
@@ -13,12 +15,12 @@ class CompetitiveMatch < ApplicationRecord
 
   validates :match_format, inclusion: {
     in: Constants::CompetitiveMatch::FORMATS,
-    message: "%{value} is not a valid match format"
+    message: '%<value>s is not a valid match format'
   }, allow_blank: true
 
   validates :side, inclusion: {
     in: Constants::CompetitiveMatch::SIDES,
-    message: "%{value} is not a valid side"
+    message: '%<value>s is not a valid side'
   }, allow_blank: true
 
   validates :game_number, numericality: {

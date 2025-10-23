@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Scrim < ApplicationRecord
   # Concerns
   include Constants
@@ -10,17 +12,17 @@ class Scrim < ApplicationRecord
   # Validations
   validates :scrim_type, inclusion: {
     in: Constants::Scrim::TYPES,
-    message: "%{value} is not a valid scrim type"
+    message: '%<value>s is not a valid scrim type'
   }, allow_blank: true
 
   validates :focus_area, inclusion: {
     in: Constants::Scrim::FOCUS_AREAS,
-    message: "%{value} is not a valid focus area"
+    message: '%<value>s is not a valid focus area'
   }, allow_blank: true
 
   validates :visibility, inclusion: {
     in: Constants::Scrim::VISIBILITY_LEVELS,
-    message: "%{value} is not a valid visibility level"
+    message: '%<value>s is not a valid visibility level'
   }, allow_blank: true
 
   validates :games_planned, numericality: { greater_than: 0 }, allow_nil: true
@@ -79,7 +81,7 @@ class Scrim < ApplicationRecord
       played_at: Time.current
     }
 
-    self.game_results << result
+    game_results << result
     self.games_completed = (games_completed || 0) + 1
 
     save
@@ -96,8 +98,8 @@ class Scrim < ApplicationRecord
   def games_completed_not_greater_than_planned
     return if games_planned.nil? || games_completed.nil?
 
-    if games_completed > games_planned
-      errors.add(:games_completed, "cannot be greater than games planned (#{games_planned})")
-    end
+    return unless games_completed > games_planned
+
+    errors.add(:games_completed, "cannot be greater than games planned (#{games_planned})")
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Schedule < ApplicationRecord
   # Concerns
   include Constants
@@ -25,7 +27,9 @@ class Schedule < ApplicationRecord
   scope :today, -> { where(start_time: Date.current.beginning_of_day..Date.current.end_of_day) }
   scope :this_week, -> { where(start_time: Date.current.beginning_of_week..Date.current.end_of_week) }
   scope :in_date_range, ->(start_date, end_date) { where(start_time: start_date..end_date) }
-  scope :for_player, ->(player_id) { where('? = ANY(required_players) OR ? = ANY(optional_players)', player_id, player_id) }
+  scope :for_player, lambda { |player_id|
+    where('? = ANY(required_players) OR ? = ANY(optional_players)', player_id, player_id)
+  }
 
   # Instance methods
   def duration_minutes
@@ -39,7 +43,7 @@ class Schedule < ApplicationRecord
     hours = minutes / 60
     mins = minutes % 60
 
-    if hours > 0
+    if hours.positive?
       "#{hours}h #{mins}m"
     else
       "#{mins}m"
