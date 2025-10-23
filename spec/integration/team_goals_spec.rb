@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'Team Goals API', type: :request do
@@ -13,44 +15,50 @@ RSpec.describe 'Team Goals API', type: :request do
 
       parameter name: :page, in: :query, type: :integer, required: false, description: 'Page number'
       parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
-      parameter name: :status, in: :query, type: :string, required: false, description: 'Filter by status (not_started, in_progress, completed, cancelled)'
-      parameter name: :category, in: :query, type: :string, required: false, description: 'Filter by category (performance, training, tournament, development, team_building, other)'
+      parameter name: :status, in: :query, type: :string, required: false,
+                description: 'Filter by status (not_started, in_progress, completed, cancelled)'
+      parameter name: :category, in: :query, type: :string, required: false,
+                description: 'Filter by category (performance, training, tournament, development, team_building, other)'
       parameter name: :player_id, in: :query, type: :string, required: false, description: 'Filter by player ID'
       parameter name: :type, in: :query, type: :string, required: false, description: 'Filter by type (team, player)'
       parameter name: :active, in: :query, type: :boolean, required: false, description: 'Filter active goals only'
       parameter name: :overdue, in: :query, type: :boolean, required: false, description: 'Filter overdue goals only'
-      parameter name: :expiring_soon, in: :query, type: :boolean, required: false, description: 'Filter goals expiring soon'
-      parameter name: :expiring_days, in: :query, type: :integer, required: false, description: 'Days threshold for expiring soon (default: 7)'
-      parameter name: :assigned_to_id, in: :query, type: :string, required: false, description: 'Filter by assigned user ID'
-      parameter name: :sort_by, in: :query, type: :string, required: false, description: 'Sort field (created_at, updated_at, title, status, category, start_date, end_date, progress)'
+      parameter name: :expiring_soon, in: :query, type: :boolean, required: false,
+                description: 'Filter goals expiring soon'
+      parameter name: :expiring_days, in: :query, type: :integer, required: false,
+                description: 'Days threshold for expiring soon (default: 7)'
+      parameter name: :assigned_to_id, in: :query, type: :string, required: false,
+                description: 'Filter by assigned user ID'
+      parameter name: :sort_by, in: :query, type: :string, required: false,
+                description: 'Sort field (created_at, updated_at, title, status, category, start_date, end_date, progress)'
       parameter name: :sort_order, in: :query, type: :string, required: false, description: 'Sort order (asc, desc)'
 
       response '200', 'team goals found' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                goals: {
-                  type: :array,
-                  items: { '$ref' => '#/components/schemas/TeamGoal' }
-                },
-                pagination: { '$ref' => '#/components/schemas/Pagination' },
-                summary: {
-                  type: :object,
-                  properties: {
-                    total: { type: :integer },
-                    by_status: { type: :object },
-                    by_category: { type: :object },
-                    active_count: { type: :integer },
-                    completed_count: { type: :integer },
-                    overdue_count: { type: :integer },
-                    avg_progress: { type: :number, format: :float }
-                  }
-                }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     goals: {
+                       type: :array,
+                       items: { '$ref' => '#/components/schemas/TeamGoal' }
+                     },
+                     pagination: { '$ref' => '#/components/schemas/Pagination' },
+                     summary: {
+                       type: :object,
+                       properties: {
+                         total: { type: :integer },
+                         by_status: { type: :object },
+                         by_category: { type: :object },
+                         active_count: { type: :integer },
+                         completed_count: { type: :integer },
+                         overdue_count: { type: :integer },
+                         avg_progress: { type: :number, format: :float }
+                       }
+                     }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -112,15 +120,15 @@ RSpec.describe 'Team Goals API', type: :request do
         end
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                goal: { '$ref' => '#/components/schemas/TeamGoal' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     goal: { '$ref' => '#/components/schemas/TeamGoal' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -145,14 +153,14 @@ RSpec.describe 'Team Goals API', type: :request do
         let(:id) { create(:team_goal, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                goal: { '$ref' => '#/components/schemas/TeamGoal' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     goal: { '$ref' => '#/components/schemas/TeamGoal' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -192,15 +200,15 @@ RSpec.describe 'Team Goals API', type: :request do
         let(:team_goal) { { team_goal: { progress: 75, status: 'in_progress' } } }
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                goal: { '$ref' => '#/components/schemas/TeamGoal' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     goal: { '$ref' => '#/components/schemas/TeamGoal' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -215,9 +223,9 @@ RSpec.describe 'Team Goals API', type: :request do
         let(:id) { create(:team_goal, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            message: { type: :string }
-          }
+               properties: {
+                 message: { type: :string }
+               }
 
         run_test!
       end

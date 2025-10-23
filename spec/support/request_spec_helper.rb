@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RequestSpecHelper
   # Helper method to generate JWT token for testing
   def auth_token(user)

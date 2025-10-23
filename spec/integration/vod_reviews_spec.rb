@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'VOD Reviews API', type: :request do
@@ -15,22 +17,23 @@ RSpec.describe 'VOD Reviews API', type: :request do
       parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
       parameter name: :match_id, in: :query, type: :string, required: false, description: 'Filter by match ID'
       parameter name: :reviewed_by_id, in: :query, type: :string, required: false, description: 'Filter by reviewer ID'
-      parameter name: :status, in: :query, type: :string, required: false, description: 'Filter by status (draft, published, archived)'
+      parameter name: :status, in: :query, type: :string, required: false,
+                description: 'Filter by status (draft, published, archived)'
 
       response '200', 'VOD reviews found' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                vod_reviews: {
-                  type: :array,
-                  items: { '$ref' => '#/components/schemas/VodReview' }
-                },
-                pagination: { '$ref' => '#/components/schemas/Pagination' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     vod_reviews: {
+                       type: :array,
+                       items: { '$ref' => '#/components/schemas/VodReview' }
+                     },
+                     pagination: { '$ref' => '#/components/schemas/Pagination' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -83,15 +86,15 @@ RSpec.describe 'VOD Reviews API', type: :request do
         end
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                vod_review: { '$ref' => '#/components/schemas/VodReview' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     vod_review: { '$ref' => '#/components/schemas/VodReview' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -116,18 +119,18 @@ RSpec.describe 'VOD Reviews API', type: :request do
         let(:id) { create(:vod_review, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                vod_review: { '$ref' => '#/components/schemas/VodReview' },
-                timestamps: {
-                  type: :array,
-                  items: { '$ref' => '#/components/schemas/VodTimestamp' }
-                }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     vod_review: { '$ref' => '#/components/schemas/VodReview' },
+                     timestamps: {
+                       type: :array,
+                       items: { '$ref' => '#/components/schemas/VodTimestamp' }
+                     }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -164,15 +167,15 @@ RSpec.describe 'VOD Reviews API', type: :request do
         let(:vod_review) { { vod_review: { status: 'published' } } }
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                vod_review: { '$ref' => '#/components/schemas/VodReview' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     vod_review: { '$ref' => '#/components/schemas/VodReview' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -187,9 +190,9 @@ RSpec.describe 'VOD Reviews API', type: :request do
         let(:id) { create(:vod_review, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            message: { type: :string }
-          }
+               properties: {
+                 message: { type: :string }
+               }
 
         run_test!
       end
@@ -204,24 +207,26 @@ RSpec.describe 'VOD Reviews API', type: :request do
       produces 'application/json'
       security [bearerAuth: []]
 
-      parameter name: :category, in: :query, type: :string, required: false, description: 'Filter by category (mistake, good_play, objective, teamfight, other)'
-      parameter name: :importance, in: :query, type: :string, required: false, description: 'Filter by importance (low, medium, high, critical)'
+      parameter name: :category, in: :query, type: :string, required: false,
+                description: 'Filter by category (mistake, good_play, objective, teamfight, other)'
+      parameter name: :importance, in: :query, type: :string, required: false,
+                description: 'Filter by importance (low, medium, high, critical)'
 
       response '200', 'timestamps found' do
         let(:vod_review_id) { create(:vod_review, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                timestamps: {
-                  type: :array,
-                  items: { '$ref' => '#/components/schemas/VodTimestamp' }
-                }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     timestamps: {
+                       type: :array,
+                       items: { '$ref' => '#/components/schemas/VodTimestamp' }
+                     }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -271,15 +276,15 @@ RSpec.describe 'VOD Reviews API', type: :request do
         end
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                timestamp: { '$ref' => '#/components/schemas/VodTimestamp' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     timestamp: { '$ref' => '#/components/schemas/VodTimestamp' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -315,15 +320,15 @@ RSpec.describe 'VOD Reviews API', type: :request do
         let(:vod_timestamp) { { vod_timestamp: { title: 'Updated title' } } }
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                timestamp: { '$ref' => '#/components/schemas/VodTimestamp' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     timestamp: { '$ref' => '#/components/schemas/VodTimestamp' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -339,9 +344,9 @@ RSpec.describe 'VOD Reviews API', type: :request do
         let(:id) { create(:vod_timestamp, vod_review: vod_review).id }
 
         schema type: :object,
-          properties: {
-            message: { type: :string }
-          }
+               properties: {
+                 message: { type: :string }
+               }
 
         run_test!
       end

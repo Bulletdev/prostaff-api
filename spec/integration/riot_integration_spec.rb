@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'Riot Integration API', type: :request do
@@ -20,37 +22,37 @@ RSpec.describe 'Riot Integration API', type: :request do
         end
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                stats: {
-                  type: :object,
-                  properties: {
-                    total_players: { type: :integer, description: 'Total number of players in the organization' },
-                    synced_players: { type: :integer, description: 'Players successfully synced' },
-                    pending_sync: { type: :integer, description: 'Players pending synchronization' },
-                    failed_sync: { type: :integer, description: 'Players with failed sync' },
-                    recently_synced: { type: :integer, description: 'Players synced in the last 24 hours' },
-                    needs_sync: { type: :integer, description: 'Players that need to be synced' }
-                  }
-                },
-                recent_syncs: {
-                  type: :array,
-                  description: 'List of 10 most recently synced players',
-                  items: {
-                    type: :object,
-                    properties: {
-                      id: { type: :string },
-                      summoner_name: { type: :string },
-                      last_sync_at: { type: :string, format: 'date-time' },
-                      sync_status: { type: :string, enum: %w[pending success error] }
-                    }
-                  }
-                }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     stats: {
+                       type: :object,
+                       properties: {
+                         total_players: { type: :integer, description: 'Total number of players in the organization' },
+                         synced_players: { type: :integer, description: 'Players successfully synced' },
+                         pending_sync: { type: :integer, description: 'Players pending synchronization' },
+                         failed_sync: { type: :integer, description: 'Players with failed sync' },
+                         recently_synced: { type: :integer, description: 'Players synced in the last 24 hours' },
+                         needs_sync: { type: :integer, description: 'Players that need to be synced' }
+                       }
+                     },
+                     recent_syncs: {
+                       type: :array,
+                       description: 'List of 10 most recently synced players',
+                       items: {
+                         type: :object,
+                         properties: {
+                           id: { type: :string },
+                           summoner_name: { type: :string },
+                           last_sync_at: { type: :string, format: 'date-time' },
+                           sync_status: { type: :string, enum: %w[pending success error] }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
 
         run_test!
       end

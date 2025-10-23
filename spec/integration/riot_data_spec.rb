@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'Riot Data API', type: :request do
@@ -12,15 +14,15 @@ RSpec.describe 'Riot Data API', type: :request do
 
       response '200', 'champions retrieved' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                champions: { type: :object },
-                count: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     champions: { type: :object },
+                     count: { type: :integer }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -49,14 +51,14 @@ RSpec.describe 'Riot Data API', type: :request do
         let(:champion_key) { '266' }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                champion: { type: :object }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     champion: { type: :object }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -77,18 +79,18 @@ RSpec.describe 'Riot Data API', type: :request do
 
       response '200', 'champions retrieved' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                champions: {
-                  type: :array,
-                  items: { type: :object }
-                },
-                count: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     champions: {
+                       type: :array,
+                       items: { type: :object }
+                     },
+                     count: { type: :integer }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -108,15 +110,15 @@ RSpec.describe 'Riot Data API', type: :request do
 
       response '200', 'items retrieved' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                items: { type: :object },
-                count: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     items: { type: :object },
+                     count: { type: :integer }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -142,15 +144,15 @@ RSpec.describe 'Riot Data API', type: :request do
 
       response '200', 'summoner spells retrieved' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                summoner_spells: { type: :object },
-                count: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     summoner_spells: { type: :object },
+                     count: { type: :integer }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -170,14 +172,14 @@ RSpec.describe 'Riot Data API', type: :request do
 
       response '200', 'version retrieved' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                version: { type: :string }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     version: { type: :string }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -205,14 +207,14 @@ RSpec.describe 'Riot Data API', type: :request do
         let(:user) { create(:user, :owner, organization: organization) }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                message: { type: :string }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     message: { type: :string }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -235,23 +237,23 @@ RSpec.describe 'Riot Data API', type: :request do
         let(:user) { create(:user, :owner, organization: organization) }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                message: { type: :string },
-                version: { type: :string },
-                data: {
-                  type: :object,
-                  properties: {
-                    champions: { type: :integer },
-                    items: { type: :integer },
-                    summoner_spells: { type: :integer }
-                  }
-                }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     message: { type: :string },
+                     version: { type: :string },
+                     data: {
+                       type: :object,
+                       properties: {
+                         champions: { type: :integer },
+                         items: { type: :integer },
+                         summoner_spells: { type: :integer }
+                       }
+                     }
+                   }
+                 }
+               }
 
         run_test!
       end

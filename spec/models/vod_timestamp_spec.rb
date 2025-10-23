@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe VodTimestamp, type: :model do
@@ -12,7 +14,9 @@ RSpec.describe VodTimestamp, type: :model do
     it { should validate_numericality_of(:timestamp_seconds).is_greater_than_or_equal_to(0) }
     it { should validate_presence_of(:title) }
     it { should validate_length_of(:title).is_at_most(255) }
-    it { should validate_inclusion_of(:category).in_array(%w[mistake good_play team_fight objective laning]).allow_blank }
+    it {
+      should validate_inclusion_of(:category).in_array(%w[mistake good_play team_fight objective laning]).allow_blank
+    }
     it { should validate_inclusion_of(:importance).in_array(%w[low normal high critical]) }
     it { should validate_inclusion_of(:target_type).in_array(%w[player team opponent]).allow_blank }
   end
