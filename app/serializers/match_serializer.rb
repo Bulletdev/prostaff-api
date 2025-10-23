@@ -13,39 +13,27 @@ class MatchSerializer < Blueprinter::Base
          :created_at, :updated_at
 
   field :result do |obj|
-
     obj.result_text
-
   end
 
   field :duration_formatted do |obj|
-
     obj.duration_formatted
-
   end
 
   field :score_display do |obj|
-
     obj.score_display
-
   end
 
   field :kda_summary do |obj|
-
     obj.kda_summary
-
   end
 
   field :has_replay do |obj|
-
     obj.has_replay?
-
   end
 
   field :has_vod do |obj|
-
     obj.has_vod?
-
   end
 
   association :organization, blueprint: OrganizationSerializer

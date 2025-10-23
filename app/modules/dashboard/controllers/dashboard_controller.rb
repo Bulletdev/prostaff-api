@@ -4,6 +4,7 @@ module Dashboard
   module Controllers
     class DashboardController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
+
       def index
         dashboard_data = {
           stats: calculate_stats,

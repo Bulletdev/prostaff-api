@@ -14,12 +14,12 @@ class OpponentTeam < ApplicationRecord
 
   validates :region, inclusion: {
     in: Constants::REGIONS,
-    message: '%<value>s is not a valid region'
+    message: '%{value} is not a valid region'
   }, allow_blank: true
 
   validates :tier, inclusion: {
     in: Constants::OpponentTeam::TIERS,
-    message: '%<value>s is not a valid tier'
+    message: '%{value} is not a valid tier'
   }, allow_blank: true
 
   # Callbacks

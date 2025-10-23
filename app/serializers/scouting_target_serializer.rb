@@ -28,9 +28,7 @@ class ScoutingTargetSerializer < Blueprinter::Base
   end
 
   field :current_rank_display do |obj|
-
     obj.current_rank_display
-
   end
 
   association :organization, blueprint: OrganizationSerializer

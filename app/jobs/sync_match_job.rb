@@ -143,7 +143,7 @@ class SyncMatchJob < ApplicationJob
     damage_score = (participant_data[:total_damage_dealt] / 1000.0)
     vision_score = participant_data[:vision_score] || 0
 
-    (base_score + damage_score * 0.1 + vision_score).round(2)
+    (base_score + (damage_score * 0.1) + vision_score).round(2)
   end
 
   def calculate_kda(kills:, deaths:, assists:)

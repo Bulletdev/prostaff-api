@@ -15,9 +15,7 @@ class PlayerSerializer < Blueprinter::Base
          :notes, :sync_status, :last_sync_at, :created_at, :updated_at
 
   field :age do |obj|
-
     obj.age
-
   end
 
   field :avatar_url do |player|
@@ -28,45 +26,31 @@ class PlayerSerializer < Blueprinter::Base
   end
 
   field :win_rate do |obj|
-
     obj.win_rate
-
   end
 
   field :current_rank do |obj|
-
     obj.current_rank_display
-
   end
 
   field :peak_rank do |obj|
-
     obj.peak_rank_display
-
   end
 
   field :contract_status do |obj|
-
     obj.contract_status
-
   end
 
   field :main_champions do |obj|
-
     obj.main_champions
-
   end
 
   field :social_links do |obj|
-
     obj.social_links
-
   end
 
   field :needs_sync do |obj|
-
     obj.needs_sync?
-
   end
 
   association :organization, blueprint: OrganizationSerializer
