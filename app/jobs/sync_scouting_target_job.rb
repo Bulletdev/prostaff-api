@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SyncScoutingTargetJob < ApplicationJob
   include RankComparison
 
@@ -47,7 +49,6 @@ class SyncScoutingTargetJob < ApplicationJob
     target.update!(last_sync_at: Time.current)
 
     Rails.logger.info("Successfully synced scouting target #{target.id}")
-
   rescue RiotApiService::NotFoundError => e
     Rails.logger.error("Scouting target not found in Riot API: #{target.summoner_name} - #{e.message}")
   rescue StandardError => e

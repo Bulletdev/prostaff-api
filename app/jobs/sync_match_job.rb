@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SyncMatchJob < ApplicationJob
   queue_as :default
 
@@ -27,7 +29,6 @@ class SyncMatchJob < ApplicationJob
     create_player_match_stats(match, match_data[:participants], organization)
 
     Rails.logger.info("Successfully synced match #{match_id}")
-
   rescue RiotApiService::NotFoundError => e
     Rails.logger.error("Match not found in Riot API: #{match_id} - #{e.message}")
   rescue StandardError => e
