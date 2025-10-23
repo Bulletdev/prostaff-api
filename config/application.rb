@@ -1,17 +1,19 @@
-require_relative "boot"
+# frozen_string_literal: true
 
-require "rails"
+require_relative 'boot'
+
+require 'rails'
 # Pick the frameworks you want:
-require "active_model/railtie"
-require "active_job/railtie"
-require "active_record/railtie"
-require "active_storage/engine"
-require "action_controller/railtie"
-require "action_mailer/railtie"
-require "action_mailbox/engine"
-require "action_text/engine"
-require "action_view/railtie"
-require "action_cable/engine"
+require 'active_model/railtie'
+require 'active_job/railtie'
+require 'active_record/railtie'
+require 'active_storage/engine'
+require 'action_controller/railtie'
+require 'action_mailer/railtie'
+require 'action_mailbox/engine'
+require 'action_text/engine'
+require 'action_view/railtie'
+require 'action_cable/engine'
 # require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
@@ -26,7 +28,7 @@ module ProstaffApi
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`.
-    config.autoload_lib(ignore: %w(assets tasks))
+    config.autoload_lib(ignore: %w[assets tasks])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -42,8 +44,8 @@ module ProstaffApi
     config.api_only = true
 
     # Load modules directory
-    config.autoload_paths += %W(#{config.root}/app/modules)
-    config.eager_load_paths += %W(#{config.root}/app/modules)
+    config.autoload_paths += %W[#{config.root}/app/modules]
+    config.eager_load_paths += %W[#{config.root}/app/modules]
 
     # CORS configuration
     config.middleware.insert_before 0, Rack::Cors do
@@ -51,10 +53,10 @@ module ProstaffApi
         origins ENV.fetch('CORS_ORIGINS', 'http://localhost:5173').split(',')
 
         resource '*',
-          headers: :any,
-          methods: [:get, :post, :put, :patch, :delete, :options, :head],
-          credentials: true,
-          max_age: 86400
+                 headers: :any,
+                 methods: %i[get post put patch delete options head],
+                 credentials: true,
+                 max_age: 86_400
       end
     end
 
