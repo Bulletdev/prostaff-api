@@ -8,6 +8,28 @@ module Players
       EUROPE = %w[euw1 eune1 ru tr1].freeze
       ASIA = %w[kr jp1 oce1].freeze
 
+      # Whitelist of allowed Riot API hostnames to prevent SSRF
+      REGION_HOSTS = {
+        'br1' => 'br1.api.riotgames.com',
+        'na1' => 'na1.api.riotgames.com',
+        'euw1' => 'euw1.api.riotgames.com',
+        'kr' => 'kr.api.riotgames.com',
+        'eune1' => 'eune1.api.riotgames.com',
+        'lan' => 'lan.api.riotgames.com',
+        'las1' => 'las1.api.riotgames.com',
+        'oce1' => 'oce1.api.riotgames.com',
+        'ru' => 'ru.api.riotgames.com',
+        'tr1' => 'tr1.api.riotgames.com',
+        'jp1' => 'jp1.api.riotgames.com'
+      }.freeze
+
+      # Whitelist of allowed regional endpoints for match/account APIs
+      REGIONAL_ENDPOINT_HOSTS = {
+        'americas' => 'americas.api.riotgames.com',
+        'europe' => 'europe.api.riotgames.com',
+        'asia' => 'asia.api.riotgames.com'
+      }.freeze
+
       attr_reader :organization, :api_key, :region
 
       def initialize(organization, region = nil)
@@ -52,10 +74,9 @@ module Players
 
       # Fetch summoner by PUUID
       def fetch_summoner_by_puuid(puuid)
-        # Region already validated in initialize via sanitize_region
-        # Use URI building to safely construct URL and avoid direct interpolation
+        # Use whitelisted host to prevent SSRF
         uri = URI::HTTPS.build(
-          host: "#{region}.api.riotgames.com",
+          host: riot_api_host,
           path: "/lol/summoner/v4/summoners/by-puuid/#{CGI.escape(puuid)}"
         )
         response = make_request(uri.to_s)
@@ -64,8 +85,9 @@ module Players
 
       # Fetch rank data for a summoner
       def fetch_rank_data(summoner_id)
+        # Use whitelisted host to prevent SSRF
         uri = URI::HTTPS.build(
-          host: "#{region}.api.riotgames.com",
+          host: riot_api_host,
           path: "/lol/league/v4/entries/by-summoner/#{CGI.escape(summoner_id)}"
         )
         response = make_request(uri.to_s)
@@ -102,8 +124,9 @@ module Players
       def search_riot_id(game_name, tag_line)
         regional_endpoint = get_regional_endpoint(region)
 
+        # Use whitelisted host to prevent SSRF
         uri = URI::HTTPS.build(
-          host: "#{regional_endpoint}.api.riotgames.com",
+          host: regional_api_host(regional_endpoint),
           path: "/riot/account/v1/accounts/by-riot-id/#{CGI.escape(game_name)}/#{CGI.escape(tag_line)}"
         )
         response = make_request(uri.to_s)
@@ -133,8 +156,9 @@ module Players
       def fetch_match_ids(puuid, count = 20)
         regional_endpoint = get_regional_endpoint(region)
 
+        # Use whitelisted host to prevent SSRF
         uri = URI::HTTPS.build(
-          host: "#{regional_endpoint}.api.riotgames.com",
+          host: regional_api_host(regional_endpoint),
           path: "/lol/match/v5/matches/by-puuid/#{CGI.escape(puuid)}/ids",
           query: URI.encode_www_form(count: count)
         )
@@ -146,8 +170,9 @@ module Players
       def fetch_match_details(match_id)
         regional_endpoint = get_regional_endpoint(region)
 
+        # Use whitelisted host to prevent SSRF
         uri = URI::HTTPS.build(
-          host: "#{regional_endpoint}.api.riotgames.com",
+          host: regional_api_host(regional_endpoint),
           path: "/lol/match/v5/matches/#{CGI.escape(match_id)}"
         )
         response = make_request(uri.to_s)
@@ -250,6 +275,22 @@ module Players
         end
 
         normalized
+      end
+
+      # Get safe Riot API hostname from whitelist (prevents SSRF)
+      def riot_api_host
+        host = REGION_HOSTS[@region]
+        raise SecurityError, "Region #{@region} not in whitelist" if host.nil?
+
+        host
+      end
+
+      # Get safe regional API hostname from whitelist (prevents SSRF)
+      def regional_api_host(endpoint_name)
+        host = REGIONAL_ENDPOINT_HOSTS[endpoint_name]
+        raise SecurityError, "Regional endpoint #{endpoint_name} not in whitelist" if host.nil?
+
+        host
       end
 
       # Get regional endpoint for match/account APIs

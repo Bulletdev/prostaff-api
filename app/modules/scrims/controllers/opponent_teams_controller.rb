@@ -111,11 +111,17 @@ module Api
         # sensitive operations (update/destroy). This ensures organizations can
         # only modify teams they have scrims with.
         # Read operations (index/show) are allowed for all teams to enable discovery.
+        #
+        # SECURITY: Unscoped find is intentional here. OpponentTeam is a global
+        # resource visible to all organizations for discovery. Authorization is
+        # handled by verify_team_usage! for modifications.
+        # rubocop:disable Rails/FindById
         def set_opponent_team
           @opponent_team = OpponentTeam.find(params[:id])
         rescue ActiveRecord::RecordNotFound
           render json: { error: 'Opponent team not found' }, status: :not_found
         end
+        # rubocop:enable Rails/FindById
 
         # Verifies that current organization has used this opponent team
         # Prevents organizations from modifying/deleting teams they haven't interacted with
