@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'Players API', type: :request do
@@ -15,22 +17,23 @@ RSpec.describe 'Players API', type: :request do
       parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
       parameter name: :role, in: :query, type: :string, required: false, description: 'Filter by role'
       parameter name: :status, in: :query, type: :string, required: false, description: 'Filter by status'
-      parameter name: :search, in: :query, type: :string, required: false, description: 'Search by summoner name or real name'
+      parameter name: :search, in: :query, type: :string, required: false,
+                description: 'Search by summoner name or real name'
 
       response '200', 'players found' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                players: {
-                  type: :array,
-                  items: { '$ref' => '#/components/schemas/Player' }
-                },
-                pagination: { '$ref' => '#/components/schemas/Pagination' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     players: {
+                       type: :array,
+                       items: { '$ref' => '#/components/schemas/Player' }
+                     },
+                     pagination: { '$ref' => '#/components/schemas/Pagination' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -80,15 +83,15 @@ RSpec.describe 'Players API', type: :request do
         end
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                player: { '$ref' => '#/components/schemas/Player' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     player: { '$ref' => '#/components/schemas/Player' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -113,14 +116,14 @@ RSpec.describe 'Players API', type: :request do
         let(:id) { create(:player, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                player: { '$ref' => '#/components/schemas/Player' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     player: { '$ref' => '#/components/schemas/Player' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -157,15 +160,15 @@ RSpec.describe 'Players API', type: :request do
         let(:player) { { player: { summoner_name: 'UpdatedName' } } }
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                player: { '$ref' => '#/components/schemas/Player' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     player: { '$ref' => '#/components/schemas/Player' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -181,9 +184,9 @@ RSpec.describe 'Players API', type: :request do
         let(:id) { create(:player, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            message: { type: :string }
-          }
+               properties: {
+                 message: { type: :string }
+               }
 
         run_test!
       end
@@ -202,18 +205,18 @@ RSpec.describe 'Players API', type: :request do
         let(:id) { create(:player, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                player: { '$ref' => '#/components/schemas/Player' },
-                overall: { type: :object },
-                recent_form: { type: :object },
-                champion_pool: { type: :array },
-                performance_by_role: { type: :array }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     player: { '$ref' => '#/components/schemas/Player' },
+                     overall: { type: :object },
+                     recent_form: { type: :object },
+                     champion_pool: { type: :array },
+                     performance_by_role: { type: :array }
+                   }
+                 }
+               }
 
         run_test!
       end

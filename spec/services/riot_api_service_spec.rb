@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe RiotApiService do
@@ -45,18 +47,18 @@ RSpec.describe RiotApiService do
       stub_request(:get, /br1.api.riotgames.com/)
         .to_return(status: 404)
 
-      expect {
+      expect do
         service.get_summoner_by_name(summoner_name: summoner_name, region: region)
-      }.to raise_error(RiotApiService::NotFoundError)
+      end.to raise_error(RiotApiService::NotFoundError)
     end
 
     it 'raises RateLimitError when rate limited' do
       stub_request(:get, /br1.api.riotgames.com/)
         .to_return(status: 429, headers: { 'Retry-After' => '120' })
 
-      expect {
+      expect do
         service.get_summoner_by_name(summoner_name: summoner_name, region: region)
-      }.to raise_error(RiotApiService::RateLimitError)
+      end.to raise_error(RiotApiService::RateLimitError)
     end
   end
 
@@ -66,9 +68,9 @@ RSpec.describe RiotApiService do
     end
 
     it 'raises error for unknown region' do
-      expect {
+      expect do
         service.send(:platform_for_region, 'INVALID')
-      }.to raise_error(RiotApiService::RiotApiError, /Unknown region/)
+      end.to raise_error(RiotApiService::RiotApiError, /Unknown region/)
     end
   end
 end

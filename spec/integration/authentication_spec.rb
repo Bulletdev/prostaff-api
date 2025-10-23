@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'Authentication API', type: :request do
@@ -15,9 +17,9 @@ RSpec.describe 'Authentication API', type: :request do
             properties: {
               name: { type: :string, example: 'Team Alpha' },
               region: { type: :string, example: 'BR' },
-              tier: { type: :string, enum: ['amateur', 'semi_pro', 'professional'], example: 'semi_pro' }
+              tier: { type: :string, enum: %w[amateur semi_pro professional], example: 'semi_pro' }
             },
-            required: ['name', 'region', 'tier']
+            required: %w[name region tier]
           },
           user: {
             type: :object,
@@ -28,27 +30,27 @@ RSpec.describe 'Authentication API', type: :request do
               timezone: { type: :string, example: 'America/Sao_Paulo' },
               language: { type: :string, example: 'pt-BR' }
             },
-            required: ['email', 'password', 'full_name']
+            required: %w[email password full_name]
           }
         },
-        required: ['organization', 'user']
+        required: %w[organization user]
       }
 
       response '201', 'registration successful' do
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                user: { '$ref' => '#/components/schemas/User' },
-                organization: { '$ref' => '#/components/schemas/Organization' },
-                access_token: { type: :string },
-                refresh_token: { type: :string },
-                expires_in: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     user: { '$ref' => '#/components/schemas/User' },
+                     organization: { '$ref' => '#/components/schemas/Organization' },
+                     access_token: { type: :string },
+                     refresh_token: { type: :string },
+                     expires_in: { type: :integer }
+                   }
+                 }
+               }
 
         let(:registration) do
           {
@@ -97,24 +99,24 @@ RSpec.describe 'Authentication API', type: :request do
           email: { type: :string, format: :email, example: 'admin@teamalpha.gg' },
           password: { type: :string, format: :password, example: 'password123' }
         },
-        required: ['email', 'password']
+        required: %w[email password]
       }
 
       response '200', 'login successful' do
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                user: { '$ref' => '#/components/schemas/User' },
-                organization: { '$ref' => '#/components/schemas/Organization' },
-                access_token: { type: :string },
-                refresh_token: { type: :string },
-                expires_in: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     user: { '$ref' => '#/components/schemas/User' },
+                     organization: { '$ref' => '#/components/schemas/Organization' },
+                     access_token: { type: :string },
+                     refresh_token: { type: :string },
+                     expires_in: { type: :integer }
+                   }
+                 }
+               }
 
         let(:credentials) { { email: user.email, password: 'password123' } }
         let(:organization) { create(:organization) }
@@ -149,17 +151,17 @@ RSpec.describe 'Authentication API', type: :request do
 
       response '200', 'token refreshed successfully' do
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                access_token: { type: :string },
-                refresh_token: { type: :string },
-                expires_in: { type: :integer }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     access_token: { type: :string },
+                     refresh_token: { type: :string },
+                     expires_in: { type: :integer }
+                   }
+                 }
+               }
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
@@ -187,15 +189,15 @@ RSpec.describe 'Authentication API', type: :request do
 
       response '200', 'user info retrieved' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                user: { '$ref' => '#/components/schemas/User' },
-                organization: { '$ref' => '#/components/schemas/Organization' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     user: { '$ref' => '#/components/schemas/User' },
+                     organization: { '$ref' => '#/components/schemas/Organization' }
+                   }
+                 }
+               }
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
@@ -222,10 +224,10 @@ RSpec.describe 'Authentication API', type: :request do
 
       response '200', 'logout successful' do
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: { type: :object }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: { type: :object }
+               }
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
@@ -252,10 +254,10 @@ RSpec.describe 'Authentication API', type: :request do
 
       response '200', 'password reset email sent' do
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: { type: :object }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: { type: :object }
+               }
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
@@ -279,15 +281,15 @@ RSpec.describe 'Authentication API', type: :request do
           password: { type: :string, format: :password, example: 'newpassword123' },
           password_confirmation: { type: :string, format: :password, example: 'newpassword123' }
         },
-        required: ['token', 'password', 'password_confirmation']
+        required: %w[token password password_confirmation]
       }
 
       response '200', 'password reset successful' do
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: { type: :object }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: { type: :object }
+               }
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'Players API', type: :request do
@@ -63,11 +65,11 @@ RSpec.describe 'Players API', type: :request do
 
     context 'when authenticated as admin' do
       it 'creates a new player' do
-        expect {
+        expect do
           post '/api/v1/players',
                params: valid_attributes.to_json,
                headers: auth_headers(user)
-        }.to change(Player, :count).by(1)
+        end.to change(Player, :count).by(1)
 
         expect(response).to have_http_status(:created)
         expect(json_response[:data][:player][:summoner_name]).to eq('TestPlayer')
@@ -135,9 +137,9 @@ RSpec.describe 'Players API', type: :request do
     it 'deletes the player' do
       player_id = player.id
 
-      expect {
+      expect do
         delete "/api/v1/players/#{player_id}", headers: auth_headers(owner)
-      }.to change(Player, :count).by(-1)
+      end.to change(Player, :count).by(-1)
 
       expect(response).to have_http_status(:success)
     end

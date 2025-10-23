@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'VOD Reviews API', type: :request do
@@ -106,11 +108,11 @@ RSpec.describe 'VOD Reviews API', type: :request do
 
     context 'when authenticated as analyst' do
       it 'creates a new vod review' do
-        expect {
+        expect do
           post '/api/v1/vod-reviews',
                params: valid_attributes.to_json,
                headers: auth_headers(user)
-        }.to change(VodReview, :count).by(1)
+        end.to change(VodReview, :count).by(1)
 
         expect(response).to have_http_status(:created)
         expect(json_response[:data][:vod_review][:title]).to eq('Test VOD Review')
@@ -170,9 +172,9 @@ RSpec.describe 'VOD Reviews API', type: :request do
 
     context 'when authenticated as admin' do
       it 'deletes the vod review' do
-        expect {
+        expect do
           delete "/api/v1/vod-reviews/#{vod_review.id}", headers: auth_headers(admin)
-        }.to change(VodReview, :count).by(-1)
+        end.to change(VodReview, :count).by(-1)
 
         expect(response).to have_http_status(:success)
       end

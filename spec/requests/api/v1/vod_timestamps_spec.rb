@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'VOD Timestamps API', type: :request do
@@ -77,11 +79,11 @@ RSpec.describe 'VOD Timestamps API', type: :request do
 
     context 'when authenticated' do
       it 'creates a new timestamp' do
-        expect {
+        expect do
           post "/api/v1/vod-reviews/#{vod_review.id}/timestamps",
                params: valid_attributes.to_json,
                headers: auth_headers(user)
-        }.to change(VodTimestamp, :count).by(1)
+        end.to change(VodTimestamp, :count).by(1)
 
         expect(response).to have_http_status(:created)
         expect(json_response[:data][:timestamp][:title]).to eq('Important moment')
@@ -151,9 +153,9 @@ RSpec.describe 'VOD Timestamps API', type: :request do
 
     context 'when authenticated as analyst' do
       it 'deletes the timestamp' do
-        expect {
+        expect do
           delete "/api/v1/vod-timestamps/#{timestamp.id}", headers: auth_headers(user)
-        }.to change(VodTimestamp, :count).by(-1)
+        end.to change(VodTimestamp, :count).by(-1)
 
         expect(response).to have_http_status(:success)
       end

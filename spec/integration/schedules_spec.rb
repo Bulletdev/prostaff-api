@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'swagger_helper'
 
 RSpec.describe 'Schedules API', type: :request do
@@ -13,10 +15,14 @@ RSpec.describe 'Schedules API', type: :request do
 
       parameter name: :page, in: :query, type: :integer, required: false, description: 'Page number'
       parameter name: :per_page, in: :query, type: :integer, required: false, description: 'Items per page'
-      parameter name: :event_type, in: :query, type: :string, required: false, description: 'Filter by event type (match, scrim, practice, meeting, other)'
-      parameter name: :status, in: :query, type: :string, required: false, description: 'Filter by status (scheduled, ongoing, completed, cancelled)'
-      parameter name: :start_date, in: :query, type: :string, required: false, description: 'Start date for filtering (YYYY-MM-DD)'
-      parameter name: :end_date, in: :query, type: :string, required: false, description: 'End date for filtering (YYYY-MM-DD)'
+      parameter name: :event_type, in: :query, type: :string, required: false,
+                description: 'Filter by event type (match, scrim, practice, meeting, other)'
+      parameter name: :status, in: :query, type: :string, required: false,
+                description: 'Filter by status (scheduled, ongoing, completed, cancelled)'
+      parameter name: :start_date, in: :query, type: :string, required: false,
+                description: 'Start date for filtering (YYYY-MM-DD)'
+      parameter name: :end_date, in: :query, type: :string, required: false,
+                description: 'End date for filtering (YYYY-MM-DD)'
       parameter name: :upcoming, in: :query, type: :boolean, required: false, description: 'Filter upcoming events'
       parameter name: :past, in: :query, type: :boolean, required: false, description: 'Filter past events'
       parameter name: :today, in: :query, type: :boolean, required: false, description: 'Filter today\'s events'
@@ -25,18 +31,18 @@ RSpec.describe 'Schedules API', type: :request do
 
       response '200', 'schedules found' do
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                schedules: {
-                  type: :array,
-                  items: { '$ref' => '#/components/schemas/Schedule' }
-                },
-                pagination: { '$ref' => '#/components/schemas/Pagination' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     schedules: {
+                       type: :array,
+                       items: { '$ref' => '#/components/schemas/Schedule' }
+                     },
+                     pagination: { '$ref' => '#/components/schemas/Pagination' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -100,15 +106,15 @@ RSpec.describe 'Schedules API', type: :request do
         end
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                schedule: { '$ref' => '#/components/schemas/Schedule' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     schedule: { '$ref' => '#/components/schemas/Schedule' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -133,14 +139,14 @@ RSpec.describe 'Schedules API', type: :request do
         let(:id) { create(:schedule, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            data: {
-              type: :object,
-              properties: {
-                schedule: { '$ref' => '#/components/schemas/Schedule' }
-              }
-            }
-          }
+               properties: {
+                 data: {
+                   type: :object,
+                   properties: {
+                     schedule: { '$ref' => '#/components/schemas/Schedule' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -179,15 +185,15 @@ RSpec.describe 'Schedules API', type: :request do
         let(:schedule) { { schedule: { title: 'Updated Title' } } }
 
         schema type: :object,
-          properties: {
-            message: { type: :string },
-            data: {
-              type: :object,
-              properties: {
-                schedule: { '$ref' => '#/components/schemas/Schedule' }
-              }
-            }
-          }
+               properties: {
+                 message: { type: :string },
+                 data: {
+                   type: :object,
+                   properties: {
+                     schedule: { '$ref' => '#/components/schemas/Schedule' }
+                   }
+                 }
+               }
 
         run_test!
       end
@@ -202,9 +208,9 @@ RSpec.describe 'Schedules API', type: :request do
         let(:id) { create(:schedule, organization: organization).id }
 
         schema type: :object,
-          properties: {
-            message: { type: :string }
-          }
+               properties: {
+                 message: { type: :string }
+               }
 
         run_test!
       end
