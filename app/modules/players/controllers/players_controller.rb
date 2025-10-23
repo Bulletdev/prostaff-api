@@ -152,60 +152,15 @@ module Players
         role = params[:role]
         region = params[:region] || 'br1'
 
-        unless summoner_name.present? && role.present?
-          return render_error(
-            message: 'Summoner name and role are required',
-            code: 'MISSING_PARAMETERS',
-            status: :unprocessable_entity,
-            details: {
-              hint: 'Format: "GameName#TAG" or "GameName-TAG" (e.g., "Faker#KR1" or "Faker-KR1")'
-            }
-          )
-        end
+        # Validations
+        return unless validate_import_params(summoner_name, role)
+        return unless validate_player_uniqueness(summoner_name)
 
-        unless %w[top jungle mid adc support].include?(role)
-          return render_error(
-            message: 'Invalid role',
-            code: 'INVALID_ROLE',
-            status: :unprocessable_entity
-          )
-        end
+        # Import from Riot API
+        result = import_player_from_riot(summoner_name, role, region)
 
-        existing_player = organization_scoped(Player).find_by(summoner_name: summoner_name)
-        if existing_player
-          return render_error(
-            message: 'Player already exists in your organization',
-            code: 'PLAYER_EXISTS',
-            status: :unprocessable_entity
-          )
-        end
-
-        result = Players::Services::RiotSyncService.import(
-          summoner_name: summoner_name,
-          role: role,
-          region: region,
-          organization: current_organization
-        )
-
-        if result[:success]
-          log_user_action(
-            action: 'import_riot',
-            entity_type: 'Player',
-            entity_id: result[:player].id,
-            new_values: result[:player].attributes
-          )
-
-          render_created({
-                           player: PlayerSerializer.render_as_hash(result[:player]),
-                           message: "Player #{result[:summoner_name]} imported successfully from Riot API"
-                         })
-        else
-          render_error(
-            message: "Failed to import from Riot API: #{result[:error]}",
-            code: result[:code] || 'IMPORT_ERROR',
-            status: :service_unavailable
-          )
-        end
+        # Handle result
+        result[:success] ? handle_import_success(result) : handle_import_error(result)
       end
 
       # POST /api/v1/players/:id/sync_from_riot
@@ -326,6 +281,79 @@ module Players
           :riot_puuid, :riot_summoner_id,
           :twitter_handle, :twitch_channel, :instagram_handle,
           :notes
+        )
+      end
+
+      # Validate import parameters
+      def validate_import_params(summoner_name, role)
+        unless summoner_name.present? && role.present?
+          render_error(
+            message: 'Summoner name and role are required',
+            code: 'MISSING_PARAMETERS',
+            status: :unprocessable_entity,
+            details: {
+              hint: 'Format: "GameName#TAG" or "GameName-TAG" (e.g., "Faker#KR1" or "Faker-KR1")'
+            }
+          )
+          return false
+        end
+
+        unless %w[top jungle mid adc support].include?(role)
+          render_error(
+            message: 'Invalid role',
+            code: 'INVALID_ROLE',
+            status: :unprocessable_entity
+          )
+          return false
+        end
+
+        true
+      end
+
+      # Check if player already exists
+      def validate_player_uniqueness(summoner_name)
+        existing_player = organization_scoped(Player).find_by(summoner_name: summoner_name)
+        return true unless existing_player
+
+        render_error(
+          message: 'Player already exists in your organization',
+          code: 'PLAYER_EXISTS',
+          status: :unprocessable_entity
+        )
+        false
+      end
+
+      # Import player from Riot API
+      def import_player_from_riot(summoner_name, role, region)
+        Players::Services::RiotSyncService.import(
+          summoner_name: summoner_name,
+          role: role,
+          region: region,
+          organization: current_organization
+        )
+      end
+
+      # Handle successful import
+      def handle_import_success(result)
+        log_user_action(
+          action: 'import_riot',
+          entity_type: 'Player',
+          entity_id: result[:player].id,
+          new_values: result[:player].attributes
+        )
+
+        render_created({
+                         player: PlayerSerializer.render_as_hash(result[:player]),
+                         message: "Player #{result[:summoner_name]} imported successfully from Riot API"
+                       })
+      end
+
+      # Handle import error
+      def handle_import_error(result)
+        render_error(
+          message: "Failed to import from Riot API: #{result[:error]}",
+          code: result[:code] || 'IMPORT_ERROR',
+          status: :service_unavailable
         )
       end
     end
