@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class RiotApiService
   RATE_LIMITS = {
     per_second: 20,
@@ -130,9 +132,9 @@ class RiotApiService
       sleep(1 - (Time.current.to_f % 1)) # Sleep until next second
     end
 
-    if count_two_min > RATE_LIMITS[:per_two_minutes]
-      raise RateLimitError, 'Rate limit exceeded for 2-minute window'
-    end
+    return unless count_two_min > RATE_LIMITS[:per_two_minutes]
+
+    raise RateLimitError, 'Rate limit exceeded for 2-minute window'
   end
 
   def platform_for_region(region)

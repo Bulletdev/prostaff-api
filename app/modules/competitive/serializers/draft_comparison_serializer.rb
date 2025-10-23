@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Competitive
   module Serializers
     class DraftComparisonSerializer < Blueprinter::Base

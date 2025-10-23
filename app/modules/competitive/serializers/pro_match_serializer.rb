@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Competitive
   module Serializers
     class ProMatchSerializer < Blueprinter::Base
@@ -34,25 +36,15 @@ module Competitive
         match.opponent_bans.presence || []
       end
 
-      field :result do |match|
-        match.result_text
-      end
+      field :result, &:result_text
 
-      field :tournament_display do |match|
-        match.tournament_display
-      end
+      field :tournament_display, &:tournament_display
 
-      field :game_label do |match|
-        match.game_label
-      end
+      field :game_label, &:game_label
 
-      field :has_complete_draft do |match|
-        match.has_complete_draft?
-      end
+      field :has_complete_draft, &:has_complete_draft?
 
-      field :meta_relevant do |match|
-        match.meta_relevant?
-      end
+      field :meta_relevant, &:meta_relevant?
 
       field :created_at
       field :updated_at

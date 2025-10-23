@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 class DataDragonService
-  BASE_URL = 'https://ddragon.leagueoflegends.com'.freeze
+  BASE_URL = 'https://ddragon.leagueoflegends.com'
 
   class DataDragonError < StandardError; end
 
@@ -89,7 +91,7 @@ class DataDragonService
     data = JSON.parse(response.body)
 
     champion_map = {}
-    data['data'].each do |_key, champion|
+    data['data'].each_value do |champion|
       champion_id = champion['key'].to_i
       champion_name = champion['id'] # This is the champion name like "Aatrox"
       champion_map[champion_id] = champion_name
@@ -163,9 +165,7 @@ class DataDragonService
       req.options.timeout = 10
     end
 
-    unless response.success?
-      raise DataDragonError, "Request failed with status #{response.status}"
-    end
+    raise DataDragonError, "Request failed with status #{response.status}" unless response.success?
 
     response
   rescue Faraday::TimeoutError => e

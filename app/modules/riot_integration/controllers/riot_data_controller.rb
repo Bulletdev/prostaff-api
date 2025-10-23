@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 module RiotIntegration
   module Controllers
     class RiotDataController < BaseController
-      skip_before_action :authenticate_request!, only: [:champions, :champion_details, :items, :version]
+      skip_before_action :authenticate_request!, only: %i[champions champion_details items version]
 
       # GET /api/v1/riot-data/champions
       def champions
@@ -9,9 +11,9 @@ module RiotIntegration
         champions = service.champion_id_map
 
         render_success({
-          champions: champions,
-          count: champions.count
-        })
+                         champions: champions,
+                         count: champions.count
+                       })
       rescue DataDragonService::DataDragonError => e
         render_error('Failed to fetch champion data', :service_unavailable, details: e.message)
       end
@@ -23,8 +25,8 @@ module RiotIntegration
 
         if champion.present?
           render_success({
-            champion: champion
-          })
+                           champion: champion
+                         })
         else
           render_error('Champion not found', :not_found)
         end
@@ -38,9 +40,9 @@ module RiotIntegration
         champions = service.all_champions
 
         render_success({
-          champions: champions,
-          count: champions.count
-        })
+                         champions: champions,
+                         count: champions.count
+                       })
       rescue DataDragonService::DataDragonError => e
         render_error('Failed to fetch champions', :service_unavailable, details: e.message)
       end
@@ -51,9 +53,9 @@ module RiotIntegration
         items = service.items
 
         render_success({
-          items: items,
-          count: items.count
-        })
+                         items: items,
+                         count: items.count
+                       })
       rescue DataDragonService::DataDragonError => e
         render_error('Failed to fetch items', :service_unavailable, details: e.message)
       end
@@ -64,9 +66,9 @@ module RiotIntegration
         spells = service.summoner_spells
 
         render_success({
-          summoner_spells: spells,
-          count: spells.count
-        })
+                         summoner_spells: spells,
+                         count: spells.count
+                       })
       rescue DataDragonService::DataDragonError => e
         render_error('Failed to fetch summoner spells', :service_unavailable, details: e.message)
       end
@@ -77,8 +79,8 @@ module RiotIntegration
         version = service.latest_version
 
         render_success({
-          version: version
-        })
+                         version: version
+                       })
       rescue DataDragonService::DataDragonError => e
         render_error('Failed to fetch version', :service_unavailable, details: e.message)
       end
@@ -98,8 +100,8 @@ module RiotIntegration
         )
 
         render_success({
-          message: 'Cache cleared successfully'
-        })
+                         message: 'Cache cleared successfully'
+                       })
       end
 
       # POST /api/v1/riot-data/update-cache
@@ -128,14 +130,14 @@ module RiotIntegration
         )
 
         render_success({
-          message: 'Cache updated successfully',
-          version: version,
-          data: {
-            champions: champions.count,
-            items: items.count,
-            summoner_spells: spells.count
-          }
-        })
+                         message: 'Cache updated successfully',
+                         version: version,
+                         data: {
+                           champions: champions.count,
+                           items: items.count,
+                           summoner_spells: spells.count
+                         }
+                       })
       rescue DataDragonService::DataDragonError => e
         render_error('Failed to update cache', :service_unavailable, details: e.message)
       end

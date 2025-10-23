@@ -4,7 +4,7 @@ module TierAuthorization
   extend ActiveSupport::Concern
 
   included do
-    before_action :check_tier_access, only: [:create, :update]
+    before_action :check_tier_access, only: %i[create update]
     before_action :check_match_limit, only: [:create], if: -> { controller_name == 'matches' }
     before_action :check_player_limit, only: [:create], if: -> { controller_name == 'players' }
   end
@@ -14,9 +14,9 @@ module TierAuthorization
   def check_tier_access
     feature = controller_feature_name
 
-    unless current_organization.can_access?(feature)
-      render_upgrade_required(feature)
-    end
+    return if current_organization.can_access?(feature)
+
+    render_upgrade_required(feature)
   end
 
   def controller_feature_name
@@ -62,27 +62,27 @@ module TierAuthorization
   end
 
   def check_match_limit
-    if current_organization.match_limit_reached?
-      render json: {
-        error: 'Limit Reached',
-        message: 'Monthly match limit reached. Upgrade to increase limit.',
-        upgrade_url: "#{frontend_url}/pricing",
-        current_limit: current_organization.tier_limits[:max_matches_per_month],
-        current_usage: current_organization.tier_limits[:current_monthly_matches]
-      }, status: :forbidden
-    end
+    return unless current_organization.match_limit_reached?
+
+    render json: {
+      error: 'Limit Reached',
+      message: 'Monthly match limit reached. Upgrade to increase limit.',
+      upgrade_url: "#{frontend_url}/pricing",
+      current_limit: current_organization.tier_limits[:max_matches_per_month],
+      current_usage: current_organization.tier_limits[:current_monthly_matches]
+    }, status: :forbidden
   end
 
   def check_player_limit
-    if current_organization.player_limit_reached?
-      render json: {
-        error: 'Limit Reached',
-        message: 'Player limit reached. Upgrade to add more players.',
-        upgrade_url: "#{frontend_url}/pricing",
-        current_limit: current_organization.tier_limits[:max_players],
-        current_usage: current_organization.tier_limits[:current_players]
-      }, status: :forbidden
-    end
+    return unless current_organization.player_limit_reached?
+
+    render json: {
+      error: 'Limit Reached',
+      message: 'Player limit reached. Upgrade to add more players.',
+      upgrade_url: "#{frontend_url}/pricing",
+      current_limit: current_organization.tier_limits[:max_players],
+      current_usage: current_organization.tier_limits[:current_players]
+    }, status: :forbidden
   end
 
   def frontend_url

@@ -96,13 +96,9 @@ module ParameterValidation
       raise ArgumentError, "#{param_name.to_s.humanize} must be a valid integer"
     end
 
-    if min.present? && int_value < min
-      raise ArgumentError, "#{param_name.to_s.humanize} must be at least #{min}"
-    end
+    raise ArgumentError, "#{param_name.to_s.humanize} must be at least #{min}" if min.present? && int_value < min
 
-    if max.present? && int_value > max
-      raise ArgumentError, "#{param_name.to_s.humanize} must be at most #{max}"
-    end
+    raise ArgumentError, "#{param_name.to_s.humanize} must be at most #{max}" if max.present? && int_value > max
 
     int_value
   end
@@ -159,9 +155,7 @@ module ParameterValidation
   def email_param(param_name, required: false)
     value = params[param_name]
 
-    if required && value.blank?
-      raise ArgumentError, "#{param_name.to_s.humanize} is required"
-    end
+    raise ArgumentError, "#{param_name.to_s.humanize} is required" if required && value.blank?
 
     return nil if value.blank?
 
@@ -190,9 +184,7 @@ module ParameterValidation
 
     return default if value.blank?
 
-    unless value.is_a?(Array)
-      raise ArgumentError, "#{param_name.to_s.humanize} must be an array"
-    end
+    raise ArgumentError, "#{param_name.to_s.humanize} must be an array" unless value.is_a?(Array)
 
     if max_size.present? && value.size > max_size
       raise ArgumentError, "#{param_name.to_s.humanize} cannot contain more than #{max_size} items"

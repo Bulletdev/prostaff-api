@@ -25,7 +25,7 @@ module Authentication
     #   { "email": "user@example.com", "password": "secret" }
     #
     class AuthController < Api::V1::BaseController
-      skip_before_action :authenticate_request!, only: [:register, :login, :forgot_password, :reset_password, :refresh]
+      skip_before_action :authenticate_request!, only: %i[register login forgot_password reset_password refresh]
 
       # Registers a new user and organization
       #
@@ -56,9 +56,8 @@ module Authentication
           render_created(
             {
               user: JSON.parse(UserSerializer.render(user)),
-              organization: JSON.parse(OrganizationSerializer.render(organization)),
-              **tokens
-            },
+              organization: JSON.parse(OrganizationSerializer.render(organization))
+            }.merge(tokens),
             message: 'Registration successful'
           )
         end
@@ -96,9 +95,8 @@ module Authentication
           render_success(
             {
               user: JSON.parse(UserSerializer.render(user)),
-              organization: JSON.parse(OrganizationSerializer.render(user.organization)),
-              **tokens
-            },
+              organization: JSON.parse(OrganizationSerializer.render(user.organization))
+            }.merge(tokens),
             message: 'Login successful'
           )
         else
@@ -294,9 +292,9 @@ module Authentication
 
       def create_user!(organization)
         User.create!(user_params.merge(
-          organization: organization,
-          role: 'owner' # First user is always the owner
-        ))
+                       organization: organization,
+                       role: 'owner' # First user is always the owner
+                     ))
       end
 
       def authenticate_user!

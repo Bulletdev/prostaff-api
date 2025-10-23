@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Authenticatable
   extend ActiveSupport::Concern
 
@@ -24,7 +26,6 @@ module Authenticatable
 
       # Update last login time
       @current_user.update_last_login! if should_update_last_login?
-
     rescue Authentication::Services::JwtService::AuthenticationError => e
       render_unauthorized(e.message)
     rescue ActiveRecord::RecordNotFound
@@ -61,21 +62,21 @@ module Authenticatable
   end
 
   def require_admin!
-    unless current_user&.admin_or_owner?
-      render_forbidden('Admin access required')
-    end
+    return if current_user&.admin_or_owner?
+
+    render_forbidden('Admin access required')
   end
 
   def require_owner!
-    unless current_user&.role == 'owner'
-      render_forbidden('Owner access required')
-    end
+    return if current_user&.role == 'owner'
+
+    render_forbidden('Owner access required')
   end
 
   def require_role!(*allowed_roles)
-    unless allowed_roles.include?(current_user&.role)
-      render_forbidden("Required role: #{allowed_roles.join(' or ')}")
-    end
+    return if allowed_roles.include?(current_user&.role)
+
+    render_forbidden("Required role: #{allowed_roles.join(' or ')}")
   end
 
   def organization_scoped(model_class)
