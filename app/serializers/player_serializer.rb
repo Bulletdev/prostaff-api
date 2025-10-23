@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PlayerSerializer < Blueprinter::Base
   identifier :id
 
@@ -12,45 +14,59 @@ class PlayerSerializer < Blueprinter::Base
          :twitter_handle, :twitch_channel, :instagram_handle,
          :notes, :sync_status, :last_sync_at, :created_at, :updated_at
 
-  field :age do |player|
-    player.age
+  field :age do |obj|
+
+    obj.age
+
   end
 
   field :avatar_url do |player|
     if player.profile_icon_id.present?
       # Use latest patch version from Data Dragon
       "https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/#{player.profile_icon_id}.png"
-    else
-      nil
     end
   end
 
-  field :win_rate do |player|
-    player.win_rate
+  field :win_rate do |obj|
+
+    obj.win_rate
+
   end
 
-  field :current_rank do |player|
-    player.current_rank_display
+  field :current_rank do |obj|
+
+    obj.current_rank_display
+
   end
 
-  field :peak_rank do |player|
-    player.peak_rank_display
+  field :peak_rank do |obj|
+
+    obj.peak_rank_display
+
   end
 
-  field :contract_status do |player|
-    player.contract_status
+  field :contract_status do |obj|
+
+    obj.contract_status
+
   end
 
-  field :main_champions do |player|
-    player.main_champions
+  field :main_champions do |obj|
+
+    obj.main_champions
+
   end
 
-  field :social_links do |player|
-    player.social_links
+  field :social_links do |obj|
+
+    obj.social_links
+
   end
 
-  field :needs_sync do |player|
-    player.needs_sync?
+  field :needs_sync do |obj|
+
+    obj.needs_sync?
+
   end
 
   association :organization, blueprint: OrganizationSerializer

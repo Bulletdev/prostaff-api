@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class RiotDataPolicy < ApplicationPolicy
   def manage?
     user.admin_or_owner?

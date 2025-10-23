@@ -1,5 +1,6 @@
-class UserSerializer < Blueprinter::Base
+# frozen_string_literal: true
 
+class UserSerializer < Blueprinter::Base
   identifier :id
 
   fields :email, :full_name, :role, :avatar_url, :timezone, :language,
@@ -33,10 +34,10 @@ class UserSerializer < Blueprinter::Base
         "#{diff.to_i} seconds ago"
       when 60...3600
         "#{(diff / 60).to_i} minutes ago"
-      when 3600...86400
+      when 3600...86_400
         "#{(diff / 3600).to_i} hours ago"
-      when 86400...2592000
-        "#{(diff / 86400).to_i} days ago"
+      when 86_400...2_592_000
+        "#{(diff / 86_400).to_i} days ago"
       else
         time.strftime('%B %d, %Y')
       end

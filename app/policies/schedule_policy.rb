@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SchedulePolicy < ApplicationPolicy
   def index?
     true

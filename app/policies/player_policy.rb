@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PlayerPolicy < ApplicationPolicy
   def index?
     true # All authenticated users can view players

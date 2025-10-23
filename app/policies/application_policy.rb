@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ApplicationPolicy
   attr_reader :user, :record
 
@@ -56,7 +58,7 @@ class ApplicationPolicy
   end
 
   def admin?
-    user.role == 'admin' || user.role == 'owner'
+    %w[admin owner].include?(user.role)
   end
 
   def coach?

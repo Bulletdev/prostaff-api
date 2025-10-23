@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ScoutingTargetSerializer < Blueprinter::Base
   identifier :id
 
@@ -25,8 +27,10 @@ class ScoutingTargetSerializer < Blueprinter::Base
     target.status&.titleize || 'Watching'
   end
 
-  field :current_rank_display do |target|
-    target.current_rank_display
+  field :current_rank_display do |obj|
+
+    obj.current_rank_display
+
   end
 
   association :organization, blueprint: OrganizationSerializer

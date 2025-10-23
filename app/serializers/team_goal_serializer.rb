@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class TeamGoalSerializer < Blueprinter::Base
   identifier :id
 
@@ -5,36 +7,52 @@ class TeamGoalSerializer < Blueprinter::Base
          :target_value, :current_value, :start_date, :end_date,
          :status, :progress, :created_at, :updated_at
 
-  field :is_team_goal do |goal|
-    goal.is_team_goal?
+  field :is_team_goal do |obj|
+
+    obj.is_team_goal?
+
   end
 
-  field :days_remaining do |goal|
-    goal.days_remaining
+  field :days_remaining do |obj|
+
+    obj.days_remaining
+
   end
 
-  field :days_total do |goal|
-    goal.days_total
+  field :days_total do |obj|
+
+    obj.days_total
+
   end
 
-  field :time_progress_percentage do |goal|
-    goal.time_progress_percentage
+  field :time_progress_percentage do |obj|
+
+    obj.time_progress_percentage
+
   end
 
-  field :is_overdue do |goal|
-    goal.is_overdue?
+  field :is_overdue do |obj|
+
+    obj.is_overdue?
+
   end
 
-  field :target_display do |goal|
-    goal.target_display
+  field :target_display do |obj|
+
+    obj.target_display
+
   end
 
-  field :current_display do |goal|
-    goal.current_display
+  field :current_display do |obj|
+
+    obj.current_display
+
   end
 
-  field :completion_percentage do |goal|
-    goal.completion_percentage
+  field :completion_percentage do |obj|
+
+    obj.completion_percentage
+
   end
 
   association :organization, blueprint: OrganizationSerializer
