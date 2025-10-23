@@ -5,7 +5,6 @@
 # in README.md with current modules, controllers, models, and services
 
 require 'pathname'
-require 'set'
 
 class ArchitectureDiagramGenerator
   RAILS_ROOT = Pathname.new(__dir__).join('..')
@@ -19,10 +18,10 @@ class ArchitectureDiagramGenerator
   end
 
   def run
-    puts "Analyzing project structure..."
+    puts 'Analyzing project structure...'
     diagram = generate_mermaid_diagram
     update_readme(diagram)
-    puts "✅ Architecture diagram updated successfully!"
+    puts '✅ Architecture diagram updated successfully!'
   end
 
   private
@@ -47,7 +46,7 @@ class ArchitectureDiagramGenerator
 
   def discover_controllers
     controllers = {}
-    
+
     # Discover module controllers
     @modules.each do |mod|
       controllers_path = RAILS_ROOT.join('app', 'modules', mod, 'controllers')
@@ -71,7 +70,7 @@ class ArchitectureDiagramGenerator
 
   def discover_services
     services = {}
-    
+
     @modules.each do |mod|
       services_path = RAILS_ROOT.join('app', 'modules', mod, 'services')
       next unless services_path.exist?
@@ -121,11 +120,11 @@ class ArchitectureDiagramGenerator
           CORS --> RateLimit
           RateLimit --> Auth
           Auth --> Router
-          
+      #{'    '}
       #{generate_router_connections}
       #{generate_data_connections}
       #{generate_external_connections}
-          
+      #{'    '}
           style Client fill:#e1f5ff
           style PostgreSQL fill:#336791
           style Redis fill:#d82c20
@@ -162,191 +161,191 @@ class ArchitectureDiagramGenerator
 
   def generate_auth_module
     <<~MODULE.chomp
-            subgraph "Authentication Module"
-                AuthController[Auth Controller]
-                JWTService[JWT Service]
-                UserModel[User Model]
-            end
+      subgraph "Authentication Module"
+          AuthController[Auth Controller]
+          JWTService[JWT Service]
+          UserModel[User Model]
+      end
     MODULE
   end
 
   def generate_generic_module(name)
     <<~MODULE.chomp
-            subgraph "#{name.capitalize} Module"
-                #{name.capitalize}Controller[#{name.capitalize} Controller]
-            end
+      subgraph "#{name.capitalize} Module"
+          #{name.capitalize}Controller[#{name.capitalize} Controller]
+      end
     MODULE
   end
 
   def generate_dashboard_module
     <<~MODULE.chomp
-            subgraph "Dashboard Module"
-                DashboardController[Dashboard Controller]
-                DashStats[Statistics Service]
-            end
+      subgraph "Dashboard Module"
+          DashboardController[Dashboard Controller]
+          DashStats[Statistics Service]
+      end
     MODULE
   end
 
   def generate_players_module
     <<~MODULE.chomp
-            subgraph "Players Module"
-                PlayersController[Players Controller]
-                PlayerModel[Player Model]
-                ChampionPool[Champion Pool Model]
-            end
+      subgraph "Players Module"
+          PlayersController[Players Controller]
+          PlayerModel[Player Model]
+          ChampionPool[Champion Pool Model]
+      end
     MODULE
   end
 
   def generate_scouting_module
     <<~MODULE.chomp
-            subgraph "Scouting Module"
-                ScoutingController[Scouting Controller]
-                ScoutingTarget[Scouting Target Model]
-                Watchlist[Watchlist Service]
-            end
+      subgraph "Scouting Module"
+          ScoutingController[Scouting Controller]
+          ScoutingTarget[Scouting Target Model]
+          Watchlist[Watchlist Service]
+      end
     MODULE
   end
 
   def generate_analytics_module
     <<~MODULE.chomp
-            subgraph "Analytics Module"
-                AnalyticsController[Analytics Controller]
-                PerformanceService[Performance Service]
-                KDAService[KDA Trend Service]
-            end
+      subgraph "Analytics Module"
+          AnalyticsController[Analytics Controller]
+          PerformanceService[Performance Service]
+          KDAService[KDA Trend Service]
+      end
     MODULE
   end
 
   def generate_matches_module
     <<~MODULE.chomp
-            subgraph "Matches Module"
-                MatchesController[Matches Controller]
-                MatchModel[Match Model]
-                PlayerMatchStats[Player Match Stats Model]
-            end
+      subgraph "Matches Module"
+          MatchesController[Matches Controller]
+          MatchModel[Match Model]
+          PlayerMatchStats[Player Match Stats Model]
+      end
     MODULE
   end
 
   def generate_schedules_module
     <<~MODULE.chomp
-            subgraph "Schedules Module"
-                SchedulesController[Schedules Controller]
-                ScheduleModel[Schedule Model]
-            end
+      subgraph "Schedules Module"
+          SchedulesController[Schedules Controller]
+          ScheduleModel[Schedule Model]
+      end
     MODULE
   end
 
   def generate_vod_module
     <<~MODULE.chomp
-            subgraph "VOD Reviews Module"
-                VODController[VOD Reviews Controller]
-                VODModel[VOD Review Model]
-                TimestampModel[Timestamp Model]
-            end
+      subgraph "VOD Reviews Module"
+          VODController[VOD Reviews Controller]
+          VODModel[VOD Review Model]
+          TimestampModel[Timestamp Model]
+      end
     MODULE
   end
 
   def generate_goals_module
     <<~MODULE.chomp
-            subgraph "Team Goals Module"
-                GoalsController[Team Goals Controller]
-                GoalModel[Team Goal Model]
-            end
+      subgraph "Team Goals Module"
+          GoalsController[Team Goals Controller]
+          GoalModel[Team Goal Model]
+      end
     MODULE
   end
 
   def generate_riot_module
     <<~MODULE.chomp
-            subgraph "Riot Integration Module"
-                RiotService[Riot API Service]
-                RiotSync[Sync Service]
-            end
+      subgraph "Riot Integration Module"
+          RiotService[Riot API Service]
+          RiotSync[Sync Service]
+      end
     MODULE
   end
 
   def generate_router_connections
     connections = []
-    connections << "    Router --> AuthController" if @modules.include?('authentication')
-    connections << "    Router --> DashboardController" if has_dashboard_routes?
-    connections << "    Router --> PlayersController" if @models.include?('player')
-    connections << "    Router --> ScoutingController" if @models.include?('scouting_target')
-    connections << "    Router --> AnalyticsController" if has_analytics_routes?
-    connections << "    Router --> MatchesController" if @models.include?('match')
-    connections << "    Router --> SchedulesController" if @models.include?('schedule')
-    connections << "    Router --> VODController" if @models.include?('vod_review')
-    connections << "    Router --> GoalsController" if @models.include?('team_goal')
+    connections << '    Router --> AuthController' if @modules.include?('authentication')
+    connections << '    Router --> DashboardController' if has_dashboard_routes?
+    connections << '    Router --> PlayersController' if @models.include?('player')
+    connections << '    Router --> ScoutingController' if @models.include?('scouting_target')
+    connections << '    Router --> AnalyticsController' if has_analytics_routes?
+    connections << '    Router --> MatchesController' if @models.include?('match')
+    connections << '    Router --> SchedulesController' if @models.include?('schedule')
+    connections << '    Router --> VODController' if @models.include?('vod_review')
+    connections << '    Router --> GoalsController' if @models.include?('team_goal')
     connections.join("\n")
   end
 
   def generate_data_connections
     connections = []
-    
+
     # Auth connections
     if @modules.include?('authentication')
-      connections << "    AuthController --> JWTService"
-      connections << "    AuthController --> UserModel"
+      connections << '    AuthController --> JWTService'
+      connections << '    AuthController --> UserModel'
     end
-    
+
     # Players connections
     if @models.include?('player')
-      connections << "    PlayersController --> PlayerModel"
-      connections << "    PlayerModel --> ChampionPool" if @models.include?('champion_pool')
+      connections << '    PlayersController --> PlayerModel'
+      connections << '    PlayerModel --> ChampionPool' if @models.include?('champion_pool')
     end
-    
+
     # Scouting connections
     if @models.include?('scouting_target')
-      connections << "    ScoutingController --> ScoutingTarget"
-      connections << "    ScoutingController --> Watchlist"
+      connections << '    ScoutingController --> ScoutingTarget'
+      connections << '    ScoutingController --> Watchlist'
     end
-    
+
     # Matches connections
     if @models.include?('match')
-      connections << "    MatchesController --> MatchModel"
-      connections << "    MatchModel --> PlayerMatchStats" if @models.include?('player_match_stat')
+      connections << '    MatchesController --> MatchModel'
+      connections << '    MatchModel --> PlayerMatchStats' if @models.include?('player_match_stat')
     end
-    
+
     # Other model connections
-    connections << "    SchedulesController --> ScheduleModel" if @models.include?('schedule')
-    
+    connections << '    SchedulesController --> ScheduleModel' if @models.include?('schedule')
+
     if @models.include?('vod_review')
-      connections << "    VODController --> VODModel"
-      connections << "    VODModel --> TimestampModel" if @models.include?('vod_timestamp')
+      connections << '    VODController --> VODModel'
+      connections << '    VODModel --> TimestampModel' if @models.include?('vod_timestamp')
     end
-    
-    connections << "    GoalsController --> GoalModel" if @models.include?('team_goal')
-    
+
+    connections << '    GoalsController --> GoalModel' if @models.include?('team_goal')
+
     # Analytics connections
     if has_analytics_routes?
-      connections << "    AnalyticsController --> PerformanceService"
-      connections << "    AnalyticsController --> KDAService"
+      connections << '    AnalyticsController --> PerformanceService'
+      connections << '    AnalyticsController --> KDAService'
     end
-    
+
     # Database connections
     @models.each do |model|
       model_name = model.split('_').map(&:capitalize).join
       connections << "    #{model_name}Model[#{model_name} Model] --> PostgreSQL"
     end
-    
+
     # Redis connections
-    connections << "    JWTService --> Redis" if @modules.include?('authentication')
-    connections << "    DashStats --> Redis" if has_dashboard_routes?
-    connections << "    PerformanceService --> Redis" if has_analytics_routes?
-    
+    connections << '    JWTService --> Redis' if @modules.include?('authentication')
+    connections << '    DashStats --> Redis' if has_dashboard_routes?
+    connections << '    PerformanceService --> Redis' if has_analytics_routes?
+
     connections.join("\n")
   end
 
   def generate_external_connections
-    return "" unless has_riot_integration?
+    return '' unless has_riot_integration?
 
     <<~CONNECTIONS.chomp
-        PlayersController --> RiotService
-        MatchesController --> RiotService
-        ScoutingController --> RiotService
-        RiotService --> RiotAPI
-        
-        RiotService --> Sidekiq
-        Sidekiq --> JobQueue
-        JobQueue --> Redis
+      PlayersController --> RiotService
+      MatchesController --> RiotService
+      ScoutingController --> RiotService
+      RiotService --> RiotAPI
+
+      RiotService --> Sidekiq
+      Sidekiq --> JobQueue
+      JobQueue --> Redis
     CONNECTIONS
   end
 
@@ -367,7 +366,7 @@ class ArchitectureDiagramGenerator
 
   def update_readme(diagram)
     content = File.read(README_PATH)
-    
+
     # Find the architecture section
     arch_start = content.index('## Architecture')
     return unless arch_start
@@ -377,7 +376,7 @@ class ArchitectureDiagramGenerator
 
     # Extract before and after sections
     before_arch = content[0...arch_start]
-    after_arch = content[arch_end..-1]
+    after_arch = content[arch_end..]
 
     # Build new architecture section
     new_arch_section = <<~ARCH
