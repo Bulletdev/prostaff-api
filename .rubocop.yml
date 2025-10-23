@@ -1,0 +1,144 @@
+# RuboCop Configuration for ProStaff API
+# Ruby on Rails 7.2+ API with Ruby 3.4.5
+#
+# This configuration balances code quality with pragmatic Rails development.
+# Generated: 2025-10-23
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.4
+  SuggestExtensions: false
+  Exclude:
+    - 'bin/**/*'
+    - 'vendor/**/*'
+    - 'node_modules/**/*'
+    - 'db/schema.rb'
+    - 'tmp/**/*'
+    - 'log/**/*'
+    - 'storage/**/*'
+    - 'spec/**/*'
+    - 'test/**/*'
+
+# ============================================
+# METRICS - Complexity and Size Limits
+# ============================================
+
+Metrics/BlockLength:
+  Exclude:
+    - 'config/routes.rb'
+    - 'config/routes/**/*'
+    - 'db/migrate/*'
+    - 'db/seeds.rb'
+  Max: 50
+
+Metrics/MethodLength:
+  Max: 15
+  Exclude:
+    - 'db/migrate/*'
+
+Metrics/ClassLength:
+  Max: 150
+
+Metrics/AbcSize:
+  Max: 20
+  Exclude:
+    - 'db/migrate/*'
+
+Metrics/CyclomaticComplexity:
+  Max: 10
+
+Metrics/PerceivedComplexity:
+  Max: 10
+
+Metrics/ModuleLength:
+  Max: 150
+
+Metrics/ParameterLists:
+  Max: 5
+  CountKeywordArgs: false
+
+# ============================================
+# NAMING - Conventions
+# ============================================
+
+# Disable predicate prefix checks (has_*, is_* are common in Rails)
+Naming/PredicatePrefix:
+  Enabled: false
+
+Naming/VariableNumber:
+  Enabled: false
+
+# ============================================
+# STYLE - Code Style
+# ============================================
+
+# Documentation required only for main code
+Style/Documentation:
+  Enabled: true
+  Exclude:
+    - 'db/migrate/*'
+    - 'config/**/*'
+    - 'lib/tasks/**/*'
+    - 'app/controllers/concerns/**/*'
+    - 'app/models/concerns/**/*'
+    - 'app/channels/**/*'
+    - 'app/jobs/**/*'
+    - 'app/mailers/**/*'
+
+Style/MultilineBlockChain:
+  Enabled: false
+
+Style/SymbolProc:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+  Exclude:
+    - 'db/schema.rb'
+
+Style/FormatStringToken:
+  EnforcedStyle: template
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/WordArray:
+  MinSize: 3
+
+Style/FetchEnvVar:
+  Enabled: false
+
+# ============================================
+# LAYOUT - Formatting
+# ============================================
+
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'config/**/*'
+    - 'db/**/*'
+
+Layout/EmptyLinesAroundBlockBody:
+  Enabled: true
+
+Layout/EndOfLine:
+  EnforcedStyle: lf
+
+# ============================================
+# LINT - Code Quality
+# ============================================
+
+Lint/UnusedMethodArgument:
+  AllowUnusedKeywordArguments: true
+  IgnoreEmptyMethods: true
+
+Lint/DuplicateBranch:
+  Enabled: true
+
+# ============================================
+# BUNDLER
+# ============================================
+
+Bundler/OrderedGems:
+  Enabled: false
