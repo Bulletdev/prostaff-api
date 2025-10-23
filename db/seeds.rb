@@ -161,11 +161,11 @@ players_data.each do |player_data|
       champion: champion
     ) do |cp|
       cp.games_played = rand(10..50)
-      cp.games_won = (cp.games_played * (0.4 + rand * 0.4)).round
+      cp.games_won = (cp.games_played * (0.4 + (rand * 0.4))).round
       cp.mastery_level = [5, 6, 7].sample
-      cp.average_kda = 1.5 + rand * 2.0
-      cp.average_cs_per_min = 6.0 + rand * 2.0
-      cp.average_damage_share = 0.15 + rand * 0.15
+      cp.average_kda = 1.5 + (rand * 2.0)
+      cp.average_cs_per_min = 6.0 + (rand * 2.0)
+      cp.average_damage_share = 0.15 + (rand * 0.15)
       cp.is_comfort_pick = index < 2
       cp.is_pocket_pick = index == 2
       cp.priority = 10 - index
