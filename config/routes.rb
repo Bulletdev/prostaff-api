@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
   # Mount Rswag API documentation
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
 
   # Health check endpoint
-  get "up" => "rails/health#show", as: :rails_health_check
+  get 'up' => 'rails/health#show', as: :rails_health_check
 
   # API routes
   namespace :api do
@@ -72,7 +74,7 @@ Rails.application.routes.draw do
           end
         end
         get 'regions', to: 'regions#index'
-        resources :watchlist, only: [:index, :create, :destroy]
+        resources :watchlist, only: %i[index create destroy]
       end
 
       # Analytics
@@ -101,9 +103,9 @@ Rails.application.routes.draw do
 
       # VOD Reviews
       resources :vod_reviews, path: 'vod-reviews' do
-        resources :timestamps, controller: 'vod_timestamps', only: [:index, :create]
+        resources :timestamps, controller: 'vod_timestamps', only: %i[index create]
       end
-      resources :vod_timestamps, path: 'vod-timestamps', only: [:update, :destroy]
+      resources :vod_timestamps, path: 'vod-timestamps', only: %i[update destroy]
 
       # Team Goals
       resources :team_goals, path: 'team-goals'
@@ -128,12 +130,12 @@ Rails.application.routes.draw do
       end
 
       # Competitive Matches (Tier 1)
-      resources :competitive_matches, path: 'competitive-matches', only: [:index, :show]
+      resources :competitive_matches, path: 'competitive-matches', only: %i[index show]
 
       # Competitive Module - PandaScore Integration
       namespace :competitive do
         # Pro Matches from PandaScore
-        resources :pro_matches, path: 'pro-matches', only: [:index, :show] do
+        resources :pro_matches, path: 'pro-matches', only: %i[index show] do
           collection do
             get :upcoming
             get :past
