@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ChampionPoolSerializer < Blueprinter::Base
   identifier :id
 
@@ -7,6 +9,7 @@ class ChampionPoolSerializer < Blueprinter::Base
 
   field :win_rate do |pool|
     return 0 if pool.games_played.to_i.zero?
+
     ((pool.wins.to_f / pool.games_played) * 100).round(1)
   end
 

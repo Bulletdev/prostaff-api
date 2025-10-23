@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class TeamGoalPolicy < ApplicationPolicy
   def index?
     true

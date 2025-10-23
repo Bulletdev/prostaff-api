@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class VodReviewSerializer < Blueprinter::Base
   identifier :id
 

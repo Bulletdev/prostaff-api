@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class MatchSerializer < Blueprinter::Base
   identifier :id
 
@@ -10,28 +12,40 @@ class MatchSerializer < Blueprinter::Base
          :vod_url, :replay_file_url, :notes,
          :created_at, :updated_at
 
-  field :result do |match|
-    match.result_text
+  field :result do |obj|
+
+    obj.result_text
+
   end
 
-  field :duration_formatted do |match|
-    match.duration_formatted
+  field :duration_formatted do |obj|
+
+    obj.duration_formatted
+
   end
 
-  field :score_display do |match|
-    match.score_display
+  field :score_display do |obj|
+
+    obj.score_display
+
   end
 
-  field :kda_summary do |match|
-    match.kda_summary
+  field :kda_summary do |obj|
+
+    obj.kda_summary
+
   end
 
-  field :has_replay do |match|
-    match.has_replay?
+  field :has_replay do |obj|
+
+    obj.has_replay?
+
   end
 
-  field :has_vod do |match|
-    match.has_vod?
+  field :has_vod do |obj|
+
+    obj.has_vod?
+
   end
 
   association :organization, blueprint: OrganizationSerializer

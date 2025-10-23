@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class VodTimestampSerializer < Blueprinter::Base
   identifier :id
 
@@ -10,7 +12,7 @@ class VodTimestampSerializer < Blueprinter::Base
     minutes = (seconds % 3600) / 60
     secs = seconds % 60
 
-    if hours > 0
+    if hours.positive?
       format('%02d:%02d:%02d', hours, minutes, secs)
     else
       format('%02d:%02d', minutes, secs)

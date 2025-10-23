@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ProMatchPolicy < ApplicationPolicy
   def index?
     true # All authenticated users can view pro matches

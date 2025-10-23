@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ScrimSerializer
   def initialize(scrim, options = {})
     @scrim = scrim

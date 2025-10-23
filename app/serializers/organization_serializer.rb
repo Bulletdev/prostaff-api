@@ -1,5 +1,6 @@
-class OrganizationSerializer < Blueprinter::Base
+# frozen_string_literal: true
 
+class OrganizationSerializer < Blueprinter::Base
   identifier :id
 
   fields :name, :slug, :region, :tier, :subscription_plan, :subscription_status,

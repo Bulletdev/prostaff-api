@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ScheduleSerializer < Blueprinter::Base
   identifier :id
 
@@ -11,6 +13,7 @@ class ScheduleSerializer < Blueprinter::Base
 
   field :duration_hours do |schedule|
     return nil unless schedule.start_time && schedule.end_time
+
     ((schedule.end_time - schedule.start_time) / 3600).round(1)
   end
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ScrimOpponentTeamSerializer
   def initialize(opponent_team, options = {})
     @opponent_team = opponent_team

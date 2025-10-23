@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PlayerMatchStatSerializer < Blueprinter::Base
   identifier :id
 
