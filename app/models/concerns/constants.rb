@@ -250,8 +250,8 @@ module Constants
 
   # Champion Pool constants
   module ChampionPool
-    MASTERY_LEVELS = (1..7).freeze
-    PRIORITY_LEVELS = (1..10).freeze
+    MASTERY_LEVELS = (1..7)
+    PRIORITY_LEVELS = (1..10)
 
     MASTERY_LEVEL_NAMES = {
       1 => 'Novice',

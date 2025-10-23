@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PlayerMatchStat < ApplicationRecord
   belongs_to :match
   belongs_to :player
@@ -47,7 +49,6 @@ class PlayerMatchStat < ApplicationRecord
   def multikill_count
     double_kills + triple_kills + quadra_kills + penta_kills
   end
-
 
   def grade_performance
     total_score = kda_score + cs_score + damage_score + vision_performance_score
@@ -123,7 +124,7 @@ class PlayerMatchStat < ApplicationRecord
   end
 
   def calculate_derived_stats
-    if match&.game_duration.present? && match.game_duration > 0
+    if match&.game_duration.present? && match.game_duration.positive?
       minutes = match.game_duration / 60.0
       self.cs_per_min = cs.to_f / minutes if cs.present?
       self.gold_per_min = gold_earned.to_f / minutes if gold_earned.present?

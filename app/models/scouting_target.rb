@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ScoutingTarget < ApplicationRecord
   # Concerns
   include Constants
@@ -36,8 +38,8 @@ class ScoutingTarget < ApplicationRecord
   def current_rank_display
     return 'Unranked' if current_tier.blank?
 
-    rank_part = current_rank&.then { |r| " #{r}" } || ""
-    lp_part = current_lp&.then { |lp| " (#{lp} LP)" } || ""
+    rank_part = current_rank&.then { |r| " #{r}" } || ''
+    lp_part = current_lp&.then { |lp| " (#{lp} LP)" } || ''
 
     "#{current_tier.titleize}#{rank_part}#{lp_part}"
   end

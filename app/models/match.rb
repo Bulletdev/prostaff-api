@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Represents a League of Legends match/game
 #
 # Matches store game data including results, statistics, and metadata.

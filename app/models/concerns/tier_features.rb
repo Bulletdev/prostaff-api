@@ -139,6 +139,7 @@ module TierFeatures
     months = tier_config[:data_retention_months]
 
     return nil if months.nil? # unlimited
+
     months.months.ago
   end
 

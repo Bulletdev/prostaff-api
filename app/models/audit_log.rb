@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AuditLog < ApplicationRecord
   # Associations
   belongs_to :organization
@@ -82,10 +84,10 @@ class AuditLog < ApplicationRecord
       "#{time_diff.to_i} seconds ago"
     when 60...3600
       "#{(time_diff / 60).to_i} minutes ago"
-    when 3600...86400
+    when 3600...86_400
       "#{(time_diff / 3600).to_i} hours ago"
-    when 86400...2592000
-      "#{(time_diff / 86400).to_i} days ago"
+    when 86_400...2_592_000
+      "#{(time_diff / 86_400).to_i} days ago"
     else
       created_at.strftime('%B %d, %Y')
     end
@@ -111,7 +113,8 @@ class AuditLog < ApplicationRecord
     end
   end
 
-  def self.log_action(organization:, user: nil, action:, entity_type:, entity_id: nil, old_values: {}, new_values: {}, ip: nil, user_agent: nil)
+  def self.log_action(organization:, action:, entity_type:, user: nil, entity_id: nil, old_values: {}, new_values: {},
+                      ip: nil, user_agent: nil)
     create!(
       organization: organization,
       user: user,
