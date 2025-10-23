@@ -1,15 +1,15 @@
-require "active_support/core_ext/integer/time"
+# frozen_string_literal: true
+
+require 'active_support/core_ext/integer/time'
 
 Rails.application.configure do
-
   config.cache_classes = true
-
 
   config.eager_load = true
 
-  config.consider_all_requests_local       = false
+  config.consider_all_requests_local = false
 
-  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
+  config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
   config.active_storage.variant_processor = :mini_magick
 
@@ -17,15 +17,13 @@ Rails.application.configure do
 
   config.log_level = :info
 
-  config.log_tags = [ :request_id ]
+  config.log_tags = [:request_id]
 
   config.cache_store = :redis_cache_store, { url: ENV['REDIS_URL'] }
-
 
   config.active_job.queue_adapter = :sidekiq
 
   config.action_mailer.perform_caching = false
-
 
   config.i18n.fallbacks = true
 
@@ -33,9 +31,8 @@ Rails.application.configure do
 
   config.log_formatter = ::Logger::Formatter.new
 
-
-  if ENV["RAILS_LOG_TO_STDOUT"].present?
-    logger           = ActiveSupport::Logger.new(STDOUT)
+  if ENV['RAILS_LOG_TO_STDOUT'].present?
+    logger           = ActiveSupport::Logger.new($stdout)
     logger.formatter = config.log_formatter
     config.logger    = ActiveSupport::TaggedLogging.new(logger)
   end
