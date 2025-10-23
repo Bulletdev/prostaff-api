@@ -32,9 +32,7 @@ module Players
 
           # 3. Optionally fetch recent matches
           matches_imported = 0
-          if import_matches
-            matches_imported = import_player_matches(player, count: 20)
-          end
+          matches_imported = import_player_matches(player, count: 20) if import_matches
 
           {
             success: true,
@@ -92,9 +90,7 @@ module Players
           next if organization.matches.exists?(riot_match_id: match_id)
 
           match_details = fetch_match_details(match_id)
-          if import_match(match_details, player)
-            imported += 1
-          end
+          imported += 1 if import_match(match_details, player)
         rescue StandardError => e
           Rails.logger.error("Failed to import match #{match_id}: #{e.message}")
         end
@@ -105,7 +101,7 @@ module Players
       # Search for a player by Riot ID (GameName#TagLine)
       def search_riot_id(game_name, tag_line)
         regional_endpoint = get_regional_endpoint(region)
-        
+
         uri = URI::HTTPS.build(
           host: "#{regional_endpoint}.api.riotgames.com",
           path: "/riot/account/v1/accounts/by-riot-id/#{CGI.escape(game_name)}/#{CGI.escape(tag_line)}"
@@ -136,7 +132,7 @@ module Players
       # Fetch match IDs
       def fetch_match_ids(puuid, count = 20)
         regional_endpoint = get_regional_endpoint(region)
-        
+
         uri = URI::HTTPS.build(
           host: "#{regional_endpoint}.api.riotgames.com",
           path: "/lol/match/v5/matches/by-puuid/#{CGI.escape(puuid)}/ids",
@@ -149,7 +145,7 @@ module Players
       # Fetch match details
       def fetch_match_details(match_id)
         regional_endpoint = get_regional_endpoint(region)
-        
+
         uri = URI::HTTPS.build(
           host: "#{regional_endpoint}.api.riotgames.com",
           path: "/lol/match/v5/matches/#{CGI.escape(match_id)}"
@@ -168,9 +164,7 @@ module Players
           http.request(request)
         end
 
-        unless response.is_a?(Net::HTTPSuccess)
-          raise "Riot API Error: #{response.code} - #{response.body}"
-        end
+        raise "Riot API Error: #{response.code} - #{response.body}" unless response.is_a?(Net::HTTPSuccess)
 
         response
       end
