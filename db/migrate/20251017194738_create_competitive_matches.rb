@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateCompetitiveMatches < ActiveRecord::Migration[7.2]
   def change
     create_table :competitive_matches, id: :uuid do |t|
@@ -44,8 +46,8 @@ class CreateCompetitiveMatches < ActiveRecord::Migration[7.2]
     end
 
     add_index :competitive_matches, :organization_id
-    add_index :competitive_matches, [:organization_id, :tournament_name], name: 'idx_comp_matches_org_tournament'
-    add_index :competitive_matches, [:tournament_region, :match_date], name: 'idx_comp_matches_region_date'
+    add_index :competitive_matches, %i[organization_id tournament_name], name: 'idx_comp_matches_org_tournament'
+    add_index :competitive_matches, %i[tournament_region match_date], name: 'idx_comp_matches_region_date'
     add_index :competitive_matches, :external_match_id, unique: true
     add_index :competitive_matches, :patch_version
     add_index :competitive_matches, :match_date

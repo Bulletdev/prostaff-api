@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreatePlayerMatchStats < ActiveRecord::Migration[7.1]
   def change
     create_table :player_match_stats, id: :uuid do |t|
@@ -66,7 +68,7 @@ class CreatePlayerMatchStats < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :player_match_stats, [:player_id, :match_id], unique: true
+    add_index :player_match_stats, %i[player_id match_id], unique: true
     add_index :player_match_stats, :champion
   end
 end

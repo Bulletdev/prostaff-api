@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreatePasswordResetTokens < ActiveRecord::Migration[7.2]
   def change
     create_table :password_reset_tokens, id: :uuid do |t|
@@ -12,6 +14,6 @@ class CreatePasswordResetTokens < ActiveRecord::Migration[7.2]
 
     add_index :password_reset_tokens, :token, unique: true
     add_index :password_reset_tokens, :expires_at
-    add_index :password_reset_tokens, [:user_id, :used_at]
+    add_index :password_reset_tokens, %i[user_id used_at]
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateOpponentTeams < ActiveRecord::Migration[7.2]
   def change
     create_table :opponent_teams, id: :uuid do |t|

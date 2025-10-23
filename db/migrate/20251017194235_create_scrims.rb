@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateScrims < ActiveRecord::Migration[7.2]
   def change
     create_table :scrims, id: :uuid do |t|
@@ -32,7 +34,7 @@ class CreateScrims < ActiveRecord::Migration[7.2]
     add_index :scrims, :opponent_team_id
     add_index :scrims, :match_id
     add_index :scrims, :scheduled_at
-    add_index :scrims, [:organization_id, :scheduled_at], name: 'idx_scrims_org_scheduled'
+    add_index :scrims, %i[organization_id scheduled_at], name: 'idx_scrims_org_scheduled'
     add_index :scrims, :scrim_type
 
     add_foreign_key :scrims, :organizations

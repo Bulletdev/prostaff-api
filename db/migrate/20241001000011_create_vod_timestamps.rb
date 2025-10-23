@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateVodTimestamps < ActiveRecord::Migration[7.1]
   def change
     create_table :vod_timestamps, id: :uuid do |t|

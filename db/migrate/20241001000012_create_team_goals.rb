@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateTeamGoals < ActiveRecord::Migration[7.1]
   def change
     create_table :team_goals, id: :uuid do |t|

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateVodReviews < ActiveRecord::Migration[7.1]
   def change
     create_table :vod_reviews, id: :uuid do |t|
