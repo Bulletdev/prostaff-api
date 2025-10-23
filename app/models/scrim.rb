@@ -12,17 +12,17 @@ class Scrim < ApplicationRecord
   # Validations
   validates :scrim_type, inclusion: {
     in: Constants::Scrim::TYPES,
-    message: '%<value>s is not a valid scrim type'
+    message: '%{value} is not a valid scrim type'
   }, allow_blank: true
 
   validates :focus_area, inclusion: {
     in: Constants::Scrim::FOCUS_AREAS,
-    message: '%<value>s is not a valid focus area'
+    message: '%{value} is not a valid focus area'
   }, allow_blank: true
 
   validates :visibility, inclusion: {
     in: Constants::Scrim::VISIBILITY_LEVELS,
-    message: '%<value>s is not a valid visibility level'
+    message: '%{value} is not a valid visibility level'
   }, allow_blank: true
 
   validates :games_planned, numericality: { greater_than: 0 }, allow_nil: true

@@ -2,6 +2,24 @@
 
 module Competitive
   module Services
+    # Service for comparing draft compositions with professional meta data
+    #
+    # This service provides draft analysis by comparing user compositions
+    # against professional match data, including:
+    # - Finding similar professional matches
+    # - Calculating composition winrates
+    # - Meta score analysis (alignment with pro picks)
+    # - Strategic insights and counter-pick suggestions
+    #
+    # @example Compare a draft
+    #   DraftComparatorService.compare_draft(
+    #     our_picks: ['Aatrox', 'Lee Sin', 'Orianna', 'Jinx', 'Thresh'],
+    #     opponent_picks: ['Gnar', 'Graves', 'Sylas', 'Kai\'Sa', 'Nautilus'],
+    #     our_bans: ['Akali', 'Azir', 'Lucian'],
+    #     patch: '14.20',
+    #     organization: current_org
+    #   )
+    #
     class DraftComparatorService
       # Compare user's draft with professional meta data
       # @param our_picks [Array<String>] Array of champion names
@@ -115,48 +133,10 @@ module Competitive
       # @param patch [String] Patch version
       # @return [Hash] Top picks and bans for the role
       def meta_analysis(role:, patch:)
-        matches = CompetitiveMatch.recent(30)
-        matches = matches.by_patch(patch) if patch.present?
+        matches = fetch_matches_for_meta(patch)
+        picks, bans = extract_picks_and_bans(matches, role)
 
-        picks = []
-        bans = []
-
-        matches.each do |match|
-          # Extract picks for this role
-          our_pick = match.our_picks.find { |p| p['role']&.downcase == role.downcase }
-          picks << our_pick['champion'] if our_pick && our_pick['champion']
-
-          opponent_pick = match.opponent_picks.find { |p| p['role']&.downcase == role.downcase }
-          picks << opponent_pick['champion'] if opponent_pick && opponent_pick['champion']
-
-          # Extract bans (bans don't have roles, so we count all)
-          bans += match.our_banned_champions
-          bans += match.opponent_banned_champions
-        end
-
-        # Count frequencies
-        pick_frequency = picks.tally.sort_by { |_k, v| -v }.first(10)
-        ban_frequency = bans.tally.sort_by { |_k, v| -v }.first(10)
-
-        {
-          role: role,
-          patch: patch,
-          top_picks: pick_frequency.map do |champion, count|
-            {
-              champion: champion,
-              picks: count,
-              pick_rate: ((count.to_f / picks.size) * 100).round(2)
-            }
-          end,
-          top_bans: ban_frequency.map do |champion, count|
-            {
-              champion: champion,
-              bans: count,
-              ban_rate: ((count.to_f / bans.size) * 100).round(2)
-            }
-          end,
-          total_matches: matches.size
-        }
+        build_meta_analysis_response(role, patch, picks, bans, matches.size)
       end
 
       # Suggest counter picks based on professional data
@@ -271,6 +251,80 @@ module Competitive
                     end
 
         insights
+      end
+
+      # Fetch matches for meta analysis
+      def fetch_matches_for_meta(patch)
+        matches = CompetitiveMatch.recent(30)
+        patch.present? ? matches.by_patch(patch) : matches
+      end
+
+      # Extract picks and bans from matches for a specific role
+      def extract_picks_and_bans(matches, role)
+        picks = []
+        bans = []
+
+        matches.each do |match|
+          picks.concat(extract_role_picks(match, role))
+          bans.concat(extract_bans(match))
+        end
+
+        [picks, bans]
+      end
+
+      # Extract picks for a specific role from a match
+      def extract_role_picks(match, role)
+        picks_for_role = []
+
+        our_pick = match.our_picks.find { |p| p['role']&.downcase == role.downcase }
+        picks_for_role << our_pick['champion'] if our_pick && our_pick['champion']
+
+        opponent_pick = match.opponent_picks.find { |p| p['role']&.downcase == role.downcase }
+        picks_for_role << opponent_pick['champion'] if opponent_pick && opponent_pick['champion']
+
+        picks_for_role
+      end
+
+      # Extract all bans from a match
+      def extract_bans(match)
+        match.our_banned_champions + match.opponent_banned_champions
+      end
+
+      # Build meta analysis response with pick/ban frequencies
+      def build_meta_analysis_response(role, patch, picks, bans, total_matches)
+        {
+          role: role,
+          patch: patch,
+          top_picks: calculate_pick_frequency(picks),
+          top_bans: calculate_ban_frequency(bans),
+          total_matches: total_matches
+        }
+      end
+
+      # Calculate pick frequency and rate
+      def calculate_pick_frequency(picks)
+        return [] if picks.empty?
+
+        picks.tally.sort_by { |_k, v| -v }.first(10).map do |champion, count|
+          {
+            champion: champion,
+            picks: count,
+            pick_rate: ((count.to_f / picks.size) * 100).round(2)
+          }
+        end
+      end
+
+      # Calculate ban frequency and rate
+      def calculate_ban_frequency(bans)
+        return [] if bans.empty?
+
+        bans.tally.sort_by { |_k, v| -v }.first(10).map do |champion, count|
+          {
+            champion: champion,
+            bans: count,
+            ban_rate: ((count.to_f / bans.size) * 100).round(2)
+          }
+        end
       end
 
       # Format match for API response
