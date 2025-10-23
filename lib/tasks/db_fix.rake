@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 namespace :db do
-  desc "Mark all migrations as applied"
+  desc 'Mark all migrations as applied'
   task mark_migrations_up: :environment do
     versions = %w[
       20241001000002
@@ -23,28 +25,28 @@ namespace :db do
       )
     end
 
-    puts "✅ All migrations marked as up!"
+    puts '✅ All migrations marked as up!'
   end
 
-  desc "Reset public schema tables"
+  desc 'Reset public schema tables'
   task reset_public_schema: :environment do
-    puts "🗑️  Dropping all tables in public schema..."
+    puts '🗑️  Dropping all tables in public schema...'
 
     tables = ActiveRecord::Base.connection.execute(<<-SQL
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     SQL
-    ).map { |row| row['tablename'] }
+                                                  ).map { |row| row['tablename'] }
 
     tables.each do |table|
-      next if table == 'schema_migrations' || table == 'ar_internal_metadata'
+      next if %w[schema_migrations ar_internal_metadata].include?(table)
 
       puts "   Dropping #{table}..."
       ActiveRecord::Base.connection.execute("DROP TABLE IF EXISTS #{table} CASCADE")
     end
 
     # Clear schema_migrations
-    ActiveRecord::Base.connection.execute("DELETE FROM schema_migrations")
+    ActiveRecord::Base.connection.execute('DELETE FROM schema_migrations')
 
-    puts "✅ Public schema reset complete!"
+    puts '✅ Public schema reset complete!'
   end
 end

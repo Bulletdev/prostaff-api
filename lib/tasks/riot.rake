@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 namespace :riot do
   desc 'Update Data Dragon cache (champions, items, etc.)'
   task update_data_dragon: :environment do
@@ -11,7 +13,7 @@ namespace :riot do
       service.clear_cache!
 
       # Fetch latest version
-      puts "📦 Fetching latest game version..."
+      puts '📦 Fetching latest game version...'
       version = service.latest_version
       puts "   ✅ Latest version: #{version}"
 
@@ -42,8 +44,7 @@ namespace :riot do
 
       puts "\n✅ Data Dragon cache updated successfully!"
       puts "   Version: #{version}"
-      puts "   Cache will expire in 1 week"
-
+      puts '   Cache will expire in 1 week'
     rescue StandardError => e
       puts "\n❌ Error updating Data Dragon cache: #{e.message}"
       puts e.backtrace.first(5).join("\n")
@@ -77,7 +78,6 @@ namespace :riot do
       champions.first(5).each do |id, name|
         puts "  [#{id}] #{name}"
       end
-
     rescue StandardError => e
       puts "❌ Error: #{e.message}"
       exit 1

@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 # Create test user for load testing
 
 org = Organization.first
 
 if org.nil?
-  puts "❌ No organization found. Please create one first."
+  puts '❌ No organization found. Please create one first.'
   exit 1
 end
 
@@ -27,7 +28,7 @@ else
 end
 
 puts "\nTest Credentials:"
-puts "=================="
+puts '=================='
 puts "Email:        #{user.email}"
 puts "Password:     #{test_password.gsub(/./, '*')}"
 puts "Organization: #{org.name}"
