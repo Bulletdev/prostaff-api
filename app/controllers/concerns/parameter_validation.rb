@@ -115,7 +115,7 @@ module ParameterValidation
   def boolean_param(param_name, default: false)
     value = params[param_name]
 
-    return default if value.nil?
+    return default unless value
 
     ActiveModel::Type::Boolean.new.cast(value)
   end

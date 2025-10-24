@@ -43,16 +43,16 @@ class Scrim < ApplicationRecord
 
   # Instance methods
   def completion_percentage
-    return 0 if games_planned.nil? || games_planned.zero?
-    return 0 if games_completed.nil?
+    return 0 unless games_planned&.positive?
+    return 0 unless games_completed
 
     ((games_completed.to_f / games_planned) * 100).round(2)
   end
 
   def status
-    return 'upcoming' if scheduled_at.nil? || scheduled_at > Time.current
+    return 'upcoming' unless scheduled_at&.<= Time.current
 
-    if games_completed.nil? || games_completed.zero?
+    if games_completed&.zero? || !games_completed
       'not_started'
     elsif games_completed >= (games_planned || 1)
       'completed'
@@ -96,8 +96,7 @@ class Scrim < ApplicationRecord
   private
 
   def games_completed_not_greater_than_planned
-    return if games_planned.nil? || games_completed.nil?
-
+    return unless games_planned && games_completed
     return unless games_completed > games_planned
 
     errors.add(:games_completed, "cannot be greater than games planned (#{games_planned})")

@@ -46,7 +46,7 @@ class CompetitiveMatch < ApplicationRecord
 
   # Instance methods
   def result_text
-    return 'Unknown' if victory.nil?
+    return 'Unknown' unless victory
 
     victory? ? 'Victory' : 'Defeat'
   end
@@ -132,7 +132,7 @@ class CompetitiveMatch < ApplicationRecord
 
   def is_current_patch?(current_patch = nil)
     return false if patch_version.blank?
-    return true if current_patch.nil?
+    return true unless current_patch
 
     patch_version == current_patch
   end
