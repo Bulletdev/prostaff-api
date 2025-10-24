@@ -46,6 +46,10 @@ class OpponentTeam < ApplicationRecord
     "#{scrims_won}W - #{scrims_lost}L"
   end
 
+  # Updates scrim statistics (raises on failure)
+  #
+  # @param victory [Boolean] Whether the scrim was won
+  # @raise [ActiveRecord::RecordInvalid] if save fails
   def update_scrim_stats!(victory:)
     self.total_scrims += 1
 
@@ -56,6 +60,17 @@ class OpponentTeam < ApplicationRecord
     end
 
     save!
+  end
+
+  # Safe version of update_scrim_stats! (returns boolean)
+  #
+  # @param victory [Boolean] Whether the scrim was won
+  # @return [Boolean] true if update succeeded, false otherwise
+  def update_scrim_stats(victory:)
+    update_scrim_stats!(victory: victory)
+    true
+  rescue ActiveRecord::RecordInvalid
+    false
   end
 
   def tier_display
