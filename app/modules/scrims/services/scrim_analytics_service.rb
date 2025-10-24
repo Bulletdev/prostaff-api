@@ -27,7 +27,7 @@ module Scrims
         scrims = @organization.scrims.includes(:opponent_team).to_a
 
         scrims.group_by(&:opponent_team_id).map do |opponent_id, opponent_scrims|
-          next if opponent_id.nil?
+          next unless opponent_id
 
           opponent_team = OpponentTeam.find(opponent_id)
           {
@@ -135,7 +135,7 @@ module Scrims
         opponent_counts = scrims.group_by(&:opponent_team_id).transform_values(&:count)
         most_frequent_id = opponent_counts.max_by { |_, count| count }&.first
 
-        return nil if most_frequent_id.nil?
+        return nil unless most_frequent_id
 
         opponent = OpponentTeam.find_by(id: most_frequent_id)
         opponent&.name

@@ -5,6 +5,7 @@ module Api
     module Scrims
       class ScrimsController < Api::V1::BaseController
         include TierAuthorization
+        include Paginatable
 
         before_action :set_scrim, only: %i[show update destroy add_game]
 
@@ -158,15 +159,6 @@ module Api
             objectives: {},
             outcomes: {}
           )
-        end
-
-        def pagination_meta(collection)
-          {
-            current_page: collection.current_page,
-            total_pages: collection.total_pages,
-            total_count: collection.total_count,
-            per_page: collection.limit_value
-          }
         end
       end
     end

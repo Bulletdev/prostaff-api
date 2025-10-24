@@ -11,6 +11,7 @@ module Api
       #
       class OpponentTeamsController < Api::V1::BaseController
         include TierAuthorization
+        include Paginatable
 
         before_action :set_opponent_team, only: %i[show update destroy scrim_history]
         before_action :verify_team_usage!, only: %i[update destroy]
@@ -152,15 +153,6 @@ module Api
             recent_performance: {},
             preferred_champions: {}
           )
-        end
-
-        def pagination_meta(collection)
-          {
-            current_page: collection.current_page,
-            total_pages: collection.total_pages,
-            total_count: collection.total_count,
-            per_page: collection.limit_value
-          }
         end
       end
     end

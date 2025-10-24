@@ -90,7 +90,7 @@ module TierFeatures
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
     max_matches = tier_config[:max_matches_per_month]
 
-    return false if max_matches.nil? # unlimited
+    return false unless max_matches # unlimited
 
     monthly_matches = matches.where('created_at > ?', 1.month.ago).count
     monthly_matches >= max_matches
@@ -100,7 +100,7 @@ module TierFeatures
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
     max_matches = tier_config[:max_matches_per_month]
 
-    return nil if max_matches.nil? # unlimited
+    return nil unless max_matches # unlimited
 
     monthly_matches = matches.where('created_at > ?', 1.month.ago).count
     [max_matches - monthly_matches, 0].max
@@ -138,7 +138,7 @@ module TierFeatures
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
     months = tier_config[:data_retention_months]
 
-    return nil if months.nil? # unlimited
+    return nil unless months # unlimited
 
     months.months.ago
   end
@@ -230,7 +230,7 @@ module TierFeatures
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
     max_matches = tier_config[:max_matches_per_month]
 
-    return false if max_matches.nil? # unlimited
+    return false unless max_matches # unlimited
     return false if match_limit_reached?
 
     monthly_matches = matches.where('created_at > ?', 1.month.ago).count

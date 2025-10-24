@@ -3,6 +3,8 @@
 module Competitive
   module Controllers
     class ProMatchesController < Api::V1::BaseController
+      include Paginatable
+
       before_action :set_pandascore_service
 
       # GET /api/v1/competitive/pro-matches
@@ -185,15 +187,6 @@ module Competitive
         end
 
         matches
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages: collection.total_pages,
-          total_count: collection.total_count,
-          per_page: collection.limit_value
-        }
       end
 
       def import_match_to_database(match_data)
