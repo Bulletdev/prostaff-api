@@ -3,6 +3,7 @@
 module Competitive
   module Services
     # Service for comparing draft compositions with professional meta data
+    # Delegates pure calculations to Competitive::Utilities::DraftAnalyzer
     #
     # This service provides draft analysis by comparing user compositions
     # against professional match data, including:
@@ -56,10 +57,10 @@ module Competitive
         )
 
         # Calculate meta score (how aligned with pro meta)
-        meta_score = calculate_meta_score(our_picks, patch)
+        meta_score = analyzer.calculate_meta_score(our_picks, patch)
 
         # Generate insights
-        insights = generate_insights(
+        insights = analyzer.generate_insights(
           our_picks: our_picks,
           opponent_picks: opponent_picks,
           our_bans: our_bans,
@@ -69,8 +70,8 @@ module Competitive
         )
 
         {
-          similarity_score: calculate_similarity_score(our_picks, similar_matches),
-          similar_matches: similar_matches.map { |m| format_match(m) },
+          similarity_score: analyzer.calculate_similarity_score(our_picks, similar_matches),
+          similar_matches: similar_matches.map { |m| analyzer.format_match(m) },
           composition_winrate: winrate,
           meta_score: meta_score,
           insights: insights,
@@ -136,7 +137,7 @@ module Competitive
         matches = fetch_matches_for_meta(patch)
         picks, bans = extract_picks_and_bans(matches, role)
 
-        build_meta_analysis_response(role, patch, picks, bans, matches.size)
+        analyzer.build_meta_analysis_response(role, patch, picks, bans, matches.size)
       end
 
       # Suggest counter picks based on professional data
@@ -180,77 +181,9 @@ module Competitive
 
       private
 
-      # Calculate how "meta" a composition is (0-100)
-      def calculate_meta_score(picks, patch)
-        return 0 if picks.blank?
-
-        # Get recent pro matches
-        recent_matches = CompetitiveMatch.recent(14).limit(100)
-        recent_matches = recent_matches.by_patch(patch) if patch.present?
-
-        return 0 if recent_matches.empty?
-
-        # Count how many times each champion appears
-        all_picks = recent_matches.flat_map(&:our_picked_champions)
-        pick_frequency = all_picks.tally
-
-        # Score our picks based on how popular they are
-        score = picks.sum do |champion|
-          frequency = pick_frequency[champion] || 0
-          (frequency.to_f / recent_matches.size) * 100
-        end
-
-        # Average and cap at 100
-        [(score / picks.size).round(2), 100].min
-      end
-
-      # Calculate similarity score between user's picks and similar matches
-      def calculate_similarity_score(picks, similar_matches)
-        return 0 if similar_matches.empty?
-
-        scores = similar_matches.map do |match|
-          common = (picks & match.our_picked_champions).size
-          (common.to_f / picks.size) * 100
-        end
-
-        (scores.sum / scores.size).round(2)
-      end
-
-      # Generate strategic insights based on analysis
-      # Note: our_picks parameter reserved for future use
-      def generate_insights(_our_picks:, opponent_picks:, our_bans:, similar_matches:, meta_score:, patch:)
-        insights = []
-
-        # Meta relevance
-        insights << if meta_score >= 70
-                      "✅ Composição altamente meta (#{meta_score}% alinhada com picks profissionais)"
-                    elsif meta_score >= 40
-                      "⚠️ Composição moderadamente meta (#{meta_score}% alinhada)"
-                    else
-                      "❌ Composição off-meta (#{meta_score}% alinhada). Considere picks mais populares."
-                    end
-
-        # Similar matches performance
-        if similar_matches.any?
-          winrate = ((similar_matches.count(&:victory?).to_f / similar_matches.size) * 100).round(0)
-          if winrate >= 60
-            insights << "🏆 Composições similares têm #{winrate}% de winrate em jogos profissionais"
-          elsif winrate <= 40
-            insights << "⚠️ Composições similares têm apenas #{winrate}% de winrate"
-          end
-        end
-
-        # Synergy check (placeholder - can be enhanced)
-        insights << '💡 Analise sinergia entre seus picks antes do jogo começar'
-
-        # Patch relevance
-        insights << if patch.present?
-                      "📊 Análise baseada no patch #{patch}"
-                    else
-                      '⚠️ Análise cross-patch - considere o patch atual para maior precisão'
-                    end
-
-        insights
+      # Returns the analyzer utility module
+      def analyzer
+        @analyzer ||= Competitive::Utilities::DraftAnalyzer
       end
 
       # Fetch matches for meta analysis
@@ -265,80 +198,13 @@ module Competitive
         bans = []
 
         matches.each do |match|
-          picks.concat(extract_role_picks(match, role))
-          bans.concat(extract_bans(match))
+          picks.concat(analyzer.extract_role_picks(match, role))
+          bans.concat(analyzer.extract_bans(match))
         end
 
         [picks, bans]
       end
 
-      # Extract picks for a specific role from a match
-      def extract_role_picks(match, role)
-        picks_for_role = []
-
-        our_pick = match.our_picks.find { |p| p['role']&.downcase == role.downcase }
-        picks_for_role << our_pick['champion'] if our_pick && our_pick['champion']
-
-        opponent_pick = match.opponent_picks.find { |p| p['role']&.downcase == role.downcase }
-        picks_for_role << opponent_pick['champion'] if opponent_pick && opponent_pick['champion']
-
-        picks_for_role
-      end
-
-      # Extract all bans from a match
-      def extract_bans(match)
-        match.our_banned_champions + match.opponent_banned_champions
-      end
-
-      # Build meta analysis response with pick/ban frequencies
-      def build_meta_analysis_response(role, patch, picks, bans, total_matches)
-        {
-          role: role,
-          patch: patch,
-          top_picks: calculate_pick_frequency(picks),
-          top_bans: calculate_ban_frequency(bans),
-          total_matches: total_matches
-        }
-      end
-
-      # Calculate pick frequency and rate
-      def calculate_pick_frequency(picks)
-        return [] if picks.empty?
-
-        picks.tally.sort_by { |_k, v| -v }.first(10).map do |champion, count|
-          {
-            champion: champion,
-            picks: count,
-            pick_rate: ((count.to_f / picks.size) * 100).round(2)
-          }
-        end
-      end
-
-      # Calculate ban frequency and rate
-      def calculate_ban_frequency(bans)
-        return [] if bans.empty?
-
-        bans.tally.sort_by { |_k, v| -v }.first(10).map do |champion, count|
-          {
-            champion: champion,
-            bans: count,
-            ban_rate: ((count.to_f / bans.size) * 100).round(2)
-          }
-        end
-      end
-
-      # Format match for API response
-      def format_match(match)
-        {
-          id: match.id,
-          tournament: match.tournament_display,
-          date: match.match_date,
-          result: match.result_text,
-          our_picks: match.our_picked_champions,
-          opponent_picks: match.opponent_picked_champions,
-          patch: match.patch_version
-        }
-      end
     end
   end
 end
