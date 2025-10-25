@@ -3,6 +3,19 @@
 module Api
   module V1
     module Analytics
+      # Teamfight Analytics Controller
+      #
+      # Analyzes combat performance including damage dealt, damage taken, and kill participation.
+      # Tracks multikill statistics and damage efficiency metrics for teamfight evaluation.
+      #
+      # @example GET /api/v1/analytics/teamfights/:player_id
+      #   {
+      #     damage_performance: { avg_damage_dealt: 18500, avg_damage_per_min: 740 },
+      #     participation: { avg_kills: 5.2, avg_assists: 7.8, multikill_stats: { penta_kills: 2 } }
+      #   }
+      #
+      # Main endpoints:
+      # - GET show: Returns teamfight statistics for the last 20 matches including damage and multikills
       class TeamfightsController < Api::V1::BaseController
         def show
           player = organization_scoped(Player).find(params[:player_id])

@@ -3,6 +3,20 @@
 module Api
   module V1
     module Analytics
+      # Champion Analytics Controller
+      #
+      # Provides detailed champion performance statistics for individual players.
+      # Analyzes champion pool diversity, mastery levels, and win rates across all champions played.
+      #
+      # @example GET /api/v1/analytics/champions/:player_id
+      #   {
+      #     player: { id: 1, name: "Player1" },
+      #     champion_stats: [{ champion: "Aatrox", games_played: 15, win_rate: 0.6, avg_kda: 3.2, mastery_grade: "A" }],
+      #     champion_diversity: { total_champions: 25, highly_played: 5, average_games: 3.2 }
+      #   }
+      #
+      # Main endpoints:
+      # - GET show: Returns comprehensive champion statistics including mastery grades and diversity metrics
       class ChampionsController < Api::V1::BaseController
         def show
           player = organization_scoped(Player).find(params[:player_id])

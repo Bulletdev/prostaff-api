@@ -3,6 +3,19 @@
 module Api
   module V1
     module Analytics
+      # Vision Analytics Controller
+      #
+      # Tracks ward placement, ward denial, and overall vision score metrics.
+      # Compares player vision performance against team role averages and calculates percentile rankings.
+      #
+      # @example GET /api/v1/analytics/vision/:player_id
+      #   {
+      #     vision_stats: { avg_vision_score: 45.2, avg_wards_placed: 18.5, avg_wards_killed: 8.2 },
+      #     role_comparison: { player_avg: 45.2, role_avg: 42.1, percentile: 68 }
+      #   }
+      #
+      # Main endpoints:
+      # - GET show: Returns vision statistics for the last 20 matches with role-based comparisons
       class VisionController < Api::V1::BaseController
         def show
           player = organization_scoped(Player).find(params[:player_id])
