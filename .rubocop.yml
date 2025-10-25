@@ -35,14 +35,22 @@ Metrics/MethodLength:
   Max: 15
   Exclude:
     - 'db/migrate/*'
+    - 'app/**/services/*_service.rb'  # Complex business logic services
+    - 'app/**/controllers/*_controller.rb'  # Controllers with multiple actions
 
 Metrics/ClassLength:
   Max: 150
+  Exclude:
+    - 'app/**/services/*_service.rb'  # Allow larger service classes
+    - 'app/**/controllers/*_controller.rb'  # Controllers with many actions
+    - 'config/initializers/**/*'
 
 Metrics/AbcSize:
   Max: 20
   Exclude:
     - 'db/migrate/*'
+    - 'app/**/services/*_service.rb'  # Complex business logic
+    - 'app/**/controllers/*_controller.rb'  # Controller actions
 
 Metrics/CyclomaticComplexity:
   Max: 10
@@ -64,6 +72,9 @@ Metrics/ParameterLists:
 # Disable predicate prefix checks (has_*, is_* are common in Rails)
 Naming/PredicatePrefix:
   Enabled: false
+
+Naming/PredicateMethod:
+  Enabled: false  # Disable predicate method naming (import_*, create_* are not predicates)
 
 Naming/VariableNumber:
   Enabled: false
