@@ -1,5 +1,33 @@
 # frozen_string_literal: true
 
+# Model representing competitive tournament match records
+#
+# This model stores detailed information about competitive matches in official tournaments,
+# including draft phase data (picks and bans), game metadata, tournament context, and match
+# outcomes. It tracks both team compositions and strategic decisions made during the draft.
+#
+# Associated with:
+# - Organization: The organization participating in the match
+# - OpponentTeam: The opposing team (optional)
+# - Match: Link to internal match record if available (optional)
+#
+# @example Create a competitive match record
+#   match = CompetitiveMatch.create(
+#     organization: org,
+#     tournament_name: 'Spring Split 2025',
+#     tournament_stage: 'Semifinals',
+#     match_format: 'Bo5',
+#     game_number: 1,
+#     side: 'blue',
+#     victory: true
+#   )
+#
+# @example Query recent victories
+#   CompetitiveMatch.victories.recent(30)
+#
+# @example Analyze draft phase
+#   match.draft_summary
+#   match.our_composition
 class CompetitiveMatch < ApplicationRecord
   # Concerns
   include Constants
