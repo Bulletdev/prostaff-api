@@ -149,7 +149,7 @@ module Authentication
       # @return [JSON] Success message
       def logout
         # Blacklist the current access token
-        token = request.headers['Authorization']&.split(' ')&.last
+        token = request.headers['Authorization']&.split&.last
         Authentication::Services::JwtService.blacklist_token(token) if token
 
         log_user_action(

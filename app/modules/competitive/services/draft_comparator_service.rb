@@ -204,7 +204,6 @@ module Competitive
 
         [picks, bans]
       end
-
     end
   end
 end
