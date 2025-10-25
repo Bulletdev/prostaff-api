@@ -1,5 +1,32 @@
 # frozen_string_literal: true
 
+# Model representing a player's champion pool and performance statistics
+#
+# This model tracks individual champion performance data for a player, including
+# games played, win rates, mastery levels, and priority ratings. It stores comprehensive
+# statistics like KDA, CS per minute, and damage share to evaluate champion proficiency.
+#
+# Associated with:
+# - Player: The player who owns this champion in their pool
+#
+# @example Create a champion pool entry
+#   pool = ChampionPool.create(
+#     player: player,
+#     champion: 'Ahri',
+#     mastery_level: 7,
+#     priority: 9,
+#     is_comfort_pick: true
+#   )
+#
+# @example Find high priority champions
+#   ChampionPool.high_priority.comfort_picks
+#
+# @example Update champion stats after a game
+#   pool.update_stats!(
+#     new_game_won: true,
+#     new_kda: 5.2,
+#     new_cs_per_min: 8.5
+#   )
 class ChampionPool < ApplicationRecord
   # Concerns
   include Constants

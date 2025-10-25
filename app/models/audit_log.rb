@@ -1,5 +1,33 @@
 # frozen_string_literal: true
 
+# Model representing audit trail logs for tracking system activities
+#
+# This model stores comprehensive audit logs of user actions and system events within
+# an organization. It tracks CRUD operations, security events, and data changes with
+# detailed metadata including IP addresses, user agents, and value changes.
+#
+# Associated with:
+# - Organization: The organization where the action occurred
+# - User: The user who performed the action (optional for system actions)
+#
+# @example Log a user action
+#   AuditLog.log_action(
+#     organization: org,
+#     user: current_user,
+#     action: 'update',
+#     entity_type: 'Player',
+#     entity_id: player.id,
+#     old_values: { status: 'active' },
+#     new_values: { status: 'inactive' },
+#     ip: request.remote_ip,
+#     user_agent: request.user_agent
+#   )
+#
+# @example Query security events
+#   AuditLog.security_events.recent(7)
+#
+# @example Find high-risk actions
+#   AuditLog.high_risk_actions.by_user(user.id)
 class AuditLog < ApplicationRecord
   # Associations
   belongs_to :organization
