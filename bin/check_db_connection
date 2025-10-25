@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Database Connection Safety Checker
+# Prevents accidental execution of destructive commands on production
+
+require_relative '../config/environment'
+
+config = ActiveRecord::Base.connection_db_config.configuration_hash
+
+puts "\n🔌 Database Connection Check"
+puts "=" * 50
+puts "  Environment: #{Rails.env}"
+puts "  Host:        #{config[:host]}"
+puts "  Database:    #{config[:database]}"
+puts "  Username:    #{config[:username]}"
+puts "  Port:        #{config[:port]}"
+puts "=" * 50
+
+if config[:host].to_s.include?('supabase') || config[:host].to_s.include?('aws')
+  puts "\n🚨 WARNING: Connected to REMOTE PRODUCTION DATABASE!"
+  puts "   This is DANGEROUS for destructive operations!"
+  puts "   Host: #{config[:host]}"
+  puts "\n❌ BLOCKED: Use .env.test or local database instead."
+  exit 1
+elsif config[:host].to_s == 'localhost' || config[:host].to_s == '127.0.0.1'
+  puts "\n✅ Safe: Connected to localhost"
+  puts "   You can proceed with operations."
+  exit 0
+else
+  puts "\n⚠️  Unknown host: #{config[:host]}"
+  puts "   Please verify before proceeding!"
+  exit 1
+end
