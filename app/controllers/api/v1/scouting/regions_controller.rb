@@ -3,6 +3,19 @@
 module Api
   module V1
     module Scouting
+      # Regions Controller
+      #
+      # Provides League of Legends server region information for scouting purposes.
+      # Returns region codes, display names, and platform identifiers for all supported regions.
+      #
+      # @example GET /api/v1/scouting/regions
+      #   [
+      #     { code: 'BR', name: 'Brazil', platform: 'BR1' },
+      #     { code: 'NA', name: 'North America', platform: 'NA1' }
+      #   ]
+      #
+      # Main endpoints:
+      # - GET index: Returns all available regions with platform IDs (public, no auth required)
       class RegionsController < Api::V1::BaseController
         skip_before_action :authenticate_request!, only: [:index]
 

@@ -3,6 +3,18 @@
 module Api
   module V1
     module Scouting
+      # Watchlist Controller
+      #
+      # Manages high-priority scouting targets for active recruitment tracking.
+      # Watchlist entries are scouting targets with high/critical priority and active status.
+      #
+      # @example GET /api/v1/scouting/watchlist
+      #   { watchlist: [...], count: 5 }
+      #
+      # Main endpoints:
+      # - GET index: Lists all high-priority scouting targets currently being watched
+      # - POST create: Adds a scouting target to watchlist by elevating priority to 'high'
+      # - DELETE destroy: Removes from watchlist by lowering priority to 'medium'
       class WatchlistController < Api::V1::BaseController
         def index
           # Watchlist is just high-priority scouting targets
