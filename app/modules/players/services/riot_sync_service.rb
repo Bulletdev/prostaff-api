@@ -2,6 +2,21 @@
 
 module Players
   module Services
+    # Service responsible for syncing player data with Riot Games API
+    #
+    # This service handles all interactions with the Riot Games API including:
+    # - Importing new players by summoner name
+    # - Syncing existing player data (rank, stats, profile)
+    # - Fetching match history
+    # - Creating player statistics from match data
+    #
+    # @example Import a new player
+    #   service = RiotSyncService.new(organization, 'br1')
+    #   result = service.import_player('GameName#TAG', 'mid')
+    #
+    # @example Sync existing player
+    #   service = RiotSyncService.new(organization)
+    #   result = service.sync_player(player, import_matches: true)
     class RiotSyncService
       VALID_REGIONS = %w[br1 na1 euw1 kr eune1 lan las1 oce1 ru tr1 jp1].freeze
       AMERICAS = %w[br1 na1 lan las1].freeze
@@ -50,11 +65,13 @@ module Players
       def import_player(summoner_name, role)
         # Parse summoner name in format "GameName#TagLine"
         parts = summoner_name.split('#')
-        return {
-          success: false,
-          error: 'Invalid summoner name format. Use: GameName#TagLine',
-          code: 'INVALID_FORMAT'
-        } if parts.size != 2
+        if parts.size != 2
+          return {
+            success: false,
+            error: 'Invalid summoner name format. Use: GameName#TagLine',
+            code: 'INVALID_FORMAT'
+          }
+        end
 
         game_name = parts[0].strip
         tag_line = parts[1].strip
@@ -73,29 +90,10 @@ module Players
         # Check if player already exists in another organization
         existing_player = Player.find_by(riot_puuid: riot_data[:puuid])
         if existing_player && existing_player.organization_id != organization.id
-          Rails.logger.warn("⚠️  SECURITY: Attempt to import player #{summoner_name} (PUUID: #{riot_data[:puuid]}) that belongs to organization #{existing_player.organization.name} by organization #{organization.name}")
+          log_security_warning(summoner_name, riot_data, existing_player)
+          create_security_audit_log(summoner_name, riot_data, existing_player)
 
-          # Log security event for audit trail
-          AuditLog.create!(
-            organization: organization,
-            action: 'import_attempt_blocked',
-            entity_type: 'Player',
-            entity_id: existing_player.id,
-            new_values: {
-              attempted_summoner_name: summoner_name,
-              actual_summoner_name: existing_player.summoner_name,
-              owner_organization_id: existing_player.organization_id,
-              owner_organization_name: existing_player.organization.name,
-              reason: 'Player already belongs to another organization',
-              puuid: riot_data[:puuid]
-            }
-          )
-
-          return {
-            success: false,
-            error: "This player is already registered in another organization. Players can only be associated with one organization at a time. Attempting to import players from other organizations may result in account restrictions.",
-            code: 'PLAYER_BELONGS_TO_OTHER_ORGANIZATION'
-          }
+          return player_belongs_to_other_org_error
         end
 
         # Create the player in database
@@ -287,6 +285,45 @@ module Players
 
       private
 
+      # Log security warning when attempting to import player from another org
+      def log_security_warning(summoner_name, riot_data, existing_player)
+        Rails.logger.warn(
+          "⚠️  SECURITY: Attempt to import player #{summoner_name} " \
+          "(PUUID: #{riot_data[:puuid]}) that belongs to organization " \
+          "#{existing_player.organization.name} by organization #{organization.name}"
+        )
+      end
+
+      # Create audit log for security event
+      def create_security_audit_log(summoner_name, riot_data, existing_player)
+        AuditLog.create!(
+          organization: organization,
+          action: 'import_attempt_blocked',
+          entity_type: 'Player',
+          entity_id: existing_player.id,
+          new_values: {
+            attempted_summoner_name: summoner_name,
+            actual_summoner_name: existing_player.summoner_name,
+            owner_organization_id: existing_player.organization_id,
+            owner_organization_name: existing_player.organization.name,
+            reason: 'Player already belongs to another organization',
+            puuid: riot_data[:puuid]
+          }
+        )
+      end
+
+      # Error message for player belonging to another organization
+      def player_belongs_to_other_org_error
+        {
+          success: false,
+          error: 'This player is already registered in another organization. ' \
+                 'Players can only be associated with one organization at a time. ' \
+                 'Attempting to import players from other organizations may result in ' \
+                 'account restrictions.',
+          code: 'PLAYER_BELONGS_TO_OTHER_ORGANIZATION'
+        }
+      end
+
       # Fetch match IDs
       def fetch_match_ids(puuid, count = 20)
         regional_endpoint = get_regional_endpoint(region)
@@ -444,15 +481,10 @@ module Players
 
       # Get regional endpoint for match/account APIs
       def get_regional_endpoint(platform_region)
-        if AMERICAS.include?(platform_region)
-          'americas'
-        elsif EUROPE.include?(platform_region)
-          'europe'
-        elsif ASIA.include?(platform_region)
-          'asia'
-        else
-          'americas' # Default fallback
-        end
+        return 'europe' if EUROPE.include?(platform_region)
+        return 'asia' if ASIA.include?(platform_region)
+
+        'americas' # Default for Americas and unknown regions
       end
     end
   end
