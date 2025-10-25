@@ -1,5 +1,20 @@
 # frozen_string_literal: true
 
+# JWT Authentication Middleware
+#
+# Rack middleware that validates JWT tokens for API authentication.
+# Extracts Bearer tokens from Authorization headers, decodes them, and sets current_user
+# and current_organization in the Rack environment for downstream controllers.
+#
+# @example Authorization Header
+#   Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+#
+# Features:
+# - Automatic token extraction from Authorization header
+# - JWT decoding and validation via JwtService
+# - User and organization injection into request environment
+# - Configurable path-based authentication skipping (login, register, public endpoints)
+# - Returns 401 Unauthorized for invalid/missing tokens on protected routes
 class JwtAuthentication
   def initialize(app)
     @app = app

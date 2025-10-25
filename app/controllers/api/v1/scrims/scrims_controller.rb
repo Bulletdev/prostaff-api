@@ -3,6 +3,21 @@
 module Api
   module V1
     module Scrims
+      # Scrims Controller
+      #
+      # Manages practice matches (scrims) against opponent teams.
+      # Handles scrim scheduling, game result tracking, analytics, and calendar views.
+      # Includes tier-based authorization for premium features.
+      #
+      # @example GET /api/v1/scrims?status=upcoming&per_page=10
+      #   { scrims: [...], meta: { current_page: 1, total_pages: 3 } }
+      #
+      # Main endpoints:
+      # - GET index: Lists scrims with filtering (type, focus_area, status) and pagination
+      # - GET calendar: Returns scrims within a date range for calendar visualization
+      # - GET analytics: Provides scrim performance statistics and trends
+      # - POST create: Creates new scrim (respects organization monthly limits)
+      # - POST add_game: Records individual game results within a scrim session
       class ScrimsController < Api::V1::BaseController
         include TierAuthorization
         include Paginatable
