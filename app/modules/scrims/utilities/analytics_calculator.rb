@@ -54,7 +54,7 @@ module Scrims
       # @return [Float] Completion rate percentage
       def completion_rate(scrims)
         completed = scrims.count { |s| s.status == 'completed' }
-        return 0 if scrims.count.zero?
+        return 0 if scrims.none?
 
         ((completed.to_f / scrims.count) * 100).round(2)
       end
@@ -76,10 +76,10 @@ module Scrims
       # Returns last N scrim results
       #
       # @param scrims [ActiveRecord::Relation] Scrim relation
-      # @param n [Integer] Number of results to return
+      # @param limit [Integer] Number of results to return
       # @return [Array<Hash>] Last N results
-      def last_n_results(scrims, n)
-        scrims.order(scheduled_at: :desc).limit(n).map do |scrim|
+      def last_n_results(scrims, limit)
+        scrims.order(scheduled_at: :desc).limit(limit).map do |scrim|
           {
             date: scrim.scheduled_at,
             win_rate: scrim.win_rate,
