@@ -162,37 +162,37 @@ module Analytics
       class << self
         private
 
-      def group_stats_by_role(stats, damage_field)
-        stats.group('players.role').select(
-          'players.role',
-          'COUNT(*) as games',
-          'AVG(player_match_stats.kills) as avg_kills',
-          'AVG(player_match_stats.deaths) as avg_deaths',
-          'AVG(player_match_stats.assists) as avg_assists',
-          'AVG(player_match_stats.gold_earned) as avg_gold',
-          "AVG(player_match_stats.#{damage_field}) as avg_damage",
-          'AVG(player_match_stats.vision_score) as avg_vision'
-        )
-      end
+        def group_stats_by_role(stats, damage_field)
+          stats.group('players.role').select(
+            'players.role',
+            'COUNT(*) as games',
+            'AVG(player_match_stats.kills) as avg_kills',
+            'AVG(player_match_stats.deaths) as avg_deaths',
+            'AVG(player_match_stats.assists) as avg_assists',
+            'AVG(player_match_stats.gold_earned) as avg_gold',
+            "AVG(player_match_stats.#{damage_field}) as avg_damage",
+            'AVG(player_match_stats.vision_score) as avg_vision'
+          )
+        end
 
-      def format_role_stat(stat)
-        {
-          role: stat.role,
-          games: stat.games,
-          avg_kda: format_avg_kda(stat),
-          avg_gold: stat.avg_gold&.round(0) || 0,
-          avg_damage: stat.avg_damage&.round(0) || 0,
-          avg_vision: stat.avg_vision&.round(1) || 0
-        }
-      end
+        def format_role_stat(stat)
+          {
+            role: stat.role,
+            games: stat.games,
+            avg_kda: format_avg_kda(stat),
+            avg_gold: stat.avg_gold&.round(0) || 0,
+            avg_damage: stat.avg_damage&.round(0) || 0,
+            avg_vision: stat.avg_vision&.round(1) || 0
+          }
+        end
 
-      def format_avg_kda(stat)
-        {
-          kills: stat.avg_kills&.round(1) || 0,
-          deaths: stat.avg_deaths&.round(1) || 0,
-          assists: stat.avg_assists&.round(1) || 0
-        }
-      end
+        def format_avg_kda(stat)
+          {
+            kills: stat.avg_kills&.round(1) || 0,
+            deaths: stat.avg_deaths&.round(1) || 0,
+            assists: stat.avg_assists&.round(1) || 0
+          }
+        end
       end
     end
   end

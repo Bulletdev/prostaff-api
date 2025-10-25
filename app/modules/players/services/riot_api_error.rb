@@ -7,7 +7,7 @@ module Players
       attr_accessor :status_code, :response_body
 
       def initialize(message = nil)
-        super(message)
+        super
         @status_code = nil
         @response_body = nil
       end

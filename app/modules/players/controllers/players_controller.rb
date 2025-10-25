@@ -364,7 +364,7 @@ module Players
                  end
 
         render_error(
-          message: result[:error] || "Failed to import from Riot API",
+          message: result[:error] || 'Failed to import from Riot API',
           code: result[:code] || 'IMPORT_ERROR',
           status: status
         )

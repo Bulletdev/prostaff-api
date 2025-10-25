@@ -96,25 +96,25 @@ puts "   ✅ User: #{user3.email} (role: #{user3.role})"
 # ============================================================================
 # SUMMARY
 # ============================================================================
-puts "\n" + ("=" * 70)
-puts "🎉 Database seeded successfully!"
-puts ("=" * 70)
+puts "\n" + ('=' * 70)
+puts '🎉 Database seeded successfully!'
+puts('=' * 70)
 puts "\n📋 Organizations Created:"
-puts "   1. Java E-sports (Tier 1 Professional)"
+puts '   1. Java E-sports (Tier 1 Professional)'
 puts "      • ID: #{org1.id}"
 puts "      • Login: coach@teamalpha.gg / #{DEFAULT_DEV_PASSWORD}"
-puts ""
-puts "   2. BotaPagodão.net (Tier 2 Semi-Pro)"
+puts ''
+puts '   2. BotaPagodão.net (Tier 2 Semi-Pro)'
 puts "      • ID: #{org2.id}"
 puts "      • Login: coach@botapagodao.net / #{DEFAULT_DEV_PASSWORD}"
-puts ""
-puts "   3. Discordia (Tier 2 Semi-Pro)"
+puts ''
+puts '   3. Discordia (Tier 2 Semi-Pro)'
 puts "      • ID: #{org3.id}"
 puts "      • Login: coach@discordia.gg / #{DEFAULT_DEV_PASSWORD}"
-puts "\n" + ("=" * 70)
-puts "📝 Next Steps:"
-puts "   • Import players manually for each organization"
-puts "   • Verify login works with the credentials above"
+puts "\n" + ('=' * 70)
+puts '📝 Next Steps:'
+puts '   • Import players manually for each organization'
+puts '   • Verify login works with the credentials above'
 puts "\n⚠️  IMPORTANT: These are DEVELOPMENT-ONLY credentials!"
-puts "   Never use these passwords in production environments."
-puts ("=" * 70) + "\n"
+puts '   Never use these passwords in production environments.'
+puts ('=' * 70) + "\n"
