@@ -3,6 +3,19 @@
 module Api
   module V1
     module Analytics
+      # Laning Phase Analytics Controller
+      #
+      # Provides early game performance metrics focusing on CS (creep score) and gold acquisition.
+      # Tracks farming efficiency with CS per minute calculations and gold earnings.
+      #
+      # @example GET /api/v1/analytics/laning/:player_id
+      #   {
+      #     cs_performance: { avg_cs_total: 185.5, avg_cs_per_min: 7.4, best_cs_game: 245 },
+      #     gold_performance: { avg_gold: 12500, best_gold_game: 15000 }
+      #   }
+      #
+      # Main endpoints:
+      # - GET show: Returns laning statistics for the last 20 matches with CS and gold metrics
       class LaningController < Api::V1::BaseController
         def show
           player = organization_scoped(Player).find(params[:player_id])

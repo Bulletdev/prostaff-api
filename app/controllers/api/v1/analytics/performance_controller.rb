@@ -1,26 +1,34 @@
 # frozen_string_literal: true
 
-# Performance Analytics Controller
-#
-# Provides endpoints for viewing team and player performance metrics.
-# Delegates complex calculations to PerformanceAnalyticsService.
-#
-# Features:
-# - Team overview statistics (wins, losses, KDA, etc.)
-# - Win rate trends over time
-# - Performance breakdown by role
-# - Top performer identification
-# - Individual player statistics
-#
-# @example Get team performance for last 30 days
-#   GET /api/v1/analytics/performance
-#
-# @example Get performance with player stats
-#   GET /api/v1/analytics/performance?player_id=123
-#
 module Api
   module V1
     module Analytics
+      # Performance Analytics Controller
+      #
+      # Provides endpoints for viewing team and player performance metrics.
+      # Delegates complex calculations to PerformanceAnalyticsService.
+      #
+      # This controller handles:
+      # - Team overview statistics (wins, losses, KDA, etc.)
+      # - Win rate trends over time
+      # - Performance breakdown by role
+      # - Top performer identification
+      # - Individual player statistics
+      #
+      # Supports filtering by date range, time period, and individual player stats.
+      # All calculations are scoped to the current organization.
+      #
+      # @example Get team performance for last 30 days
+      #   GET /api/v1/analytics/performance
+      #
+      # @example Get performance with player stats
+      #   GET /api/v1/analytics/performance?player_id=123
+      #
+      # @example Get performance for a specific date range
+      #   GET /api/v1/analytics/performance?start_date=2025-01-01&end_date=2025-01-31
+      #
+      # @example Get performance for a time period
+      #   GET /api/v1/analytics/performance?time_period=week
       class PerformanceController < Api::V1::BaseController
         include Analytics::Concerns::AnalyticsCalculations
 

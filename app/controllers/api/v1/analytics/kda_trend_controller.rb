@@ -3,6 +3,19 @@
 module Api
   module V1
     module Analytics
+      # KDA Trend Analytics Controller
+      #
+      # Tracks kill/death/assist performance trends over time for players.
+      # Analyzes recent match history to identify performance patterns and calculate rolling averages.
+      #
+      # @example GET /api/v1/analytics/kda_trend/:player_id
+      #   {
+      #     kda_by_match: [{ match_id: 1, kda: 3.5, kills: 5, deaths: 2, assists: 2, victory: true }],
+      #     averages: { last_10_games: 3.2, last_20_games: 2.9, overall: 2.8 }
+      #   }
+      #
+      # Main endpoints:
+      # - GET show: Returns KDA trends for the last 50 matches with rolling averages
       class KdaTrendController < Api::V1::BaseController
         def show
           player = organization_scoped(Player).find(params[:player_id])
