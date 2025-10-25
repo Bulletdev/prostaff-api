@@ -3,6 +3,34 @@
 module Api
   module V1
     module Scouting
+      # Scouting Players Controller
+      #
+      # Manages scouting targets for League of Legends players. Provides CRUD operations
+      # for tracking potential recruits with comprehensive filtering, searching, and sorting.
+      #
+      # This controller handles:
+      # - Creating and managing scouting targets
+      # - Filtering by role, status, priority, region, age range
+      # - Searching by summoner name or real name
+      # - Sorting by multiple criteria (rank, winrate, priority, etc.)
+      # - Assignment to scouts
+      # - Audit logging of all changes
+      # - Pagination of results
+      #
+      # All operations are scoped to the current organization and require authentication.
+      #
+      # @example List all scouting targets
+      #   GET /api/v1/scouting/players
+      #
+      # @example Filter high priority targets by role
+      #   GET /api/v1/scouting/players?role=mid&high_priority=true
+      #
+      # @example Search and sort targets
+      #   GET /api/v1/scouting/players?search=Faker&sort_by=rank&sort_order=desc
+      #
+      # @example Create a new scouting target
+      #   POST /api/v1/scouting/players
+      #   { "scouting_target": { "summoner_name": "Player1", "role": "mid", "priority": "high" } }
       class PlayersController < Api::V1::BaseController
         before_action :set_scouting_target, only: %i[show update destroy sync]
 
