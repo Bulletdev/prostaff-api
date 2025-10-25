@@ -1,5 +1,43 @@
 # frozen_string_literal: true
 
+# Model representing team and individual player goals with progress tracking
+#
+# This model manages goal-setting and tracking for both team-wide objectives and
+# individual player targets. It supports various metrics (win rate, KDA, CS/min, etc.),
+# tracks progress over time, and provides deadline management with status indicators.
+#
+# Associated with:
+# - Organization: The organization setting the goal
+# - Player: The player for individual goals (nil for team goals)
+# - AssignedTo: The user responsible for achieving the goal (optional)
+# - CreatedBy: The user who created the goal (optional)
+#
+# @example Create a team goal
+#   goal = TeamGoal.create(
+#     organization: org,
+#     title: 'Reach 65% Win Rate',
+#     category: 'performance',
+#     metric_type: 'win_rate',
+#     target_value: 65,
+#     current_value: 52,
+#     start_date: Date.today,
+#     end_date: 1.month.from_now,
+#     status: 'active'
+#   )
+#
+# @example Create a player goal
+#   goal = TeamGoal.create(
+#     organization: org,
+#     player: player,
+#     title: 'Improve CS/min to 8.5',
+#     metric_type: 'cs_per_min',
+#     target_value: 8.5,
+#     current_value: 7.2
+#   )
+#
+# @example Track progress
+#   goal.update_progress!(8.0)
+#   goal.mark_as_completed! if goal.progress >= 100
 class TeamGoal < ApplicationRecord
   # Concerns
   include Constants

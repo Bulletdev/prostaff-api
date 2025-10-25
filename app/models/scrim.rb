@@ -1,5 +1,36 @@
 # frozen_string_literal: true
 
+# Model representing practice scrimmage sessions and their outcomes
+#
+# This model manages scrim (practice match) scheduling, tracking, and results.
+# It stores game plans, focus areas, opponent information, game results, and
+# objectives with outcomes. Supports confidential scrims and progress tracking.
+#
+# Associated with:
+# - Organization: The organization participating in the scrim
+# - Match: Link to match record if available (optional)
+# - OpponentTeam: The practice opponent (optional)
+#
+# @example Schedule a scrim
+#   scrim = Scrim.create(
+#     organization: org,
+#     opponent_team: team,
+#     scrim_type: 'internal',
+#     focus_area: 'early_game',
+#     games_planned: 3,
+#     scheduled_at: 2.days.from_now,
+#     is_confidential: false
+#   )
+#
+# @example Record game results
+#   scrim.add_game_result(
+#     victory: true,
+#     duration: 1800,
+#     notes: 'Good early game execution'
+#   )
+#
+# @example Query upcoming scrims
+#   Scrim.upcoming.by_focus_area('team_fighting')
 class Scrim < ApplicationRecord
   # Concerns
   include Constants
