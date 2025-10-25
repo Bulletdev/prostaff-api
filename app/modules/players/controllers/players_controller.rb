@@ -350,10 +350,23 @@ module Players
 
       # Handle import error
       def handle_import_error(result)
+        # Determine appropriate HTTP status based on error code
+        status = case result[:code]
+                 when 'PLAYER_NOT_FOUND', 'INVALID_FORMAT'
+                   :not_found
+                 when 'PLAYER_BELONGS_TO_OTHER_ORGANIZATION'
+                   :forbidden
+                 when 'RIOT_API_ERROR'
+                   # Check if it's a server error (5xx) or rate limit
+                   result[:status_code] && result[:status_code] >= 500 ? :bad_gateway : :service_unavailable
+                 else
+                   :service_unavailable
+                 end
+
         render_error(
-          message: "Failed to import from Riot API: #{result[:error]}",
+          message: result[:error] || "Failed to import from Riot API",
           code: result[:code] || 'IMPORT_ERROR',
-          status: :service_unavailable
+          status: status
         )
       end
     end
