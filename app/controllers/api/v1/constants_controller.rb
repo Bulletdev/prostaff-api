@@ -2,6 +2,20 @@
 
 module Api
   module V1
+    # Constants Controller
+    #
+    # Provides application-wide constant values and enumerations for frontend consumption.
+    # Returns all valid options for dropdowns, filters, and validation including regions, tiers,
+    # roles, statuses, and other enumerated values used throughout the application.
+    #
+    # @example GET /api/v1/constants
+    #   {
+    #     regions: { values: ['BR', 'NA', 'EUW'], names: { 'BR': 'Brazil' } },
+    #     player: { roles: {...}, statuses: {...}, queue_ranks: [...] }
+    #   }
+    #
+    # Main endpoints:
+    # - GET index: Returns comprehensive constants for all application entities (public, no auth required)
     class ConstantsController < ApplicationController
       # GET /api/v1/constants
       # Public endpoint - no authentication required
