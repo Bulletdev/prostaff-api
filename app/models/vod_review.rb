@@ -1,5 +1,35 @@
 # frozen_string_literal: true
 
+# Model representing video (VOD) reviews with timestamped analysis
+#
+# This model manages video-on-demand reviews for matches and practice sessions.
+# It stores video URLs, review content, timestamps with categorized feedback,
+# and supports sharing with specific players or making reviews public.
+#
+# Associated with:
+# - Organization: The organization conducting the review
+# - Match: The match being reviewed (optional)
+# - Reviewer: The user conducting the review (optional)
+# - VodTimestamps: Timestamped feedback points (has_many, dependent destroy)
+#
+# @example Create a VOD review
+#   review = VodReview.create(
+#     organization: org,
+#     match: match,
+#     reviewer: coach,
+#     title: 'Semifinals Game 3 Review',
+#     video_url: 'https://youtube.com/watch?v=example',
+#     review_type: 'match_review',
+#     status: 'draft'
+#   )
+#
+# @example Publish and share review
+#   review.publish!
+#   review.make_public!
+#   review.share_with_all_players!
+#
+# @example Access important timestamps
+#   review.important_timestamps.each { |ts| puts ts.note }
 class VodReview < ApplicationRecord
   # Concerns
   include Constants
