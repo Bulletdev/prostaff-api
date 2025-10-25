@@ -2,6 +2,35 @@
 
 module Api
   module V1
+    # Base controller for API v1 endpoints
+    #
+    # Provides common functionality for all API v1 controllers including authentication,
+    # authorization via Pundit, standardized error handling, and response rendering methods.
+    #
+    # This controller includes:
+    # - Authentication through the Authenticatable concern
+    # - Authorization with Pundit
+    # - Standardized JSON response formats for success and error cases
+    # - Pagination support with metadata
+    # - Audit logging capabilities
+    # - Exception rescue handlers for common Rails errors
+    #
+    # @example Creating a new API controller
+    #   class Api::V1::UsersController < Api::V1::BaseController
+    #     def index
+    #       users = User.all
+    #       render_success(users: users)
+    #     end
+    #   end
+    #
+    # @example Using pagination
+    #   class Api::V1::PostsController < Api::V1::BaseController
+    #     def index
+    #       posts = Post.all
+    #       result = paginate(posts, per_page: 25)
+    #       render_success(result)
+    #     end
+    #   end
     class BaseController < ApplicationController
       include Authenticatable
       include Pundit::Authorization
