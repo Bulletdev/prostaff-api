@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_17_194806) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_26_030559) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -303,10 +303,14 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_17_194806) do
     t.datetime "updated_at", null: false
     t.string "sync_status"
     t.string "region"
+    t.string "avatar_url"
+    t.string "kick_url"
+    t.string "professional_name", comment: "Professional/competitive IGN used in tournaments (e.g., \"Titan\" for paiN Gaming)"
     t.index ["organization_id", "role"], name: "index_players_on_org_and_role"
     t.index ["organization_id", "status"], name: "idx_players_org_status"
     t.index ["organization_id", "status"], name: "index_players_on_org_and_status"
     t.index ["organization_id"], name: "index_players_on_organization_id"
+    t.index ["professional_name"], name: "index_players_on_professional_name"
     t.index ["riot_puuid"], name: "index_players_on_riot_puuid", unique: true
     t.index ["role"], name: "index_players_on_role"
     t.index ["status"], name: "index_players_on_status"

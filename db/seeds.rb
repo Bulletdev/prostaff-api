@@ -96,7 +96,7 @@ puts "   ✅ User: #{user3.email} (role: #{user3.role})"
 # ============================================================================
 # SUMMARY
 # ============================================================================
-puts "\n" + ('=' * 70)
+puts "\n#{'=' * 70}"
 puts '🎉 Database seeded successfully!'
 puts('=' * 70)
 puts "\n📋 Organizations Created:"
@@ -111,10 +111,10 @@ puts ''
 puts '   3. Discordia (Tier 2 Semi-Pro)'
 puts "      • ID: #{org3.id}"
 puts "      • Login: coach@discordia.gg / #{DEFAULT_DEV_PASSWORD}"
-puts "\n" + ('=' * 70)
+puts "\n#{'=' * 70}"
 puts '📝 Next Steps:'
 puts '   • Import players manually for each organization'
 puts '   • Verify login works with the credentials above'
 puts "\n⚠️  IMPORTANT: These are DEVELOPMENT-ONLY credentials!"
 puts '   Never use these passwords in production environments.'
-puts ('=' * 70) + "\n"
+puts "#{'=' * 70}\n"
