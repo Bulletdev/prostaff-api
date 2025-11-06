@@ -145,85 +145,59 @@ graph TB
     end
 
     subgraph "Application Layer - Modular Monolith"
-subgraph "Authentication Module"
-    AuthController[Auth Controller]
-    JWTService[JWT Service]
-    UserModel[User Model]
-end
-subgraph "Analytics Module"
-    AnalyticsController[Analytics Controller]
-end
-subgraph "Competitive Module"
-    CompetitiveController[Competitive Controller]
-end
-subgraph "Dashboard Module"
-    DashboardController[Dashboard Controller]
-end
-subgraph "Matches Module"
-    MatchesController[Matches Controller]
-end
-subgraph "Players Module"
-    PlayersController[Players Controller]
-end
-subgraph "Riot_integration Module"
-    Riot_integrationController[Riot_integration Controller]
-end
-subgraph "Schedules Module"
-    SchedulesController[Schedules Controller]
-end
-subgraph "Scouting Module"
-    ScoutingController[Scouting Controller]
-end
-subgraph "Scrims Module"
-    ScrimsController[Scrims Controller]
-end
-subgraph "Team_goals Module"
-    Team_goalsController[Team_goals Controller]
-end
-subgraph "Vod_reviews Module"
-    Vod_reviewsController[Vod_reviews Controller]
-end
-subgraph "Dashboard Module"
-    DashboardController[Dashboard Controller]
-    DashStats[Statistics Service]
-end
-subgraph "Players Module"
-    PlayersController[Players Controller]
-    PlayerModel[Player Model]
-    ChampionPool[Champion Pool Model]
-end
-subgraph "Scouting Module"
-    ScoutingController[Scouting Controller]
-    ScoutingTarget[Scouting Target Model]
-    Watchlist[Watchlist Service]
-end
-subgraph "Analytics Module"
-    AnalyticsController[Analytics Controller]
-    PerformanceService[Performance Service]
-    KDAService[KDA Trend Service]
-end
-subgraph "Matches Module"
-    MatchesController[Matches Controller]
-    MatchModel[Match Model]
-    PlayerMatchStats[Player Match Stats Model]
-end
-subgraph "Schedules Module"
-    SchedulesController[Schedules Controller]
-    ScheduleModel[Schedule Model]
-end
-subgraph "VOD Reviews Module"
-    VODController[VOD Reviews Controller]
-    VODModel[VOD Review Model]
-    TimestampModel[Timestamp Model]
-end
-subgraph "Team Goals Module"
-    GoalsController[Team Goals Controller]
-    GoalModel[Team Goal Model]
-end
-subgraph "Riot Integration Module"
-    RiotService[Riot API Service]
-    RiotSync[Sync Service]
-end
+        subgraph "Authentication Module"
+            AuthController[Auth Controller]
+            JWTService[JWT Service]
+            UserModel[User Model]
+        end
+        subgraph "Analytics Module"
+            AnalyticsController[Analytics Controller]
+            PerformanceService[Performance Service]
+            KDAService[KDA Trend Service]
+        end
+        subgraph "Competitive Module"
+            CompetitiveController[Competitive Controller]
+        end
+        subgraph "Dashboard Module"
+            DashboardController[Dashboard Controller]
+            DashStats[Statistics Service]
+        end
+        subgraph "Matches Module"
+            MatchesController[Matches Controller]
+            MatchModel[Match Model]
+            PlayerMatchStats[Player Match Stats Model]
+        end
+        subgraph "Players Module"
+            PlayersController[Players Controller]
+            PlayerModel[Player Model]
+            ChampionPool[Champion Pool Model]
+        end
+        subgraph "Riot Integration Module"
+            RiotIntegrationController[Riot Integration Controller]
+            RiotService[Riot API Service]
+            RiotSync[Sync Service]
+        end
+        subgraph "Schedules Module"
+            SchedulesController[Schedules Controller]
+            ScheduleModel[Schedule Model]
+        end
+        subgraph "Scouting Module"
+            ScoutingController[Scouting Controller]
+            ScoutingTarget[Scouting Target Model]
+            Watchlist[Watchlist Service]
+        end
+        subgraph "Scrims Module"
+            ScrimsController[Scrims Controller]
+        end
+        subgraph "Team Goals Module"
+            GoalsController[Team Goals Controller]
+            GoalModel[Team Goal Model]
+        end
+        subgraph "VOD Reviews Module"
+            VODController[VOD Reviews Controller]
+            VODModel[VOD Review Model]
+            TimestampModel[Timestamp Model]
+        end
     end
 
     subgraph "Data Layer"
@@ -240,64 +214,66 @@ end
         RiotAPI[Riot Games API]
     end
 
+    %% Conexões
     Client -->|HTTP/JSON| CORS
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
     
     Router --> AuthController
-    Router --> DashboardController
-    Router --> PlayersController
-    Router --> ScoutingController
     Router --> AnalyticsController
+    Router --> CompetitiveController
+    Router --> DashboardController
     Router --> MatchesController
+    Router --> PlayersController
+    Router --> RiotIntegrationController
     Router --> SchedulesController
-    Router --> VODController
+    Router --> ScoutingController
+    Router --> ScrimsController
     Router --> GoalsController
-    AuthController --> JWTService
+    Router --> VODController
+
+    AuthController --> JWTService --> Redis
     AuthController --> UserModel
-    PlayersController --> PlayerModel
-    PlayerModel --> ChampionPool
+    AnalyticsController --> PerformanceService --> Redis
+    AnalyticsController --> KDAService
+    DashboardController --> DashStats --> Redis
+    MatchesController --> MatchModel --> PlayerMatchStats
+    PlayersController --> PlayerModel --> ChampionPool
     ScoutingController --> ScoutingTarget
     ScoutingController --> Watchlist
-    MatchesController --> MatchModel
-    MatchModel --> PlayerMatchStats
     SchedulesController --> ScheduleModel
-    VODController --> VODModel
-    VODModel --> TimestampModel
     GoalsController --> GoalModel
-    AnalyticsController --> PerformanceService
-    AnalyticsController --> KDAService
-    AuditLogModel[AuditLog Model] --> PostgreSQL
-    ChampionPoolModel[ChampionPool Model] --> PostgreSQL
-    CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
-    MatchModel[Match Model] --> PostgreSQL
-    NotificationModel[Notification Model] --> PostgreSQL
-    OpponentTeamModel[OpponentTeam Model] --> PostgreSQL
-    OrganizationModel[Organization Model] --> PostgreSQL
-    PasswordResetTokenModel[PasswordResetToken Model] --> PostgreSQL
-    PlayerModel[Player Model] --> PostgreSQL
-    PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
-    ScheduleModel[Schedule Model] --> PostgreSQL
-    ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
-    ScrimModel[Scrim Model] --> PostgreSQL
-    TeamGoalModel[TeamGoal Model] --> PostgreSQL
-    TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
-    UserModel[User Model] --> PostgreSQL
-    VodReviewModel[VodReview Model] --> PostgreSQL
-    VodTimestampModel[VodTimestamp Model] --> PostgreSQL
-    JWTService --> Redis
-    DashStats --> Redis
-    PerformanceService --> Redis
-PlayersController --> RiotService
-MatchesController --> RiotService
-ScoutingController --> RiotService
-RiotService --> RiotAPI
+    VODController --> VODModel --> TimestampModel
 
-RiotService --> Sidekiq
-Sidekiq --> JobQueue
-JobQueue --> Redis
-    
+    %% Conexões para PostgreSQL (modelos adicionais)
+    AuditLogModel[Audit Log Model] --> PostgreSQL
+    ChampionPool --> PostgreSQL
+    CompetitiveMatchModel[Competitive Match Model] --> PostgreSQL
+    MatchModel --> PostgreSQL
+    NotificationModel[Notification Model] --> PostgreSQL
+    OpponentTeamModel[Opponent Team Model] --> PostgreSQL
+    OrganizationModel[Organization Model] --> PostgreSQL
+    PasswordResetTokenModel[Password Reset Token Model] --> PostgreSQL
+    PlayerModel --> PostgreSQL
+    PlayerMatchStats --> PostgreSQL
+    ScheduleModel --> PostgreSQL
+    ScoutingTarget --> PostgreSQL
+    ScrimModel[Scrim Model] --> PostgreSQL
+    GoalModel --> PostgreSQL
+    TokenBlacklistModel[Token Blacklist Model] --> PostgreSQL
+    UserModel --> PostgreSQL
+    VODModel --> PostgreSQL
+    TimestampModel --> PostgreSQL
+
+    %% Integrações com Riot e Jobs
+    PlayersController --> RiotService
+    MatchesController --> RiotService
+    ScoutingController --> RiotService
+    RiotService --> RiotAPI
+    RiotService --> Sidekiq --> JobQueue --> Redis
+
+    %% Estilos
     style Client fill:#e1f5ff
     style PostgreSQL fill:#336791
     style Redis fill:#d82c20
