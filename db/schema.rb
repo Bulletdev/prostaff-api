@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_26_030559) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_26_233429) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -343,12 +343,14 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_030559) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "scrim_id"
     t.index ["created_by_id"], name: "index_schedules_on_created_by_id"
     t.index ["event_type"], name: "index_schedules_on_event_type"
     t.index ["match_id"], name: "index_schedules_on_match_id"
     t.index ["organization_id", "start_time", "event_type"], name: "index_schedules_on_org_time_type"
     t.index ["organization_id", "start_time"], name: "idx_schedules_org_time"
     t.index ["organization_id"], name: "index_schedules_on_organization_id"
+    t.index ["scrim_id"], name: "index_schedules_on_scrim_id"
     t.index ["start_time"], name: "index_schedules_on_start_time"
     t.index ["status"], name: "index_schedules_on_status"
   end
@@ -535,6 +537,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_030559) do
   add_foreign_key "players", "organizations"
   add_foreign_key "schedules", "matches"
   add_foreign_key "schedules", "organizations"
+  add_foreign_key "schedules", "scrims", on_delete: :cascade
   add_foreign_key "schedules", "users", column: "created_by_id"
   add_foreign_key "scouting_targets", "organizations"
   add_foreign_key "scouting_targets", "users", column: "added_by_id"
