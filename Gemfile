@@ -76,7 +76,7 @@ gem 'rswag-api'
 gem 'rswag-ui'
 
 # Elasticsearch client (for analytics queries)
-gem 'elasticsearch', '~> 9.2'
+gem 'elasticsearch', '~> 9.1', '>= 9.1.3'
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
