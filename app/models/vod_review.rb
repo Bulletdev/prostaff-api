@@ -75,12 +75,9 @@ class VodReview < ApplicationRecord
   end
 
   def status_color
-    case status
-    when 'draft' then 'yellow'
-    when 'published' then 'green'
-    when 'archived' then 'gray'
-    else 'gray'
-    end
+    return 'yellow' if status == 'draft'
+    return 'green' if status == 'published'
+    'gray'
   end
 
   def can_be_edited_by?(user)

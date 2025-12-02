@@ -75,12 +75,9 @@ module Api
         # @param period [String] Time period (week, month, season)
         # @return [Integer] Number of days
         def time_period_to_days(period)
-          case period
-          when 'week' then 7
-          when 'month' then 30
-          when 'season' then 90
-          else 30
-          end
+          return 7 if period == 'week'
+          return 90 if period == 'season'
+          30
         end
 
         # Legacy method - kept for backwards compatibility

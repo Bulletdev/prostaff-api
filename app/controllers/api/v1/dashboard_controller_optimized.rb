@@ -56,8 +56,8 @@ module Api
         ((wins.to_f / total) * 100).round(1)
       end
 
-      def calculate_recent_form(matches)
-        matches.map { |m| m.victory? ? 'W' : 'L' }.join('')
+  def calculate_recent_form(matches)
+        matches.map { |m| m.victory? ? 'W' : 'L' }.join
       end
 
       def calculate_average_kda_fast(kda_result)

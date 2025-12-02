@@ -151,7 +151,7 @@ class Schedule < ApplicationRecord
     our_participants = required_players + optional_players
     other_participants = other.required_players + other.optional_players
 
-    (our_participants & other_participants).any?
+    our_participants.intersect?(other_participants)
   end
 
   def log_audit_trail

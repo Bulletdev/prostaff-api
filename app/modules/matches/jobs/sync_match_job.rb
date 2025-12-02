@@ -81,11 +81,7 @@ class SyncMatchJob < ApplicationJob
   end
 
   def determine_match_type(game_mode)
-    case game_mode.upcase
-    when 'CLASSIC' then 'official'
-    when 'ARAM' then 'scrim'
-    else 'scrim'
-    end
+    game_mode.to_s.upcase == 'CLASSIC' ? 'official' : 'scrim'
   end
 
   def determine_team_victory(participants, organization)

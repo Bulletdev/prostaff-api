@@ -188,7 +188,8 @@ class TeamGoal < ApplicationRecord
   end
 
   def assigned_to_name
-    assigned_to&.full_name || assigned_to&.email&.split('@')&.first || 'Unassigned'
+    return 'Unassigned' unless assigned_to
+    assigned_to.full_name || (assigned_to.email&.split('@')&.first) || 'Unassigned'
   end
 
   def player_name

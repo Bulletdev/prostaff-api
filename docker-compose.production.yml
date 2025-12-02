@@ -1,6 +1,40 @@
-version: '3.8'
-
 services:
+  # Elasticsearch for analytics search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: prostaff-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - prostaff-net
+
+  # Kibana for exploring ES indices
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: prostaff-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "5601:5601"
+    networks:
+      - prostaff-net
+
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -17,6 +51,7 @@ services:
       - nginx_logs:/var/log/nginx
     depends_on:
       - api
+      - kibana
     networks:
       - prostaff-net
     healthcheck:
@@ -156,6 +191,24 @@ services:
           memory: 256M
           cpus: '0.1'
 
+  # Scraper service (optional runner)
+  scraper:
+    build:
+      context: ./League-Data-Scraping-And-Analytics-master/ProStaff-Scraper
+    container_name: prostaff-scraper
+    env_file:
+      - ./League-Data-Scraping-And-Analytics-master/ProStaff-Scraper/.env
+    volumes:
+      - ./League-Data-Scraping-And-Analytics-master/ProStaff-Scraper:/app
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - prostaff-net
+    profiles:
+      - scraper
+
   # Backup Service (runs daily)
   backup:
     image: postgres:15-alpine
@@ -181,6 +234,8 @@ volumes:
   redis_data:
     driver: local
   nginx_logs:
+    driver: local
+  es_data:
     driver: local
 
 networks:
