@@ -38,13 +38,10 @@ class VodTimestamp < ApplicationRecord
   end
 
   def importance_color
-    case importance
-    when 'low' then 'gray'
-    when 'normal' then 'blue'
-    when 'high' then 'orange'
-    when 'critical' then 'red'
-    else 'gray'
-    end
+    return 'blue' if importance == 'normal'
+    return 'orange' if importance == 'high'
+    return 'red' if importance == 'critical'
+    'gray'
   end
 
   def category_color
