@@ -6,69 +6,26 @@ class SyncPlayerFromRiotJob < ApplicationJob
   def perform(player_id)
     player = Player.find(player_id)
 
-    unless player.riot_puuid.present? || player.summoner_name.present?
-      player.update(sync_status: 'error', last_sync_at: Time.current)
-      Rails.logger.error "Player #{player_id} missing Riot info"
-      return
-    end
+    return mark_error(player, "Player #{player_id} missing Riot info") unless player.riot_puuid.present? || player.summoner_name.present?
 
     riot_api_key = ENV['RIOT_API_KEY']
-    unless riot_api_key.present?
-      player.update(sync_status: 'error', last_sync_at: Time.current)
-      Rails.logger.error 'Riot API key not configured'
-      return
-    end
+    return mark_error(player, 'Riot API key not configured') unless riot_api_key.present?
+
+    region = player.region.presence&.downcase || 'br1'
 
     begin
-      region = player.region.presence&.downcase || 'br1'
+      summoner_data = fetch_summoner(player, region, riot_api_key)
+      ranked_data = fetch_ranked_stats_by_puuid(summoner_data['puuid'], region, riot_api_key)
 
-      summoner_data = if player.riot_puuid.present?
-                        fetch_summoner_by_puuid(player.riot_puuid, region, riot_api_key)
-                      else
-                        fetch_summoner_by_name(player.summoner_name, region, riot_api_key)
-                      end
-
-      # Use PUUID for league endpoint (workaround for Riot API bug where summoner_data['id'] is nil)
-      # See: https://github.com/RiotGames/developer-relations/issues/1092
-      ranked_data = fetch_ranked_stats_by_puuid(player.riot_puuid, region, riot_api_key)
-
-      update_data = {
-        riot_puuid: summoner_data['puuid'],
-        riot_summoner_id: summoner_data['id'],
-        summoner_level: summoner_data['summonerLevel'],
-        profile_icon_id: summoner_data['profileIconId'],
-        sync_status: 'success',
-        last_sync_at: Time.current
-      }
-
-      solo_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
-      if solo_queue
-        update_data.merge!({
-                             solo_queue_tier: solo_queue['tier'],
-                             solo_queue_rank: solo_queue['rank'],
-                             solo_queue_lp: solo_queue['leaguePoints'],
-                             solo_queue_wins: solo_queue['wins'],
-                             solo_queue_losses: solo_queue['losses']
-                           })
-      end
-
-      flex_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_FLEX_SR' }
-      if flex_queue
-        update_data.merge!({
-                             flex_queue_tier: flex_queue['tier'],
-                             flex_queue_rank: flex_queue['rank'],
-                             flex_queue_lp: flex_queue['leaguePoints']
-                           })
-      end
+      update_data = build_update_data(summoner_data)
+      update_data.merge!(extract_queue_updates(ranked_data))
 
       player.update!(update_data)
-
       Rails.logger.info "Successfully synced player #{player_id} from Riot API"
     rescue StandardError => e
       Rails.logger.error "Failed to sync player #{player_id}: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-
-      player.update(sync_status: 'error', last_sync_at: Time.current)
+      mark_error(player)
     end
   end
 
@@ -154,3 +111,49 @@ class SyncPlayerFromRiotJob < ApplicationJob
     JSON.parse(response.body)
   end
 end
+  def fetch_summoner(player, region, api_key)
+    return fetch_summoner_by_puuid(player.riot_puuid, region, api_key) if player.riot_puuid.present?
+    fetch_summoner_by_name(player.summoner_name, region, api_key)
+  end
+
+  def build_update_data(summoner_data)
+    {
+      riot_puuid: summoner_data['puuid'],
+      riot_summoner_id: summoner_data['id'],
+      summoner_level: summoner_data['summonerLevel'],
+      profile_icon_id: summoner_data['profileIconId'],
+      sync_status: 'success',
+      last_sync_at: Time.current
+    }
+  end
+
+  def extract_queue_updates(ranked_data)
+    updates = {}
+
+    solo = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
+    if solo
+      updates.merge!({
+        solo_queue_tier: solo['tier'],
+        solo_queue_rank: solo['rank'],
+        solo_queue_lp: solo['leaguePoints'],
+        solo_queue_wins: solo['wins'],
+        solo_queue_losses: solo['losses']
+      })
+    end
+
+    flex = ranked_data.find { |q| q['queueType'] == 'RANKED_FLEX_SR' }
+    if flex
+      updates.merge!({
+        flex_queue_tier: flex['tier'],
+        flex_queue_rank: flex['rank'],
+        flex_queue_lp: flex['leaguePoints']
+      })
+    end
+
+    updates
+  end
+
+  def mark_error(player, message = nil)
+    Rails.logger.error(message) if message
+    player.update(sync_status: 'error', last_sync_at: Time.current)
+  end

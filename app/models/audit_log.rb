@@ -122,13 +122,10 @@ class AuditLog < ApplicationRecord
   end
 
   def risk_level
-    case action
-    when 'delete' then 'high'
-    when 'update' then 'medium'
-    when 'create' then 'low'
-    when 'login', 'logout' then 'info'
-    else 'medium'
-    end
+    return 'high' if action == 'delete'
+    return 'low' if action == 'create'
+    return 'info' if %w[login logout].include?(action)
+    'medium'
   end
 
   def risk_color
