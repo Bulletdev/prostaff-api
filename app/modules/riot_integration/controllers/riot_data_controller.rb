@@ -2,7 +2,7 @@
 
 module RiotIntegration
   module Controllers
-    class RiotDataController < BaseController
+    class RiotDataController < Api::V1::BaseController
       skip_before_action :authenticate_request!, only: %i[champions champion_details items version]
 
       # GET /api/v1/riot-data/champions
