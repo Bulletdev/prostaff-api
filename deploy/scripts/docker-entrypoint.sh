@@ -8,10 +8,17 @@ rm -f /app/tmp/pids/server.pid
 
 # Wait for database to be ready
 echo "⏳ Waiting for database..."
-until PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -c '\q' 2>/dev/null; do
-  echo "  Database is unavailable - sleeping"
-  sleep 2
-done
+if [ -n "$DATABASE_URL" ]; then
+  until pg_isready -d "$DATABASE_URL"; do
+    echo "  Database is unavailable - sleeping"
+    sleep 2
+  done
+else
+  until PGPASSWORD=$POSTGRES_PASSWORD psql -h "${POSTGRES_HOST:-postgres}" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q' 2>/dev/null; do
+    echo "  Database is unavailable - sleeping"
+    sleep 2
+  done
+fi
 echo "✅ Database is ready"
 
 # Run database migrations

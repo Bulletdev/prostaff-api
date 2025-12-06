@@ -1,0 +1,36 @@
+databases:
+  - name: prostaff-db
+    databaseName: prostaff_api_production
+    user: prostaff_user
+    plan: free
+    region: oregon
+
+services:
+  - type: redis
+    name: prostaff-redis
+    region: oregon
+    plan: free
+    ipAllowList: [] # Access only from within Render
+
+  - type: web
+    name: prostaff-api
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerFilePath: ./Dockerfile.production
+    envVars:
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://prostaffgg.netlify.app,http://localhost:5173
+      - key: DATABASE_URL
+        fromDatabase:
+          name: prostaff-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: prostaff-redis
+          property: connectionString
+      - key: WEB_CONCURRENCY
+        value: 2
