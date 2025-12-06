@@ -11,6 +11,7 @@ RUN apt-get update -qq && \
     curl \
     libpq-dev \
     libyaml-dev \
+    postgresql-client \
     tzdata && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
