@@ -17,7 +17,7 @@ services:
     runtime: docker
     region: oregon
     plan: free
-    dockerFilePath: ./Dockerfile.production
+    dockerfilePath: ./Dockerfile.production
     envVars:
       - key: RAILS_MASTER_KEY
         sync: false
