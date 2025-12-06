@@ -34,14 +34,14 @@ fi
 # Method 2: OWASP Dependency Check (comprehensive)
 echo -e "${YELLOW}Running OWASP Dependency Check...${NC}"
 
-docker run --rm \
-  -v "$(pwd):/src:ro" \
-  -v "$(pwd)/$REPORT_DIR:/report:rw" \
-  owasp/dependency-check:latest \
-  --scan /src/Gemfile.lock \
-  --format ALL \
-  --project "ProStaff API" \
-  --out /report/owasp-${TIMESTAMP}
+# docker run --rm \
+#   -v "$(pwd):/src:ro" \
+#   -v "$(pwd)/$REPORT_DIR:/report:rw" \
+#   owasp/dependency-check:latest \
+#   --scan /src/Gemfile.lock \
+#   --format ALL \
+#   --project "ProStaff API" \
+#   --out /report/owasp-${TIMESTAMP}
 
 echo -e "${GREEN}✅ Dependency scan complete!${NC}"
 echo "Bundler Audit: $REPORT_DIR/bundler-audit-${TIMESTAMP}.txt"

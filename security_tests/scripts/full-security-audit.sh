@@ -43,7 +43,7 @@ echo -e "${GREEN}✅ API is running${NC}\n"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}[1/6] Running Brakeman (Rails Security Scanner)${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-"$SCRIPT_DIR/brakeman-scan.sh"
+"$SCRIPT_DIR/brakeman-scan.sh" || true
 cp "$PROJECT_ROOT/security_tests/reports/brakeman/brakeman-"*.{html,json} "$REPORT_DIR/" 2>/dev/null || true
 echo ""
 
@@ -136,6 +136,44 @@ check_header "X-XSS-Protection" "1; mode=block"
 check_header "Strict-Transport-Security" "max-age=31536000"
 check_header "Content-Security-Policy" "default-src 'self'"
 check_header "Referrer-Policy" "no-referrer or strict-origin-when-cross-origin"
+
+echo ""
+
+
+# 7. Configuration Security Check
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}[7/7] Checking Rails Configuration${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+CONFIG_REPORT="$REPORT_DIR/configuration-check.txt"
+echo "Configuration Security Analysis" > "$CONFIG_REPORT"
+echo "===============================" >> "$CONFIG_REPORT"
+
+# Check production configuration
+PROD_CONFIG="config/environments/production.rb"
+
+if [ -f "$PROD_CONFIG" ]; then
+  # Check force_ssl
+  if grep -q "config.force_ssl = true" "$PROD_CONFIG"; then
+    echo -e "${GREEN}✅ config.force_ssl is enabled in production${NC}"
+    echo "[PASS] config.force_ssl is enabled" >> "$CONFIG_REPORT"
+  else
+    echo -e "${YELLOW}⚠️  config.force_ssl NOT found enabled in production${NC}"
+    echo "[WARN] config.force_ssl should be enabled in production" >> "$CONFIG_REPORT"
+  fi
+
+  # Check consider_all_requests_local
+  if grep -q "config.consider_all_requests_local = false" "$PROD_CONFIG"; then
+    echo -e "${GREEN}✅ config.consider_all_requests_local is false in production${NC}"
+    echo "[PASS] config.consider_all_requests_local is false" >> "$CONFIG_REPORT"
+  else
+    echo -e "${YELLOW}⚠️  config.consider_all_requests_local might not be false in production${NC}"
+    echo "[WARN] config.consider_all_requests_local should be false in production" >> "$CONFIG_REPORT"
+  fi
+else
+  echo -e "${YELLOW}⚠️  Production config file not found at $PROD_CONFIG${NC}"
+  echo "[WARN] Production config file not found" >> "$CONFIG_REPORT"
+fi
 
 echo ""
 

@@ -29,7 +29,7 @@ mkdir -p "$REPORT_DIR"
 docker run --rm \
   --network=host \
   -v "$(pwd)/$REPORT_DIR:/zap/wrk:rw" \
-  owasp/zap2docker-stable \
+  zaproxy/zap-stable \
   zap-api-scan.py \
   -t "$API_SPEC" \
   -f openapi \
