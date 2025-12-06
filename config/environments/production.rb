@@ -9,6 +9,9 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
+  # Allow Render hostname
+  config.hosts << ENV['RENDER_EXTERNAL_HOSTNAME'] if ENV['RENDER_EXTERNAL_HOSTNAME'].present?
+
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
   config.active_storage.variant_processor = :mini_magick
