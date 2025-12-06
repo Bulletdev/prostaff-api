@@ -3,19 +3,19 @@ databases:
     databaseName: prostaff_api_production
     user: prostaff_user
     plan: free
-    region: oregon
+
 
 services:
   - type: redis
     name: prostaff-redis
-    region: oregon
+
     plan: free
     ipAllowList: [] # Access only from within Render
 
   - type: web
     name: prostaff-api
     runtime: docker
-    region: oregon
+
     plan: free
     dockerfilePath: ./Dockerfile.production
     envVars:
