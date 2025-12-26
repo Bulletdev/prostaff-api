@@ -114,7 +114,7 @@ module Api
         # Read operations (index/show) are allowed for all teams to enable discovery.
         #
         def set_opponent_team
-          id = Integer(params[:id]) rescue nil
+          id = Integer(params[:id], exception: false)
           return render json: { error: 'Opponent team not found' }, status: :not_found unless id
 
           @opponent_team = OpponentTeam.find_by(id: id)
