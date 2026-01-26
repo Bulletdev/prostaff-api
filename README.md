@@ -167,12 +167,12 @@ graph TB
         subgraph "Players Module"
             PlayersController[Players Controller]
             PlayerModel[Player Model]
-            ChampionPool[Champion Pool Model]
+            ChampionPoolModel[Champion Pool Model]
         end
 
         subgraph "Scouting Module"
             ScoutingController[Scouting Controller]
-            ScoutingTarget[Scouting Target Model]
+            ScoutingTargetModel[Scouting Target Model]
             Watchlist[Watchlist Service]
         end
 
@@ -185,7 +185,7 @@ graph TB
         subgraph "Matches Module"
             MatchesController[Matches Controller]
             MatchModel[Match Model]
-            PlayerMatchStats[Player Match Stats Model]
+            PlayerMatchStatModel[Player Match Stat Model]
         end
 
         subgraph "Schedules Module"
@@ -195,13 +195,13 @@ graph TB
 
         subgraph "VOD Reviews Module"
             VODController[VOD Reviews Controller]
-            VODModel[VOD Review Model]
-            TimestampModel[Timestamp Model]
+            VodReviewModel[VOD Review Model]
+            VodTimestampModel[VOD Timestamp Model]
         end
 
         subgraph "Team Goals Module"
             GoalsController[Team Goals Controller]
-            GoalModel[Team Goal Model]
+            TeamGoalModel[Team Goal Model]
         end
 
         subgraph "Riot Integration Module"
@@ -232,6 +232,8 @@ graph TB
             SupportTicketsController[Support Tickets Controller]
             SupportFAQsController[Support FAQs Controller]
             SupportStaffController[Support Staff Controller]
+            SupportTicketModel[Support Ticket Model]
+            SupportFaqModel[Support FAQ Model]
         end
     end
 
@@ -247,6 +249,7 @@ graph TB
 
     subgraph "External Services"
         RiotAPI[Riot Games API]
+        PandaScoreAPI[PandaScore API]
     end
 
     Client -->|HTTP/JSON| CORS
@@ -264,21 +267,26 @@ graph TB
     Router --> VODController
     Router --> GoalsController
     Router --> CompetitiveController
+    Router --> ProMatchesController
     Router --> ScrimsController
+    Router --> OpponentTeamsController
     Router --> DraftPlansController
+    Router --> TacticalBoardsController
     Router --> SupportTicketsController
+    Router --> SupportFAQsController
+    Router --> SupportStaffController
     AuthController --> JWTService
     AuthController --> UserModel
     PlayersController --> PlayerModel
-    PlayerModel --> ChampionPool
-    ScoutingController --> ScoutingTarget
+    PlayerModel --> ChampionPoolModel
+    ScoutingController --> ScoutingTargetModel
     ScoutingController --> Watchlist
     MatchesController --> MatchModel
-    MatchModel --> PlayerMatchStats
+    MatchModel --> PlayerMatchStatModel
     SchedulesController --> ScheduleModel
-    VODController --> VODModel
-    VODModel --> TimestampModel
-    GoalsController --> GoalModel
+    VODController --> VodReviewModel
+    VodReviewModel --> VodTimestampModel
+    GoalsController --> TeamGoalModel
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
     CompetitiveController --> PandaScoreService
@@ -286,7 +294,7 @@ graph TB
     ScrimsController --> ScrimAnalytics
     DraftPlansController --> DraftAnalysisService
     SupportTicketsController --> SupportTicketModel
-    SupportFAQsController --> SupportFAQModel
+    SupportFAQsController --> SupportFaqModel
     AuditLogModel[AuditLog Model] --> PostgreSQL
     ChampionPoolModel[ChampionPool Model] --> PostgreSQL
     CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
@@ -313,19 +321,20 @@ graph TB
     JWTService --> Redis
     DashStats --> Redis
     PerformanceService --> Redis
-PlayersController --> RiotService
-MatchesController --> RiotService
-ScoutingController --> RiotService
-RiotService --> RiotAPI
+    PlayersController --> RiotService
+    MatchesController --> RiotService
+    ScoutingController --> RiotService
+    RiotService --> RiotAPI
 
-RiotService --> Sidekiq
-Sidekiq --> JobQueue
-JobQueue --> Redis
+    RiotService --> Sidekiq
+    PandaScoreService --> PandaScoreAPI[PandaScore API]
+    Sidekiq -- Uses --> Redis
     
     style Client fill:#e1f5ff
     style PostgreSQL fill:#336791
     style Redis fill:#d82c20
     style RiotAPI fill:#eb0029
+    style PandaScoreAPI fill:#ff6b35
     style Sidekiq fill:#b1003e
 ```
 
