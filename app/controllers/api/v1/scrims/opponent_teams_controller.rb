@@ -28,7 +28,8 @@ module Api
 
           # Search
           if params[:search].present?
-            teams = teams.where('name ILIKE ? OR tag ILIKE ?', "%#{params[:search]}%", "%#{params[:search]}%")
+            search_term = ActiveRecord::Base.sanitize_sql_like(params[:search])
+            teams = teams.where('name ILIKE ? OR tag ILIKE ?', "%#{search_term}%", "%#{search_term}%")
           end
 
           # Pagination
@@ -118,7 +119,7 @@ module Api
           return render json: { error: 'Opponent team not found' }, status: :not_found unless id
 
           @opponent_team = OpponentTeam.find_by(id: id)
-          return render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
+          render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
         end
 
         # Verifies that current organization has used this opponent team
