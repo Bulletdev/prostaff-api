@@ -418,22 +418,39 @@ class ArchitectureDiagramGenerator
   end
 
   def has_dashboard_routes?
-    routes_content = File.read(RAILS_ROOT.join('config', 'routes.rb'))
+    routes_path = RAILS_ROOT.join('config', 'routes.rb').realpath
+    validate_path_within_project(routes_path)
+    routes_content = File.read(routes_path)
     routes_content.include?('dashboard')
   end
 
   def has_analytics_routes?
-    routes_content = File.read(RAILS_ROOT.join('config', 'routes.rb'))
+    routes_path = RAILS_ROOT.join('config', 'routes.rb').realpath
+    validate_path_within_project(routes_path)
+    routes_content = File.read(routes_path)
     routes_content.include?('analytics')
   end
 
   def has_riot_integration?
-    gemfile = File.read(RAILS_ROOT.join('Gemfile'))
+    gemfile_path = RAILS_ROOT.join('Gemfile').realpath
+    validate_path_within_project(gemfile_path)
+    gemfile = File.read(gemfile_path)
     gemfile.include?('faraday') || @services.values.any? { |s| s.include?('riot') }
   end
 
+  def validate_path_within_project(path)
+    rails_root_realpath = RAILS_ROOT.realpath
+    unless path.to_s.start_with?(rails_root_realpath.to_s)
+      raise SecurityError, "Path is outside project root: #{path}"
+    end
+  end
+
   def update_readme(diagram)
-    content = File.read(README_PATH)
+    # Validate README_PATH is within project root
+    readme_realpath = README_PATH.realpath
+    validate_path_within_project(readme_realpath)
+
+    content = File.read(readme_realpath)
 
     # Find the architecture section
     arch_start = content.index('## Architecture')
@@ -484,8 +501,8 @@ class ArchitectureDiagramGenerator
 
     ARCH
 
-    # Write back to file
-    File.write(README_PATH, before_arch + new_arch_section + after_arch)
+    # Write back to file with validated path
+    File.write(readme_realpath, before_arch + new_arch_section + after_arch)
   end
 end
 
