@@ -306,7 +306,7 @@ end
     indent_module(<<~MODULE.chomp)
 subgraph "Support Module"
     SupportTicketsController[Support Tickets Controller]
-    SupportFAQsController[Support FAQs Controller]
+    SupportFaqsController[Support FAQs Controller]
     SupportStaffController[Support Staff Controller]
     SupportTicketModel[Support Ticket Model]
     SupportFaqModel[Support FAQ Model]
@@ -347,7 +347,7 @@ end
     # Support module routes
     if @models.include?('support_ticket')
       connections << '    Router --> SupportTicketsController'
-      connections << '    Router --> SupportFAQsController'
+      connections << '    Router --> SupportFaqsController'
       connections << '    Router --> SupportStaffController'
     end
 
@@ -373,6 +373,7 @@ end
     if @models.include?('scouting_target')
       connections << '    ScoutingController --> ScoutingTargetModel'
       connections << '    ScoutingController --> Watchlist'
+      connections << '    Watchlist --> PostgreSQL'
     end
 
     # Matches connections
@@ -406,6 +407,7 @@ end
     # Scrims connections
     if @modules.include?('scrims')
       connections << '    ScrimsController --> ScrimAnalytics'
+      connections << '    ScrimAnalytics --> PostgreSQL'
     end
 
     # Strategy connections
@@ -416,7 +418,8 @@ end
     # Support connections
     if @models.include?('support_ticket')
       connections << '    SupportTicketsController --> SupportTicketModel'
-      connections << '    SupportFAQsController --> SupportFaqModel'
+      connections << '    SupportFaqsController --> SupportFaqModel'
+      connections << '    SupportStaffController --> UserModel'
     end
 
     # Database connections
@@ -441,6 +444,7 @@ end
       connections << '    PlayersController --> RiotService'
       connections << '    MatchesController --> RiotService'
       connections << '    ScoutingController --> RiotService'
+      connections << '    RiotService --> RiotSync'
       connections << '    RiotService --> RiotAPI'
       connections << ''
       connections << '    RiotService --> Sidekiq'

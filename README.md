@@ -230,7 +230,7 @@ graph TB
 
         subgraph "Support Module"
             SupportTicketsController[Support Tickets Controller]
-            SupportFAQsController[Support FAQs Controller]
+            SupportFaqsController[Support FAQs Controller]
             SupportStaffController[Support Staff Controller]
             SupportTicketModel[Support Ticket Model]
             SupportFaqModel[Support FAQ Model]
@@ -273,7 +273,7 @@ graph TB
     Router --> DraftPlansController
     Router --> TacticalBoardsController
     Router --> SupportTicketsController
-    Router --> SupportFAQsController
+    Router --> SupportFaqsController
     Router --> SupportStaffController
     AuthController --> JWTService
     AuthController --> UserModel
@@ -281,6 +281,7 @@ graph TB
     PlayerModel --> ChampionPoolModel
     ScoutingController --> ScoutingTargetModel
     ScoutingController --> Watchlist
+    Watchlist --> PostgreSQL
     MatchesController --> MatchModel
     MatchModel --> PlayerMatchStatModel
     SchedulesController --> ScheduleModel
@@ -292,9 +293,11 @@ graph TB
     CompetitiveController --> PandaScoreService
     CompetitiveController --> DraftAnalyzer
     ScrimsController --> ScrimAnalytics
+    ScrimAnalytics --> PostgreSQL
     DraftPlansController --> DraftAnalysisService
     SupportTicketsController --> SupportTicketModel
-    SupportFAQsController --> SupportFaqModel
+    SupportFaqsController --> SupportFaqModel
+    SupportStaffController --> UserModel
     AuditLogModel[AuditLog Model] --> PostgreSQL
     ChampionPoolModel[ChampionPool Model] --> PostgreSQL
     CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
@@ -324,6 +327,7 @@ graph TB
     PlayersController --> RiotService
     MatchesController --> RiotService
     ScoutingController --> RiotService
+    RiotService --> RiotSync
     RiotService --> RiotAPI
 
     RiotService --> Sidekiq
