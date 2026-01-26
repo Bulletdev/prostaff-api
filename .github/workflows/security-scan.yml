@@ -158,10 +158,9 @@ jobs:
             --config=auto \
             --json \
             --output=semgrep-report.json \
-            --exclude='scripts/*.rb' \
-            --exclude='scripts/*.sh' \
-            --exclude='load_tests/**' \
-            --exclude='security_tests/**' \
+            --exclude 'scripts/' \
+            --exclude 'load_tests/' \
+            --exclude 'security_tests/' \
             || true
 
       - name: Parse Results
