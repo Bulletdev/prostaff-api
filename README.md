@@ -153,73 +153,86 @@ graph TB
     end
 
     subgraph "Application Layer - Modular Monolith"
-subgraph "Authentication Module"
-    AuthController[Auth Controller]
-    JWTService[JWT Service]
-    UserModel[User Model]
-end
-subgraph "Dashboard Module"
-    DashboardController[Dashboard Controller]
-    DashStats[Statistics Service]
-end
-subgraph "Players Module"
-    PlayersController[Players Controller]
-    PlayerModel[Player Model]
-    ChampionPool[Champion Pool Model]
-end
-subgraph "Scouting Module"
-    ScoutingController[Scouting Controller]
-    ScoutingTarget[Scouting Target Model]
-    Watchlist[Watchlist Service]
-end
-subgraph "Analytics Module"
-    AnalyticsController[Analytics Controller]
-    PerformanceService[Performance Service]
-    KDAService[KDA Trend Service]
-end
-subgraph "Matches Module"
-    MatchesController[Matches Controller]
-    MatchModel[Match Model]
-    PlayerMatchStats[Player Match Stats Model]
-end
-subgraph "Schedules Module"
-    SchedulesController[Schedules Controller]
-    ScheduleModel[Schedule Model]
-end
-subgraph "VOD Reviews Module"
-    VODController[VOD Reviews Controller]
-    VODModel[VOD Review Model]
-    TimestampModel[Timestamp Model]
-end
-subgraph "Team Goals Module"
-    GoalsController[Team Goals Controller]
-    GoalModel[Team Goal Model]
-end
-subgraph "Riot Integration Module"
-    RiotService[Riot API Service]
-    RiotSync[Sync Service]
-end
-subgraph "Competitive Module"
-    CompetitiveController[Competitive Controller]
-    ProMatchesController[Pro Matches Controller]
-    PandaScoreService[PandaScore Service]
-    DraftAnalyzer[Draft Analyzer]
-end
-subgraph "Scrims Module"
-    ScrimsController[Scrims Controller]
-    OpponentTeamsController[Opponent Teams Controller]
-    ScrimAnalytics[Scrim Analytics Service]
-end
-subgraph "Strategy Module"
-    DraftPlansController[Draft Plans Controller]
-    TacticalBoardsController[Tactical Boards Controller]
-    DraftAnalysisService[Draft Analysis Service]
-end
-subgraph "Support Module"
-    SupportTicketsController[Support Tickets Controller]
-    SupportFAQsController[Support FAQs Controller]
-    SupportStaffController[Support Staff Controller]
-end
+        subgraph "Authentication Module"
+            AuthController[Auth Controller]
+            JWTService[JWT Service]
+            UserModel[User Model]
+        end
+
+        subgraph "Dashboard Module"
+            DashboardController[Dashboard Controller]
+            DashStats[Statistics Service]
+        end
+
+        subgraph "Players Module"
+            PlayersController[Players Controller]
+            PlayerModel[Player Model]
+            ChampionPool[Champion Pool Model]
+        end
+
+        subgraph "Scouting Module"
+            ScoutingController[Scouting Controller]
+            ScoutingTarget[Scouting Target Model]
+            Watchlist[Watchlist Service]
+        end
+
+        subgraph "Analytics Module"
+            AnalyticsController[Analytics Controller]
+            PerformanceService[Performance Service]
+            KDAService[KDA Trend Service]
+        end
+
+        subgraph "Matches Module"
+            MatchesController[Matches Controller]
+            MatchModel[Match Model]
+            PlayerMatchStats[Player Match Stats Model]
+        end
+
+        subgraph "Schedules Module"
+            SchedulesController[Schedules Controller]
+            ScheduleModel[Schedule Model]
+        end
+
+        subgraph "VOD Reviews Module"
+            VODController[VOD Reviews Controller]
+            VODModel[VOD Review Model]
+            TimestampModel[Timestamp Model]
+        end
+
+        subgraph "Team Goals Module"
+            GoalsController[Team Goals Controller]
+            GoalModel[Team Goal Model]
+        end
+
+        subgraph "Riot Integration Module"
+            RiotService[Riot API Service]
+            RiotSync[Sync Service]
+        end
+
+        subgraph "Competitive Module"
+            CompetitiveController[Competitive Controller]
+            ProMatchesController[Pro Matches Controller]
+            PandaScoreService[PandaScore Service]
+            DraftAnalyzer[Draft Analyzer]
+        end
+
+        subgraph "Scrims Module"
+            ScrimsController[Scrims Controller]
+            OpponentTeamsController[Opponent Teams Controller]
+            ScrimAnalytics[Scrim Analytics Service]
+        end
+
+        subgraph "Strategy Module"
+            DraftPlansController[Draft Plans Controller]
+            TacticalBoardsController[Tactical Boards Controller]
+            DraftAnalysisService[Draft Analysis Service]
+        end
+
+        subgraph "Support Module"
+            SupportTicketsController[Support Tickets Controller]
+            SupportFAQsController[Support FAQs Controller]
+            SupportStaffController[Support Staff Controller]
+        end
     end
 
     subgraph "Data Layer"

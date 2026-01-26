@@ -157,151 +157,156 @@ class ArchitectureDiagramGenerator
     sections << generate_strategy_module if @models.include?('draft_plan') || @models.include?('tactical_board')
     sections << generate_support_module if @models.include?('support_ticket')
 
-    sections.compact.join("\n")
+    sections.compact.join("\n\n")
+  end
+
+  # Helper to indent module content
+  def indent_module(content)
+    content.split("\n").map { |line| "        #{line}" }.join("\n")
   end
 
   def generate_auth_module
-    <<~MODULE.chomp
-      subgraph "Authentication Module"
-          AuthController[Auth Controller]
-          JWTService[JWT Service]
-          UserModel[User Model]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Authentication Module"
+    AuthController[Auth Controller]
+    JWTService[JWT Service]
+    UserModel[User Model]
+end
     MODULE
   end
 
   def generate_generic_module(name)
-    <<~MODULE.chomp
-      subgraph "#{name.capitalize} Module"
-          #{name.capitalize}Controller[#{name.capitalize} Controller]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "#{name.capitalize} Module"
+    #{name.capitalize}Controller[#{name.capitalize} Controller]
+end
     MODULE
   end
 
   def generate_dashboard_module
-    <<~MODULE.chomp
-      subgraph "Dashboard Module"
-          DashboardController[Dashboard Controller]
-          DashStats[Statistics Service]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Dashboard Module"
+    DashboardController[Dashboard Controller]
+    DashStats[Statistics Service]
+end
     MODULE
   end
 
   def generate_players_module
-    <<~MODULE.chomp
-      subgraph "Players Module"
-          PlayersController[Players Controller]
-          PlayerModel[Player Model]
-          ChampionPool[Champion Pool Model]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Players Module"
+    PlayersController[Players Controller]
+    PlayerModel[Player Model]
+    ChampionPool[Champion Pool Model]
+end
     MODULE
   end
 
   def generate_scouting_module
-    <<~MODULE.chomp
-      subgraph "Scouting Module"
-          ScoutingController[Scouting Controller]
-          ScoutingTarget[Scouting Target Model]
-          Watchlist[Watchlist Service]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Scouting Module"
+    ScoutingController[Scouting Controller]
+    ScoutingTarget[Scouting Target Model]
+    Watchlist[Watchlist Service]
+end
     MODULE
   end
 
   def generate_analytics_module
-    <<~MODULE.chomp
-      subgraph "Analytics Module"
-          AnalyticsController[Analytics Controller]
-          PerformanceService[Performance Service]
-          KDAService[KDA Trend Service]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Analytics Module"
+    AnalyticsController[Analytics Controller]
+    PerformanceService[Performance Service]
+    KDAService[KDA Trend Service]
+end
     MODULE
   end
 
   def generate_matches_module
-    <<~MODULE.chomp
-      subgraph "Matches Module"
-          MatchesController[Matches Controller]
-          MatchModel[Match Model]
-          PlayerMatchStats[Player Match Stats Model]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Matches Module"
+    MatchesController[Matches Controller]
+    MatchModel[Match Model]
+    PlayerMatchStats[Player Match Stats Model]
+end
     MODULE
   end
 
   def generate_schedules_module
-    <<~MODULE.chomp
-      subgraph "Schedules Module"
-          SchedulesController[Schedules Controller]
-          ScheduleModel[Schedule Model]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Schedules Module"
+    SchedulesController[Schedules Controller]
+    ScheduleModel[Schedule Model]
+end
     MODULE
   end
 
   def generate_vod_module
-    <<~MODULE.chomp
-      subgraph "VOD Reviews Module"
-          VODController[VOD Reviews Controller]
-          VODModel[VOD Review Model]
-          TimestampModel[Timestamp Model]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "VOD Reviews Module"
+    VODController[VOD Reviews Controller]
+    VODModel[VOD Review Model]
+    TimestampModel[Timestamp Model]
+end
     MODULE
   end
 
   def generate_goals_module
-    <<~MODULE.chomp
-      subgraph "Team Goals Module"
-          GoalsController[Team Goals Controller]
-          GoalModel[Team Goal Model]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Team Goals Module"
+    GoalsController[Team Goals Controller]
+    GoalModel[Team Goal Model]
+end
     MODULE
   end
 
   def generate_riot_module
-    <<~MODULE.chomp
-      subgraph "Riot Integration Module"
-          RiotService[Riot API Service]
-          RiotSync[Sync Service]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Riot Integration Module"
+    RiotService[Riot API Service]
+    RiotSync[Sync Service]
+end
     MODULE
   end
 
   def generate_competitive_module
-    <<~MODULE.chomp
-      subgraph "Competitive Module"
-          CompetitiveController[Competitive Controller]
-          ProMatchesController[Pro Matches Controller]
-          PandaScoreService[PandaScore Service]
-          DraftAnalyzer[Draft Analyzer]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Competitive Module"
+    CompetitiveController[Competitive Controller]
+    ProMatchesController[Pro Matches Controller]
+    PandaScoreService[PandaScore Service]
+    DraftAnalyzer[Draft Analyzer]
+end
     MODULE
   end
 
   def generate_scrims_module
-    <<~MODULE.chomp
-      subgraph "Scrims Module"
-          ScrimsController[Scrims Controller]
-          OpponentTeamsController[Opponent Teams Controller]
-          ScrimAnalytics[Scrim Analytics Service]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Scrims Module"
+    ScrimsController[Scrims Controller]
+    OpponentTeamsController[Opponent Teams Controller]
+    ScrimAnalytics[Scrim Analytics Service]
+end
     MODULE
   end
 
   def generate_strategy_module
-    <<~MODULE.chomp
-      subgraph "Strategy Module"
-          DraftPlansController[Draft Plans Controller]
-          TacticalBoardsController[Tactical Boards Controller]
-          DraftAnalysisService[Draft Analysis Service]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Strategy Module"
+    DraftPlansController[Draft Plans Controller]
+    TacticalBoardsController[Tactical Boards Controller]
+    DraftAnalysisService[Draft Analysis Service]
+end
     MODULE
   end
 
   def generate_support_module
-    <<~MODULE.chomp
-      subgraph "Support Module"
-          SupportTicketsController[Support Tickets Controller]
-          SupportFAQsController[Support FAQs Controller]
-          SupportStaffController[Support Staff Controller]
-      end
+    indent_module(<<~MODULE.chomp)
+subgraph "Support Module"
+    SupportTicketsController[Support Tickets Controller]
+    SupportFAQsController[Support FAQs Controller]
+    SupportStaffController[Support Staff Controller]
+end
     MODULE
   end
 
