@@ -140,11 +140,6 @@ class ArchitectureDiagramGenerator
     # Authentication module
     sections << generate_auth_module if @modules.include?('authentication')
 
-    # Other discovered modules
-    (@modules - ['authentication']).each do |mod|
-      sections << generate_generic_module(mod)
-    end
-
     # Core modules based on routes and models
     sections << generate_dashboard_module if has_dashboard_routes?
     sections << generate_players_module if @models.include?('player')
@@ -155,6 +150,12 @@ class ArchitectureDiagramGenerator
     sections << generate_vod_module if @models.include?('vod_review')
     sections << generate_goals_module if @models.include?('team_goal')
     sections << generate_riot_module if has_riot_integration?
+
+    # New modules
+    sections << generate_competitive_module if @modules.include?('competitive')
+    sections << generate_scrims_module if @modules.include?('scrims')
+    sections << generate_strategy_module if @models.include?('draft_plan') || @models.include?('tactical_board')
+    sections << generate_support_module if @models.include?('support_ticket')
 
     sections.compact.join("\n")
   end
@@ -263,6 +264,47 @@ class ArchitectureDiagramGenerator
     MODULE
   end
 
+  def generate_competitive_module
+    <<~MODULE.chomp
+      subgraph "Competitive Module"
+          CompetitiveController[Competitive Controller]
+          ProMatchesController[Pro Matches Controller]
+          PandaScoreService[PandaScore Service]
+          DraftAnalyzer[Draft Analyzer]
+      end
+    MODULE
+  end
+
+  def generate_scrims_module
+    <<~MODULE.chomp
+      subgraph "Scrims Module"
+          ScrimsController[Scrims Controller]
+          OpponentTeamsController[Opponent Teams Controller]
+          ScrimAnalytics[Scrim Analytics Service]
+      end
+    MODULE
+  end
+
+  def generate_strategy_module
+    <<~MODULE.chomp
+      subgraph "Strategy Module"
+          DraftPlansController[Draft Plans Controller]
+          TacticalBoardsController[Tactical Boards Controller]
+          DraftAnalysisService[Draft Analysis Service]
+      end
+    MODULE
+  end
+
+  def generate_support_module
+    <<~MODULE.chomp
+      subgraph "Support Module"
+          SupportTicketsController[Support Tickets Controller]
+          SupportFAQsController[Support FAQs Controller]
+          SupportStaffController[Support Staff Controller]
+      end
+    MODULE
+  end
+
   def generate_router_connections
     connections = []
     connections << '    Router --> AuthController' if @modules.include?('authentication')
@@ -274,6 +316,10 @@ class ArchitectureDiagramGenerator
     connections << '    Router --> SchedulesController' if @models.include?('schedule')
     connections << '    Router --> VODController' if @models.include?('vod_review')
     connections << '    Router --> GoalsController' if @models.include?('team_goal')
+    connections << '    Router --> CompetitiveController' if @modules.include?('competitive')
+    connections << '    Router --> ScrimsController' if @modules.include?('scrims')
+    connections << '    Router --> DraftPlansController' if @models.include?('draft_plan')
+    connections << '    Router --> SupportTicketsController' if @models.include?('support_ticket')
     connections.join("\n")
   end
 
@@ -318,6 +364,28 @@ class ArchitectureDiagramGenerator
     if has_analytics_routes?
       connections << '    AnalyticsController --> PerformanceService'
       connections << '    AnalyticsController --> KDAService'
+    end
+
+    # Competitive connections
+    if @modules.include?('competitive')
+      connections << '    CompetitiveController --> PandaScoreService'
+      connections << '    CompetitiveController --> DraftAnalyzer'
+    end
+
+    # Scrims connections
+    if @modules.include?('scrims')
+      connections << '    ScrimsController --> ScrimAnalytics'
+    end
+
+    # Strategy connections
+    if @models.include?('draft_plan')
+      connections << '    DraftPlansController --> DraftAnalysisService'
+    end
+
+    # Support connections
+    if @models.include?('support_ticket')
+      connections << '    SupportTicketsController --> SupportTicketModel'
+      connections << '    SupportFAQsController --> SupportFAQModel'
     end
 
     # Database connections
@@ -394,6 +462,10 @@ class ArchitectureDiagramGenerator
       - `vod_reviews` - Video review and timestamp management
       - `team_goals` - Goal setting and tracking
       - `riot_integration` - Riot Games API integration
+      - `competitive` - PandaScore integration, pro matches, draft analysis
+      - `scrims` - Scrim management and opponent team tracking
+      - `strategy` - Draft planning and tactical board system
+      - `support` - Support ticket system with staff and FAQ management
 
       ### Architecture Diagram
 

@@ -16,13 +16,17 @@
 <summary>Key Features (Click to show details) </summary>
 
 -  **JWT Authentication** with refresh tokens and token blacklisting
--  **Interactive Swagger Documentation** (107 endpoints documented)
+-  **Interactive Swagger Documentation** (170+ endpoints documented)
 -  **Riot Games API Integration** for automatic match import and player sync
 -  **Advanced Analytics** (KDA trends, champion pools, vision control, etc.)
 -  **Scouting System** with talent discovery and watchlist management
 -  **VOD Review System** with timestamp annotations
 - ️ **Schedule Management** for matches, scrims, and team events
 -  **Goal Tracking** for team and player performance objectives
+-  **Competitive Module** with PandaScore integration and draft analysis
+-  **Scrims Management** with opponent tracking and analytics
+-  **Strategy Module** with draft planning and tactical boards
+-  **Support System** with ticketing and FAQ management
 -  **Background Jobs** with Sidekiq for async processing
 - ️ **Security Hardened** (OWASP Top 10, Brakeman, ZAP tested)
 -  **High Performance** (p95: ~500ms, with cache: ~50ms)
@@ -128,6 +132,10 @@ This API follows a modular monolith architecture with the following modules:
 - `vod_reviews` - Video review and timestamp management
 - `team_goals` - Goal setting and tracking
 - `riot_integration` - Riot Games API integration
+- `competitive` - PandaScore integration, pro matches, draft analysis
+- `scrims` - Scrim management and opponent team tracking
+- `strategy` - Draft planning and tactical board system
+- `support` - Support ticket system with staff and FAQ management
 
 ### Architecture Diagram
 
@@ -145,59 +153,73 @@ graph TB
     end
 
     subgraph "Application Layer - Modular Monolith"
-        subgraph "Authentication Module"
-            AuthController[Auth Controller]
-            JWTService[JWT Service]
-            UserModel[User Model]
-        end
-        subgraph "Analytics Module"
-            AnalyticsController[Analytics Controller]
-            PerformanceService[Performance Service]
-            KDAService[KDA Trend Service]
-        end
-        subgraph "Competitive Module"
-            CompetitiveController[Competitive Controller]
-        end
-        subgraph "Dashboard Module"
-            DashboardController[Dashboard Controller]
-            DashStats[Statistics Service]
-        end
-        subgraph "Matches Module"
-            MatchesController[Matches Controller]
-            MatchModel[Match Model]
-            PlayerMatchStats[Player Match Stats Model]
-        end
-        subgraph "Players Module"
-            PlayersController[Players Controller]
-            PlayerModel[Player Model]
-            ChampionPool[Champion Pool Model]
-        end
-        subgraph "Riot Integration Module"
-            RiotIntegrationController[Riot Integration Controller]
-            RiotService[Riot API Service]
-            RiotSync[Sync Service]
-        end
-        subgraph "Schedules Module"
-            SchedulesController[Schedules Controller]
-            ScheduleModel[Schedule Model]
-        end
-        subgraph "Scouting Module"
-            ScoutingController[Scouting Controller]
-            ScoutingTarget[Scouting Target Model]
-            Watchlist[Watchlist Service]
-        end
-        subgraph "Scrims Module"
-            ScrimsController[Scrims Controller]
-        end
-        subgraph "Team Goals Module"
-            GoalsController[Team Goals Controller]
-            GoalModel[Team Goal Model]
-        end
-        subgraph "VOD Reviews Module"
-            VODController[VOD Reviews Controller]
-            VODModel[VOD Review Model]
-            TimestampModel[Timestamp Model]
-        end
+subgraph "Authentication Module"
+    AuthController[Auth Controller]
+    JWTService[JWT Service]
+    UserModel[User Model]
+end
+subgraph "Dashboard Module"
+    DashboardController[Dashboard Controller]
+    DashStats[Statistics Service]
+end
+subgraph "Players Module"
+    PlayersController[Players Controller]
+    PlayerModel[Player Model]
+    ChampionPool[Champion Pool Model]
+end
+subgraph "Scouting Module"
+    ScoutingController[Scouting Controller]
+    ScoutingTarget[Scouting Target Model]
+    Watchlist[Watchlist Service]
+end
+subgraph "Analytics Module"
+    AnalyticsController[Analytics Controller]
+    PerformanceService[Performance Service]
+    KDAService[KDA Trend Service]
+end
+subgraph "Matches Module"
+    MatchesController[Matches Controller]
+    MatchModel[Match Model]
+    PlayerMatchStats[Player Match Stats Model]
+end
+subgraph "Schedules Module"
+    SchedulesController[Schedules Controller]
+    ScheduleModel[Schedule Model]
+end
+subgraph "VOD Reviews Module"
+    VODController[VOD Reviews Controller]
+    VODModel[VOD Review Model]
+    TimestampModel[Timestamp Model]
+end
+subgraph "Team Goals Module"
+    GoalsController[Team Goals Controller]
+    GoalModel[Team Goal Model]
+end
+subgraph "Riot Integration Module"
+    RiotService[Riot API Service]
+    RiotSync[Sync Service]
+end
+subgraph "Competitive Module"
+    CompetitiveController[Competitive Controller]
+    ProMatchesController[Pro Matches Controller]
+    PandaScoreService[PandaScore Service]
+    DraftAnalyzer[Draft Analyzer]
+end
+subgraph "Scrims Module"
+    ScrimsController[Scrims Controller]
+    OpponentTeamsController[Opponent Teams Controller]
+    ScrimAnalytics[Scrim Analytics Service]
+end
+subgraph "Strategy Module"
+    DraftPlansController[Draft Plans Controller]
+    TacticalBoardsController[Tactical Boards Controller]
+    DraftAnalysisService[Draft Analysis Service]
+end
+subgraph "Support Module"
+    SupportTicketsController[Support Tickets Controller]
+    SupportFAQsController[Support FAQs Controller]
+    SupportStaffController[Support Staff Controller]
+end
     end
 
     subgraph "Data Layer"
@@ -214,66 +236,79 @@ graph TB
         RiotAPI[Riot Games API]
     end
 
-    %% Conexões
     Client -->|HTTP/JSON| CORS
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
     
     Router --> AuthController
-    Router --> AnalyticsController
-    Router --> CompetitiveController
     Router --> DashboardController
-    Router --> MatchesController
     Router --> PlayersController
-    Router --> RiotIntegrationController
-    Router --> SchedulesController
     Router --> ScoutingController
-    Router --> ScrimsController
-    Router --> GoalsController
+    Router --> AnalyticsController
+    Router --> MatchesController
+    Router --> SchedulesController
     Router --> VODController
-
-    AuthController --> JWTService --> Redis
+    Router --> GoalsController
+    Router --> CompetitiveController
+    Router --> ScrimsController
+    Router --> DraftPlansController
+    Router --> SupportTicketsController
+    AuthController --> JWTService
     AuthController --> UserModel
-    AnalyticsController --> PerformanceService --> Redis
-    AnalyticsController --> KDAService
-    DashboardController --> DashStats --> Redis
-    MatchesController --> MatchModel --> PlayerMatchStats
-    PlayersController --> PlayerModel --> ChampionPool
+    PlayersController --> PlayerModel
+    PlayerModel --> ChampionPool
     ScoutingController --> ScoutingTarget
     ScoutingController --> Watchlist
+    MatchesController --> MatchModel
+    MatchModel --> PlayerMatchStats
     SchedulesController --> ScheduleModel
+    VODController --> VODModel
+    VODModel --> TimestampModel
     GoalsController --> GoalModel
-    VODController --> VODModel --> TimestampModel
-
-    %% Conexões para PostgreSQL (modelos adicionais)
-    AuditLogModel[Audit Log Model] --> PostgreSQL
-    ChampionPool --> PostgreSQL
-    CompetitiveMatchModel[Competitive Match Model] --> PostgreSQL
-    MatchModel --> PostgreSQL
+    AnalyticsController --> PerformanceService
+    AnalyticsController --> KDAService
+    CompetitiveController --> PandaScoreService
+    CompetitiveController --> DraftAnalyzer
+    ScrimsController --> ScrimAnalytics
+    DraftPlansController --> DraftAnalysisService
+    SupportTicketsController --> SupportTicketModel
+    SupportFAQsController --> SupportFAQModel
+    AuditLogModel[AuditLog Model] --> PostgreSQL
+    ChampionPoolModel[ChampionPool Model] --> PostgreSQL
+    CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
+    DraftPlanModel[DraftPlan Model] --> PostgreSQL
+    MatchModel[Match Model] --> PostgreSQL
     NotificationModel[Notification Model] --> PostgreSQL
-    OpponentTeamModel[Opponent Team Model] --> PostgreSQL
+    OpponentTeamModel[OpponentTeam Model] --> PostgreSQL
     OrganizationModel[Organization Model] --> PostgreSQL
-    PasswordResetTokenModel[Password Reset Token Model] --> PostgreSQL
-    PlayerModel --> PostgreSQL
-    PlayerMatchStats --> PostgreSQL
-    ScheduleModel --> PostgreSQL
-    ScoutingTarget --> PostgreSQL
+    PasswordResetTokenModel[PasswordResetToken Model] --> PostgreSQL
+    PlayerModel[Player Model] --> PostgreSQL
+    PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
+    ScheduleModel[Schedule Model] --> PostgreSQL
+    ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
     ScrimModel[Scrim Model] --> PostgreSQL
-    GoalModel --> PostgreSQL
-    TokenBlacklistModel[Token Blacklist Model] --> PostgreSQL
-    UserModel --> PostgreSQL
-    VODModel --> PostgreSQL
-    TimestampModel --> PostgreSQL
+    SupportFaqModel[SupportFaq Model] --> PostgreSQL
+    SupportTicketModel[SupportTicket Model] --> PostgreSQL
+    SupportTicketMessageModel[SupportTicketMessage Model] --> PostgreSQL
+    TacticalBoardModel[TacticalBoard Model] --> PostgreSQL
+    TeamGoalModel[TeamGoal Model] --> PostgreSQL
+    TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
+    UserModel[User Model] --> PostgreSQL
+    VodReviewModel[VodReview Model] --> PostgreSQL
+    VodTimestampModel[VodTimestamp Model] --> PostgreSQL
+    JWTService --> Redis
+    DashStats --> Redis
+    PerformanceService --> Redis
+PlayersController --> RiotService
+MatchesController --> RiotService
+ScoutingController --> RiotService
+RiotService --> RiotAPI
 
-    %% Integrações com Riot e Jobs
-    PlayersController --> RiotService
-    MatchesController --> RiotService
-    ScoutingController --> RiotService
-    RiotService --> RiotAPI
-    RiotService --> Sidekiq --> JobQueue --> Redis
-
-    %% Estilos
+RiotService --> Sidekiq
+Sidekiq --> JobQueue
+JobQueue --> Redis
+    
     style Client fill:#e1f5ff
     style PostgreSQL fill:#336791
     style Redis fill:#d82c20
@@ -546,6 +581,72 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 #### Riot Integration
 - `GET /riot-integration/sync-status` - Get sync status for all players
 
+#### Competitive (PandaScore Integration)
+- `GET /competitive-matches` - List competitive matches
+- `GET /competitive-matches/:id` - Get competitive match details
+- `GET /competitive/pro-matches` - List all pro matches
+- `GET /competitive/pro-matches/:id` - Get pro match details
+- `GET /competitive/pro-matches/upcoming` - Get upcoming pro matches
+- `GET /competitive/pro-matches/past` - Get past pro matches
+- `POST /competitive/pro-matches/refresh` - Refresh pro matches from PandaScore
+- `POST /competitive/pro-matches/import` - Import specific pro match
+- `POST /competitive/draft-comparison` - Compare team compositions
+- `GET /competitive/meta/:role` - Get meta champions by role
+- `GET /competitive/composition-winrate` - Get composition winrate statistics
+- `GET /competitive/counters` - Get champion counter suggestions
+
+#### Scrims Management
+- `GET /scrims/scrims` - List all scrims
+- `GET /scrims/scrims/:id` - Get scrim details
+- `POST /scrims/scrims` - Create new scrim
+- `PATCH /scrims/scrims/:id` - Update scrim
+- `DELETE /scrims/scrims/:id` - Delete scrim
+- `POST /scrims/scrims/:id/add_game` - Add game to scrim
+- `GET /scrims/scrims/calendar` - Get scrims calendar
+- `GET /scrims/scrims/analytics` - Get scrims analytics
+- `GET /scrims/opponent-teams` - List opponent teams
+- `GET /scrims/opponent-teams/:id` - Get opponent team details
+- `POST /scrims/opponent-teams` - Create opponent team
+- `PATCH /scrims/opponent-teams/:id` - Update opponent team
+- `DELETE /scrims/opponent-teams/:id` - Delete opponent team
+- `GET /scrims/opponent-teams/:id/scrim-history` - Get scrim history with opponent
+
+#### Strategy Module
+- `GET /strategy/draft-plans` - List draft plans
+- `GET /strategy/draft-plans/:id` - Get draft plan details
+- `POST /strategy/draft-plans` - Create new draft plan
+- `PATCH /strategy/draft-plans/:id` - Update draft plan
+- `DELETE /strategy/draft-plans/:id` - Delete draft plan
+- `POST /strategy/draft-plans/:id/analyze` - Analyze draft plan
+- `PATCH /strategy/draft-plans/:id/activate` - Activate draft plan
+- `PATCH /strategy/draft-plans/:id/deactivate` - Deactivate draft plan
+- `GET /strategy/tactical-boards` - List tactical boards
+- `GET /strategy/tactical-boards/:id` - Get tactical board details
+- `POST /strategy/tactical-boards` - Create new tactical board
+- `PATCH /strategy/tactical-boards/:id` - Update tactical board
+- `DELETE /strategy/tactical-boards/:id` - Delete tactical board
+- `GET /strategy/tactical-boards/:id/statistics` - Get tactical board statistics
+- `GET /strategy/assets/champion/:champion_name` - Get champion assets
+- `GET /strategy/assets/map` - Get map assets
+
+#### Support System
+- `GET /support/tickets` - List user's tickets
+- `GET /support/tickets/:id` - Get ticket details
+- `POST /support/tickets` - Create new support ticket
+- `PATCH /support/tickets/:id` - Update ticket
+- `DELETE /support/tickets/:id` - Delete ticket
+- `POST /support/tickets/:id/close` - Close ticket
+- `POST /support/tickets/:id/reopen` - Reopen ticket
+- `POST /support/tickets/:id/messages` - Add message to ticket
+- `GET /support/faq` - List all FAQs
+- `GET /support/faq/:slug` - Get FAQ by slug
+- `POST /support/faq/:slug/helpful` - Mark FAQ as helpful
+- `POST /support/faq/:slug/not-helpful` - Mark FAQ as not helpful
+- `GET /support/staff/dashboard` - Support staff dashboard (staff only)
+- `GET /support/staff/analytics` - Support analytics (staff only)
+- `POST /support/staff/tickets/:id/assign` - Assign ticket to staff (staff only)
+- `POST /support/staff/tickets/:id/resolve` - Resolve ticket (staff only)
+
 **For complete endpoint documentation with request/response examples, visit `/api-docs`**
 
 </details>
@@ -599,8 +700,12 @@ bundle exec rspec spec/integration/players_spec.rb
 - ✅ Riot Data (14 endpoints)
 - ✅ Riot Integration (1 endpoint)
 - ✅ Dashboard (4 endpoints)
+- ✅ Competitive (14 endpoints)
+- ✅ Scrims (14 endpoints)
+- ✅ Strategy (16 endpoints)
+- ✅ Support (15 endpoints)
 
-**Total:** 107 endpoints documented
+**Total:** 170+ endpoints documented
 
 ### Code Coverage
 
