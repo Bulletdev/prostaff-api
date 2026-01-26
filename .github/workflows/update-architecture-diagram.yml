@@ -60,10 +60,12 @@ jobs:
 
       - name: Commit and push if changed
         if: steps.verify_diff.outputs.changed == 'true'
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout ${{ github.head_ref || github.ref_name }}
+          git checkout "$BRANCH_NAME"
           git add README.md
           git commit -m "docs: auto-update architecture diagram [skip ci]"
           git push
