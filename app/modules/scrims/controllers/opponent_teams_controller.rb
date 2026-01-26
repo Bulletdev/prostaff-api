@@ -8,7 +8,6 @@ module Api
       # Manages opponent team records which are shared across organizations.
       # Security note: Update and delete operations are restricted to organizations
       # that have used this opponent team in scrims.
-      #
       class OpponentTeamsController < Api::V1::BaseController
         include TierAuthorization
         include Paginatable
@@ -118,7 +117,7 @@ module Api
           return render json: { error: 'Opponent team not found' }, status: :not_found unless id
 
           @opponent_team = OpponentTeam.find_by(id: id)
-          return render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
+          render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
         end
 
         # Verifies that current organization has used this opponent team
