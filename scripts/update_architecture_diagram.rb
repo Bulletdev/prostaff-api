@@ -114,6 +114,7 @@ class ArchitectureDiagramGenerator
 
           subgraph "External Services"
               RiotAPI[Riot Games API]
+              PandaScoreAPI[PandaScore API]
           end
 
           Client -->|HTTP/JSON| CORS
@@ -129,6 +130,7 @@ class ArchitectureDiagramGenerator
           style PostgreSQL fill:#336791
           style Redis fill:#d82c20
           style RiotAPI fill:#eb0029
+          style PandaScoreAPI fill:#ff6b35
           style Sidekiq fill:#b1003e
       ```
     MERMAID
@@ -197,7 +199,7 @@ end
 subgraph "Players Module"
     PlayersController[Players Controller]
     PlayerModel[Player Model]
-    ChampionPool[Champion Pool Model]
+    ChampionPoolModel[Champion Pool Model]
 end
     MODULE
   end
@@ -206,7 +208,7 @@ end
     indent_module(<<~MODULE.chomp)
 subgraph "Scouting Module"
     ScoutingController[Scouting Controller]
-    ScoutingTarget[Scouting Target Model]
+    ScoutingTargetModel[Scouting Target Model]
     Watchlist[Watchlist Service]
 end
     MODULE
@@ -227,7 +229,7 @@ end
 subgraph "Matches Module"
     MatchesController[Matches Controller]
     MatchModel[Match Model]
-    PlayerMatchStats[Player Match Stats Model]
+    PlayerMatchStatModel[Player Match Stat Model]
 end
     MODULE
   end
@@ -245,8 +247,8 @@ end
     indent_module(<<~MODULE.chomp)
 subgraph "VOD Reviews Module"
     VODController[VOD Reviews Controller]
-    VODModel[VOD Review Model]
-    TimestampModel[Timestamp Model]
+    VodReviewModel[VOD Review Model]
+    VodTimestampModel[VOD Timestamp Model]
 end
     MODULE
   end
@@ -255,7 +257,7 @@ end
     indent_module(<<~MODULE.chomp)
 subgraph "Team Goals Module"
     GoalsController[Team Goals Controller]
-    GoalModel[Team Goal Model]
+    TeamGoalModel[Team Goal Model]
 end
     MODULE
   end
@@ -306,6 +308,8 @@ subgraph "Support Module"
     SupportTicketsController[Support Tickets Controller]
     SupportFAQsController[Support FAQs Controller]
     SupportStaffController[Support Staff Controller]
+    SupportTicketModel[Support Ticket Model]
+    SupportFaqModel[Support FAQ Model]
 end
     MODULE
   end
@@ -321,10 +325,32 @@ end
     connections << '    Router --> SchedulesController' if @models.include?('schedule')
     connections << '    Router --> VODController' if @models.include?('vod_review')
     connections << '    Router --> GoalsController' if @models.include?('team_goal')
-    connections << '    Router --> CompetitiveController' if @modules.include?('competitive')
-    connections << '    Router --> ScrimsController' if @modules.include?('scrims')
-    connections << '    Router --> DraftPlansController' if @models.include?('draft_plan')
-    connections << '    Router --> SupportTicketsController' if @models.include?('support_ticket')
+
+    # Competitive module routes
+    if @modules.include?('competitive')
+      connections << '    Router --> CompetitiveController'
+      connections << '    Router --> ProMatchesController'
+    end
+
+    # Scrims module routes
+    if @modules.include?('scrims')
+      connections << '    Router --> ScrimsController'
+      connections << '    Router --> OpponentTeamsController'
+    end
+
+    # Strategy module routes
+    if @models.include?('draft_plan') || @models.include?('tactical_board')
+      connections << '    Router --> DraftPlansController' if @models.include?('draft_plan')
+      connections << '    Router --> TacticalBoardsController' if @models.include?('tactical_board')
+    end
+
+    # Support module routes
+    if @models.include?('support_ticket')
+      connections << '    Router --> SupportTicketsController'
+      connections << '    Router --> SupportFAQsController'
+      connections << '    Router --> SupportStaffController'
+    end
+
     connections.join("\n")
   end
 
@@ -340,30 +366,30 @@ end
     # Players connections
     if @models.include?('player')
       connections << '    PlayersController --> PlayerModel'
-      connections << '    PlayerModel --> ChampionPool' if @models.include?('champion_pool')
+      connections << '    PlayerModel --> ChampionPoolModel' if @models.include?('champion_pool')
     end
 
     # Scouting connections
     if @models.include?('scouting_target')
-      connections << '    ScoutingController --> ScoutingTarget'
+      connections << '    ScoutingController --> ScoutingTargetModel'
       connections << '    ScoutingController --> Watchlist'
     end
 
     # Matches connections
     if @models.include?('match')
       connections << '    MatchesController --> MatchModel'
-      connections << '    MatchModel --> PlayerMatchStats' if @models.include?('player_match_stat')
+      connections << '    MatchModel --> PlayerMatchStatModel' if @models.include?('player_match_stat')
     end
 
     # Other model connections
     connections << '    SchedulesController --> ScheduleModel' if @models.include?('schedule')
 
     if @models.include?('vod_review')
-      connections << '    VODController --> VODModel'
-      connections << '    VODModel --> TimestampModel' if @models.include?('vod_timestamp')
+      connections << '    VODController --> VodReviewModel'
+      connections << '    VodReviewModel --> VodTimestampModel' if @models.include?('vod_timestamp')
     end
 
-    connections << '    GoalsController --> GoalModel' if @models.include?('team_goal')
+    connections << '    GoalsController --> TeamGoalModel' if @models.include?('team_goal')
 
     # Analytics connections
     if has_analytics_routes?
@@ -390,7 +416,7 @@ end
     # Support connections
     if @models.include?('support_ticket')
       connections << '    SupportTicketsController --> SupportTicketModel'
-      connections << '    SupportFAQsController --> SupportFAQModel'
+      connections << '    SupportFAQsController --> SupportFaqModel'
     end
 
     # Database connections
@@ -408,18 +434,29 @@ end
   end
 
   def generate_external_connections
-    return '' unless has_riot_integration?
+    connections = []
 
-    <<~CONNECTIONS.chomp
-      PlayersController --> RiotService
-      MatchesController --> RiotService
-      ScoutingController --> RiotService
-      RiotService --> RiotAPI
+    # Riot API connections
+    if has_riot_integration?
+      connections << '    PlayersController --> RiotService'
+      connections << '    MatchesController --> RiotService'
+      connections << '    ScoutingController --> RiotService'
+      connections << '    RiotService --> RiotAPI'
+      connections << ''
+      connections << '    RiotService --> Sidekiq'
+    end
 
-      RiotService --> Sidekiq
-      Sidekiq --> JobQueue
-      JobQueue --> Redis
-    CONNECTIONS
+    # PandaScore connections
+    if @modules.include?('competitive')
+      connections << '    PandaScoreService --> PandaScoreAPI[PandaScore API]'
+    end
+
+    # Sidekiq connections (simplified)
+    if has_riot_integration?
+      connections << '    Sidekiq -- Uses --> Redis'
+    end
+
+    connections.compact.join("\n")
   end
 
   def has_dashboard_routes?
