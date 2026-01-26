@@ -119,7 +119,7 @@ module Api
           return render json: { error: 'Opponent team not found' }, status: :not_found unless id
 
           @opponent_team = OpponentTeam.find_by(id: id)
-          render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
+          return render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
         end
 
         # Verifies that current organization has used this opponent team
