@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddPerformanceIndexes < ActiveRecord::Migration[7.1]
+class AddBasicPerformanceIndexes < ActiveRecord::Migration[7.1]
   def change
     add_index :matches, %i[organization_id victory], name: 'index_matches_on_org_and_victory'
     add_index :matches, %i[organization_id game_start], name: 'index_matches_on_org_and_game_start'
