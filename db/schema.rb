@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_08_124814) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_08_134932) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -213,9 +213,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_124814) do
     t.jsonb "settings", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "trial_expires_at"
+    t.datetime "trial_started_at"
     t.index ["region"], name: "index_organizations_on_region"
     t.index ["slug"], name: "index_organizations_on_slug", unique: true
     t.index ["subscription_plan"], name: "index_organizations_on_subscription_plan"
+    t.index ["subscription_status"], name: "index_organizations_on_subscription_status"
+    t.index ["trial_expires_at"], name: "index_organizations_on_trial_expires_at"
   end
 
   create_table "password_reset_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

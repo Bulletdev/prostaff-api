@@ -63,8 +63,75 @@ class Organization < ApplicationRecord
   scope :by_region, ->(region) { where(region: region) }
   scope :by_tier, ->(tier) { where(tier: tier) }
   scope :active_subscription, -> { where(subscription_status: 'active') }
+  scope :trial_active, -> { where(subscription_status: 'trial').where('trial_expires_at > ?', Time.current) }
+  scope :trial_expired, -> { where(subscription_status: 'trial').where('trial_expires_at <= ?', Time.current) }
+
+  # Callbacks for trial management
+  before_create :set_trial_period, if: -> { subscription_plan.blank? || subscription_plan == 'free' }
+  before_save :check_trial_expiration, if: :trial_expires_at_changed?
+
+  # Trial management methods
+
+  # Check if organization is on an active trial
+  # @return [Boolean]
+  def on_trial?
+    subscription_status == 'trial' && trial_expires_at.present? && trial_expires_at > Time.current
+  end
+
+  # Check if trial has expired
+  # @return [Boolean]
+  def trial_expired?
+    subscription_status == 'trial' && trial_expires_at.present? && trial_expires_at <= Time.current
+  end
+
+  # Get remaining trial days
+  # @return [Integer] Days remaining, 0 if expired or not on trial
+  def trial_days_remaining
+    return 0 unless on_trial?
+
+    ((trial_expires_at - Time.current) / 1.day).ceil
+  end
+
+  # Check if organization has active access (paid or valid trial)
+  # @return [Boolean]
+  def has_active_access?
+    subscription_status == 'active' || on_trial?
+  end
+
+  # Expire the trial and revoke access
+  def expire_trial!
+    update!(
+      subscription_status: 'expired',
+      subscription_plan: 'free'
+    )
+  end
+
+  # Activate a paid subscription
+  # @param plan [String] The subscription plan
+  def activate_subscription!(plan)
+    update!(
+      subscription_status: 'active',
+      subscription_plan: plan,
+      trial_expires_at: nil # Clear trial expiration
+    )
+  end
 
   private
+
+  # Sets trial period for new free/trial organizations
+  def set_trial_period
+    self.subscription_status = 'trial'
+    self.subscription_plan = 'free'
+    self.trial_started_at = Time.current
+    self.trial_expires_at = 14.days.from_now # 14-day trial
+  end
+
+  # Automatically expire trial if expiration date has passed
+  def check_trial_expiration
+    if trial_expires_at.present? && trial_expires_at <= Time.current
+      self.subscription_status = 'expired'
+    end
+  end
 
   def generate_slug
     return if slug.present?
