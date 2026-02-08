@@ -34,9 +34,13 @@ module Api
     class BaseController < ApplicationController
       include Authenticatable
       include Pundit::Authorization
+      include TrialChecker
 
       # Skip authentication for specific actions if needed
       # This will be overridden in individual controllers
+
+      # Add trial warning headers to all responses
+      after_action :add_trial_warning_headers, if: -> { current_organization.present? }
 
       rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
       rescue_from ActiveRecord::RecordInvalid, with: :render_validation_errors
