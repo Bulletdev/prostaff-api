@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for VodReview model
+# Renders video review data with timestamps and analysis
 class VodReviewSerializer < Blueprinter::Base
   identifier :id
 

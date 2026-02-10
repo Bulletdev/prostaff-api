@@ -31,7 +31,7 @@
 # @example Access important timestamps
 #   review.important_timestamps.each { |ts| puts ts.note }
 class VodReview < ApplicationRecord
-  # Concerns
+  include OrganizationScoped
   include Constants
 
   # Associations
@@ -77,6 +77,7 @@ class VodReview < ApplicationRecord
   def status_color
     return 'yellow' if status == 'draft'
     return 'green' if status == 'published'
+
     'gray'
   end
 

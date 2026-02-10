@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for VodTimestamp model
+# Renders individual video timestamps with descriptions
 class VodTimestampSerializer < Blueprinter::Base
   identifier :id
 
