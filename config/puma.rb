@@ -78,7 +78,10 @@ if %w[production staging].include?(ENV['RAILS_ENV'])
 
   # === Nakayoshi Fork (Memory Optimization) ===
   # This reduces memory usage by running GC before forking
-  nakayoshi_fork if ENV.fetch('PUMA_NAKAYOSHI_FORK', 'true') == 'true'
+  # Note: nakayoshi_fork is only available in Puma 7+
+  if respond_to?(:nakayoshi_fork) && ENV.fetch('PUMA_NAKAYOSHI_FORK', 'true') == 'true'
+    nakayoshi_fork
+  end
 
   # === Low Level Configuration ===
   # Configure the queue for accepting connections
