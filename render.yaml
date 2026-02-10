@@ -18,7 +18,7 @@ services:
       - key: RAILS_MASTER_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: https://prostaffgg.netlify.app,http://localhost:5173
+        value: https://prostaffgg.gg,http://prostaffgg.vercel.app
 
       - key: REDIS_URL
         fromService:

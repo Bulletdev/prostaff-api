@@ -84,12 +84,14 @@ if %w[production staging].include?(ENV['RAILS_ENV'])
   end
 
   # === Low Level Configuration ===
-  # Configure the queue for accepting connections
-  # When backlog is full, new connections are rejected
-  backlog ENV.fetch('PUMA_BACKLOG', 1024).to_i
+  # Note: Some methods like backlog and tcp_nopush are only available in Puma 7+
+  # Commenting out for Puma 6 compatibility
 
-  # Set the TCP_CORK and TCP_NODELAY options on the connection socket
-  tcp_nopush true if ENV.fetch('PUMA_TCP_NOPUSH', 'true') == 'true'
+  # Configure the queue for accepting connections (Puma 7+ only)
+  # backlog ENV.fetch('PUMA_BACKLOG', 1024).to_i if respond_to?(:backlog)
+
+  # Set the TCP_CORK and TCP_NODELAY options (Puma 7+ only)
+  # tcp_nopush true if respond_to?(:tcp_nopush) && ENV.fetch('PUMA_TCP_NOPUSH', 'true') == 'true'
 
   # === Monitoring ===
   # Activate control/status app
