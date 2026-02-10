@@ -1,3 +1,20 @@
+# Docker Compose para Produção - ProStaff API
+# Deploy com Kamal na Hetzner VPS
+#
+# IMPORTANTE:
+# - PostgreSQL: DESABILITADO - Usa Supabase (configure DATABASE_URL no .env.production)
+# - Redis: ESSENCIAL - Usado por Sidekiq, Rails Cache e Rack::Attack
+# - Elasticsearch: ESSENCIAL - Usado para analytics avançados
+# - Kibana: OPCIONAL - Interface para explorar dados do Elasticsearch
+#
+# Para deploy com Kamal:
+# 1. Configure .env.production com DATABASE_URL do Supabase
+# 2. Configure REDIS_PASSWORD para segurança
+# 3. Execute: kamal deploy
+#
+# Para rodar local (teste de produção):
+# docker-compose -f docker-compose.production.yml up -d
+
 services:
   # Elasticsearch for analytics search
   elasticsearch:
@@ -60,55 +77,60 @@ services:
       timeout: 10s
       retries: 3
 
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: prostaff-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
-      - ./backups:/backups
-    networks:
-      - prostaff-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
+  # PostgreSQL Database - DESABILITADO testar como fallback depois
+  # Para habilitar PostgreSQL local, descomente este bloco e ajuste depends_on nos outros serviços
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: prostaff-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     PGDATA: /var/lib/postgresql/data/pgdata
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+  #     - ./backups:/backups
+  #   networks:
+  #     - prostaff-net
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 2G
+  #       reservations:
+  #         memory: 1G
 
-  # Redis Cache & Sessions
+  # Redis para Sidekiq, Rails Cache e Rate Limiting (Rack::Attack)
   redis:
     image: redis:7-alpine
     container_name: prostaff-redis
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    # Use redis.production.conf for better durability and monitoring
+    command: redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD:-prostaff_redis_2026}
     volumes:
       - redis_data:/data
+      - ./redis.production.conf:/etc/redis/redis.conf:ro
     networks:
       - prostaff-net
+    ports:
+      - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-prostaff_redis_2026}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 512M  # Reduzido para otimizar recursos
         reservations:
-          memory: 512M
+          memory: 256M
 
   # Rails API
   api:
@@ -133,10 +155,10 @@ services:
       - ./tmp:/app/tmp
       - ./public:/app/public
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      # postgres:  # DESABILITADO - Usa Supabase
+      #   condition: service_healthy
     networks:
       - prostaff-net
     healthcheck:
@@ -176,10 +198,10 @@ services:
       - ./log:/app/log
       - ./tmp:/app/tmp
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      # postgres:  # DESABILITADO - Usa Supabase
+      #   condition: service_healthy
     networks:
       - prostaff-net
     deploy:
@@ -229,8 +251,8 @@ services:
       - backup
 
 volumes:
-  postgres_data:
-    driver: local
+  # postgres_data:  # DESABILITADO - Usa Supabase PostgreSQL
+  #   driver: local
   redis_data:
     driver: local
   nginx_logs:
