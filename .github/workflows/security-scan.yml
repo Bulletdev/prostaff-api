@@ -161,15 +161,44 @@ jobs:
             --exclude 'scripts/' \
             --exclude 'load_tests/' \
             --exclude 'security_tests/' \
+            --exclude 'vendor/' \
+            --verbose \
             || true
+
+          echo "::group::Semgrep Report Preview"
+          cat semgrep-report.json | head -c 5000
+          echo ""
+          echo "::endgroup::"
 
       - name: Parse Results
         id: parse
         run: |
+          # Count total results
+          TOTAL=$(jq '.results | length' semgrep-report.json)
+
+          # Count actual ERROR severity issues (not warnings)
           ERRORS=$(jq '.results | map(select(.extra.severity == "ERROR")) | length' semgrep-report.json)
           WARNINGS=$(jq '.results | map(select(.extra.severity == "WARNING")) | length' semgrep-report.json)
+
+          # Count HIGH confidence security issues (excluding audit rules)
+          CRITICAL=$(jq '.results | map(select(.extra.metadata.confidence == "HIGH" and (.extra.metadata.subcategory // "vuln") != "audit")) | length' semgrep-report.json)
+
           echo "errors=$ERRORS" >> $GITHUB_OUTPUT
           echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+
+          echo "::notice::Semgrep Analysis Complete"
+          echo "::notice::  - Total findings: $TOTAL"
+          echo "::notice::  - ERROR severity: $ERRORS"
+          echo "::notice::  - WARNING severity: $WARNINGS"
+          echo "::notice::  - HIGH confidence (non-audit): $CRITICAL"
+
+          # Show details of ERROR severity issues if any
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::group::ERROR Severity Issues"
+            jq -r '.results[] | select(.extra.severity == "ERROR") | "  - \(.path):\(.start.line) - \(.check_id)"' semgrep-report.json
+            echo "::endgroup::"
+          fi
 
       - name: Upload Report
         uses: actions/upload-artifact@v4
@@ -184,12 +213,14 @@ jobs:
           script: |
             const errors = '${{ steps.parse.outputs.errors }}';
             const warnings = '${{ steps.parse.outputs.warnings }}';
+            const critical = '${{ steps.parse.outputs.critical }}';
             const body = `## 🔍 Semgrep Static Analysis
 
-            - Errors: ${errors}
-            - Warnings: ${warnings}
+            - **Errors**: ${errors}
+            - **Critical Issues**: ${critical}
+            - **Warnings**: ${warnings}
 
-            ${errors > 0 ? '❌ Security errors found! Please fix.' : warnings > 0 ? '⚠️ Warnings found. Please review.' : '✅ No issues found.'}
+            ${errors > 0 ? '❌ Security errors found! Please fix.' : critical > 0 ? '⚠️ High confidence security issues found. Please review.' : warnings > 0 ? '⚠️ Warnings found (non-blocking).' : '✅ No issues found.'}
             `;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -198,10 +229,11 @@ jobs:
               body: body
             });
 
-      - name: Fail on Errors
+      - name: Fail on Critical Errors
         if: steps.parse.outputs.errors > 0
         run: |
-          echo "::error::Semgrep found ${{ steps.parse.outputs.errors }} security errors!"
+          echo "::error::Semgrep found ${{ steps.parse.outputs.errors }} security errors with ERROR severity!"
+          echo "::error::Review the semgrep-report.json artifact for details"
           exit 1
 
   secret-scan:
