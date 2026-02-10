@@ -12,6 +12,8 @@ Rails.application.configure do
 
   config.eager_load = false
 
+  # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
+  # We want detailed exceptions in development environment
   config.consider_all_requests_local = true
 
   config.server_timing = true
