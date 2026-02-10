@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authorization policy for VodReview resources
 class VodReviewPolicy < ApplicationPolicy
   def index?
     analyst?
@@ -21,6 +22,7 @@ class VodReviewPolicy < ApplicationPolicy
     admin? && same_organization?
   end
 
+  # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
       if %w[analyst coach admin owner].include?(user.role)

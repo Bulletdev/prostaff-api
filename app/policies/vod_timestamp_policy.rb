@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authorization policy for VodTimestamp resources
 class VodTimestampPolicy < ApplicationPolicy
   def index?
     analyst?

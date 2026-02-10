@@ -41,6 +41,7 @@ class VodTimestamp < ApplicationRecord
     return 'blue' if importance == 'normal'
     return 'orange' if importance == 'high'
     return 'red' if importance == 'critical'
+
     'gray'
   end
 
@@ -83,12 +84,8 @@ class VodTimestamp < ApplicationRecord
     base_url = vod_review.video_url
     return base_url unless base_url.present?
 
-    # Handle YouTube URLs
-    if base_url.include?('youtube.com') || base_url.include?('youtu.be')
-      separator = base_url.include?('?') ? '&' : '?'
-      "#{base_url}#{separator}t=#{timestamp_seconds}s"
-    # Handle Twitch URLs
-    elsif base_url.include?('twitch.tv')
+    # Handle YouTube and Twitch URLs (both use same timestamp format)
+    if base_url.include?('youtube.com') || base_url.include?('youtu.be') || base_url.include?('twitch.tv')
       separator = base_url.include?('?') ? '&' : '?'
       "#{base_url}#{separator}t=#{timestamp_seconds}s"
     else
