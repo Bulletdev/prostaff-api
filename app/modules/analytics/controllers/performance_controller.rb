@@ -3,7 +3,7 @@
 module Analytics
   module Controllers
     class PerformanceController < Api::V1::BaseController
-      include Analytics::Concerns::AnalyticsCalculations
+      include ::Analytics::Concerns::AnalyticsCalculations
 
       def index
         # Team performance analytics

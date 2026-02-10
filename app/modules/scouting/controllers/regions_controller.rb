@@ -3,6 +3,8 @@
 module Api
   module V1
     module Scouting
+      # Regions Controller
+      # Provides available regions for scouting
       class RegionsController < Api::V1::BaseController
         skip_before_action :authenticate_request!, only: [:index]
 

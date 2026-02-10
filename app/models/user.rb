@@ -36,8 +36,20 @@ class User < ApplicationRecord
   scope :active, -> { where.not(last_login_at: nil) }
 
   # Instance methods
+  def admin?
+    role == 'admin'
+  end
+
+  def owner?
+    role == 'owner'
+  end
+
   def admin_or_owner?
     %w[admin owner].include?(role)
+  end
+
+  def support_staff?
+    role == 'support_staff'
   end
 
   def can_manage_users?

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for Match model
+# Renders match data with game details and victory status
 class MatchSerializer < Blueprinter::Base
   identifier :id
 

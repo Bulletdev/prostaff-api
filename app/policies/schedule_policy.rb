@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authorization policy for Schedule resources
 class SchedulePolicy < ApplicationPolicy
   def index?
     true
@@ -21,6 +22,7 @@ class SchedulePolicy < ApplicationPolicy
     admin? && same_organization?
   end
 
+  # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
       scope.where(organization: user.organization)

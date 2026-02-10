@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# Serializer for Schedule model
+#
+# Renders schedule events with associated data for API responses.
+# Includes calculated fields like duration and associations.
 class ScheduleSerializer < Blueprinter::Base
   identifier :id
 

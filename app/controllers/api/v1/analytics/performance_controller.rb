@@ -30,7 +30,7 @@ module Api
       # @example Get performance for a time period
       #   GET /api/v1/analytics/performance?time_period=week
       class PerformanceController < Api::V1::BaseController
-        include Analytics::Concerns::AnalyticsCalculations
+        include ::Analytics::Concerns::AnalyticsCalculations
 
         # Returns performance analytics for the organization
         #
@@ -47,10 +47,28 @@ module Api
           matches = apply_date_filters(organization_scoped(Match))
           players = organization_scoped(Player).active
 
-          service = Analytics::Services::PerformanceAnalyticsService.new(matches, players)
-          performance_data = service.calculate_performance_data(player_id: params[:player_id])
+          # Only process player_id if it's present and valid
+          player_id = params[:player_id].presence
+          if player_id.present? && !players.exists?(id: player_id)
+            return render_error(
+              message: 'Player not found',
+              code: 'PLAYER_NOT_FOUND',
+              status: :not_found
+            )
+          end
+
+          service = ::Analytics::Services::PerformanceAnalyticsService.new(matches, players)
+          performance_data = service.calculate_performance_data(player_id: player_id)
 
           render_success(performance_data)
+        rescue StandardError => e
+          Rails.logger.error("Error in performance#index: #{e.message}")
+          Rails.logger.error(e.backtrace.join("\n"))
+          render_error(
+            message: "Failed to load performance data: #{e.message}",
+            code: 'INTERNAL_ERROR',
+            status: :internal_server_error
+          )
         end
 
         private
@@ -77,6 +95,7 @@ module Api
         def time_period_to_days(period)
           return 7 if period == 'week'
           return 90 if period == 'season'
+
           30
         end
 

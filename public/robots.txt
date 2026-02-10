@@ -1,0 +1,272 @@
+# ProStaff Analytics Hub - Robots.txt
+# Otimizado para SEO e proteção contra crawlers maliciosos
+
+# ====================
+# BOTS LEGÍTIMOS (SEO)
+# ====================
+
+# Google
+User-agent: Googlebot
+User-agent: Googlebot-Image
+User-agent: Googlebot-News
+User-agent: Googlebot-Video
+Allow: /
+Crawl-delay: 1
+
+# Bing
+User-agent: Bingbot
+User-agent: MSNBot
+Allow: /
+Crawl-delay: 1
+
+# Yandex
+User-agent: Yandex
+Allow: /
+Crawl-delay: 2
+
+# DuckDuckGo
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+# Social Media Crawlers (Open Graph, Cards, etc)
+User-agent: Twitterbot
+User-agent: facebookexternalhit
+User-agent: facebookcatalog
+User-agent: LinkedInBot
+User-agent: Slackbot
+User-agent: Discordbot
+User-agent: WhatsApp
+User-agent: TelegramBot
+Allow: /
+
+# Apple
+User-agent: Applebot
+Allow: /
+Crawl-delay: 1
+
+# Baidu (Chinese search engine)
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+# =================================
+# BLOQUEIO DE CRAWLERS MALICIOSOS
+# =================================
+
+# Scrapers agressivos e bots maliciosos conhecidos
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: rogerBot
+User-agent: SiteExplorer
+User-agent: OpenLinkProfiler
+User-agent: SEOkicks
+User-agent: Lipperhey
+User-agent: Exabot
+User-agent: BLEXBot
+User-agent: Screaming Frog SEO Spider
+User-agent: MegaIndex.ru
+User-agent: Cliqzbot
+User-agent: PetalBot
+User-agent: AspiegelBot
+User-agent: ZoominfoBot
+User-agent: DataForSeoBot
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: Meta-ExternalAgent
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: CCBot
+User-agent: anthropic-ai
+User-agent: Claude-Web
+User-agent: cohere-ai
+User-agent: PerplexityBot
+User-agent: Omgilibot
+User-agent: Omgili
+User-agent: YouBot
+User-agent: Kangaroo Bot
+User-agent: Crawlera
+User-agent: 007ac9 Crawler
+User-agent: 008
+User-agent: Aboundex
+User-agent: Acoon
+User-agent: AdvBot
+User-agent: ASPSeek
+User-agent: Atomic_Email_Hunter
+User-agent: attach
+User-agent: autoemailspider
+User-agent: BackDoorBot
+User-agent: BecomeBot
+User-agent: BlowFish
+User-agent: BotALot
+User-agent: BuiltBotTough
+User-agent: Bullseye
+User-agent: BunnySlippers
+User-agent: Cegbfeieh
+User-agent: CheeseBot
+User-agent: CherryPicker
+User-agent: CopyRightCheck
+User-agent: cosmos
+User-agent: Crescent
+User-agent: Custo
+User-agent: DISCo
+User-agent: DittoSpyder
+User-agent: EmailCollector
+User-agent: EmailSiphon
+User-agent: EmailWolf
+User-agent: EroCrawler
+User-agent: ExtractorPro
+User-agent: FairAd
+User-agent: Flaming AttackBot
+User-agent: Foobot
+User-agent: Gaisbot
+User-agent: GetRight
+User-agent: grub
+User-agent: hloader
+User-agent: httplib
+User-agent: HTTrack
+User-agent: humanlinks
+User-agent: ieautodiscovery
+User-agent: InfoNaviRobot
+User-agent: IstellaBot
+User-agent: Java/1.
+User-agent: JennyBot
+User-agent: k2spider
+User-agent: Kenjin Spider
+User-agent: Keyword Density
+User-agent: larbin
+User-agent: LexiBot
+User-agent: libWeb
+User-agent: libwww
+User-agent: LinkextractorPro
+User-agent: linko
+User-agent: LinkScan
+User-agent: LinkWalker
+User-agent: LNSpiderguy
+User-agent: lwp-trivial
+User-agent: magpie
+User-agent: Mata Hari
+User-agent: MaxPointCrawler
+User-agent: MIIxpc
+User-agent: Mippin
+User-agent: Missigua Locator
+User-agent: Mister PiX
+User-agent: moget
+User-agent: MSIECrawler
+User-agent: NetAnts
+User-agent: NICErsPRO
+User-agent: Niki-Bot
+User-agent: NPBot
+User-agent: Nutch
+User-agent: Octopus
+User-agent: Offline Explorer
+User-agent: Openfind
+User-agent: panscient
+User-agent: ProPowerBot
+User-agent: ProWebWalker
+User-agent: psbot
+User-agent: Python-urllib
+User-agent: QueryN Metasearch
+User-agent: Radiation Retriever
+User-agent: Teleport
+User-agent: TeleportPro
+User-agent: Telesoft
+User-agent: The Intraformant
+User-agent: TheNomad
+User-agent: TightTwatBot
+User-agent: Titan
+User-agent: toCrawl
+User-agent: True_Robot
+User-agent: turingos
+User-agent: TurnitinBot
+User-agent: UbiCrawler
+User-agent: UnisterBot
+User-agent: URLy Warning
+User-agent: VCI
+User-agent: WBSearchBot
+User-agent: Web Downloader
+User-agent: Web Image Collector
+User-agent: WebAuto
+User-agent: WebBandit
+User-agent: WebCopier
+User-agent: WebEnhancer
+User-agent: WebmasterWorldForumBot
+User-agent: WebReaper
+User-agent: WebSauger
+User-agent: Website Quester
+User-agent: Webster Pro
+User-agent: WebStripper
+User-agent: WebZip
+User-agent: Wotbox
+User-agent: wsr-agent
+User-agent: WWW-Collector-E
+User-agent: Xenu
+User-agent: Zao
+User-agent: Zeus
+User-agent: ZyBORG
+User-agent: coccoc
+User-agent: Incutio
+User-agent: lmspider
+User-agent: memorybot
+User-agent: serf
+User-agent: Unknown
+User-agent: uptime files
+Disallow: /
+
+# ===============================
+# PROTEÇÃO DE ÁREAS SENSÍVEIS
+# ===============================
+
+# Todos os bots - bloqueio de áreas administrativas e sensíveis
+User-agent: *
+Disallow: /admin
+Disallow: /api/v1/admin/
+Disallow: /api/v1/auth/
+Disallow: /api/v1/dashboard/
+Disallow: /api/v1/players/*/stats
+Disallow: /api/v1/analytics/
+Disallow: /api/v1/scouting/watchlist
+Disallow: /api/v1/support/tickets
+Disallow: /api/v1/support/staff/
+Disallow: /api/v1/rosters/
+Disallow: /api/v1/scrims/
+Disallow: /api/v1/strategy/
+Disallow: /*.json$
+Disallow: /*.xml$
+Disallow: /config/
+Disallow: /logs/
+Disallow: /tmp/
+Disallow: /private/
+Disallow: /*?api_key=*
+Disallow: /*?token=*
+Disallow: /*?session=*
+Disallow: /*?jwt=*
+Disallow: /*?access_token=*
+Disallow: /*?utm_*
+
+# Permitir áreas públicas importantes para SEO
+Allow: /api-docs
+Allow: /api/v1/constants
+Allow: /api/v1/riot-data/
+Allow: /api/v1/competitive-matches
+Allow: /api/v1/scouting/players
+Allow: /api/v1/scouting/regions
+Allow: /api/v1/support/faq
+Allow: /health
+Allow: /up
+Allow: /sitemap.xml
+
+# ==================
+# CONFIGURAÇÕES GERAIS
+# ==================
+
+# Crawl delay para bots não especificados (evita sobrecarga)
+Crawl-delay: 5
+
+# Sitemap (dinâmico via Rails)
+Sitemap: https://api.prostaff.gg/sitemap.xml
+
+# Host preference (ajuda Google a entender domínio preferencial)
+Host: https://api.prostaff.gg

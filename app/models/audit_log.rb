@@ -29,7 +29,8 @@
 # @example Find high-risk actions
 #   AuditLog.high_risk_actions.by_user(user.id)
 class AuditLog < ApplicationRecord
-  # Associations
+  include OrganizationScoped
+
   belongs_to :organization
   belongs_to :user, optional: true
 
@@ -125,6 +126,7 @@ class AuditLog < ApplicationRecord
     return 'high' if action == 'delete'
     return 'low' if action == 'create'
     return 'info' if %w[login logout].include?(action)
+
     'medium'
   end
 

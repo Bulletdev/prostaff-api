@@ -4,6 +4,8 @@ module Authenticatable
   extend ActiveSupport::Concern
 
   included do
+    include RowLevelSecurity
+
     before_action :authenticate_request!
     before_action :set_current_user
     before_action :set_current_organization

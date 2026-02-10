@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_08_134932) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -130,6 +130,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_134932) do
     t.index ["organization_id"], name: "index_draft_plans_on_organization_id"
     t.index ["patch_version"], name: "index_draft_plans_on_patch_version"
     t.index ["updated_by_id"], name: "index_draft_plans_on_updated_by_id"
+  end
+
+  create_table "fantasy_waitlists", force: :cascade do |t|
+    t.string "email", null: false
+    t.bigint "organization_id"
+    t.boolean "notified", default: false
+    t.datetime "subscribed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_fantasy_waitlists_on_email", unique: true
+    t.index ["organization_id"], name: "index_fantasy_waitlists_on_organization_id"
   end
 
   create_table "matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

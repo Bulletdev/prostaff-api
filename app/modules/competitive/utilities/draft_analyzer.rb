@@ -7,6 +7,7 @@ module Competitive
     #
     # @example
     #   Competitive::Utilities::DraftAnalyzer.calculate_meta_score(picks, patch)
+    # Draft Analyzer Utility\n    # Provides draft analysis and meta scoring
     module DraftAnalyzer
       extend self
 

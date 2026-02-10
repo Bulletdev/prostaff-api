@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authorization policy for professional match resources
 class ProMatchPolicy < ApplicationPolicy
   def index?
     true # All authenticated users can view pro matches
@@ -27,6 +28,7 @@ class ProMatchPolicy < ApplicationPolicy
     user.owner? || user.coach?
   end
 
+  # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
       scope.all

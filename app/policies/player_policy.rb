@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authorization policy for Player resources
 class PlayerPolicy < ApplicationPolicy
   def index?
     true # All authenticated users can view players
@@ -33,6 +34,7 @@ class PlayerPolicy < ApplicationPolicy
     admin? && same_organization?
   end
 
+  # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
       scope.where(organization: user.organization)

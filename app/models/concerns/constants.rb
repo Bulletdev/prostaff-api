@@ -41,7 +41,7 @@ module Constants
   # Player related constants
   module Player
     ROLES = %w[top jungle mid adc support].freeze
-    STATUSES = %w[active inactive benched trial].freeze
+    STATUSES = %w[active inactive benched trial removed].freeze
     QUEUE_RANKS = %w[I II III IV].freeze
     QUEUE_TIERS = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER].freeze
 
@@ -57,7 +57,8 @@ module Constants
       'active' => 'Active',
       'inactive' => 'Inactive',
       'benched' => 'Benched',
-      'trial' => 'Trial'
+      'trial' => 'Trial',
+      'removed' => 'Removed'
     }.freeze
   end
 
@@ -229,7 +230,7 @@ module Constants
 
   # Scouting target constants
   module ScoutingTarget
-    STATUSES = %w[watching contacted negotiating rejected signed].freeze
+    STATUSES = %w[watching contacted negotiating rejected signed free_agent].freeze
     PRIORITIES = %w[low medium high critical].freeze
 
     STATUS_NAMES = {
@@ -237,7 +238,8 @@ module Constants
       'contacted' => 'Contacted',
       'negotiating' => 'Negotiating',
       'rejected' => 'Rejected',
-      'signed' => 'Signed'
+      'signed' => 'Signed',
+      'free_agent' => 'Free Agent'
     }.freeze
 
     PRIORITY_NAMES = {

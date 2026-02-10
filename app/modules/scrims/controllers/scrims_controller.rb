@@ -3,6 +3,8 @@
 module Api
   module V1
     module Scrims
+      # Scrims Controller
+      # Manages practice matches (scrims) and results
       class ScrimsController < Api::V1::BaseController
         include TierAuthorization
         include Paginatable

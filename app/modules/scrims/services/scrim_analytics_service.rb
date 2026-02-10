@@ -39,7 +39,7 @@ module Scrims
               tag: opponent_team.tag
             },
             total_scrims: opponent_scrims.size,
-            total_games: opponent_scrims.sum(&:games_completed).to_i,
+            total_games: opponent_scrims.sum { |s| s.games_completed || 0 },
             win_rate: calculator.calculate_win_rate(opponent_scrims)
           }
         end.compact
@@ -52,7 +52,7 @@ module Scrims
         scrims.group_by(&:focus_area).transform_values do |area_scrims|
           {
             total_scrims: area_scrims.size,
-            total_games: area_scrims.sum(&:games_completed).to_i,
+            total_games: area_scrims.sum { |s| s.games_completed || 0 },
             win_rate: calculator.calculate_win_rate(area_scrims),
             avg_completion: calculator.average_completion_percentage(area_scrims)
           }

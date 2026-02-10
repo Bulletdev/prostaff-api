@@ -17,6 +17,7 @@ module Players
     # @example Sync existing player
     #   service = RiotSyncService.new(organization)
     #   result = service.sync_player(player, import_matches: true)
+    # Riot Sync Service\n    # Synchronizes player data with Riot API
     class RiotSyncService
       VALID_REGIONS = %w[br1 na1 euw1 kr eune1 lan las1 oce1 ru tr1 jp1].freeze
       AMERICAS = %w[br1 na1 lan las1].freeze
@@ -489,3 +490,4 @@ module Players
     end
   end
 end
+100

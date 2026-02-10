@@ -16,7 +16,11 @@ module Analytics
         trend_data = {
           player: PlayerSerializer.render_as_hash(player),
           kda_by_match: stats.map do |stat|
-            kda = stat.deaths.zero? ? (stat.kills + stat.assists).to_f : ((stat.kills + stat.assists).to_f / stat.deaths)
+            kda = if stat.deaths.zero?
+                    (stat.kills + stat.assists).to_f
+                  else
+                    ((stat.kills + stat.assists).to_f / stat.deaths)
+                  end
             {
               match_id: stat.match.id,
               date: stat.match.game_start,

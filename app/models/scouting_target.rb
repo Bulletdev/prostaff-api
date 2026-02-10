@@ -1,36 +1,51 @@
 # frozen_string_literal: true
 
+# ScoutingTarget represents a global player available for scouting
+#
+# This is the GLOBAL layer - no organization_id.
+# All organizations can see all scouting targets (free agents).
+# Organization-specific tracking is done through ScoutingWatchlist.
+#
+# @attr [String] summoner_name Player's in-game name
+# @attr [String] region Server region (BR, NA, KR, etc.)
+# @attr [String] riot_puuid Riot's unique player identifier (globally unique)
+# @attr [String] role Position (top, jungle, mid, adc, support)
+# @attr [String] status Player status (free_agent, watching, etc.)
+# @attr [String] current_tier Current ranked tier
+# @attr [String] current_rank Current rank within tier
+# @attr [Integer] current_lp Current LP
+# @attr [Array] champion_pool Champions the player is known for
+# @attr [JSONB] recent_performance Recent performance metrics
 class ScoutingTarget < ApplicationRecord
   # Concerns
+  # REMOVED: include OrganizationScoped (this is now global)
   include Constants
 
   # Associations
-  belongs_to :organization
-  belongs_to :added_by, class_name: 'User', optional: true
-  belongs_to :assigned_to, class_name: 'User', optional: true
+  # REMOVED: belongs_to :organization
+  # REMOVED: belongs_to :added_by
+  # REMOVED: belongs_to :assigned_to
+
+  # NEW: Many-to-many with organizations through watchlists
+  has_many :scouting_watchlists, dependent: :destroy
+  has_many :organizations, through: :scouting_watchlists
 
   # Validations
   validates :summoner_name, presence: true, length: { maximum: 100 }
   validates :region, presence: true, inclusion: { in: Constants::REGIONS }
   validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
   validates :status, inclusion: { in: Constants::ScoutingTarget::STATUSES }
-  validates :priority, inclusion: { in: Constants::ScoutingTarget::PRIORITIES }
-  validates :riot_puuid, uniqueness: true, allow_blank: true
+  validates :riot_puuid, uniqueness: true, allow_blank: true # Global uniqueness
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
 
   # Callbacks
   before_save :normalize_summoner_name
-  after_update :log_audit_trail, if: :saved_changes?
 
-  # Scopes
+  # Scopes - GLOBAL scopes (no org filtering)
   scope :by_status, ->(status) { where(status: status) }
-  scope :by_priority, ->(priority) { where(priority: priority) }
   scope :by_role, ->(role) { where(role: role) }
   scope :by_region, ->(region) { where(region: region) }
-  scope :active, -> { where(status: %w[watching contacted negotiating]) }
-  scope :high_priority, -> { where(priority: %w[high critical]) }
-  scope :needs_review, -> { where('last_reviewed IS NULL OR last_reviewed < ?', 1.week.ago) }
-  scope :assigned_to_user, ->(user_id) { where(assigned_to_id: user_id) }
+  scope :free_agents, -> { where(status: 'free_agent') }
 
   # Instance methods
   # Returns formatted display of current ranked status
@@ -44,58 +59,12 @@ class ScoutingTarget < ApplicationRecord
     "#{current_tier.titleize}#{rank_part}#{lp_part}"
   end
 
-  def status_color
-    case status
-    when 'watching' then 'blue'
-    when 'contacted' then 'yellow'
-    when 'negotiating' then 'orange'
-    when 'rejected' then 'red'
-    when 'signed' then 'green'
-    else 'gray'
-    end
-  end
-
-  def priority_color
-    case priority
-    when 'low' then 'gray'
-    when 'medium' then 'blue'
-    when 'high' then 'orange'
-    when 'critical' then 'red'
-    else 'gray'
-    end
-  end
-
-  def priority_score
-    case priority
-    when 'low' then 1
-    when 'medium' then 2
-    when 'high' then 3
-    when 'critical' then 4
-    else 0
-    end
-  end
-
   def performance_trend_color
     case performance_trend
     when 'improving' then 'green'
     when 'stable' then 'blue'
     when 'declining' then 'red'
     else 'gray'
-    end
-  end
-
-  def needs_review?
-    last_reviewed.blank? || last_reviewed < 1.week.ago
-  end
-
-  def days_since_review
-    return 'Never' if last_reviewed.blank?
-
-    days = (Date.current - last_reviewed.to_date).to_i
-    case days
-    when 0 then 'Today'
-    when 1 then 'Yesterday'
-    else "#{days} days ago"
     end
   end
 
@@ -144,22 +113,18 @@ class ScoutingTarget < ApplicationRecord
     [total, 0].max
   end
 
-  def mark_as_reviewed!(user = nil)
-    update!(
-      last_reviewed: Time.current,
-      assigned_to: user || assigned_to
-    )
+  # Check if this target is in a specific organization's watchlist
+  # @param organization [Organization] The organization to check
+  # @return [ScoutingWatchlist, nil] The watchlist entry if exists
+  def watchlist_for(organization)
+    scouting_watchlists.find_by(organization: organization)
   end
 
-  def advance_status!
-    new_status = case status
-                 when 'watching' then 'contacted'
-                 when 'contacted' then 'negotiating'
-                 when 'negotiating' then 'signed'
-                 else status
-                 end
-
-    update!(status: new_status, last_reviewed: Time.current)
+  # Check if this target is being watched by a specific organization
+  # @param organization [Organization] The organization to check
+  # @return [Boolean]
+  def watched_by?(organization)
+    watchlist_for(organization).present?
   end
 
   private
@@ -199,16 +164,5 @@ class ScoutingTarget < ApplicationRecord
 
   def normalize_summoner_name
     self.summoner_name = summoner_name.strip if summoner_name.present?
-  end
-
-  def log_audit_trail
-    AuditLog.create!(
-      organization: organization,
-      action: 'update',
-      entity_type: 'ScoutingTarget',
-      entity_id: id,
-      old_values: saved_changes.transform_values(&:first),
-      new_values: saved_changes.transform_values(&:last)
-    )
   end
 end

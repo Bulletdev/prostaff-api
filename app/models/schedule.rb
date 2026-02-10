@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+# Represents a scheduled event or match in the organization's calendar
 class Schedule < ApplicationRecord
   # Concerns
   include Constants
+  include OrganizationScoped
 
   # Associations
   belongs_to :organization
@@ -54,9 +56,8 @@ class Schedule < ApplicationRecord
     case status
     when 'scheduled' then 'blue'
     when 'ongoing' then 'green'
-    when 'completed' then 'gray'
     when 'cancelled' then 'red'
-    else 'gray'
+    else 'gray' # covers 'completed' and any other values
     end
   end
 

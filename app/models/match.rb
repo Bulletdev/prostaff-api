@@ -33,6 +33,7 @@
 class Match < ApplicationRecord
   # Concerns
   include Constants
+  include OrganizationScoped
 
   # Associations
   belongs_to :organization
@@ -49,6 +50,8 @@ class Match < ApplicationRecord
 
   # Callbacks
   after_update :log_audit_trail, if: :saved_changes?
+  after_create :clear_organization_cache
+  after_destroy :clear_organization_cache
 
   # Scopes
   scope :by_type, ->(type) { where(match_type: type) }
@@ -146,5 +149,9 @@ class Match < ApplicationRecord
       old_values: saved_changes.transform_values(&:first),
       new_values: saved_changes.transform_values(&:last)
     )
+  end
+
+  def clear_organization_cache
+    organization.clear_matches_cache if organization.present?
   end
 end

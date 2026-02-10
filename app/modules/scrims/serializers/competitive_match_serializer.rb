@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Scrims
+  # Serializer for competitive match data in scrims\n  # Renders match details with team compositions and results
   class CompetitiveMatchSerializer
     def initialize(competitive_match, options = {})
       @competitive_match = competitive_match

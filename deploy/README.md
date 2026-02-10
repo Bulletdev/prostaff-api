@@ -33,7 +33,7 @@ deploy/
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/prostaff-api.git
+git clone https://github.com/bulletdev/prostaff-api.git
 cd prostaff-api
 
 # Copiar ambiente

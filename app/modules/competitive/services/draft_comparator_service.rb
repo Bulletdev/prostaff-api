@@ -21,6 +21,7 @@ module Competitive
     #     organization: current_org
     #   )
     #
+    # Draft Comparator Service\n    # Analyzes and compares champion drafts
     class DraftComparatorService
       # Compare user's draft with professional meta data
       # @param our_picks [Array<String>] Array of champion names

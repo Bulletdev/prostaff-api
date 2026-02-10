@@ -33,6 +33,8 @@
 class Player < ApplicationRecord
   # Concerns
   include Constants
+  include OrganizationScoped
+  include SoftDeletable
 
   # Associations
   belongs_to :organization
@@ -41,6 +43,9 @@ class Player < ApplicationRecord
   has_many :champion_pools, dependent: :destroy
   has_many :team_goals, dependent: :destroy
   has_many :vod_timestamps, foreign_key: 'target_player_id', dependent: :nullify
+
+  # Password authentication for individual player access
+  has_secure_password :player_password, validations: false
 
   # Validations
   validates :summoner_name, presence: true, length: { maximum: 100 }
@@ -55,10 +60,15 @@ class Player < ApplicationRecord
   validates :solo_queue_rank, inclusion: { in: Constants::Player::QUEUE_RANKS }, allow_blank: true
   validates :flex_queue_tier, inclusion: { in: Constants::Player::QUEUE_TIERS }, allow_blank: true
   validates :flex_queue_rank, inclusion: { in: Constants::Player::QUEUE_RANKS }, allow_blank: true
+  validates :player_email, uniqueness: true, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
+  validates :player_password, length: { minimum: 8 }, if: -> { player_password.present? }
 
   # Callbacks
   before_save :normalize_summoner_name
   after_update :log_audit_trail, if: :saved_changes?
+  after_create :clear_organization_cache
+  after_destroy :clear_organization_cache
+  after_update :clear_organization_cache, if: :saved_change_to_deleted_at?
 
   # Scopes
   scope :by_role, ->(role) { where(role: role) }
@@ -66,7 +76,7 @@ class Player < ApplicationRecord
   scope :active, -> { where(status: 'active') }
   scope :with_contracts, -> { where.not(contract_start_date: nil) }
   scope :contracts_expiring_soon, lambda { |days = 30|
-    where(contract_end_date: Date.current..Date.current + days.days)
+    where(contract_end_date: Date.current..(Date.current + days.days))
   }
   scope :by_tier, ->(tier) { where(solo_queue_tier: tier) }
   scope :ordered_by_role, lambda {
@@ -81,6 +91,7 @@ class Player < ApplicationRecord
       END"
           ))
   }
+  scope :with_player_access, -> { where(player_access_enabled: true) }
 
   # Instance methods
   # Returns formatted display of current ranked status
@@ -148,6 +159,36 @@ class Player < ApplicationRecord
     }.compact
   end
 
+  # Enable individual player access with email and password
+  # @param email [String] Player's email for login
+  # @param password [String] Player's password (will be hashed)
+  # @return [Boolean] true if successful
+  def enable_player_access!(email:, password:)
+    update!(
+      player_email: email,
+      player_password: password,
+      player_access_enabled: true
+    )
+  end
+
+  # Disable individual player access
+  # @return [Boolean] true if successful
+  def disable_player_access!
+    update!(player_access_enabled: false)
+  end
+
+  # Check if player has individual access enabled
+  # @return [Boolean] true if player access is enabled
+  def has_player_access?
+    player_access_enabled && player_email.present? && player_password_digest.present?
+  end
+
+  # Update player's last login timestamp
+  # @return [Boolean] true if successful
+  def update_last_login!
+    update_column(:last_login_at, Time.current)
+  end
+
   private
 
   def normalize_summoner_name
@@ -163,5 +204,9 @@ class Player < ApplicationRecord
       old_values: saved_changes.transform_values(&:first),
       new_values: saved_changes.transform_values(&:last)
     )
+  end
+
+  def clear_organization_cache
+    organization.clear_players_cache if organization.present?
   end
 end

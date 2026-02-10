@@ -3,18 +3,37 @@
 module Api
   module V1
     module Scouting
+      # Scouting Players Controller
+      # Manages GLOBAL scouting targets and org-specific watchlists
       class PlayersController < Api::V1::BaseController
         before_action :set_scouting_target, only: %i[show update destroy sync]
 
+        # GET /api/v1/scouting/players
+        # Returns global scouting targets with optional watchlist filtering
         def index
-          targets = organization_scoped(ScoutingTarget).includes(:added_by, :assigned_to)
+          # Start with global scouting targets
+          targets = ScoutingTarget.includes(:scouting_watchlists)
+
+          # Filter by watchlist if requested
+          if params[:my_watchlist] == 'true'
+            targets = targets.joins(:scouting_watchlists)
+                            .where(scouting_watchlists: { organization_id: current_organization.id })
+          end
+
+          # Apply global filters
           targets = apply_filters(targets)
           targets = apply_sorting(targets)
 
           result = paginate(targets)
 
+          # Serialize with watchlist context
+          players_data = result[:data].map do |target|
+            watchlist = target.scouting_watchlists.find { |w| w.organization_id == current_organization.id }
+            JSON.parse(ScoutingTargetSerializer.render(target, watchlist: watchlist))
+          end
+
           render_success({
-                           players: ScoutingTargetSerializer.render_as_hash(result[:data]),
+                           players: players_data,
                            total: result[:pagination][:total_count],
                            page: result[:pagination][:current_page],
                            per_page: result[:pagination][:per_page],
@@ -22,86 +41,127 @@ module Api
                          })
         end
 
+        # GET /api/v1/scouting/players/:id
         def show
+          watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+
           render_success({
-                           scouting_target: ScoutingTargetSerializer.render_as_hash(@target)
+                           scouting_target: JSON.parse(
+                             ScoutingTargetSerializer.render(@target, watchlist: watchlist)
+                           )
                          })
         end
 
+        # POST /api/v1/scouting/players
+        # Creates/finds global target and adds to org watchlist
         def create
-          target = organization_scoped(ScoutingTarget).new(scouting_target_params)
-          target.organization = current_organization
-          target.added_by = current_user
+          ActiveRecord::Base.transaction do
+            # Find or create global scouting target
+            target = find_or_create_target!
 
-          if target.save
+            # Create watchlist entry for this organization
+            watchlist = target.scouting_watchlists.create!(
+              organization: current_organization,
+              added_by: current_user,
+              priority: watchlist_params[:priority] || 'medium',
+              status: watchlist_params[:status] || 'watching',
+              notes: watchlist_params[:notes],
+              assigned_to_id: watchlist_params[:assigned_to_id]
+            )
+
             log_user_action(
               action: 'create',
-              entity_type: 'ScoutingTarget',
-              entity_id: target.id,
-              new_values: target.attributes
+              entity_type: 'ScoutingWatchlist',
+              entity_id: watchlist.id,
+              new_values: watchlist.attributes
             )
 
             render_created({
-                             scouting_target: ScoutingTargetSerializer.render_as_hash(target)
+                             scouting_target: JSON.parse(
+                               ScoutingTargetSerializer.render(target, watchlist: watchlist)
+                             )
                            }, message: 'Scouting target added successfully')
-          else
-            render_error(
-              message: 'Failed to add scouting target',
-              code: 'VALIDATION_ERROR',
-              status: :unprocessable_entity,
-              details: target.errors.as_json
-            )
           end
+        rescue ActiveRecord::RecordInvalid => e
+          render_error(
+            message: 'Failed to add scouting target',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: e.record.errors.as_json
+          )
         end
 
+        # PATCH /api/v1/scouting/players/:id
+        # Updates global target data OR watchlist data
         def update
-          old_values = @target.attributes.dup
+          ActiveRecord::Base.transaction do
+            # Update global target fields if provided
+            if target_params.any?
+              @target.update!(target_params)
+            end
 
-          if @target.update(scouting_target_params)
-            log_user_action(
-              action: 'update',
-              entity_type: 'ScoutingTarget',
-              entity_id: @target.id,
-              old_values: old_values,
-              new_values: @target.attributes
-            )
+            # Update watchlist fields if provided
+            if watchlist_params.any?
+              watchlist = @target.scouting_watchlists.find_or_create_by!(organization: current_organization) do |w|
+                w.added_by = current_user
+              end
+
+              old_values = watchlist.attributes.dup
+              watchlist.update!(watchlist_params)
+
+              log_user_action(
+                action: 'update',
+                entity_type: 'ScoutingWatchlist',
+                entity_id: watchlist.id,
+                old_values: old_values,
+                new_values: watchlist.attributes
+              )
+            end
+
+            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
 
             render_updated({
-                             scouting_target: ScoutingTargetSerializer.render_as_hash(@target)
+                             scouting_target: JSON.parse(
+                               ScoutingTargetSerializer.render(@target, watchlist: watchlist)
+                             )
                            })
-          else
-            render_error(
-              message: 'Failed to update scouting target',
-              code: 'VALIDATION_ERROR',
-              status: :unprocessable_entity,
-              details: @target.errors.as_json
-            )
           end
+        rescue ActiveRecord::RecordInvalid => e
+          render_error(
+            message: 'Failed to update scouting target',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: e.record.errors.as_json
+          )
         end
 
+        # DELETE /api/v1/scouting/players/:id
+        # Removes from org's watchlist (doesn't delete global target)
         def destroy
-          if @target.destroy
+          watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+
+          if watchlist
+            watchlist.destroy
+
             log_user_action(
               action: 'delete',
-              entity_type: 'ScoutingTarget',
-              entity_id: @target.id,
-              old_values: @target.attributes
+              entity_type: 'ScoutingWatchlist',
+              entity_id: watchlist.id,
+              old_values: watchlist.attributes
             )
 
-            render_deleted(message: 'Scouting target removed successfully')
+            render_deleted(message: 'Removed from watchlist')
           else
             render_error(
-              message: 'Failed to remove scouting target',
-              code: 'DELETE_ERROR',
-              status: :unprocessable_entity
+              message: 'Not in your watchlist',
+              code: 'NOT_FOUND',
+              status: :not_found
             )
           end
         end
 
         def sync
-          # This will sync the scouting target with Riot API
-          # Will be implemented when Riot API service is ready
-          # todo
+          # Sync functionality not yet implemented
           render_error(
             message: 'Sync functionality not yet implemented',
             code: 'NOT_IMPLEMENTED',
@@ -111,19 +171,38 @@ module Api
 
         private
 
+        def find_or_create_target!
+          if scouting_target_params[:riot_puuid].present?
+            # Find by PUUID (global uniqueness)
+            target = ScoutingTarget.find_or_initialize_by(riot_puuid: scouting_target_params[:riot_puuid])
+          else
+            # Create new without PUUID
+            target = ScoutingTarget.new
+          end
+
+          target.assign_attributes(scouting_target_params)
+          target.save!
+          target
+        end
+
         def apply_filters(targets)
           targets = apply_basic_filters(targets)
           targets = apply_age_range_filter(targets)
-          targets = apply_boolean_filters(targets)
+          targets = apply_rank_range_filter(targets)
           apply_search_filter(targets)
         end
 
         def apply_basic_filters(targets)
           targets = targets.by_role(params[:role]) if params[:role].present?
           targets = targets.by_status(params[:status]) if params[:status].present?
-          targets = targets.by_priority(params[:priority]) if params[:priority].present?
           targets = targets.by_region(params[:region]) if params[:region].present?
-          targets = targets.assigned_to_user(params[:assigned_to_id]) if params[:assigned_to_id].present?
+
+          # Filter by watchlist fields if in watchlist mode
+          if params[:my_watchlist] == 'true'
+            targets = targets.where(scouting_watchlists: { priority: params[:priority] }) if params[:priority].present?
+            targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] }) if params[:assigned_to_id].present?
+          end
+
           targets
         end
 
@@ -134,11 +213,12 @@ module Api
           min_age && max_age ? targets.where(age: min_age..max_age) : targets
         end
 
-        def apply_boolean_filters(targets)
-          targets = targets.active if params[:active] == 'true'
-          targets = targets.high_priority if params[:high_priority] == 'true'
-          targets = targets.needs_review if params[:needs_review] == 'true'
-          targets
+        def apply_rank_range_filter(targets)
+          return targets unless params[:rank_range].present?
+
+          # Rank range filtering by LP
+          min_lp, max_lp = params[:rank_range]
+          min_lp && max_lp ? targets.where(current_lp: min_lp..max_lp) : targets
         end
 
         def apply_search_filter(targets)
@@ -167,7 +247,11 @@ module Api
           allowed_sort_orders = %w[asc desc]
 
           sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
-          sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'desc'
+          sort_order = if allowed_sort_orders.include?(params[:sort_order]&.downcase)
+                         params[:sort_order].downcase
+                       else
+                         'desc'
+                       end
 
           [sort_by, sort_order]
         end
@@ -185,22 +269,44 @@ module Api
         end
 
         def set_scouting_target
-          @target = organization_scoped(ScoutingTarget).find(params[:id])
+          # ScoutingTarget is global, but access is controlled by user role
+          # Using policy_scope ensures only authorized users (coach+) can access
+          authorized_targets = policy_scope(ScoutingTarget)
+          @target = authorized_targets.find_by(id: params[:id])
+
+          # Raise not found if target doesn't exist or user isn't authorized
+          raise ActiveRecord::RecordNotFound, "ScoutingTarget not found" unless @target
         end
 
         def scouting_target_params
-          # :role refers to in-game position (top/jungle/mid/adc/support), not user role
-          # nosemgrep
           params.require(:scouting_target).permit(
             :summoner_name, :real_name, :role, :region, :nationality,
-            :age, :status, :priority, :current_team,
+            :age, :status, :current_team,
             :current_tier, :current_rank, :current_lp,
             :peak_tier, :peak_rank,
             :riot_puuid, :riot_summoner_id,
             :email, :phone, :discord_username, :twitter_handle,
-            :scouting_notes, :contact_notes,
-            :availability, :salary_expectations,
-            :performance_trend, :assigned_to_id,
+            :notes, :availability, :salary_expectations,
+            :performance_trend,
+            champion_pool: []
+          )
+        end
+
+        def watchlist_params
+          params.fetch(:watchlist, {}).permit(
+            :priority, :status, :notes, :assigned_to_id
+          )
+        end
+
+        def target_params
+          params.fetch(:target, {}).permit(
+            :summoner_name, :real_name, :role, :region, :nationality,
+            :age, :status, :current_team,
+            :current_tier, :current_rank, :current_lp,
+            :peak_tier, :peak_rank,
+            :riot_puuid, :riot_summoner_id,
+            :email, :phone, :discord_username, :twitter_handle,
+            :notes,
             champion_pool: []
           )
         end
