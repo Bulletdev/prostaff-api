@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for Scrim model
+# Renders practice match data and results
 class ScrimSerializer
   def initialize(scrim, options = {})
     @scrim = scrim

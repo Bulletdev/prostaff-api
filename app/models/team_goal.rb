@@ -39,7 +39,7 @@
 #   goal.update_progress!(8.0)
 #   goal.mark_as_completed! if goal.progress >= 100
 class TeamGoal < ApplicationRecord
-  # Concerns
+  include OrganizationScoped
   include Constants
 
   # Associations
@@ -68,7 +68,7 @@ class TeamGoal < ApplicationRecord
   scope :team_goals, -> { where(player_id: nil) }
   scope :player_goals, -> { where.not(player_id: nil) }
   scope :for_player, ->(player_id) { where(player_id: player_id) }
-  scope :expiring_soon, ->(days = 7) { where(end_date: Date.current..Date.current + days.days) }
+  scope :expiring_soon, ->(days = 7) { where(end_date: Date.current..(Date.current + days.days)) }
   scope :overdue, -> { where('end_date < ? AND status = ?', Date.current, 'active') }
 
   # Instance methods
@@ -189,7 +189,8 @@ class TeamGoal < ApplicationRecord
 
   def assigned_to_name
     return 'Unassigned' unless assigned_to
-    assigned_to.full_name || (assigned_to.email&.split('@')&.first) || 'Unassigned'
+
+    assigned_to.full_name || assigned_to.email&.split('@')&.first || 'Unassigned'
   end
 
   def player_name

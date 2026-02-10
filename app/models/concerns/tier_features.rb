@@ -92,8 +92,7 @@ module TierFeatures
 
     return false unless max_matches # unlimited
 
-    monthly_matches = matches.where('created_at > ?', 1.month.ago).count
-    monthly_matches >= max_matches
+    cached_monthly_matches_count >= max_matches
   end
 
   def matches_remaining_this_month
@@ -102,34 +101,31 @@ module TierFeatures
 
     return nil unless max_matches # unlimited
 
-    monthly_matches = matches.where('created_at > ?', 1.month.ago).count
-    [max_matches - monthly_matches, 0].max
+    [max_matches - cached_monthly_matches_count, 0].max
   end
 
   # Player limits
   def player_limit_reached?
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
-    players.count >= tier_config[:max_players]
+    cached_players_count >= tier_config[:max_players]
   end
 
   def players_remaining
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
     max_players = tier_config[:max_players]
 
-    [max_players - players.count, 0].max
+    [max_players - cached_players_count, 0].max
   end
 
   # Analytics level
   def analytics_level
     case tier
-    when 'tier_3_amateur'
-      :basic
     when 'tier_2_semi_pro'
       :advanced
     when 'tier_1_professional'
       :predictive
     else
-      :basic
+      :basic # covers tier_3_amateur and any other values
     end
   end
 
@@ -158,17 +154,19 @@ module TierFeatures
   end
 
   def tier_limits
-    tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
+    @tier_limits ||= begin
+      tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
 
-    {
-      max_players: tier_config[:max_players],
-      max_matches_per_month: tier_config[:max_matches_per_month],
-      data_retention_months: tier_config[:data_retention_months],
-      current_players: players.count,
-      current_monthly_matches: matches.where('created_at > ?', 1.month.ago).count,
-      players_remaining: players_remaining,
-      matches_remaining: matches_remaining_this_month
-    }
+      {
+        max_players: tier_config[:max_players],
+        max_matches_per_month: tier_config[:max_matches_per_month],
+        data_retention_months: tier_config[:data_retention_months],
+        current_players: cached_players_count,
+        current_monthly_matches: cached_monthly_matches_count,
+        players_remaining: players_remaining,
+        matches_remaining: matches_remaining_this_month
+      }
+    end
   end
 
   def available_features
@@ -223,7 +221,7 @@ module TierFeatures
     tier_config = TIER_FEATURES[tier_symbol] || TIER_FEATURES[:tier_3_amateur]
     max_players = tier_config[:max_players]
 
-    players.count >= (max_players * 0.8).floor # 80% threshold
+    cached_players_count >= (max_players * 0.8).floor # 80% threshold
   end
 
   def approaching_match_limit?
@@ -233,8 +231,36 @@ module TierFeatures
     return false unless max_matches # unlimited
     return false if match_limit_reached?
 
-    monthly_matches = matches.where('created_at > ?', 1.month.ago).count
-    monthly_matches >= (max_matches * 0.8).floor # 80% threshold
+    cached_monthly_matches_count >= (max_matches * 0.8).floor # 80% threshold
+  end
+
+  # Métodos auxiliares para cachear contagens
+  # Usa cache em camadas: memoização por request + Redis cache
+  def cached_players_count
+    @cached_players_count ||= Rails.cache.fetch(
+      "org:#{id}:players_count",
+      expires_in: 5.minutes
+    ) do
+      players.where(deleted_at: nil).count
+    end
+  end
+
+  def cached_monthly_matches_count
+    @cached_monthly_matches_count ||= Rails.cache.fetch(
+      "org:#{id}:monthly_matches_count:#{Date.today.strftime('%Y-%m')}",
+      expires_in: 5.minutes
+    ) do
+      matches.where('created_at > ?', 1.month.ago).count
+    end
+  end
+
+  # Cache helper methods para invalidação
+  def clear_players_cache
+    Rails.cache.delete("org:#{id}:players_count")
+  end
+
+  def clear_matches_cache
+    Rails.cache.delete("org:#{id}:monthly_matches_count:#{Date.today.strftime('%Y-%m')}")
   end
 
   private

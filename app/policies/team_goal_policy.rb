@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authorization policy for TeamGoal resources
 class TeamGoalPolicy < ApplicationPolicy
   def index?
     true
@@ -36,6 +37,7 @@ class TeamGoalPolicy < ApplicationPolicy
     record.assigned_to_id == user.id
   end
 
+  # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
       scope.where(organization: user.organization)

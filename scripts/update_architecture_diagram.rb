@@ -21,7 +21,8 @@ class ArchitectureDiagramGenerator
     puts 'Analyzing project structure...'
     diagram = generate_mermaid_diagram
     update_readme(diagram)
-    puts '✅ Architecture diagram updated successfully!'
+    export_mermaid_file(diagram)
+    puts ' Architecture diagram updated successfully!'
   end
 
   private
@@ -534,6 +535,15 @@ end
 
       #{diagram}
 
+      > ** Better Visualization Options:**
+      >
+      > The diagram above may be difficult to read in GitHub's preview. For better visualization:
+      > - **[View in Mermaid Live Editor](https://mermaid.live/)** - Open `diagram.mmd` file in the live editor
+      > - **[View in VS Code](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid)** - Install Mermaid extension
+      > - **Export diagram**: Use the standalone `diagram.mmd` file for import into diagramming tools
+      >
+      > The complete Mermaid source is available in [`diagram.mmd`](./diagram.mmd).
+
       **Key Architecture Principles:**
 
       1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
@@ -549,6 +559,19 @@ end
 
     # Write back to file with validated path
     File.write(readme_realpath, before_arch + new_arch_section + after_arch)
+  end
+
+  def export_mermaid_file(diagram)
+    # Extract just the mermaid code (remove the markdown code fence)
+    mermaid_code = diagram.strip.gsub(/^```mermaid\n/, '').gsub(/\n```$/, '')
+
+    # Validate and write to diagram.mmd file
+    diagram_path = RAILS_ROOT.join('diagram.mmd')
+    diagram_realpath = diagram_path.expand_path
+    validate_path_within_project(diagram_realpath)
+
+    File.write(diagram_realpath, mermaid_code)
+    puts '📄 Exported standalone diagram to diagram.mmd'
   end
 end
 

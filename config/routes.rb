@@ -5,8 +5,12 @@ Rails.application.routes.draw do
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
 
-  # Health check endpoint
+  # Health check endpoints
   get 'up' => 'rails/health#show', as: :rails_health_check
+  get 'health' => 'rails/health#show'
+
+  # SEO - Sitemap
+  get 'sitemap.xml', to: 'sitemap#index', defaults: { format: 'xml' }
 
   # API routes
   namespace :api do
@@ -49,6 +53,61 @@ Rails.application.routes.draw do
         end
       end
 
+      # Roster Management
+      post 'rosters/remove/:player_id', to: 'rosters#remove_from_roster'
+      post 'rosters/hire/:scouting_target_id', to: 'rosters#hire_from_scouting'
+      get 'rosters/free-agents', to: 'rosters#free_agents'
+      get 'rosters/statistics', to: 'rosters#statistics'
+
+      # Admin - Player Management
+      namespace :admin do
+        resources :players, only: [:index] do
+          member do
+            post :soft_delete
+            post :restore
+            post :enable_access
+            post :disable_access
+            post :transfer
+          end
+        end
+
+        # Audit Logs
+        resources :audit_logs, only: [:index], path: 'audit-logs'
+      end
+
+      # Support System
+      namespace :support do
+        # User tickets
+        resources :tickets do
+          member do
+            post :close
+            post :reopen
+            post 'messages', to: 'tickets#add_message'
+          end
+        end
+
+        # FAQ
+        resources :faq, only: [:index, :show], param: :slug, controller: 'faqs' do
+          member do
+            post :helpful, to: 'faqs#mark_helpful'
+            post 'not-helpful', to: 'faqs#mark_not_helpful'
+          end
+        end
+
+        # Staff operations
+        namespace :staff do
+          get 'dashboard', to: 'staff#dashboard'
+          get 'analytics', to: 'staff#analytics'
+
+          resources :tickets, only: [] do
+            member do
+              post :assign
+              post :resolve
+            end
+          end
+        end
+      end
+
       # Riot Integration
       scope :riot_integration, controller: 'riot_integration' do
         get :sync_status
@@ -81,6 +140,7 @@ Rails.application.routes.draw do
       namespace :analytics do
         get 'performance', to: 'performance#index'
         get 'champions/:player_id', to: 'champions#show'
+        get 'champions/:player_id/details', to: 'champions#details'
         get 'kda-trend/:player_id', to: 'kda_trend#show'
         get 'laning/:player_id', to: 'laning#show'
         get 'teamfights/:player_id', to: 'teamfights#show'
@@ -149,6 +209,35 @@ Rails.application.routes.draw do
         get 'meta/:role', to: 'draft_comparison#meta_by_role'
         get 'composition-winrate', to: 'draft_comparison#composition_winrate'
         get 'counters', to: 'draft_comparison#suggest_counters'
+      end
+
+      # Strategy Module - Draft & Tactical Planning
+      namespace :strategy do
+        # Draft Plans
+        resources :draft_plans, path: 'draft-plans' do
+          member do
+            post :analyze
+            patch :activate
+            patch :deactivate
+          end
+        end
+
+        # Tactical Boards
+        resources :tactical_boards, path: 'tactical-boards' do
+          member do
+            get :statistics
+          end
+        end
+
+        # Assets endpoints
+        get 'assets/champion/:champion_name', to: 'assets#champion_assets'
+        get 'assets/map', to: 'assets#map_assets'
+      end
+
+      # Fantasy Module - Coming Soon Waitlist
+      namespace :fantasy do
+        post 'waitlist', to: 'waitlist#create'
+        get 'waitlist/stats', to: 'waitlist#stats'
       end
     end
   end

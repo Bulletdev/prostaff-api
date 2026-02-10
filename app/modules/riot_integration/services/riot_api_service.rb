@@ -138,11 +138,45 @@ class RiotApiService
   end
 
   def platform_for_region(region)
-    REGIONS.dig(region.upcase, :platform) || raise(RiotApiError, "Unknown region: #{region}")
+    normalized = normalize_region(region)
+    REGIONS.dig(normalized, :platform) || raise(RiotApiError, "Unknown region: #{region}")
   end
 
   def regional_route_for_region(region)
-    REGIONS.dig(region.upcase, :region) || raise(RiotApiError, "Unknown region: #{region}")
+    normalized = normalize_region(region)
+    REGIONS.dig(normalized, :region) || raise(RiotApiError, "Unknown region: #{region}")
+  end
+
+  # Normalizes platform codes (br1, na1, euw1) to region codes (BR, NA, EUW)
+  def normalize_region(region)
+    return nil if region.nil?
+
+    # Convert to uppercase and remove trailing digit
+    normalized = region.to_s.upcase.sub(/\d+$/, '')
+
+    # Map platform codes to region codes
+    platform_to_region = {
+      'BR' => 'BR',
+      'NA' => 'NA',
+      'EUW' => 'EUW',
+      'EUN' => 'EUNE',
+      'KR' => 'KR',
+      'JP' => 'JP',
+      'OC' => 'OCE',
+      'LA' => 'LAN',  # LA1 -> LAN, LA2 -> LAS (handle separately)
+      'RU' => 'RU',
+      'TR' => 'TR'
+    }
+
+    # Special case for LA1/LA2
+    if region.to_s.upcase == 'LA1'
+      return 'LAN'
+    elsif region.to_s.upcase == 'LA2'
+      return 'LAS'
+    end
+
+    # Return mapped region or the normalized value
+    platform_to_region[normalized] || normalized
   end
 
   def parse_summoner_response(response)
@@ -218,8 +252,36 @@ class RiotApiService
       triple_kills: participant['tripleKills'],
       quadra_kills: participant['quadraKills'],
       penta_kills: participant['pentaKills'],
-      win: participant['win']
+      win: participant['win'],
+      items: [
+        participant['item0'], participant['item1'], participant['item2'],
+        participant['item3'], participant['item4'], participant['item5'],
+        participant['item6']
+      ].compact.reject(&:zero?),
+      item_build_order: extract_item_build_order(participant),
+      trinket: participant['item6'],
+      summoner_spell_1: participant['summoner1Id'],
+      summoner_spell_2: participant['summoner2Id'],
+      runes: extract_runes(participant)
     }
+  end
+
+  def extract_runes(participant)
+    perks = participant.dig('perks', 'styles')
+    return [] unless perks
+
+    # Extract primary and sub-style selections
+    perks.flat_map { |style| style['selections'].map { |s| s['perk'] } }
+  end
+
+  def extract_item_build_order(participant)
+    # Riot API doesn't provide item purchase order in match details
+    # We can only get the final items, so return them in the order they appear
+    # (item0-5 are main items, item6 is trinket)
+    [
+      participant['item0'], participant['item1'], participant['item2'],
+      participant['item3'], participant['item4'], participant['item5']
+    ].compact.reject(&:zero?)
   end
 
   def parse_champion_mastery(response)

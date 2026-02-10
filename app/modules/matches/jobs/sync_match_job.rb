@@ -5,27 +5,46 @@ module Matches
     class SyncMatchJob < ApplicationJob
       queue_as :default
 
-      retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
-      retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
+      # retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
+      # retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
 
-      def perform(match_id, organization_id, region = 'BR')
+      def perform(match_id, organization_id, region = 'BR', force_update = false)
+        puts "SyncMatchJob: Starting sync for #{match_id} (force_update: #{force_update})"
+        $stdout.flush
         organization = Organization.find(organization_id)
         riot_service = RiotApiService.new
 
-        match_data = riot_service.get_match_details(
-          match_id: match_id,
-          region: region
-        )
+        begin
+          match_data = riot_service.get_match_details(
+            match_id: match_id,
+            region: region
+          )
+        rescue Exception => e
+          puts "SyncMatchJob: FATAL ERROR in get_match_details: #{e.class} - #{e.message}"
+          puts e.backtrace.join("\n")
+          $stdout.flush
+          raise
+        end
+        puts 'SyncMatchJob: Match data fetched'
+        $stdout.flush
 
         match = Match.find_by(riot_match_id: match_data[:match_id])
         if match.present?
-          Rails.logger.info("Match #{match_id} already exists")
-          return
+          if force_update || needs_update?(match)
+            puts 'SyncMatchJob: Match exists but needs update, updating...'
+            $stdout.flush
+            update_match_and_stats(match, match_data, organization)
+          else
+            puts 'SyncMatchJob: Match already exists and is up to date'
+            $stdout.flush
+            return
+          end
+        else
+          match = create_match_record(match_data, organization)
+          puts 'SyncMatchJob: Match record created'
+          $stdout.flush
+          create_player_match_stats(match, match_data[:participants], organization)
         end
-
-        match = create_match_record(match_data, organization)
-
-        create_player_match_stats(match, match_data[:participants], organization)
 
         Rails.logger.info("Successfully synced match #{match_id}")
       rescue RiotApiService::NotFoundError => e
@@ -37,6 +56,33 @@ module Matches
 
       private
 
+      # Check if match needs update (missing critical data)
+      def needs_update?(match)
+        # Check if any player stats are missing critical fields
+        match.player_match_stats.any? do |stat|
+          stat.cs.nil? || stat.cs.zero? ||
+            stat.damage_share.nil? ||
+            stat.gold_share.nil? ||
+            stat.cs_per_min.nil?
+        end
+      end
+
+      # Update existing match and stats
+      def update_match_and_stats(match, match_data, organization)
+        # Update match record if needed
+        match.update!(
+          game_duration: match_data[:game_duration],
+          game_version: match_data[:game_version],
+          victory: determine_team_victory(match_data[:participants], organization)
+        )
+
+        # Delete old stats and recreate with new data
+        match.player_match_stats.destroy_all
+        create_player_match_stats(match, match_data[:participants], organization)
+        puts 'SyncMatchJob: Match and stats updated'
+        $stdout.flush
+      end
+
       def create_match_record(match_data, organization)
         Match.create!(
           organization: organization,
@@ -45,15 +91,43 @@ module Matches
           game_start: match_data[:game_creation],
           game_end: match_data[:game_creation] + match_data[:game_duration].seconds,
           game_duration: match_data[:game_duration],
-          patch_version: match_data[:game_version],
+          game_version: match_data[:game_version],
           victory: determine_team_victory(match_data[:participants], organization)
         )
       end
 
       def create_player_match_stats(match, participants, organization)
+        puts "SyncMatchJob: Creating player stats for #{participants.size} participants"
+        # Calculate team totals for shares
+        team_totals = participants.group_by { |p| p[:team_id] }.transform_values do |team_participants|
+          {
+            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
+            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
+            total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
+          }
+        end
+
         participants.each do |participant_data|
           player = organization.players.find_by(riot_puuid: participant_data[:puuid])
           next unless player
+
+          puts "SyncMatchJob Debug: Player #{player.summoner_name} - Items: #{participant_data[:items]}"
+          puts "SyncMatchJob Debug: Raw Participant Keys: #{participant_data.keys}"
+
+          team_stats = team_totals[participant_data[:team_id]]
+          damage_share = if team_stats[:total_damage].positive?
+                           participant_data[:total_damage_dealt] / team_stats[:total_damage]
+                         else
+                           0
+                         end
+          gold_share = if team_stats[:total_gold].positive?
+                         participant_data[:gold_earned] / team_stats[:total_gold]
+                       else
+                         0
+                       end
+
+          # Calculate CS (minions + jungle minions)
+          cs_total = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
 
           PlayerMatchStat.create!(
             match: match,
@@ -64,20 +138,24 @@ module Matches
             deaths: participant_data[:deaths],
             assists: participant_data[:assists],
             gold_earned: participant_data[:gold_earned],
-            total_damage_dealt: participant_data[:total_damage_dealt],
-            total_damage_taken: participant_data[:total_damage_taken],
-            minions_killed: participant_data[:minions_killed],
-            jungle_minions_killed: participant_data[:neutral_minions_killed],
+            damage_dealt_total: participant_data[:total_damage_dealt],
+            damage_taken: participant_data[:total_damage_taken],
+            cs: cs_total,
             vision_score: participant_data[:vision_score],
             wards_placed: participant_data[:wards_placed],
-            wards_killed: participant_data[:wards_killed],
-            champion_level: participant_data[:champion_level],
-            first_blood_kill: participant_data[:first_blood_kill],
+            wards_destroyed: participant_data[:wards_killed],
+            first_blood: participant_data[:first_blood_kill],
             double_kills: participant_data[:double_kills],
             triple_kills: participant_data[:triple_kills],
             quadra_kills: participant_data[:quadra_kills],
             penta_kills: participant_data[:penta_kills],
-            performance_score: calculate_performance_score(participant_data)
+            performance_score: calculate_performance_score(participant_data),
+            items: participant_data[:items],
+            runes: participant_data[:runes],
+            summoner_spell_1: participant_data[:summoner_spell_1],
+            summoner_spell_2: participant_data[:summoner_spell_2],
+            damage_share: damage_share,
+            gold_share: gold_share
           )
         end
       end

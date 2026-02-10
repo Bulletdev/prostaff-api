@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for TeamGoal model
+# Renders team objectives and progress tracking
 class TeamGoalSerializer < Blueprinter::Base
   identifier :id
 

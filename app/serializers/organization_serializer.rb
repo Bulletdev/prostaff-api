@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
+# Serializer for Organization model
+# Renders organization details for API responses
 class OrganizationSerializer < Blueprinter::Base
   identifier :id
 
   fields :name, :slug, :region, :tier, :subscription_plan, :subscription_status,
-         :logo_url, :settings, :created_at, :updated_at
+         :logo_url, :settings, :created_at, :updated_at,
+         :trial_expires_at, :trial_started_at
 
   field :region_display do |org|
     region_names = {
@@ -42,12 +45,22 @@ class OrganizationSerializer < Blueprinter::Base
     end
   end
 
+  # Trial information
+  field :trial_info do |org|
+    {
+      on_trial: org.on_trial?,
+      trial_expired: org.trial_expired?,
+      days_remaining: org.trial_days_remaining,
+      has_active_access: org.has_active_access?
+    }
+  end
+
   field :statistics do |org|
     {
-      total_players: org.players.count,
-      active_players: org.players.active.count,
+      total_players: org.cached_players_count,
+      active_players: org.players.where(deleted_at: nil, status: 'active').count,
       total_matches: org.matches.count,
-      recent_matches: org.matches.recent(30).count,
+      recent_matches: org.cached_monthly_matches_count,
       total_users: org.users.count
     }
   end
@@ -65,13 +78,15 @@ class OrganizationSerializer < Blueprinter::Base
   end
 
   field :limits do |org|
+    # Chamar tier_limits uma única vez e retornar apenas os campos necessários
+    limits = org.tier_limits
     {
-      max_players: org.tier_limits[:max_players],
-      max_matches_per_month: org.tier_limits[:max_matches_per_month],
-      current_players: org.tier_limits[:current_players],
-      current_monthly_matches: org.tier_limits[:current_monthly_matches],
-      players_remaining: org.tier_limits[:players_remaining],
-      matches_remaining: org.tier_limits[:matches_remaining]
+      max_players: limits[:max_players],
+      max_matches_per_month: limits[:max_matches_per_month],
+      current_players: limits[:current_players],
+      current_monthly_matches: limits[:current_monthly_matches],
+      players_remaining: limits[:players_remaining],
+      matches_remaining: limits[:matches_remaining]
     }
   end
 end

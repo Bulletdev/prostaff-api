@@ -140,7 +140,7 @@ module Scrims
       # @return [Hash] Games played by week
       def games_played_trend(scrims)
         scrims.group_by { |s| s.created_at.beginning_of_week }
-              .transform_values { |s| s.sum(&:games_completed) }
+              .transform_values { |s| s.sum { |scrim| scrim.games_completed || 0 } }
       end
 
       # Calculates consistency score (0-100, higher = more consistent)

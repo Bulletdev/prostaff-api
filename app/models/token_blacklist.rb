@@ -1,5 +1,12 @@
 # frozen_string_literal: true
 
+# Manages blacklisted JWT tokens for secure logout
+#
+# When users log out, their JWT token's unique identifier (jti) is added
+# to this blacklist to prevent token reuse until expiration.
+#
+# @attr [String] jti JWT unique identifier
+# @attr [DateTime] expires_at Token expiration timestamp
 class TokenBlacklist < ApplicationRecord
   validates :jti, presence: true, uniqueness: true
   validates :expires_at, presence: true

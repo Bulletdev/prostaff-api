@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for opponent team in scrims
+# Renders opponent team information and history
 class ScrimOpponentTeamSerializer
   def initialize(opponent_team, options = {})
     @opponent_team = opponent_team

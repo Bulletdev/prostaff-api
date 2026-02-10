@@ -1,5 +1,7 @@
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database (LOCAL DEVELOPMENT ONLY)
+  # Para produção/homologação use Supabase (DATABASE_URL no .env)
+  # Este container é opcional - apenas para desenvolvimento offline ou testes
   postgres:
     image: postgres:15-alpine
     environment:
@@ -15,19 +17,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - local-db  # Use 'docker-compose --profile local-db up' para iniciar
 
-  # Redis for caching and Sidekiq
+  # Redis for Sidekiq, Rails Cache and Rate Limiting
   redis:
     image: redis:7-alpine
+    command: redis-server /etc/redis/redis.conf
     volumes:
       - redis_data:/data
+      - ./redis.conf:/etc/redis/redis.conf:ro
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Rails API
   api:
@@ -46,6 +53,12 @@ services:
     networks:
       - default
       - security-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     command: >
       sh -c "
         bundle check || bundle install &&
@@ -63,16 +76,49 @@ services:
       - .:/app
       - bundle_cache:/usr/local/bundle
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bundle exec sidekiqmon processes | grep -q 'busy' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     command: bundle exec sidekiq -C config/sidekiq.yml
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: prostaff-nginx
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api
+    networks:
+      - default
+      - security-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data:
   redis_data:
   bundle_cache:
+  nginx_cache:
+  nginx_logs:
 
 networks:
   security-net:

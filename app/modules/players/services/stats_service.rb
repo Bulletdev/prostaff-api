@@ -2,6 +2,7 @@
 
 module Players
   module Services
+    # Stats Service\n    # Calculates and aggregates player statistics
     class StatsService
       include Analytics::Concerns::AnalyticsCalculations
 

@@ -36,6 +36,26 @@ module Authentication
       #
       # @return [JSON] User, organization, and JWT tokens
       def register
+        # Check for duplicate email
+        email = params.dig(:user, :email)&.downcase&.strip
+        if email.present? && User.exists?(email: email)
+          return render_error(
+            message: 'Já existe uma conta com este email. Por favor, faça login ou use outro email.',
+            code: 'DUPLICATE_EMAIL',
+            status: :unprocessable_entity
+          )
+        end
+
+        # Check for duplicate organization name
+        org_name = params.dig(:organization, :name)&.strip
+        if org_name.present? && Organization.exists?(['LOWER(name) = ?', org_name.downcase])
+          return render_error(
+            message: 'Já existe uma organização com este nome. Por favor, escolha outro nome.',
+            code: 'DUPLICATE_ORGANIZATION',
+            status: :unprocessable_entity
+          )
+        end
+
         ActiveRecord::Base.transaction do
           organization = create_organization!
           user = create_user!(organization)
@@ -58,7 +78,7 @@ module Authentication
               user: JSON.parse(UserSerializer.render(user)),
               organization: JSON.parse(OrganizationSerializer.render(organization))
             }.merge(tokens),
-            message: 'Registration successful'
+            message: "Registration successful. Your #{organization.trial_days_remaining}-day trial has started!"
           )
         end
       rescue ActiveRecord::RecordInvalid => e
@@ -308,7 +328,10 @@ module Authentication
       end
 
       def organization_params
-        params.require(:organization).permit(:name, :region, :tier)
+        permitted = params.require(:organization).permit(:name, :region, :tier)
+        # Normalize region to uppercase to match Constants::REGIONS format
+        permitted[:region] = permitted[:region]&.upcase if permitted[:region].present?
+        permitted
       end
 
       def user_params

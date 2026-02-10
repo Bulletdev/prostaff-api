@@ -87,6 +87,12 @@ class SyncMatchJob < ApplicationJob
         triple_kills: participant_data[:triple_kills],
         quadra_kills: participant_data[:quadra_kills],
         penta_kills: participant_data[:penta_kills],
+        items: participant_data[:items] || [],
+        item_build_order: participant_data[:item_build_order] || [],
+        trinket: participant_data[:trinket],
+        summoner_spell_1: map_summoner_spell(participant_data[:summoner_spell_1]),
+        summoner_spell_2: map_summoner_spell(participant_data[:summoner_spell_2]),
+        runes: participant_data[:runes] || [],
         performance_score: calculate_performance_score(participant_data)
       )
       created_count += 1
@@ -99,8 +105,7 @@ class SyncMatchJob < ApplicationJob
   def determine_match_type(game_mode)
     case game_mode.upcase
     when 'CLASSIC' then 'official'
-    when 'ARAM' then 'scrim'
-    else 'scrim'
+    else 'scrim' # covers ARAM and other game modes
     end
   end
 
@@ -118,13 +123,22 @@ class SyncMatchJob < ApplicationJob
   def normalize_role(role)
     role_mapping = {
       'top' => 'top',
+      'toplaner' => 'top',
+      'topo' => 'top',
       'jungle' => 'jungle',
+      'selva' => 'jungle',
       'middle' => 'mid',
       'mid' => 'mid',
+      'meio' => 'mid',
       'bottom' => 'adc',
       'adc' => 'adc',
+      'adcarry' => 'adc',
+      'carry' => 'adc',
+      'atirador' => 'adc',
       'utility' => 'support',
-      'support' => 'support'
+      'support' => 'support',
+      'suporte' => 'support'
+
     }
 
     role_mapping[role&.downcase] || 'mid'
@@ -151,5 +165,28 @@ class SyncMatchJob < ApplicationJob
     return total if deaths.zero?
 
     total / deaths
+  end
+
+  # Map summoner spell ID to name
+  # Based on Riot's Data Dragon summoner spell IDs
+  def map_summoner_spell(spell_id)
+    spell_mapping = {
+      1 => 'SummonerBoost',        # Cleanse
+      3 => 'SummonerExhaust',      # Exhaust
+      4 => 'SummonerFlash',        # Flash
+      6 => 'SummonerHaste',        # Ghost
+      7 => 'SummonerHeal',         # Heal
+      11 => 'SummonerSmite',       # Smite
+      12 => 'SummonerTeleport',    # Teleport
+      13 => 'SummonerMana',        # Clarity
+      14 => 'SummonerDot',         # Ignite
+      21 => 'SummonerBarrier',     # Barrier
+      30 => 'SummonerPoroRecall',  # To the King!
+      31 => 'SummonerPoroThrow',   # Poro Toss
+      32 => 'SummonerSnowball',    # Mark/Dash (ARAM)
+      39 => 'SummonerSnowURFBattle' # Ultra Rapid Fire
+    }
+
+    spell_mapping[spell_id] || "SummonerSpell#{spell_id}"
   end
 end

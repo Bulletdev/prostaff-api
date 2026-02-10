@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Base Pundit policy class providing authorization logic for all resources
 class ApplicationPolicy
   attr_reader :user, :record
 
@@ -36,6 +37,7 @@ class ApplicationPolicy
     false
   end
 
+  # Scope class for filtering resources based on authorization rules
   class Scope
     def initialize(user, scope)
       @user = user

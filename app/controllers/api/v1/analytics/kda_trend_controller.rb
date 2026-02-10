@@ -27,10 +27,16 @@ module Api
                                  .limit(50)
                                  .includes(:match)
 
+          stats_array = stats.to_a
+
           trend_data = {
             player: PlayerSerializer.render_as_hash(player),
-            kda_by_match: stats.map do |stat|
-              kda = stat.deaths.zero? ? (stat.kills + stat.assists).to_f : ((stat.kills + stat.assists).to_f / stat.deaths)
+            kda_by_match: stats_array.map do |stat|
+              kda = if stat.deaths.zero?
+                      (stat.kills + stat.assists).to_f
+                    else
+                      ((stat.kills + stat.assists).to_f / stat.deaths)
+                    end
               {
                 match_id: stat.match.id,
                 date: stat.match.game_start,
@@ -43,9 +49,9 @@ module Api
               }
             end,
             averages: {
-              last_10_games: calculate_kda_average(stats.limit(10)),
-              last_20_games: calculate_kda_average(stats.limit(20)),
-              overall: calculate_kda_average(stats)
+              last_10_games: calculate_kda_average(stats_array.first(10)),
+              last_20_games: calculate_kda_average(stats_array.first(20)),
+              overall: calculate_kda_average(stats_array)
             }
           }
 
@@ -57,9 +63,9 @@ module Api
         def calculate_kda_average(stats)
           return 0 if stats.empty?
 
-          total_kills = stats.sum(:kills)
-          total_deaths = stats.sum(:deaths)
-          total_assists = stats.sum(:assists)
+          total_kills = stats.sum(&:kills)
+          total_deaths = stats.sum(&:deaths)
+          total_assists = stats.sum(&:assists)
 
           deaths = total_deaths.zero? ? 1 : total_deaths
           ((total_kills + total_assists).to_f / deaths).round(2)

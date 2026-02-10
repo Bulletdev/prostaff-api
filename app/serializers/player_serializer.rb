@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for Player model
+# Renders player data with rank, stats, and profile information
 class PlayerSerializer < Blueprinter::Base
   identifier :id
 
@@ -12,6 +14,7 @@ class PlayerSerializer < Blueprinter::Base
          :peak_tier, :peak_rank, :peak_season,
          :riot_puuid, :riot_summoner_id, :profile_icon_id,
          :twitter_handle, :twitch_channel, :instagram_handle,
+         :kick_url, :professional_name,
          :notes, :sync_status, :last_sync_at, :created_at, :updated_at
 
   field :age do |obj|
@@ -19,9 +22,11 @@ class PlayerSerializer < Blueprinter::Base
   end
 
   field :avatar_url do |player|
-    if player.profile_icon_id.present?
-      # Use latest patch version from Data Dragon
-      "https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/#{player.profile_icon_id}.png"
+    # Use custom avatar_url if present and not blank, otherwise fallback to Riot profile icon
+    if player.avatar_url.present? && player.avatar_url.strip.present?
+      player.avatar_url
+    elsif player.profile_icon_id.present?
+      RiotCdnService.new.profile_icon_url(player.profile_icon_id)
     end
   end
 

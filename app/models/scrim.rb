@@ -32,7 +32,7 @@
 # @example Query upcoming scrims
 #   Scrim.upcoming.by_focus_area('team_fighting')
 class Scrim < ApplicationRecord
-  # Concerns
+  include OrganizationScoped
   include Constants
 
   # Associations

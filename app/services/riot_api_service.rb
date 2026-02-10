@@ -263,8 +263,36 @@ class RiotApiService
       triple_kills: participant['tripleKills'],
       quadra_kills: participant['quadraKills'],
       penta_kills: participant['pentaKills'],
-      win: participant['win']
+      win: participant['win'],
+      items: [
+        participant['item0'], participant['item1'], participant['item2'],
+        participant['item3'], participant['item4'], participant['item5'],
+        participant['item6']
+      ].compact.reject(&:zero?),
+      item_build_order: extract_item_build_order(participant),
+      trinket: participant['item6'],
+      summoner_spell_1: participant['summoner1Id'],
+      summoner_spell_2: participant['summoner2Id'],
+      runes: extract_runes(participant)
     }
+  end
+
+  def extract_runes(participant)
+    perks = participant.dig('perks', 'styles')
+    return [] unless perks
+
+    # Extract primary and sub-style selections
+    perks.flat_map { |style| style['selections'].map { |s| s['perk'] } }
+  end
+
+  def extract_item_build_order(participant)
+    # Riot API doesn't provide item purchase order in match details
+    # We can only get the final items, so return them in the order they appear
+    # (item0-5 are main items, item6 is trinket)
+    [
+      participant['item0'], participant['item1'], participant['item2'],
+      participant['item3'], participant['item4'], participant['item5']
+    ].compact.reject(&:zero?)
   end
 
   def parse_champion_mastery(response)

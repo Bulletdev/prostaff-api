@@ -4,46 +4,54 @@ module Api
   module V1
     module Scouting
       # Watchlist Controller
-      #
-      # Manages high-priority scouting targets for active recruitment tracking.
-      # Watchlist entries are scouting targets with high/critical priority and active status.
-      #
-      # @example GET /api/v1/scouting/watchlist
-      #   { watchlist: [...], count: 5 }
-      #
-      # Main endpoints:
-      # - GET index: Lists all high-priority scouting targets currently being watched
-      # - POST create: Adds a scouting target to watchlist by elevating priority to 'high'
-      # - DELETE destroy: Removes from watchlist by lowering priority to 'medium'
+      # Manages organization-specific player scouting watchlists
       class WatchlistController < Api::V1::BaseController
+        # GET /api/v1/scouting/watchlist
+        # Returns high-priority scouting targets in org's watchlist
         def index
-          # Watchlist is just high-priority scouting targets
-          targets = organization_scoped(ScoutingTarget)
-                    .where(priority: %w[high critical])
-                    .where(status: %w[watching contacted negotiating])
-                    .includes(:added_by, :assigned_to)
-                    .order(priority: :desc, created_at: :desc)
+          watchlists = organization_scoped(ScoutingWatchlist)
+                       .where(priority: %w[high critical])
+                       .where(status: %w[watching contacted negotiating])
+                       .includes(:scouting_target, :added_by, :assigned_to)
+                       .order(priority: :desc, created_at: :desc)
+
+          watchlist_data = watchlists.map do |watchlist|
+            JSON.parse(ScoutingTargetSerializer.render(watchlist.scouting_target, watchlist: watchlist))
+          end
 
           render_success({
-                           watchlist: ScoutingTargetSerializer.render_as_hash(targets),
-                           count: targets.size
+                           watchlist: watchlist_data,
+                           count: watchlists.size
                          })
         end
 
+        # POST /api/v1/scouting/watchlist
+        # Add a scouting target to watchlist (sets priority to high)
         def create
-          # Add a scouting target to watchlist by updating its priority
-          target = organization_scoped(ScoutingTarget).find(params[:scouting_target_id])
+          target = ScoutingTarget.find(params[:scouting_target_id])
 
-          if target.update(priority: 'high')
+          # Find or create watchlist entry
+          watchlist = organization_scoped(ScoutingWatchlist)
+                      .find_or_initialize_by(scouting_target: target)
+
+          watchlist.assign_attributes(
+            added_by: current_user,
+            priority: 'high',
+            status: watchlist.new_record? ? 'watching' : watchlist.status
+          )
+
+          if watchlist.save
             log_user_action(
               action: 'add_to_watchlist',
-              entity_type: 'ScoutingTarget',
-              entity_id: target.id,
+              entity_type: 'ScoutingWatchlist',
+              entity_id: watchlist.id,
               new_values: { priority: 'high' }
             )
 
             render_created({
-                             scouting_target: ScoutingTargetSerializer.render_as_hash(target)
+                             scouting_target: JSON.parse(
+                               ScoutingTargetSerializer.render(target, watchlist: watchlist)
+                             )
                            }, message: 'Added to watchlist')
           else
             render_error(
@@ -54,24 +62,35 @@ module Api
           end
         end
 
+        # DELETE /api/v1/scouting/watchlist/:id
+        # Remove from watchlist (doesn't delete target, just lowers priority)
         def destroy
-          # Remove from watchlist by lowering priority
-          target = organization_scoped(ScoutingTarget).find(params[:id])
+          target = ScoutingTarget.find(params[:id])
+          watchlist = organization_scoped(ScoutingWatchlist).find_by(scouting_target: target)
 
-          if target.update(priority: 'medium')
-            log_user_action(
-              action: 'remove_from_watchlist',
-              entity_type: 'ScoutingTarget',
-              entity_id: target.id,
-              new_values: { priority: 'medium' }
-            )
+          if watchlist
+            # Lower priority instead of deleting
+            if watchlist.update(priority: 'medium')
+              log_user_action(
+                action: 'remove_from_watchlist',
+                entity_type: 'ScoutingWatchlist',
+                entity_id: watchlist.id,
+                new_values: { priority: 'medium' }
+              )
 
-            render_deleted(message: 'Removed from watchlist')
+              render_deleted(message: 'Removed from watchlist')
+            else
+              render_error(
+                message: 'Failed to remove from watchlist',
+                code: 'UPDATE_ERROR',
+                status: :unprocessable_entity
+              )
+            end
           else
             render_error(
-              message: 'Failed to remove from watchlist',
-              code: 'UPDATE_ERROR',
-              status: :unprocessable_entity
+              message: 'Not in watchlist',
+              code: 'NOT_FOUND',
+              status: :not_found
             )
           end
         end

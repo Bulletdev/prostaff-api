@@ -60,7 +60,7 @@ module Analytics
       # @param matches [Array] Collection of matches
       # @return [String] Form string
       def calculate_recent_form(matches)
-        matches.map { |m| m.victory? ? 'W' : 'L' }.join('')
+        matches.map { |m| m.victory? ? 'W' : 'L' }.join
       end
       module_function :calculate_recent_form
 
@@ -119,7 +119,13 @@ module Analytics
       # @param group_by [Symbol] Grouping period (:day, :week, :month)
       # @return [Array<Hash>] Trend data by period
       def calculate_win_rate_trend(matches, group_by: :week)
-        grouped = matches.group_by do |match|
+        return [] if matches.empty?
+
+        # Filter out matches without game_start
+        valid_matches = matches.select { |m| m.respond_to?(:game_start) && m.game_start.present? }
+        return [] if valid_matches.empty?
+
+        grouped = valid_matches.group_by do |match|
           case group_by
           when :day
             match.game_start.beginning_of_day
@@ -131,7 +137,7 @@ module Analytics
         end
 
         grouped.map do |period, period_matches|
-          wins = period_matches.count(&:victory?)
+          wins = period_matches.count { |m| m.respond_to?(:victory?) && m.victory? }
           total = period_matches.size
           win_rate = total.zero? ? 0.0 : ((wins.to_f / total) * 100).round(1)
 

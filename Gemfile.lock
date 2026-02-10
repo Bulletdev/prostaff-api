@@ -133,15 +133,10 @@ GEM
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
-<<<<<<< Updated upstream
-    faraday-net_http (3.4.2)
-      net-http (~> 0.5)
-=======
     faraday-multipart (1.2.0)
       multipart-post (~> 2.0)
-    faraday-net_http (3.4.1)
-      net-http (>= 0.5.0)
->>>>>>> Stashed changes
+    faraday-net_http (3.4.2)
+      net-http (~> 0.5)
     faraday-retry (2.3.2)
       faraday (~> 2.0)
     fugit (1.12.1)
@@ -202,14 +197,9 @@ GEM
     minitest (5.26.0)
     msgpack (1.8.0)
     multi_json (1.18.0)
-<<<<<<< Updated upstream
+    multipart-post (2.4.1)
     net-http (0.9.1)
       uri (>= 0.11.1)
-=======
-    multipart-post (2.4.1)
-    net-http (0.6.0)
-      uri
->>>>>>> Stashed changes
     net-imap (0.5.12)
       date
       net-protocol

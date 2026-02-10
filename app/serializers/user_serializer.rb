@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for User model
+# Renders user profile and authentication data
 class UserSerializer < Blueprinter::Base
   identifier :id
 

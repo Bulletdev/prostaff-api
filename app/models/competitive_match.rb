@@ -30,6 +30,7 @@
 #   match.our_composition
 class CompetitiveMatch < ApplicationRecord
   # Concerns
+  include OrganizationScoped
   include Constants
 
   # Associations
@@ -168,11 +169,9 @@ class CompetitiveMatch < ApplicationRecord
   # Analysis methods
   def draft_phase_sequence
     # Returns the complete draft sequence combining bans and picks
-    sequence = []
-
     # Combine bans and picks with timestamps/order if available
-    our_bans.each do |ban|
-      sequence << { team: 'ours', type: 'ban', **ban.symbolize_keys }
+    sequence = our_bans.map do |ban|
+      { team: 'ours', type: 'ban', **ban.symbolize_keys }
     end
 
     opponent_bans.each do |ban|

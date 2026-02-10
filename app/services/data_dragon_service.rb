@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Data Dragon Service\n# Fetches static game data from Riot's Data Dragon CDN
 class DataDragonService
   BASE_URL = 'https://ddragon.leagueoflegends.com'
 

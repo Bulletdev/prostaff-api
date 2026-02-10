@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Serializer for ChampionPool model
+# Renders champion pool statistics for API responses
 class ChampionPoolSerializer < Blueprinter::Base
   identifier :id
 

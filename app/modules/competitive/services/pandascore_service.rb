@@ -2,6 +2,7 @@
 
 module Competitive
   module Services
+    # Pandascore Service\n    # Fetches professional match data from PandaScore API
     class PandascoreService
       include Singleton
 
