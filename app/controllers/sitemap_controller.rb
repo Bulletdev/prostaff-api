@@ -2,7 +2,8 @@
 
 # Controller para gerar sitemap.xml dinamicamente
 class SitemapController < ApplicationController
-  skip_before_action :authenticate_request!, only: [:index]
+  # No authentication required for sitemap - it's a public endpoint
+  # Note: authenticate_request! is only defined in Api::V1::BaseController, not ApplicationController
 
   # GET /sitemap.xml
   def index
