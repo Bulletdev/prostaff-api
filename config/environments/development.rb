@@ -44,15 +44,22 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.default_url_options = { host: 'localhost', port: 3333 }
 
-  config.action_mailer.smtp_settings = {
-    address: ENV.fetch('SMTP_ADDRESS', 'smtp.gmail.com'),
-    port: ENV.fetch('SMTP_PORT', 587).to_i,
-    user_name: ENV.fetch('SMTP_USERNAME'),
-    password: ENV.fetch('SMTP_PASSWORD'),
-    authentication: ENV.fetch('SMTP_AUTHENTICATION', 'plain'),
-    enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
-    domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
-  }
+  # Only configure SMTP if credentials are provided
+  if ENV['SMTP_USERNAME'].present? && ENV['SMTP_PASSWORD'].present?
+    config.action_mailer.smtp_settings = {
+      address: ENV.fetch('SMTP_ADDRESS', 'smtp.gmail.com'),
+      port: ENV.fetch('SMTP_PORT', 587).to_i,
+      user_name: ENV.fetch('SMTP_USERNAME'),
+      password: ENV.fetch('SMTP_PASSWORD'),
+      authentication: ENV.fetch('SMTP_AUTHENTICATION', 'plain'),
+      enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
+      domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
+    }
+  else
+    # Fall back to file delivery or log delivery when SMTP is not configured
+    config.action_mailer.delivery_method = :file
+    config.action_mailer.file_settings = { location: Rails.root.join('tmp/mail') }
+  end
 
   config.active_support.deprecation = :log
 
