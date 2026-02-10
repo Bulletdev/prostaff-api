@@ -1,0 +1,142 @@
+service: prostaff-api
+
+image: your-dockerhub-username/prostaff-api
+
+servers:
+  web:
+    hosts:
+      - <YOUR_SERVER_IP>
+    labels:
+      traefik.http.routers.prostaff-api.rule: Host(`api.prostaff.gg`)
+      traefik.http.routers.prostaff-api.tls: true
+      traefik.http.routers.prostaff-api.tls.certresolver: letsencrypt
+      traefik.http.routers.prostaff-api.entrypoints: websecure
+      traefik.http.services.prostaff-api.loadbalancer.healthcheck.path: /up
+      traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval: 10s
+    options:
+      network: "prostaff-network"
+  job:
+    hosts:
+      - <YOUR_SERVER_IP>
+    cmd: bundle exec sidekiq -C config/sidekiq.yml
+    options:
+      network: "prostaff-network"
+
+registry:
+  username: your-dockerhub-username
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    RAILS_ENV: production
+    RAILS_LOG_TO_STDOUT: true
+    RAILS_SERVE_STATIC_FILES: true
+    WEB_CONCURRENCY: 2
+    RAILS_MAX_THREADS: 5
+  secret:
+    - DATABASE_URL
+    - REDIS_URL
+    - SECRET_KEY_BASE
+    - RIOT_API_KEY
+    - POSTGRES_PASSWORD
+    - REDIS_PASSWORD
+
+traefik:
+  options:
+    publish:
+      - "80:80"
+      - "443:443"
+    network: "prostaff-network"
+    volume:
+      - "/var/lib/prostaff/traefik-certificates:/certificates"
+  args:
+    entryPoints.web.address: ":80"
+    entryPoints.web.http.redirections.entryPoint.to: websecure
+    entryPoints.web.http.redirections.entryPoint.scheme: https
+    entryPoints.websecure.address: ":443"
+    certificatesResolvers.letsencrypt.acme.email: "admin@prostaff.gg"
+    certificatesResolvers.letsencrypt.acme.storage: "/certificates/acme.json"
+    certificatesResolvers.letsencrypt.acme.httpchallenge: true
+    certificatesResolvers.letsencrypt.acme.httpchallenge.entrypoint: web
+    accesslog: true
+    accesslog.format: json
+
+accessories:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    host: <YOUR_SERVER_IP>
+    port: "127.0.0.1:9200:9200"
+    env:
+      clear:
+        discovery.type: single-node
+        xpack.security.enabled: false
+        ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    directories:
+      - data:/usr/share/elasticsearch/data
+    options:
+      network: "prostaff-network"
+
+  postgres:
+    image: postgres:15-alpine
+    host: <YOUR_SERVER_IP>
+    port: "127.0.0.1:5432:5432"
+    env:
+      clear:
+        POSTGRES_USER: prostaff
+        POSTGRES_DB: prostaff_production
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
+    options:
+      network: "prostaff-network"
+
+  redis:
+    image: redis:7-alpine
+    host: <YOUR_SERVER_IP>
+    port: "127.0.0.1:6379:6379"
+    env:
+      secret:
+        - REDIS_PASSWORD
+    directories:
+      - data:/data
+    options:
+      network: "prostaff-network"
+    cmd: redis-server --requirepass $REDIS_PASSWORD --appendonly yes
+
+ssh:
+  user: deploy
+  keys:
+    - ~/.ssh/id_rsa
+
+healthcheck:
+  path: /up
+  port: 3000
+  max_attempts: 10
+  interval: 10s
+
+builder:
+  arch: amd64
+  args:
+    RUBY_VERSION: 3.4.5
+  secrets:
+    - RAILS_MASTER_KEY
+
+volumes:
+  - "prostaff_storage:/app/storage"
+
+network: prostaff-network
+
+logging:
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs -f
+  dbconsole: accessory exec postgres "psql -U prostaff -d prostaff_production"
+

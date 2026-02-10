@@ -30,6 +30,9 @@ module ProstaffApi
     # Common ones are `templates`, `generators`, or `middleware`.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    # Add strategy module to autoload paths
+    config.autoload_paths << Rails.root.join('app/modules')
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files
@@ -37,6 +40,9 @@ module ProstaffApi
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # Load custom middleware
+    require Rails.root.join('lib', 'bot_logger_middleware')
 
     # Only loads a smaller set of middleware suitable for API only apps.
     # Middleware like session, flash, cookies can be added back manually.
@@ -50,7 +56,7 @@ module ProstaffApi
     # CORS configuration
     config.middleware.insert_before 0, Rack::Cors do
       allow do
-        origins ENV.fetch('CORS_ORIGINS', 'http://localhost:5173').split(',')
+        origins ENV.fetch('CORS_ORIGINS', 'http://localhost:8888').split(',')
 
         resource '*',
                  headers: :any,
@@ -62,6 +68,9 @@ module ProstaffApi
 
     # Rack Attack for rate limiting
     config.middleware.use Rack::Attack
+
+    # Bot Logger Middleware for monitoring bot activity
+    config.middleware.use BotLoggerMiddleware
 
     # Time zone
     config.time_zone = 'UTC'

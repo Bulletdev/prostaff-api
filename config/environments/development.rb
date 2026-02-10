@@ -16,22 +16,41 @@ Rails.application.configure do
 
   config.server_timing = true
 
-  if Rails.root.join('tmp/caching-dev.txt').exist?
-    config.cache_store = :memory_store
-    config.public_file_server.headers = {
-      'Cache-Control' => "public, max-age=#{2.days.to_i}"
-    }
-  else
-    config.action_controller.perform_caching = false
+  # Enable caching with Redis in development
+  config.action_controller.perform_caching = true
 
-    config.cache_store = :null_store
-  end
+  # Use Redis for caching (mesmo que tmp/caching-dev.txt não exista)
+  config.cache_store = :redis_cache_store, {
+    url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'),
+    connect_timeout: 30,
+    read_timeout: 1,
+    write_timeout: 1,
+    reconnect_attempts: 1,
+    expires_in: 5.minutes,
+    namespace: 'prostaff_dev_cache'
+  }
+
+  config.public_file_server.headers = {
+    'Cache-Control' => "public, max-age=#{2.days.to_i}"
+  }
 
   config.active_storage.variant_processor = :mini_magick
 
-  config.action_mailer.raise_delivery_errors = false
-
+  # ActionMailer configuration
+  config.action_mailer.raise_delivery_errors = true
   config.action_mailer.perform_caching = false
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.default_url_options = { host: 'localhost', port: 3333 }
+
+  config.action_mailer.smtp_settings = {
+    address: ENV.fetch('SMTP_ADDRESS', 'smtp.gmail.com'),
+    port: ENV.fetch('SMTP_PORT', 587).to_i,
+    user_name: ENV.fetch('SMTP_USERNAME'),
+    password: ENV.fetch('SMTP_PASSWORD'),
+    authentication: ENV.fetch('SMTP_AUTHENTICATION', 'plain'),
+    enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
+    domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
+  }
 
   config.active_support.deprecation = :log
 
@@ -48,6 +67,9 @@ Rails.application.configure do
   config.assets.debug = true if defined?(config.assets)
 
   config.assets.quiet = true if defined?(config.assets)
+
+  # ActiveJob configuration - use Sidekiq in development
+  config.active_job.queue_adapter = :sidekiq
 
   # Bullet for N+1 query detection
   # Uncomment if using Bullet gem

@@ -9,7 +9,8 @@
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins ENV.fetch('CORS_ORIGINS', 'http://localhost:5173,http://localhost:8888').split(',')
+    # O fallback (segundo argumento) deve ser uma única string separada por vírgulas
+    origins ENV.fetch('CORS_ORIGINS', 'http://localhost:5173,http://localhost:8888,https://prostaff.vercel.app,https://prostaff.gg').split(',')
 
     resource '*',
              headers: :any,
@@ -18,3 +19,4 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
              max_age: 86_400
   end
 end
+
