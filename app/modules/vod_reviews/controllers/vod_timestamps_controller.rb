@@ -96,6 +96,8 @@ module Api
       private
 
       def set_vod_review
+        # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
+        # This is scoped through organization_scoped() helper method
         @vod_review = organization_scoped(VodReview).find(params[:vod_review_id])
       end
 
