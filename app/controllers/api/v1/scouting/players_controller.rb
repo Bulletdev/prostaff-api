@@ -274,7 +274,7 @@ module Api
 
         def scouting_target_params
           params.require(:scouting_target).permit(
-            :summoner_name, :real_name, :role, :region, :nationality,
+            :summoner_name, :real_name, :player_role, :region, :nationality,
             :age, :status, :current_team,
             :current_tier, :current_rank, :current_lp,
             :peak_tier, :peak_rank,
@@ -294,7 +294,7 @@ module Api
 
         def target_params
           params.fetch(:target, {}).permit(
-            :summoner_name, :real_name, :role, :region, :nationality,
+            :summoner_name, :real_name, :player_role, :region, :nationality,
             :age, :status, :current_team,
             :current_tier, :current_rank, :current_lp,
             :peak_tier, :peak_rank,

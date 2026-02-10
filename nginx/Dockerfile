@@ -18,5 +18,8 @@ COPY nginx/app.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
+# Switch to nginx user for security
+USER nginx
+
 # The nginx -t test will run at container startup when DNS is available
 CMD ["nginx", "-g", "daemon off;"]
