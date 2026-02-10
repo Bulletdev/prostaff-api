@@ -6,7 +6,9 @@
 port ENV.fetch('PORT', 3000)
 
 # Specifies the `environment` that Puma will run in.
-environment ENV.fetch('RAILS_ENV', 'development')
+# If PORT is set (common in production environments), default to production
+default_env = ENV['PORT'] ? 'production' : 'development'
+environment ENV.fetch('RAILS_ENV', default_env)
 
 # Specifies the `pidfile` that Puma will use.
 pidfile ENV.fetch('PIDFILE', 'tmp/pids/server.pid')
