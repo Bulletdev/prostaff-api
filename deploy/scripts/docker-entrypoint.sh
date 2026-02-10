@@ -5,18 +5,26 @@ echo " ProStaff API - Starting..."
 
 # Fix DATABASE_URL if it has unescaped special characters in password
 if [ -n "$DATABASE_URL" ]; then
-  # Extract components using parameter expansion
-  if [[ "$DATABASE_URL" =~ ^postgresql://([^:]+):([^@]+)@(.+)$ ]]; then
-    user="${BASH_REMATCH[1]}"
-    pass="${BASH_REMATCH[2]}"
-    rest="${BASH_REMATCH[3]}"
+  echo " Checking DATABASE_URL format..."
 
-    # URL-encode the password using Python (available in our image)
-    encoded_pass=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$pass', safe=''))")
+  # Extract components - match everything after last @ as host part
+  # Format: postgresql://user:pass@host:port/db
+  if [[ "$DATABASE_URL" =~ ^([^:]+)://([^:]+):(.+)@([^@/]+.*) ]]; then
+    scheme="${BASH_REMATCH[1]}"
+    user="${BASH_REMATCH[2]}"
+    pass="${BASH_REMATCH[3]}"
+    rest="${BASH_REMATCH[4]}"  # host:port/database
+
+    # URL-encode the password using Python
+    # Escape single quotes and backslashes for safe Python execution
+    safe_pass=$(printf '%s' "$pass" | sed "s/\\\\/\\\\\\\\/g; s/'/\\\\'/g")
+    encoded_pass=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$safe_pass''', safe=''))")
 
     # Reconstruct DATABASE_URL with encoded password
-    export DATABASE_URL="postgresql://${user}:${encoded_pass}@${rest}"
-    echo " DATABASE_URL password component URL-encoded"
+    export DATABASE_URL="${scheme}://${user}:${encoded_pass}@${rest}"
+    echo " DATABASE_URL password URL-encoded"
+  else
+    echo " DATABASE_URL format not recognized, using as-is"
   fi
 fi
 
