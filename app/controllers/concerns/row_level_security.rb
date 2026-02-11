@@ -10,30 +10,32 @@ module RowLevelSecurity
   def with_rls_context
     return yield unless current_user && current_organization
 
-    begin
-      # Set PostgreSQL session variables for RLS
-      # Using a transaction to ensure SET LOCAL works properly
-      ActiveRecord::Base.connection.execute(
-        "SET LOCAL app.current_user_id = '#{current_user.id}';"
-      )
-      ActiveRecord::Base.connection.execute(
-        "SET LOCAL app.current_organization_id = '#{current_organization.id}';"
-      )
-      ActiveRecord::Base.connection.execute(
-        "SET LOCAL app.user_role = '#{current_user.role}';"
-      )
-    rescue ActiveRecord::StatementInvalid => e
-      # SET LOCAL might fail outside transactions on some poolers
-      Rails.logger.warn("RLS SET LOCAL failed: #{e.message}. Using thread-local only.")
-    end
-
     # Set thread-local variable for application-level scoping
-    # This is needed because PostgreSQL RLS doesn't apply to table owners (postgres user)
+    # This is the primary mechanism since RLS might not work with poolers
     Thread.current[:current_organization_id] = current_organization.id
     Thread.current[:current_user_id] = current_user.id
     Thread.current[:current_user_role] = current_user.role
 
-    yield
+    # Try to set PostgreSQL session variables for RLS
+    # This works in direct connections but may fail with transaction-mode poolers
+    ActiveRecord::Base.transaction do
+      begin
+        ActiveRecord::Base.connection.execute(
+          "SET LOCAL app.current_user_id = '#{current_user.id}';"
+        )
+        ActiveRecord::Base.connection.execute(
+          "SET LOCAL app.current_organization_id = '#{current_organization.id}';"
+        )
+        ActiveRecord::Base.connection.execute(
+          "SET LOCAL app.user_role = '#{current_user.role}';"
+        )
+      rescue ActiveRecord::StatementInvalid => e
+        # SET LOCAL might fail outside transactions on some poolers
+        Rails.logger.warn("RLS SET LOCAL failed: #{e.message}. Using thread-local only.")
+      end
+
+      yield
+    end
   ensure
     # Reset PostgreSQL variables
     begin
