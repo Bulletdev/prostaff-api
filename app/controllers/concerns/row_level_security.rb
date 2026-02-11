@@ -20,14 +20,22 @@ module RowLevelSecurity
     # This works in direct connections but may fail with transaction-mode poolers
     ActiveRecord::Base.transaction do
       begin
-        ActiveRecord::Base.connection.execute(
-          "SET LOCAL app.current_user_id = '#{current_user.id}';"
+        connection = ActiveRecord::Base.connection
+        # Use parameterized queries to prevent SQL injection
+        connection.exec_query(
+          'SET LOCAL app.current_user_id = $1',
+          'SET LOCAL',
+          [[nil, current_user.id.to_s]]
         )
-        ActiveRecord::Base.connection.execute(
-          "SET LOCAL app.current_organization_id = '#{current_organization.id}';"
+        connection.exec_query(
+          'SET LOCAL app.current_organization_id = $1',
+          'SET LOCAL',
+          [[nil, current_organization.id.to_s]]
         )
-        ActiveRecord::Base.connection.execute(
-          "SET LOCAL app.user_role = '#{current_user.role}';"
+        connection.exec_query(
+          'SET LOCAL app.user_role = $1',
+          'SET LOCAL',
+          [[nil, current_user.role.to_s]]
         )
       rescue ActiveRecord::StatementInvalid => e
         # SET LOCAL might fail outside transactions on some poolers

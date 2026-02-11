@@ -41,10 +41,10 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
         with:
           ruby-version: 3.4.5
           bundler-cache: true
@@ -179,14 +179,14 @@ jobs:
 
       - name: Upload Reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: nightly-security-reports-${{ github.run_number }}
           path: security_tests/reports/nightly/
 
       - name: Create GitHub Issue on Failure
         if: steps.parse.outputs.brakeman_high > 0 || steps.parse.outputs.vulnerabilities == 'true' || steps.parse.outputs.zap_high > 0
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
             const fs = require('fs');
