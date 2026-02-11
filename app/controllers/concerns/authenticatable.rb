@@ -10,6 +10,7 @@ module Authenticatable
     before_action :authenticate_request!
     before_action :set_current_user
     before_action :set_current_organization
+    around_action :set_organization_context
   end
 
   private
@@ -131,5 +132,21 @@ module Authenticatable
         message: message
       }
     }, status: :forbidden
+  end
+
+  def set_organization_context
+    # Set thread-local variables for OrganizationScoped concern
+    if current_organization && current_user
+      Thread.current[:current_organization_id] = current_organization.id
+      Thread.current[:current_user_id] = current_user.id
+      Thread.current[:current_user_role] = current_user.role
+    end
+
+    yield
+  ensure
+    # Always reset thread-local variables
+    Thread.current[:current_organization_id] = nil
+    Thread.current[:current_user_id] = nil
+    Thread.current[:current_user_role] = nil
   end
 end
