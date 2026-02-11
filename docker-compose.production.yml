@@ -90,4 +90,17 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      # Ajustado para KVM
+      # Ajustado para KVM 2 (1GB Heap é seguro)
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - prostaff_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  prostaff_pg_data:
+  prostaff_redis_data:
+  prostaff_es_data:
