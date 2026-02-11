@@ -29,11 +29,10 @@ module Authenticatable
       @current_user = User.unscoped.find(@jwt_payload[:user_id])
       @current_organization = @current_user.organization
 
-      # Set thread-local variables for OrganizationScoped models
-      # This is needed early for update_last_login! and will be maintained by set_organization_context
-      Thread.current[:current_organization_id] = @current_organization.id
-      Thread.current[:current_user_id] = @current_user.id
-      Thread.current[:current_user_role] = @current_user.role
+      # Set request-scoped attributes for OrganizationScoped models (thread-safe)
+      Current.organization_id = @current_organization.id
+      Current.user_id = @current_user.id
+      Current.user_role = @current_user.role
 
       # Update last login time (uses update_column which skips callbacks/audit logs)
       @current_user.update_last_login! if should_update_last_login?
