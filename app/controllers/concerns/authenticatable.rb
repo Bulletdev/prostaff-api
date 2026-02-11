@@ -10,7 +10,6 @@ module Authenticatable
     before_action :authenticate_request!
     before_action :set_current_user
     before_action :set_current_organization
-    around_action :set_organization_context
   end
 
   private
@@ -29,6 +28,12 @@ module Authenticatable
       # Bypass RLS for authentication queries - we need to find the user before we can set RLS context
       @current_user = User.unscoped.find(@jwt_payload[:user_id])
       @current_organization = @current_user.organization
+
+      # Set thread-local variables for OrganizationScoped models
+      # This is needed early for update_last_login! and will be maintained by set_organization_context
+      Thread.current[:current_organization_id] = @current_organization.id
+      Thread.current[:current_user_id] = @current_user.id
+      Thread.current[:current_user_role] = @current_user.role
 
       # Update last login time (uses update_column which skips callbacks/audit logs)
       @current_user.update_last_login! if should_update_last_login?
@@ -132,21 +137,5 @@ module Authenticatable
         message: message
       }
     }, status: :forbidden
-  end
-
-  def set_organization_context
-    # Set thread-local variables for OrganizationScoped concern
-    if current_organization && current_user
-      Thread.current[:current_organization_id] = current_organization.id
-      Thread.current[:current_user_id] = current_user.id
-      Thread.current[:current_user_role] = current_user.role
-    end
-
-    yield
-  ensure
-    # Always reset thread-local variables
-    Thread.current[:current_organization_id] = nil
-    Thread.current[:current_user_id] = nil
-    Thread.current[:current_user_role] = nil
   end
 end
