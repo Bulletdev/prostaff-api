@@ -5,10 +5,10 @@
     "dockerfilePath": "Dockerfile.production"
   },
   "deploy": {
-    "healthcheckPath": "/up",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
+    "restartPolicyMaxRetries": 10
   },
   "env": {
     "RAILS_ENV": "production",
