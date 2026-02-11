@@ -340,7 +340,8 @@ module Authentication
 
         return nil if email.blank? || password.blank?
 
-        user = User.find_by(email: email)
+        # Bypass RLS for login - we don't have RLS context yet during authentication
+        user = User.unscoped.find_by(email: email)
         user&.authenticate(password) ? user : nil
       end
 
