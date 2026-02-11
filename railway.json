@@ -5,7 +5,6 @@
     "dockerfilePath": "Dockerfile.production"
   },
   "deploy": {
-    "startCommand": "bundle exec puma -C config/puma.rb",
     "healthcheckPath": "/up",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
