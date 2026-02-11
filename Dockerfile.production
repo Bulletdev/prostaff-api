@@ -76,12 +76,12 @@ RUN mkdir -p /app/tmp/pids /app/tmp/cache /app/tmp/sockets /app/log && \
 # Switch to non-root user
 USER rails:rails
 
-# Expose port
+# Expose port (Railway sets PORT=8080 by default)
 EXPOSE 3000
 
-# Health check
+# Health check (uses PORT env variable to match runtime configuration)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000/up || exit 1
+    CMD curl -f http://localhost:${PORT:-3000}/up || exit 1
 
 # Entry point for database migration
 COPY --chown=rails:rails deploy/scripts/docker-entrypoint.sh /usr/local/bin/
