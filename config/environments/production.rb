@@ -33,13 +33,16 @@ Rails.application.configure do
 
   # Use Redis for caching if available, otherwise fall back to memory store
   config.cache_store = if ENV['REDIS_URL'].present?
-                         :redis_cache_store, {
-                           url: ENV['REDIS_URL'],
-                           reconnect_attempts: 3,
-                           error_handler: ->(method:, returning:, exception:) {
-                             Rails.logger.warn "Rails cache Redis error: #{exception.message}"
+                         [
+                           :redis_cache_store,
+                           {
+                             url: ENV['REDIS_URL'],
+                             reconnect_attempts: 3,
+                             error_handler: ->(method:, returning:, exception:) {
+                               Rails.logger.warn "Rails cache Redis error: #{exception.message}"
+                             }
                            }
-                         }
+                         ]
                        else
                          :memory_store
                        end
