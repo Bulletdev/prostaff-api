@@ -5,9 +5,9 @@ Rails.application.routes.draw do
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
 
-  # Health check endpoints
+  # Health check endpoints (Railway external health check)
+  get 'health' => proc { [200, { 'Content-Type' => 'application/json' }, ['{"status":"ok","service":"ProStaff API"}']] }
   get 'up' => 'rails/health#show', as: :rails_health_check
-  get 'health' => 'health#index'  # Simple health without DB check
   get 'health/detailed' => 'health#show'  # Detailed health with DB check
 
   # SEO - Sitemap
