@@ -7,5 +7,5 @@ dockerfilePath = "Dockerfile.production"
 startCommand = "bundle exec puma -C config/puma.rb"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
