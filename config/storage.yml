@@ -1,0 +1,9 @@
+# Local storage for development and test
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# Production storage (can be configured later if needed)
+production:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
