@@ -96,7 +96,8 @@ production:
   <<: *default
   <%
     # Use SUPABASE_DB_URL to avoid Rails auto-parsing DATABASE_URL with special chars
-    db_url = ENV['SUPABASE_DB_URL'] || ENV['DATABASE_URL']
+    # _ORIGINAL_DATABASE_URL is set by initializers/database_url_override.rb
+    db_url = ENV['SUPABASE_DB_URL'] || ENV['_ORIGINAL_DATABASE_URL'] || ENV['DATABASE_URL']
     if db_url
       begin
         # Parse database URL manually to handle special characters in password
