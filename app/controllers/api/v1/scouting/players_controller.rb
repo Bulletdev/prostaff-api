@@ -269,7 +269,7 @@ module Api
         end
 
         def set_scouting_target
-          @target = ScoutingTarget.find(params[:id])
+          @target = ScoutingTarget.find_by!(id: params[:id])
         end
 
         def scouting_target_params

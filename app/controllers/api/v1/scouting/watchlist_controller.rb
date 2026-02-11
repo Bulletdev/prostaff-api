@@ -28,7 +28,7 @@ module Api
         # POST /api/v1/scouting/watchlist
         # Add a scouting target to watchlist (sets priority to high)
         def create
-          target = ScoutingTarget.find(params[:scouting_target_id])
+          target = ScoutingTarget.find_by!(id: params[:scouting_target_id])
 
           # Find or create watchlist entry
           watchlist = organization_scoped(ScoutingWatchlist)
@@ -65,7 +65,7 @@ module Api
         # DELETE /api/v1/scouting/watchlist/:id
         # Remove from watchlist (doesn't delete target, just lowers priority)
         def destroy
-          target = ScoutingTarget.find(params[:id])
+          target = ScoutingTarget.find_by!(id: params[:id])
           watchlist = organization_scoped(ScoutingWatchlist).find_by(scouting_target: target)
 
           if watchlist

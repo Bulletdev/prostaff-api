@@ -111,7 +111,7 @@ module Api
         private
 
         def set_ticket
-          @ticket = SupportTicket.find(params[:id])
+          @ticket = SupportTicket.find_by!(id: params[:id])
         rescue ActiveRecord::RecordNotFound
           render_error('Ticket not found', :not_found)
         end

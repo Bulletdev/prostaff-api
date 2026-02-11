@@ -17,7 +17,7 @@ module Api
 
         # POST /api/v1/support/staff/tickets/:id/assign
         def assign
-          staff_member = User.find(params[:assigned_to_id])
+          staff_member = User.find_by!(id: params[:assigned_to_id])
 
           unless staff_member.support_staff? || staff_member.admin?
             return render_error('User is not support staff', :unprocessable_entity)
@@ -80,7 +80,7 @@ module Api
         end
 
         def set_ticket
-          @ticket = SupportTicket.find(params[:id])
+          @ticket = SupportTicket.find_by!(id: params[:id])
         rescue ActiveRecord::RecordNotFound
           render_error('Ticket not found', :not_found)
         end
