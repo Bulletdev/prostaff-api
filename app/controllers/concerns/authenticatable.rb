@@ -35,8 +35,8 @@ module Authenticatable
       Thread.current[:current_user_id] = @current_user.id
       Thread.current[:current_user_role] = @current_user.role
 
-      # Update last login time (skip audit log for this update)
-      @current_user.update_column(:last_login_at, Time.current) if should_update_last_login?
+      # Update last login time
+      @current_user.update_last_login! if should_update_last_login?
     rescue Authentication::Services::JwtService::AuthenticationError => e
       Rails.logger.error("JWT Authentication error: #{e.class} - #{e.message}")
       render_unauthorized(e.message)
