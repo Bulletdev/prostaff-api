@@ -3,7 +3,9 @@
 # Puma configuration file for ProStaff API
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
+# Bind to 0.0.0.0 to allow external connections (required for Docker/Railway)
 port ENV.fetch('PORT', 3000)
+bind "tcp://0.0.0.0:#{ENV.fetch('PORT', 3000)}"
 
 # Specifies the `environment` that Puma will run in.
 # If PORT is set (common in production environments), default to production
