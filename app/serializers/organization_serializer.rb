@@ -56,37 +56,75 @@ class OrganizationSerializer < Blueprinter::Base
   end
 
   field :statistics do |org|
-    {
-      total_players: org.cached_players_count,
-      active_players: org.players.where(deleted_at: nil, status: 'active').count,
-      total_matches: org.matches.count,
-      recent_matches: org.cached_monthly_matches_count,
-      total_users: org.users.count
-    }
+    begin
+      {
+        total_players: org.cached_players_count,
+        active_players: org.players.where(deleted_at: nil, status: 'active').count,
+        total_matches: org.matches.count,
+        recent_matches: org.cached_monthly_matches_count,
+        total_users: org.users.count
+      }
+    rescue => e
+      Rails.logger.error("OrganizationSerializer statistics error: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace&.first(5)&.join("\n"))
+      {
+        total_players: 0,
+        active_players: 0,
+        total_matches: 0,
+        recent_matches: 0,
+        total_users: 0
+      }
+    end
   end
 
   # Tier features and capabilities
   field :features do |org|
-    {
-      can_access_scrims: org.can_access_scrims?,
-      can_access_competitive_data: org.can_access_competitive_data?,
-      can_access_predictive_analytics: org.can_access_predictive_analytics?,
-      available_features: org.available_features,
-      available_data_sources: org.available_data_sources,
-      available_analytics: org.available_analytics
-    }
+    begin
+      {
+        can_access_scrims: org.can_access_scrims?,
+        can_access_competitive_data: org.can_access_competitive_data?,
+        can_access_predictive_analytics: org.can_access_predictive_analytics?,
+        available_features: org.available_features,
+        available_data_sources: org.available_data_sources,
+        available_analytics: org.available_analytics
+      }
+    rescue => e
+      Rails.logger.error("OrganizationSerializer features error: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace&.first(5)&.join("\n"))
+      {
+        can_access_scrims: false,
+        can_access_competitive_data: false,
+        can_access_predictive_analytics: false,
+        available_features: [],
+        available_data_sources: [],
+        available_analytics: []
+      }
+    end
   end
 
   field :limits do |org|
-    # Chamar tier_limits uma única vez e retornar apenas os campos necessários
-    limits = org.tier_limits
-    {
-      max_players: limits[:max_players],
-      max_matches_per_month: limits[:max_matches_per_month],
-      current_players: limits[:current_players],
-      current_monthly_matches: limits[:current_monthly_matches],
-      players_remaining: limits[:players_remaining],
-      matches_remaining: limits[:matches_remaining]
-    }
+    begin
+      # Chamar tier_limits uma única vez e retornar apenas os campos necessários
+      limits = org.tier_limits
+      {
+        max_players: limits[:max_players],
+        max_matches_per_month: limits[:max_matches_per_month],
+        current_players: limits[:current_players],
+        current_monthly_matches: limits[:current_monthly_matches],
+        players_remaining: limits[:players_remaining],
+        matches_remaining: limits[:matches_remaining]
+      }
+    rescue => e
+      Rails.logger.error("OrganizationSerializer limits error: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace&.first(5)&.join("\n"))
+      {
+        max_players: 0,
+        max_matches_per_month: 0,
+        current_players: 0,
+        current_monthly_matches: 0,
+        players_remaining: 0,
+        matches_remaining: 0
+      }
+    end
   end
 end
