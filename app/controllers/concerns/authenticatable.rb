@@ -30,6 +30,11 @@ module Authenticatable
       @current_user = User.unscoped.find(@jwt_payload[:user_id])
       @current_organization = @current_user.organization
 
+      # Set thread-local variables BEFORE update_last_login! to ensure AuditLog creation works
+      Thread.current[:current_organization_id] = @current_organization.id
+      Thread.current[:current_user_id] = @current_user.id
+      Thread.current[:current_user_role] = @current_user.role
+
       # Update last login time
       @current_user.update_last_login! if should_update_last_login?
     rescue Authentication::Services::JwtService::AuthenticationError => e
