@@ -46,6 +46,7 @@ module Api
       rescue_from ActiveRecord::RecordInvalid, with: :render_validation_errors
       rescue_from ActionController::ParameterMissing, with: :render_parameter_missing
       rescue_from Pundit::NotAuthorizedError, with: :render_forbidden_policy
+      rescue_from StandardError, with: :render_internal_error
 
       protected
 
@@ -158,6 +159,27 @@ module Api
             action: exception.query
           }
         )
+      end
+
+      def render_internal_error(exception)
+        Rails.logger.error("Internal error: #{exception.class} - #{exception.message}")
+        Rails.logger.error(exception.backtrace.join("\n")) if exception.backtrace
+
+        # In development, show detailed error; in production, be vague for security
+        if Rails.env.development?
+          render_error(
+            message: exception.message,
+            code: 'INTERNAL_ERROR',
+            status: :internal_server_error,
+            details: { backtrace: exception.backtrace&.first(5) }
+          )
+        else
+          render_error(
+            message: 'An internal error occurred',
+            code: 'INTERNAL_ERROR',
+            status: :internal_server_error
+          )
+        end
       end
     end
   end
