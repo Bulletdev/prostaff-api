@@ -7,7 +7,8 @@ Rails.application.routes.draw do
 
   # Health check endpoints
   get 'up' => 'rails/health#show', as: :rails_health_check
-  get 'health' => 'rails/health#show'
+  get 'health' => 'health#index'  # Simple health without DB check
+  get 'health/detailed' => 'health#show'  # Detailed health with DB check
 
   # SEO - Sitemap
   get 'sitemap.xml', to: 'sitemap#index', defaults: { format: 'xml' }

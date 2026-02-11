@@ -49,6 +49,9 @@ fi
 
 # Skip preload in production - Puma will handle it
 echo "[4/4] Starting application server..." >&2
+echo "  → Port: ${PORT:-3000}" >&2
+echo "  → Environment: ${RAILS_ENV:-development}" >&2
+echo "  → Workers: ${WEB_CONCURRENCY:-2}" >&2
 echo "========================================" >&2
 
 # Execute the main command
