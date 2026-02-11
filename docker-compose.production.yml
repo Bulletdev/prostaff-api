@@ -1,22 +1,82 @@
-# Docker Compose para Produção - ProStaff API
-# Deploy com Kamal na Hetzner VPS
-#
-# IMPORTANTE:
-# - PostgreSQL: DESABILITADO - Usa Supabase (configure DATABASE_URL no .env.production)
-# - Redis: ESSENCIAL - Usado por Sidekiq, Rails Cache e Rack::Attack
-# - Elasticsearch: ESSENCIAL - Usado para analytics avançados
-# - Kibana: OPCIONAL - Interface para explorar dados do Elasticsearch
-#
-# Para deploy com Kamal:
-# 1. Configure .env.production com DATABASE_URL do Supabase
-# 2. Configure REDIS_PASSWORD para segurança
-# 3. Execute: kamal deploy
-#
-# Para rodar local (teste de produção):
-# docker-compose -f docker-compose.production.yml up -d
-
 services:
-  # Elasticsearch for analytics search
+  # --- Aplicação Principal ---
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: prostaff-api
+    restart: unless-stopped
+    environment:
+      RAILS_ENV: production
+      # O Coolify preenche as variáveis se você definir na UI,
+      # mas aqui garantimos a conexão interna:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      RAILS_LOG_TO_STDOUT: "true"
+      PORT: 3000
+    ports:
+      - "3000" # O Coolify vai detectar essa porta e criar o domínio automaticamente
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --- Worker (Sidekiq) ---
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: prostaff-sidekiq
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      - api
+      - redis
+
+  # --- Banco de Dados (Local na VPS) ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: prostaff-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-prostaff_production}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe123!}
+    volumes:
+      - prostaff_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Cache & Job Queue ---
+  redis:
+    image: redis:7-alpine
+    container_name: prostaff-redis
+    restart: always
+    volumes:
+      - prostaff_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Analytics (Memória Reduzida) ---
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     container_name: prostaff-elasticsearch
@@ -24,245 +84,17 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      # IMPORTANTE: Reduzido para caber na KVM 1 (4GB total)
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
-      - es_data:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
+      - prostaff_es_data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - prostaff-net
-
-  # Kibana for exploring ES indices
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.4
-    container_name: prostaff-kibana
-    restart: unless-stopped
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    ports:
-      - "5601:5601"
-    networks:
-      - prostaff-net
-
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: prostaff-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./deploy/ssl:/etc/nginx/ssl:ro
-      - ./public:/app/public:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - api
-      - kibana
-    networks:
-      - prostaff-net
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-
-  # PostgreSQL Database - DESABILITADO testar como fallback depois
-  # Para habilitar PostgreSQL local, descomente este bloco e ajuste depends_on nos outros serviços
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: prostaff-postgres
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     PGDATA: /var/lib/postgresql/data/pgdata
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
-  #     - ./backups:/backups
-  #   networks:
-  #     - prostaff-net
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 2G
-  #       reservations:
-  #         memory: 1G
-
-  # Redis para Sidekiq, Rails Cache e Rate Limiting (Rack::Attack)
-  redis:
-    image: redis:7-alpine
-    container_name: prostaff-redis
-    restart: unless-stopped
-    # Use redis.production.conf for better durability and monitoring
-    command: redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD:-prostaff_redis_2026}
-    volumes:
-      - redis_data:/data
-      - ./redis.production.conf:/etc/redis/redis.conf:ro
-    networks:
-      - prostaff-net
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-prostaff_redis_2026}", "ping"]
-      interval: 10s
-      timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 512M  # Reduzido para otimizar recursos
-        reservations:
-          memory: 256M
-
-  # Rails API
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-      args:
-        RAILS_ENV: ${RAILS_ENV}
-    container_name: prostaff-api
-    restart: unless-stopped
-    environment:
-      RAILS_ENV: ${RAILS_ENV}
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-      SENTRY_DSN: ${SENTRY_DSN}
-    volumes:
-      - ./log:/app/log
-      - ./tmp:/app/tmp
-      - ./public:/app/public
-    depends_on:
-      redis:
-        condition: service_healthy
-      # postgres:  # DESABILITADO - Usa Supabase
-      #   condition: service_healthy
-    networks:
-      - prostaff-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-
-  # Sidekiq Background Jobs
-  sidekiq:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-      args:
-        RAILS_ENV: ${RAILS_ENV}
-    container_name: prostaff-sidekiq
-    restart: unless-stopped
-    command: bundle exec sidekiq -C config/sidekiq.yml
-    environment:
-      RAILS_ENV: ${RAILS_ENV}
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${SIDEKIQ_REDIS_URL}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-      SENTRY_DSN: ${SENTRY_DSN}
-    volumes:
-      - ./log:/app/log
-      - ./tmp:/app/tmp
-    depends_on:
-      redis:
-        condition: service_healthy
-      # postgres:  # DESABILITADO - Usa Supabase
-      #   condition: service_healthy
-    networks:
-      - prostaff-net
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.1'
-
-  # Scraper service (optional runner)
-  scraper:
-    build:
-      context: ./League-Data-Scraping-And-Analytics-master/ProStaff-Scraper
-    container_name: prostaff-scraper
-    env_file:
-      - ./League-Data-Scraping-And-Analytics-master/ProStaff-Scraper/.env
-    volumes:
-      - ./League-Data-Scraping-And-Analytics-master/ProStaff-Scraper:/app
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    command: ["tail", "-f", "/dev/null"]
-    networks:
-      - prostaff-net
-    profiles:
-      - scraper
-
-  # Backup Service (runs daily)
-  backup:
-    image: postgres:15-alpine
-    container_name: prostaff-backup
-    restart: "no"
-    environment:
-      PGHOST: postgres
-      PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - ./backups:/backups
-      - ./deploy/scripts/backup.sh:/backup.sh:ro
-    networks:
-      - prostaff-net
-    entrypoint: ["/backup.sh"]
-    profiles:
-      - backup
 
 volumes:
-  # postgres_data:  # DESABILITADO - Usa Supabase PostgreSQL
-  #   driver: local
-  redis_data:
-    driver: local
-  nginx_logs:
-    driver: local
-  es_data:
-    driver: local
-
-networks:
-  prostaff-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+  prostaff_pg_data:
+  prostaff_redis_data:
+  prostaff_es_data:
