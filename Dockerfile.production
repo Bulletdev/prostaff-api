@@ -49,14 +49,6 @@ COPY . .
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile --gemfile app/ lib/
 
-# Precompile assets (if any)
-# Set dummy DATABASE_URL to prevent configuration errors during build
-RUN if [ -f "bin/rails" ]; then \
-      DATABASE_URL=postgresql://dummy:dummy@localhost/dummy \
-      SECRET_KEY_BASE=placeholder \
-      bundle exec rails assets:precompile || true; \
-    fi
-
 # Stage 3: Production
 FROM base
 

@@ -4,8 +4,11 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile.production"
 
 [deploy]
-startCommand = "bundle exec puma -C config/puma.rb"
-healthcheckPath = "/health"
+# Alteração 1: Forçar o binding em 0.0.0.0 e usar a porta injetada pelo Railway
+startCommand = "bundle exec puma -b 0.0.0.0 -p ${PORT:-8080} -C config/puma.rb"
+
+# Alteração 2: Mudar o caminho para o padrão do Rails 7.1+
+healthcheckPath = "/up"
 healthcheckTimeout = 300
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
