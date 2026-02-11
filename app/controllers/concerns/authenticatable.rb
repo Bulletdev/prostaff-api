@@ -34,6 +34,9 @@ module Authenticatable
       Current.user_id = @current_user.id
       Current.user_role = @current_user.role
 
+      # Debug log in production to verify Current is being set
+      Rails.logger.info("[AUTH] Set Current.organization_id=#{Current.organization_id} for user #{@current_user.email}")
+
       # Update last login time (uses update_column which skips callbacks/audit logs)
       @current_user.update_last_login! if should_update_last_login?
     rescue Authentication::Services::JwtService::AuthenticationError => e
