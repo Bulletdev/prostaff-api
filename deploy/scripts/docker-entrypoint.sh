@@ -62,5 +62,10 @@ fi
 
 echo " Application ready!"
 
-# Execute the main command
+# Execute the main command with modified environment
+if [ -n "$DATABASE_URL" ]; then
+  # Export for child processes
+  export DATABASE_URL
+fi
+
 exec "$@"
