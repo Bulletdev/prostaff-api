@@ -3,38 +3,26 @@ set -e
 
 echo " ProStaff API - Starting..."
 
-# Fix DATABASE_URL if it has unescaped special characters in password
-if [ -n "$DATABASE_URL" ]; then
-  echo " Checking DATABASE_URL format..."
-
-  # Extract components - match everything after last @ as host part
-  # Format: postgresql://user:pass@host:port/db
-  if [[ "$DATABASE_URL" =~ ^([^:]+)://([^:]+):(.+)@([^@/]+.*) ]]; then
-    scheme="${BASH_REMATCH[1]}"
-    user="${BASH_REMATCH[2]}"
-    pass="${BASH_REMATCH[3]}"
-    rest="${BASH_REMATCH[4]}"  # host:port/database
-
-    # URL-encode the password using Python
-    # Escape single quotes and backslashes for safe Python execution
-    safe_pass=$(printf '%s' "$pass" | sed "s/\\\\/\\\\\\\\/g; s/'/\\\\'/g")
-    encoded_pass=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$safe_pass''', safe=''))")
-
-    # Reconstruct DATABASE_URL with encoded password
-    export DATABASE_URL="${scheme}://${user}:${encoded_pass}@${rest}"
-    echo " DATABASE_URL password URL-encoded"
-  else
-    echo " DATABASE_URL format not recognized, using as-is"
-  fi
-fi
+# Skip DATABASE_URL encoding - handled by Rails initializer
+# The initializer (config/initializers/database_url_override.rb) will detect
+# special characters and parse manually in database.yml
+echo " Database configuration will be handled by Rails initializer"
 
 # Remove any pre-existing server PID file
 rm -f /app/tmp/pids/server.pid
 
 # Wait for database to be ready
 echo " Waiting for database..."
-if [ -n "$DATABASE_URL" ]; then
-  until pg_isready -d "$DATABASE_URL"; do
+# Use SUPABASE_DB_URL or DATABASE_URL, extract host for pg_isready
+DB_URL="${SUPABASE_DB_URL:-$DATABASE_URL}"
+if [ -n "$DB_URL" ]; then
+  # Extract host and port from URL (format: postgresql://user:pass@host:port/db)
+  # Parse from right to left to handle @ in password
+  DB_HOST=$(echo "$DB_URL" | sed -E 's|.*@([^@/]+):[0-9]+/.*|\1|')
+  DB_PORT=$(echo "$DB_URL" | sed -E 's|.*@[^@/]+:([0-9]+)/.*|\1|')
+
+  echo "  Checking connection to ${DB_HOST}:${DB_PORT}..."
+  until pg_isready -h "$DB_HOST" -p "$DB_PORT" > /dev/null 2>&1; do
     echo "  Database is unavailable - sleeping"
     sleep 2
   done
@@ -62,10 +50,7 @@ fi
 
 echo " Application ready!"
 
-# Execute the main command with modified environment
-if [ -n "$DATABASE_URL" ]; then
-  # Export for child processes
-  export DATABASE_URL
-fi
+echo " Starting application server..."
 
+# Execute the main command
 exec "$@"
