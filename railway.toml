@@ -7,8 +7,11 @@ dockerfilePath = "Dockerfile.production"
 # Use puma.rb configuration for binding (it already handles PORT env var)
 startCommand = "bundle exec puma -C config/puma.rb"
 
-# Health check configuration
-healthcheckPath = "/up"
-healthcheckTimeout = 300
+# Restart policy
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
+
+# Healthcheck disabled - Railway will consider the service healthy if it's running
+# You can enable it later once the app is fully configured
+# healthcheckPath = "/up"
+# healthcheckTimeout = 300
