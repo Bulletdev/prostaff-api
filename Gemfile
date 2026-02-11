@@ -5,9 +5,6 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '3.4.5'
 
-# deploy
-gem 'kamal', '~> 2.0'
-
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem 'rails', '~> 7.2.0'
 
@@ -100,6 +97,9 @@ group :development do
   gem 'rubocop'
   gem 'rubocop-rails'
   gem 'rubocop-rspec'
+
+  # Deploy tools (only needed for deployment operations, not runtime)
+  gem 'kamal', '~> 2.0'
 end
 
 group :test do
