@@ -9,9 +9,11 @@ module OrganizationScoped
   included do
     # Aplicar default_scope apenas se houver uma organização no contexto
     default_scope lambda {
-      if Current.organization_id.present?
-        where(organization_id: Current.organization_id)
+      org_id = Current.organization_id
+      if org_id.present?
+        where(organization_id: org_id)
       else
+        Rails.logger.warn("[SCOPE] OrganizationScoped: Current.organization_id is nil for #{name}")
         all
       end
     }
