@@ -77,11 +77,12 @@ RUN mkdir -p /app/tmp/pids /app/tmp/cache /app/tmp/sockets /app/log && \
 USER rails:rails
 
 # Expose port (Railway sets PORT=8080 by default)
-EXPOSE 3000
+EXPOSE 8080
 
 # Health check (uses PORT env variable to match runtime configuration)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-3000}/up || exit 1
+# Note: Railway has its own health check system, but this is useful for local testing
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/up || exit 1
 
 # Entry point for database migration
 COPY --chown=rails:rails deploy/scripts/docker-entrypoint.sh /usr/local/bin/
