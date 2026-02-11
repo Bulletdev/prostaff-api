@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
 class HealthController < ActionController::API
+  # Skip authentication and authorization for health checks
+  skip_before_action :verify_authenticity_token, raise: false
+
   # Simple health check that doesn't check database
   def index
     render json: {
       status: 'ok',
       timestamp: Time.current.iso8601,
-      environment: Rails.env
-    }
+      environment: Rails.env,
+      service: 'ProStaff API'
+    }, status: :ok
   end
 
   # Detailed health check with database verification
@@ -18,6 +22,7 @@ class HealthController < ActionController::API
       status: database_status ? 'ok' : 'degraded',
       timestamp: Time.current.iso8601,
       environment: Rails.env,
+      service: 'ProStaff API',
       database: database_status ? 'connected' : 'disconnected'
     }, status: database_status ? :ok : :service_unavailable
   end

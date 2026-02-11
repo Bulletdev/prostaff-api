@@ -1,0 +1,11 @@
+# Railway Configuration for ProStaff API (Rails)
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.production"
+
+[deploy]
+startCommand = "bundle exec puma -C config/puma.rb"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
