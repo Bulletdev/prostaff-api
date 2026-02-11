@@ -24,13 +24,25 @@ Rails.application.configure do
 
   config.active_storage.variant_processor = :mini_magick
 
-  config.force_ssl = true
+  # Disable force_ssl for health checks - Railway handles SSL termination
+  config.force_ssl = false
 
   config.log_level = :info
 
   config.log_tags = [:request_id]
 
-  config.cache_store = :redis_cache_store, { url: ENV['REDIS_URL'] }
+  # Use Redis for caching if available, otherwise fall back to memory store
+  config.cache_store = if ENV['REDIS_URL'].present?
+                         :redis_cache_store, {
+                           url: ENV['REDIS_URL'],
+                           reconnect_attempts: 3,
+                           error_handler: ->(method:, returning:, exception:) {
+                             Rails.logger.warn "Rails cache Redis error: #{exception.message}"
+                           }
+                         }
+                       else
+                         :memory_store
+                       end
 
   config.active_job.queue_adapter = :sidekiq
 

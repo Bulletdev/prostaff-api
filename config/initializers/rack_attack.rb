@@ -5,12 +5,21 @@ module Rack
     # Enable caching for Rack::Attack
     # Development: MemoryStore (simples e rápido)
     # Production: Redis DB 0 (persistente, compartilhado entre replicas)
-    Rack::Attack.cache.store = if Rails.env.production?
-                                  ActiveSupport::Cache::RedisCacheStore.new(
-                                    url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'),
-                                    reconnect_attempts: 3,
-                                    namespace: 'rack_attack'
-                                  )
+    # Falls back to MemoryStore if Redis is unavailable
+    Rack::Attack.cache.store = if Rails.env.production? && ENV['REDIS_URL'].present?
+                                  begin
+                                    ActiveSupport::Cache::RedisCacheStore.new(
+                                      url: ENV['REDIS_URL'],
+                                      reconnect_attempts: 3,
+                                      error_handler: ->(method:, returning:, exception:) {
+                                        Rails.logger.warn "Rack::Attack Redis error: #{exception.message}"
+                                      },
+                                      namespace: 'rack_attack'
+                                    )
+                                  rescue => e
+                                    Rails.logger.warn "Failed to connect to Redis for Rack::Attack, falling back to MemoryStore: #{e.message}"
+                                    ActiveSupport::Cache::MemoryStore.new
+                                  end
                                 else
                                   ActiveSupport::Cache::MemoryStore.new
                                 end
