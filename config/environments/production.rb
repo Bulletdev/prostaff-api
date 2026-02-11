@@ -47,7 +47,8 @@ Rails.application.configure do
                          :memory_store
                        end
 
-  config.active_job.queue_adapter = :sidekiq
+  # Use Sidekiq if Redis is available, otherwise use inline (synchronous)
+  config.active_job.queue_adapter = ENV['REDIS_URL'].present? ? :sidekiq : :inline
 
   config.action_mailer.perform_caching = false
 

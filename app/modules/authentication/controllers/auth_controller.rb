@@ -71,7 +71,7 @@ module Authentication
             user_agent: request.user_agent
           )
 
-          UserMailer.welcome(user).deliver_later
+          deliver_email(UserMailer.welcome(user))
 
           render_created(
             {
@@ -209,7 +209,7 @@ module Authentication
             user_agent: request.user_agent
           )
 
-          UserMailer.password_reset(user, reset_token).deliver_later
+          deliver_email(UserMailer.password_reset(user, reset_token))
 
           AuditLog.create!(
             organization: user.organization,
@@ -268,7 +268,7 @@ module Authentication
 
           reset_token.mark_as_used!
 
-          UserMailer.password_reset_confirmation(user).deliver_later
+          deliver_email(UserMailer.password_reset_confirmation(user))
 
           AuditLog.create!(
             organization: user.organization,
@@ -305,6 +305,15 @@ module Authentication
       end
 
       private
+
+      # Deliver email using async queue if Redis available, otherwise deliver synchronously
+      def deliver_email(mailer)
+        if ENV['REDIS_URL'].present?
+          mailer.deliver_later
+        else
+          mailer.deliver_now
+        end
+      end
 
       def create_organization!
         Organization.create!(organization_params)
