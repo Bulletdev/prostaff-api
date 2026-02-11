@@ -101,18 +101,34 @@ production:
       begin
         # Parse database URL manually to handle special characters in password
         # Format: scheme://username:password@host:port/database
-        # Use regex to extract from right to left to handle @ in password
-        if db_url =~ /^([^:]+):\/\/(.+)@([^@\/]+):(\d+)\/(.+)$/
-          scheme = $1
-          user_pass = $2  # username:password
-          host = $3
-          port = $4
-          database = $5
+        # Parse from right to left to handle @ symbols in password
 
-          # Split user_pass on first colon only
-          if user_pass =~ /^([^:]+):(.+)$/
-            username = $1
-            password = $2
+        # Extract scheme (postgresql)
+        if db_url =~ /^([^:]+):\/\/(.+)$/
+          scheme = $1
+          rest = $2  # Everything after ://
+
+          # Split by last / to get database name
+          if rest =~ /^(.+)\/([^\/]+)$/
+            before_db = $1  # username:password@host:port
+            database = $2
+
+            # Split by last : to get port
+            if before_db =~ /^(.+):(\d+)$/
+              before_port = $1  # username:password@host
+              port = $2
+
+              # Split by LAST @ to separate credentials from host
+              # This handles @ symbols in the password
+              last_at_index = before_port.rindex('@')
+              if last_at_index
+                user_pass = before_port[0...last_at_index]
+                host = before_port[(last_at_index + 1)..-1]
+
+                # Split user_pass on FIRST : only
+                if user_pass =~ /^([^:]+):(.+)$/
+                  username = $1
+                  password = $2
   %>
   adapter: <%= scheme %>
   username: <%= username %>
@@ -121,6 +137,9 @@ production:
   port: <%= port %>
   database: <%= database %>
   <%
+                end
+              end
+            end
           end
         end
       rescue => e
