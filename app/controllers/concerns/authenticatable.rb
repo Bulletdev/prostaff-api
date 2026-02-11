@@ -23,7 +23,9 @@ module Authenticatable
 
     begin
       @jwt_payload = Authentication::Services::JwtService.decode(token)
-      @current_user = User.find(@jwt_payload[:user_id])
+
+      # Bypass RLS for authentication queries - we need to find the user before we can set RLS context
+      @current_user = User.unscoped.find(@jwt_payload[:user_id])
       @current_organization = @current_user.organization
 
       # Update last login time
