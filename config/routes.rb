@@ -17,9 +17,6 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
-      # Health check with DB diagnostics
-      get 'health/db', to: 'health#db'
-
       # Constants (public)
       get 'constants', to: 'constants#index'
 
