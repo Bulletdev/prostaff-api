@@ -24,7 +24,16 @@ default: &default
 development:
   <<: *default
   # Use DATABASE_URL from .env (Supabase)
-  url: <%= ENV.fetch("DATABASE_URL") %>
+  <% if ENV["DATABASE_URL"] %>
+  url: <%= ENV["DATABASE_URL"] %>
+  <% else %>
+  # Fallback for development without DATABASE_URL
+  database: prostaff_api_development
+  host: localhost
+  port: 5432
+  username: postgres
+  password: password
+  <% end %>
 
   # The specified database role being used to connect to postgres.
   # To create additional roles in postgres see `$ createuser --help`.
@@ -120,5 +129,12 @@ production:
   url: <%= db_url %>
   <%
       end
+    else
+      # Fallback for when DATABASE_URL is not available (e.g., during Docker build)
+      # This allows the app to build without a database connection
+  %>
+  database: prostaff_api_production
+  adapter: postgresql
+  <%
     end
   %>
