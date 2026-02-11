@@ -29,9 +29,20 @@ module Authenticatable
       # Update last login time
       @current_user.update_last_login! if should_update_last_login?
     rescue Authentication::Services::JwtService::AuthenticationError => e
+      Rails.logger.error("JWT Authentication error: #{e.class} - #{e.message}")
       render_unauthorized(e.message)
-    rescue ActiveRecord::RecordNotFound
+    rescue ActiveRecord::RecordNotFound => e
+      Rails.logger.error("User not found during authentication: #{e.message}")
       render_unauthorized('User not found')
+    rescue StandardError => e
+      Rails.logger.error("Unexpected authentication error: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace.join("\n"))
+      render json: {
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'An internal error occurred'
+        }
+      }, status: :internal_server_error
     end
   end
 
