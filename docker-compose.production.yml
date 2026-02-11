@@ -1,5 +1,5 @@
 services:
-  # --- Aplicação Principal ---
+  # --- Aplicação Principal (Rails API) ---
   api:
     build:
       context: .
@@ -8,18 +8,21 @@ services:
     restart: unless-stopped
     environment:
       RAILS_ENV: production
-      # O Coolify preenche as variáveis se você definir na UI,
-      # mas aqui garantimos a conexão interna:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # O Coolify injeta a URL do Supabase aqui
+      DATABASE_URL: ${DATABASE_URL}
+      # URL para o banco local (futura réplica)
+      REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Conexão interna com Redis e Elastic
       REDIS_URL: redis://redis:6379/1
       ELASTICSEARCH_URL: http://elasticsearch:9200
       RAILS_LOG_TO_STDOUT: "true"
       PORT: 3000
+      # Chaves de API e Segurança (definidas no Coolify)
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      RIOT_API_KEY: ${RIOT_API_KEY}
     ports:
-      - "3000" # O Coolify vai detectar essa porta e criar o domínio automaticamente
+      - "3000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       elasticsearch:
@@ -39,14 +42,17 @@ services:
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
       RAILS_ENV: production
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL}
+      REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/1
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      RIOT_API_KEY: ${RIOT_API_KEY}
     depends_on:
       - api
       - redis
 
-  # --- Banco de Dados (Local na VPS) ---
+  # --- Banco Local (Futura Read Replica) ---
   postgres:
     image: postgres:15-alpine
     container_name: prostaff-postgres
@@ -76,7 +82,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # --- Analytics (Memória Reduzida) ---
+  # --- Analytics (Elasticsearch) ---
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     container_name: prostaff-elasticsearch
@@ -84,17 +90,4 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      # IMPORTANTE: Reduzido para caber na KVM 1 (4GB total)
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    volumes:
-      - prostaff_es_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-volumes:
-  prostaff_pg_data:
-  prostaff_redis_data:
-  prostaff_es_data:
+      # Ajustado para KVM
