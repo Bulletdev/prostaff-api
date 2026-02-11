@@ -121,11 +121,19 @@ module Authentication
           )
         else
           render_error(
-            message: 'Invalid email or password',
+            message: 'Invalid credentials',
             code: 'INVALID_CREDENTIALS',
             status: :unauthorized
           )
         end
+      rescue StandardError => e
+        Rails.logger.error("Login error: #{e.class} - #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
+        render_error(
+          message: 'Invalid credentials',
+          code: 'INVALID_CREDENTIALS',
+          status: :unauthorized
+        )
       end
 
       # Refreshes an access token using a refresh token
