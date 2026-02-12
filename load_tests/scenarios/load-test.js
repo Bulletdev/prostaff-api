@@ -152,6 +152,6 @@ export default function(data) {
   sleep(Math.random() * 5 + 3);
 }
 
-export function teardown(data) {
+export function teardown() {
   console.log('Load test completed');
 }

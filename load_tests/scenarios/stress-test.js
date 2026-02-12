@@ -79,6 +79,6 @@ export default function(data) {
   sleep(0.3);
 }
 
-export function teardown(data) {
+export function teardown() {
   console.log('Stress test completed - check for breaking points');
 }
