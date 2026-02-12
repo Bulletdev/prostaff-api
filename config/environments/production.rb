@@ -9,14 +9,18 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
-  # Allow Render hostname
+# Allow Render hostname                                                                                              
+  config.hosts << "prostaff.gg"                                                                                        
+  config.hosts << "www.prostaff.gg"                                                                                    
+  config.hosts << ".prostaff.gg"                                                                                       
+                                                                                                                       
+  # Railway domain                                                                                                     
+  config.hosts << "prostaff-api-production.up.railway.app"                                                             
 
-  config.hosts << "prostaff.gg"
-
-  config.hosts << "www.prostaff.gg"
-
-  # Railway domain
-  config.hosts << "prostaff-api-production.up.railway.app"
+  # Allow localhost for health checks (Coolify/Docker)
+  config.hosts << "localhost"
+  config.hosts << "127.0.0.1"
+  config.hosts << "187.77.39.215"
 
  # config.hosts << "123.123.123.123"
 
