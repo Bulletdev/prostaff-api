@@ -1,8 +1,8 @@
 # Use Ruby 3.4.5 slim image (better Windows compatibility)
 FROM ruby:3.4.5-slim
 
-# Install system dependencies
-RUN apt-get update -qq && apt-get install -y \
+# Install system dependencies with version pinning and no recommended packages
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libyaml-dev \

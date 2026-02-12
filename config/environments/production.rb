@@ -9,28 +9,29 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
-# Allow Render hostname                                                                                              
-  config.hosts << "prostaff.gg"                                                                                        
-  config.hosts << "www.prostaff.gg"                                                                                    
-  config.hosts << ".prostaff.gg"                                                                                       
-                                                                                                                       
-  # Railway domain                                                                                                     
-  config.hosts << "prostaff-api-production.up.railway.app"                                                             
+  # Allow custom domains
+  config.hosts << 'prostaff.gg'
+  config.hosts << 'www.prostaff.gg'
+  config.hosts << '.prostaff.gg'
+
+  # Railway/Coolify domains
+  config.hosts << 'prostaff-api-production.up.railway.app'
+  config.hosts << 'api.prostaff.gg'
 
   # Allow localhost for health checks (Coolify/Docker)
-  config.hosts << "localhost"
-  config.hosts << "127.0.0.1"
-  config.hosts << "187.77.39.215"
-  config.hosts << "api.prostaff.gg"
+  config.hosts << 'localhost'
+  config.hosts << '127.0.0.1'
+  config.hosts << '187.77.39.215'
 
- # config.hosts << "123.123.123.123"
+  # config.hosts << '123.123.123.123'
 
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
   config.active_storage.variant_processor = :mini_magick
 
-  # Disable force_ssl for health checks - Railway handles SSL termination
-  config.force_ssl = false
+  # SSL is handled by reverse proxy (Coolify/Railway), but we enforce HTTPS at app level
+  # Disabled only if explicitly set (for internal health checks)
+  config.force_ssl = ENV.fetch('FORCE_SSL', 'true') != 'false'
 
   config.log_level = :info
 
@@ -43,7 +44,7 @@ Rails.application.configure do
                            {
                              url: ENV['REDIS_URL'],
                              reconnect_attempts: 3,
-                             error_handler: ->(method:, returning:, exception:) {
+                             error_handler: lambda { |_method:, _returning:, exception:|
                                Rails.logger.warn "Rails cache Redis error: #{exception.message}"
                              }
                            }

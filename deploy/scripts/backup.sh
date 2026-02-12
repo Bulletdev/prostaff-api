@@ -31,7 +31,7 @@ fi
 
 # Clean old backups
 echo "🗑️  Cleaning backups older than $RETENTION_DAYS days..."
-find "$BACKUP_DIR" -name "prostaff_*.sql.gz" -type f -mtime +$RETENTION_DAYS -delete
+find "$BACKUP_DIR" -name "prostaff_*.sql.gz" -type f -mtime +"$RETENTION_DAYS" -delete
 REMAINING=$(find "$BACKUP_DIR" -name "prostaff_*.sql.gz" -type f | wc -l)
 echo "  Remaining backups: $REMAINING"
 

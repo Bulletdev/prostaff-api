@@ -30,7 +30,7 @@ for i in {1..30}; do
         echo -e "${GREEN}✓ API is healthy${NC}"
         break
     fi
-    if [ $i -eq 30 ]; then
+    if [ "$i" -eq 30 ]; then
         echo -e "${RED} API health check timeout. You may need to check logs.${NC}"
     fi
     sleep 2
