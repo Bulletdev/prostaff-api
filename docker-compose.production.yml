@@ -1,101 +1,96 @@
 services:
-  # --- Aplicação Principal (Rails API) ---
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-    container_name: prostaff-api
-    restart: unless-stopped
-    environment:
-      RAILS_ENV: production
-      # O Coolify injeta a URL do Supabase aqui
-      DATABASE_URL: ${DATABASE_URL}
-      # URL para o banco local (futura réplica)
-      REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      # Conexão interna com Redis e Elastic
-      REDIS_URL: redis://redis:6379/1
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      RAILS_LOG_TO_STDOUT: "true"
-      PORT: 3000
-      # Chaves de API e Segurança (definidas no Coolify)
-      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-    ports:
-      - "3000"
-    depends_on:
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+api:
+build:
+context: .
+dockerfile: Dockerfile.production
+container_name: prostaff-api
+restart: unless-stopped
+labels:
+- "traefik.enable=true"
+- "traefik.http.routers.prostaff-api.rule=Host(prostaff.gg)"
+- "traefik.http.routers.prostaff-api.entrypoints=https"
+- "traefik.http.routers.prostaff-api.tls=true"
+- "traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt"
+- "traefik.http.services.prostaff-api.loadbalancer.server.port=3000"
+environment:
+RAILS_ENV: production
+DATABASE_URL: DATABASEU​RLREPLICAD​ATABASEU​RL:postgres://{POSTGRES_USER}:POSTGRESP​ASSWORD@postgres:5432/{POSTGRES_DB}
+REDIS_URL: redis://redis:6379/1
+ELASTICSEARCH_URL: http://elasticsearch:9200
+RAILS_LOG_TO_STDOUT: "true"
+PORT: 3000
+RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+RIOT_API_KEY: ${RIOT_API_KEY}
+ports:
+- "3000:3000"
+depends_on:
+redis:
+condition: service_healthy
+elasticsearch:
+condition: service_healthy
 
-  # --- Worker (Sidekiq) ---
-  sidekiq:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-    container_name: prostaff-sidekiq
-    command: bundle exec sidekiq -C config/sidekiq.yml
-    environment:
-      RAILS_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379/1
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-    depends_on:
-      - api
-      - redis
+sidekiq:
+build:
+context: .
+dockerfile: Dockerfile.production
+container_name: prostaff-sidekiq
+command: bundle exec sidekiq -C config/sidekiq.yml
+environment:
+RAILS_ENV: production
+DATABASE_URL: DATABASEU​RLREPLICAD​ATABASEU​RL:postgres://{POSTGRES_USER}:POSTGRESP​ASSWORD@postgres:5432/{POSTGRES_DB}
+REDIS_URL: redis://redis:6379/1
+ELASTICSEARCH_URL: http://elasticsearch:9200
+RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+RIOT_API_KEY: ${RIOT_API_KEY}
+depends_on:
+- api
+- redis
 
-  # --- Banco Local (Futura Read Replica) ---
-  postgres:
-    image: postgres:15-alpine
-    container_name: prostaff-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-prostaff_production}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe123!}
-    volumes:
-      - prostaff_pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+postgres:
+image: postgres:15-alpine
+container_name: prostaff-postgres
+restart: always
+environment:
+POSTGRES_DB: ${POSTGRES_DB:-prostaff_production}
+POSTGRES_USER: ${POSTGRES_USER:-postgres}
+POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe123!}
+volumes:
+- prostaff_pg_data:/var/lib/postgresql/data
+healthcheck:
+test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+interval: 10s
+timeout: 5s
+retries: 5
 
-  # --- Cache & Job Queue ---
-  redis:
-    image: redis:7-alpine
-    container_name: prostaff-redis
-    restart: always
-    volumes:
-      - prostaff_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+redis:
+image: redis:7-alpine
+container_name: prostaff-redis
+restart: always
+volumes:
+- prostaff_redis_data:/data
+healthcheck:
+test: ["CMD", "redis-cli", "ping"]
+interval: 10s
+timeout: 5s
+retries: 5
 
-  # --- Analytics (Elasticsearch) ---
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: prostaff-elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      # Ajustado para KVM 2 (1GB Heap é seguro)
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
-    volumes:
-      - prostaff_es_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+elasticsearch:
+image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+container_name: prostaff-elasticsearch
+restart: unless-stopped
+environment:
+- discovery.type=single-node
+- xpack.security.enabled=false
+- ES_JAVA_OPTS=-Xms512m -Xmx512m
+volumes:
+- prostaff_es_data:/usr/share/elasticsearch/data
+healthcheck:
+test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+interval: 30s
+timeout: 10s
+retries: 5
 
 volumes:
-  prostaff_pg_data:
-  prostaff_redis_data:
-  prostaff_es_data:
+prostaff_pg_data:
+prostaff_redis_data:
+prostaff_es_data:
