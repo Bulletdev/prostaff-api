@@ -28,7 +28,7 @@ class CreateNotifications < ActiveRecord::Migration[7.1]
       t.timestamps null: false
     end
 
-    add_index :notifications, :user_id
+    # Note: :user_id index is automatically created by t.references above
     add_index :notifications, :is_read
     add_index :notifications, :created_at, order: { created_at: :desc }
 

@@ -10,24 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_12_000000) do
   create_schema "auth"
-  create_schema "extensions"
-  create_schema "graphql"
-  create_schema "graphql_public"
-  create_schema "pgbouncer"
-  create_schema "realtime"
-  create_schema "storage"
-  create_schema "supabase_migrations"
-  create_schema "vault"
 
   # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_graphql"
-  enable_extension "pg_stat_statements"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
-  enable_extension "supabase_vault"
-  enable_extension "uuid-ossp"
 
   create_table "audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
@@ -178,13 +166,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
     t.index ["match_type"], name: "index_matches_on_match_type"
     t.index ["organization_id", "created_at"], name: "idx_matches_org_created"
     t.index ["organization_id", "game_start", "victory"], name: "idx_matches_org_game_start_victory", comment: "Otimiza queries de winrate por período"
-    t.index ["organization_id", "game_start"], name: "idx_matches_org_game_start"
-    t.index ["organization_id", "game_start"], name: "index_matches_on_org_and_game_start"
-    t.index ["organization_id", "victory"], name: "idx_matches_org_victory"
-    t.index ["organization_id", "victory"], name: "index_matches_on_org_and_victory"
     t.index ["organization_id"], name: "index_matches_on_organization_id"
     t.index ["riot_match_id"], name: "index_matches_on_riot_match_id", unique: true
     t.index ["victory"], name: "index_matches_on_victory"
+  end
+
+  create_table "notifications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "title", limit: 200, null: false
+    t.text "message", null: false
+    t.string "type", null: false
+    t.text "link_url"
+    t.string "link_type", limit: 20
+    t.uuid "link_id"
+    t.boolean "is_read", default: false
+    t.datetime "read_at", precision: nil
+    t.text "channels", default: ["in_app"], array: true
+    t.boolean "email_sent", default: false
+    t.boolean "discord_sent", default: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_notifications_on_created_at", order: :desc
+    t.index ["is_read"], name: "index_notifications_on_is_read"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
+    t.check_constraint "type::text = ANY (ARRAY['info'::character varying, 'success'::character varying, 'warning'::character varying, 'error'::character varying, 'match'::character varying, 'schedule'::character varying, 'system'::character varying]::text[])", name: "notifications_type_check"
   end
 
   create_table "opponent_teams", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -296,9 +302,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
     t.datetime "updated_at", null: false
     t.index ["champion"], name: "index_player_match_stats_on_champion"
     t.index ["match_id", "player_id"], name: "idx_player_stats_match_player_agg", comment: "Otimiza agregações de estatísticas (SUM kills/deaths/assists)"
-    t.index ["match_id"], name: "idx_player_stats_match"
-    t.index ["match_id"], name: "index_player_match_stats_on_match"
-    t.index ["match_id"], name: "index_player_match_stats_on_match_id"
     t.index ["player_id", "match_id"], name: "index_player_match_stats_on_player_id_and_match_id", unique: true
     t.index ["player_id"], name: "index_player_match_stats_on_player_id"
   end
@@ -362,8 +365,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
     t.index ["organization_id", "deleted_at"], name: "idx_players_org_deleted_active", where: "(deleted_at IS NULL)", comment: "Índice parcial para COUNT de players ativos"
     t.index ["organization_id", "last_sync_at"], name: "idx_players_org_last_sync"
     t.index ["organization_id", "role"], name: "index_players_on_org_and_role"
-    t.index ["organization_id", "status"], name: "idx_players_org_status"
-    t.index ["organization_id", "status"], name: "index_players_on_org_and_status"
     t.index ["organization_id", "sync_status"], name: "idx_players_org_sync_status"
     t.index ["organization_id"], name: "index_players_on_organization_id"
     t.index ["player_access_enabled"], name: "index_players_on_player_access_enabled", comment: "Quick lookup for players with access enabled"
@@ -402,16 +403,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "scrim_id"
     t.index ["created_by_id"], name: "index_schedules_on_created_by_id"
     t.index ["event_type"], name: "index_schedules_on_event_type"
     t.index ["match_id"], name: "index_schedules_on_match_id"
     t.index ["organization_id", "event_type"], name: "idx_schedules_org_event_type"
     t.index ["organization_id", "start_time", "event_type"], name: "idx_schedules_org_time_type", comment: "Otimiza queries de próximos eventos"
-    t.index ["organization_id", "start_time", "event_type"], name: "index_schedules_on_org_time_type"
-    t.index ["organization_id", "start_time"], name: "idx_schedules_org_time"
     t.index ["organization_id"], name: "index_schedules_on_organization_id"
-    t.index ["scrim_id"], name: "index_schedules_on_scrim_id"
     t.index ["start_time"], name: "index_schedules_on_start_time"
     t.index ["status"], name: "index_schedules_on_status"
   end
@@ -609,7 +606,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
     t.index ["category"], name: "index_team_goals_on_category"
     t.index ["created_by_id"], name: "index_team_goals_on_created_by_id"
     t.index ["organization_id", "status"], name: "idx_team_goals_org_status", comment: "Otimiza COUNT de goals por status"
-    t.index ["organization_id", "status"], name: "index_team_goals_on_org_and_status"
     t.index ["organization_id"], name: "index_team_goals_on_organization_id"
     t.index ["player_id"], name: "index_team_goals_on_player_id"
     t.index ["status"], name: "index_team_goals_on_status"
@@ -638,11 +634,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
     t.datetime "last_login_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "supabase_uid"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["role"], name: "index_users_on_role"
-    t.index ["supabase_uid"], name: "index_users_on_supabase_uid"
   end
 
   create_table "vod_reviews", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -702,6 +696,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
   add_foreign_key "draft_plans", "users", column: "created_by_id"
   add_foreign_key "draft_plans", "users", column: "updated_by_id"
   add_foreign_key "matches", "organizations"
+  add_foreign_key "notifications", "users"
   add_foreign_key "password_reset_tokens", "users"
   add_foreign_key "player_match_stats", "matches"
   add_foreign_key "player_match_stats", "players"
@@ -709,7 +704,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_08_200854) do
   add_foreign_key "players", "organizations", column: "previous_organization_id", on_delete: :nullify
   add_foreign_key "schedules", "matches"
   add_foreign_key "schedules", "organizations"
-  add_foreign_key "schedules", "scrims", on_delete: :cascade
   add_foreign_key "schedules", "users", column: "created_by_id"
   add_foreign_key "scouting_watchlists", "organizations"
   add_foreign_key "scouting_watchlists", "scouting_targets"
