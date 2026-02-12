@@ -58,6 +58,6 @@ export default function(data) {
   sleep(0.5);
 }
 
-export function teardown(data) {
+export function teardown() {
   console.log('Spike test completed - check recovery time and error rates');
 }

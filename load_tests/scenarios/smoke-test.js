@@ -73,6 +73,6 @@ export default function(data) {
   sleep(2);
 }
 
-export function teardown(data) {
+export function teardown() {
   console.log('Smoke test completed');
 }
