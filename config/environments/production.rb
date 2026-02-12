@@ -21,6 +21,7 @@ Rails.application.configure do
   config.hosts << "localhost"
   config.hosts << "127.0.0.1"
   config.hosts << "187.77.39.215"
+  config.hosts << "api.prostaff.gg"
 
  # config.hosts << "123.123.123.123"
 
