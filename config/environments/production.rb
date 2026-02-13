@@ -9,29 +9,29 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
-  # Allow custom domains
+  # Restrict to production domains only
   config.hosts << 'prostaff.gg'
   config.hosts << 'www.prostaff.gg'
-  config.hosts << '.prostaff.gg'
-
-  # Railway/Coolify domains
-  config.hosts << 'prostaff-api-production.up.railway.app'
   config.hosts << 'api.prostaff.gg'
+  config.hosts << 'prostaff-api-production.up.railway.app'
 
-  # Allow localhost for health checks (Coolify/Docker)
-  config.hosts << 'localhost'
-  config.hosts << '127.0.0.1'
-  config.hosts << '187.77.39.215'
-
-  # config.hosts << '123.123.123.123'
+  # Allow localhost only for Docker internal health checks
+  config.hosts << 'localhost' if ENV['DOCKER_CONTAINER']
 
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
   config.active_storage.variant_processor = :mini_magick
 
-  # SSL is handled by reverse proxy (Coolify/Railway), but we enforce HTTPS at app level
-  # Disabled only if explicitly set (for internal health checks)
+  # SSL Configuration - Traefik terminates SSL, Rails receives HTTP
   config.force_ssl = ENV.fetch('FORCE_SSL', 'true') != 'false'
+  config.assume_ssl = true # Prevents SSL redirect loops with Traefik
+
+  # Trust all proxies (Traefik, Cloudflare)
+  require 'ipaddr'
+  config.action_dispatch.trusted_proxies = [
+    IPAddr.new("0.0.0.0/0"),    # Trust all (Traefik handles security)
+    IPAddr.new("::/0")           # IPv6
+  ]
 
   config.log_level = :info
 

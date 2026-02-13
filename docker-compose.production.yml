@@ -7,17 +7,32 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.prostaff-api.rule=Host(`prostaff.gg`)"
+      - "traefik.http.routers.prostaff-api.rule=Host(`prostaff.gg`) || Host(`api.prostaff.gg`)"
       - "traefik.http.routers.prostaff-api.entrypoints=https"
       - "traefik.http.routers.prostaff-api.tls=true"
       - "traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.prostaff-api.loadbalancer.server.port=3000"
+      - "traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up"
+      - "traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=30s"
+      # Rate Limiting (30 req/s per IP - same as nginx config)
+      - "traefik.http.middlewares.prostaff-ratelimit.ratelimit.average=30"
+      - "traefik.http.middlewares.prostaff-ratelimit.ratelimit.period=1s"
+      - "traefik.http.middlewares.prostaff-ratelimit.ratelimit.burst=50"
+      # Compression (gzip replacement)
+      - "traefik.http.middlewares.prostaff-compress.compress=true"
+      # Security Headers
+      - "traefik.http.middlewares.prostaff-security.headers.stsSeconds=63072000"
+      - "traefik.http.middlewares.prostaff-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.prostaff-security.headers.stsPreload=true"
+      - "traefik.http.middlewares.prostaff-security.headers.forceSTSHeader=true"
+      # Chain all middlewares
+      - "traefik.http.routers.prostaff-api.middlewares=prostaff-ratelimit,prostaff-compress,prostaff-security"
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/1
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_URL: http://elastic:${ELASTIC_PASSWORD:-ChangeMe123!}@elasticsearch:9200
       RAILS_LOG_TO_STDOUT: "true"
       PORT: 3000
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
@@ -41,7 +56,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/1
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_URL: http://elastic:${ELASTIC_PASSWORD:-ChangeMe123!}@elasticsearch:9200
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       RIOT_API_KEY: ${RIOT_API_KEY}
     depends_on:
@@ -82,12 +97,13 @@ services:
     restart: unless-stopped
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-ChangeMe123!}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - prostaff_es_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:-ChangeMe123!} http://localhost:9200 >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
