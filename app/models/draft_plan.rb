@@ -111,6 +111,37 @@ class DraftPlan < ApplicationRecord
     update!(is_active: true)
   end
 
+  # Check if we have priority picks for all roles
+  def blind_pick_ready?
+    Constants::Player::ROLES.all? { |role| priority_picks&.key?(role) }
+  end
+
+  # Calculate what percentage of possible scenarios are covered
+  def scenario_coverage
+    return 0 if total_scenarios.zero?
+
+    # Simplified coverage calculation
+    # In a real scenario, this would analyze ban combinations
+    [((total_scenarios / 10.0) * 100).round(2), 100].min
+  end
+
+  # Check how many opponent comfort picks are banned
+  def comfort_picks_coverage
+    comfort = opponent_comfort_picks
+    return 100 if comfort.empty?
+
+    banned = (our_bans & comfort).size
+    ((banned.to_f / comfort.size) * 100).round(2)
+  end
+
+  # Suggest additional bans based on opponent comfort picks
+  def suggest_bans
+    comfort = opponent_comfort_picks
+    already_banned = our_bans || []
+
+    (comfort - already_banned).first(5)
+  end
+
   private
 
   def validate_bans_structure
@@ -163,37 +194,6 @@ class DraftPlan < ApplicationRecord
     return unless priority_picks.is_a?(Hash)
 
     self.priority_picks = priority_picks.transform_values(&:strip)
-  end
-
-  # Calculate what percentage of possible scenarios are covered
-  def scenario_coverage
-    return 0 if total_scenarios.zero?
-
-    # Simplified coverage calculation
-    # In a real scenario, this would analyze ban combinations
-    [((total_scenarios / 10.0) * 100).round(2), 100].min
-  end
-
-  # Check how many opponent comfort picks are banned
-  def comfort_picks_coverage
-    comfort = opponent_comfort_picks
-    return 100 if comfort.empty?
-
-    banned = (our_bans & comfort).size
-    ((banned.to_f / comfort.size) * 100).round(2)
-  end
-
-  # Suggest additional bans based on opponent comfort picks
-  def suggest_bans
-    comfort = opponent_comfort_picks
-    already_banned = our_bans || []
-
-    (comfort - already_banned).first(5)
-  end
-
-  # Check if we have priority picks for all roles
-  def blind_pick_ready?
-    Constants::Player::ROLES.all? { |role| priority_picks&.key?(role) }
   end
 
   def log_audit_trail
