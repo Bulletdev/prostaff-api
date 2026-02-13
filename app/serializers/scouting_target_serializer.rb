@@ -31,7 +31,10 @@ class ScoutingTargetSerializer < Blueprinter::Base
   field :avatar_url do |target|
     target.avatar_url || target.metadata&.dig('avatar_url') || begin
       icon_id = target.profile_icon_id || target.metadata&.dig('profile_icon_id')
-      icon_id ? "https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/#{icon_id}.png" : nil
+      if icon_id
+        cdn = RiotCdnService.new
+        "https://ddragon.leagueoflegends.com/cdn/#{cdn.cached_latest_version}/img/profileicon/#{icon_id}.png"
+      end
     end
   end
 
