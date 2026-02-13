@@ -24,14 +24,16 @@ Rails.application.configure do
   config.active_storage.variant_processor = :mini_magick
 
   # SSL Configuration - Traefik terminates SSL, Rails receives HTTP
-  config.force_ssl = ENV.fetch('FORCE_SSL', 'true') != 'false'
-  config.assume_ssl = true # Prevents SSL redirect loops with Traefik
+  config.force_ssl = false
+
 
   # Trust all proxies (Traefik, Cloudflare)
   require 'ipaddr'
   config.action_dispatch.trusted_proxies = [
-    IPAddr.new("0.0.0.0/0"),    # Trust all (Traefik handles security)
-    IPAddr.new("::/0")           # IPv6
+    IPAddr.new("10.0.0.0/8"),
+    IPAddr.new("172.16.0.0/12"),
+    IPAddr.new("172.16.0.0/16"),
+    IPAddr.new("127.0.0.1"),
   ]
 
   config.log_level = :info
