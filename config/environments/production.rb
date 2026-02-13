@@ -50,7 +50,7 @@ Rails.application.configure do
                            {
                              url: ENV['REDIS_URL'],
                              reconnect_attempts: 3,
-                             error_handler: lambda { |_method:, _returning:, exception:|
+                             error_handler: lambda { |_method:, returning:, exception:|
                                Rails.logger.warn "Rails cache Redis error: #{exception.message}"
                              }
                            }
