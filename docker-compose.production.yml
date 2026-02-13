@@ -39,6 +39,9 @@ services:
       RIOT_API_KEY: ${RIOT_API_KEY}
     ports:
       - "3000:3000"
+    networks:
+      - default
+      - traefik
     depends_on:
       redis:
         condition: service_healthy
@@ -107,6 +110,13 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+networks:
+  traefik:
+    external: true
+    name: coolify  # Coolify's default Traefik network name
+  default:
+    driver: bridge
 
 volumes:
   prostaff_pg_data:
