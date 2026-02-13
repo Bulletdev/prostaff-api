@@ -9,15 +9,18 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
-  # Restrict to production domains only
-  config.hosts << 'prostaff.gg'
-  config.hosts << 'www.prostaff.gg'
-  config.hosts << 'api.prostaff.gg'
-  config.hosts << 'prostaff-api-production.up.railway.app'
+# Disable Rails Host Authorization. 
+  # Traefik already filters traffic by domain (prostaff.gg), and this 
+  # prevents health checks on internal IPs (like 10.0.x.x) from being blocked.
+  config.hosts = nil
 
-  # Allow localhost for Docker internal health checks (Coolify/Traefik)
-  config.hosts << 'localhost'
-  config.hosts << '127.0.0.1'
+  # REMOVE OR COMMENT OUT THESE OLD LINES:
+  # config.hosts << 'prostaff.gg'
+  # config.hosts << 'www.prostaff.gg'
+  # config.hosts << 'api.prostaff.gg'
+  # config.hosts << 'prostaff-api-production.up.railway.app'
+  # config.hosts << 'localhost'
+  # config.hosts << '127.0.0.1'
 
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
