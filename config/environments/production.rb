@@ -15,8 +15,9 @@ Rails.application.configure do
   config.hosts << 'api.prostaff.gg'
   config.hosts << 'prostaff-api-production.up.railway.app'
 
-  # Allow localhost only for Docker internal health checks
-  config.hosts << 'localhost' if ENV['DOCKER_CONTAINER']
+  # Allow localhost for Docker internal health checks (Coolify/Traefik)
+  config.hosts << 'localhost'
+  config.hosts << '127.0.0.1'
 
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
