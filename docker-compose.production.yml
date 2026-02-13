@@ -31,7 +31,7 @@ services:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379/1
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
       ELASTICSEARCH_URL: http://elastic:${ELASTIC_PASSWORD:-ChangeMe123!}@elasticsearch:9200
       RAILS_LOG_TO_STDOUT: "true"
       PORT: 3000
@@ -58,7 +58,7 @@ services:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379/1
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
       ELASTICSEARCH_URL: http://elastic:${ELASTIC_PASSWORD:-ChangeMe123!}@elasticsearch:9200
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       RIOT_API_KEY: ${RIOT_API_KEY}
