@@ -10,7 +10,7 @@
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
     # O fallback (segundo argumento) deve ser uma única string separada por vírgulas
-    origins ENV.fetch('CORS_ORIGINS', 'http://localhost:5173,http://localhost:8888,https://prostaff.vercel.app,https://prostaff.gg').split(',')
+    origins ENV.fetch(' origins ENV.fetch('CORS_ORIGINS', 'http://localhost:5173,http://localhost:8888,https://prostaff.vercel.app,https://prostaff.gg,https://api.prostaff.gg').split(',') 
 
     resource '*',
              headers: :any,
