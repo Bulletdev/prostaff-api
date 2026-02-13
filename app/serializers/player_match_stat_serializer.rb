@@ -76,9 +76,10 @@ class PlayerMatchStatSerializer < Blueprinter::Base
       # I'll add a `spell_icon_url_by_name` to the service or just handle it here.
       # Let's keep it simple:
 
+      cdn = RiotCdnService.new
       {
         name: spell_name,
-        icon_url: "#{RiotCdnService::BASE_URL}/#{RiotCdnService::DEFAULT_VERSION}/img/spell/#{spell_name}.png"
+        icon_url: "#{RiotCdnService::BASE_URL}/#{cdn.cached_latest_version}/img/spell/#{spell_name}.png"
       }
     end
   end
