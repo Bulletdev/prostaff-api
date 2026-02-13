@@ -9,6 +9,11 @@ module Players
 
       # GET /api/v1/players
       def index
+        # Optimized query to prevent timeout during bulk sync operations
+        # PostgreSQL will allow concurrent reads even during updates (MVCC)
+        # Set a reasonable timeout to prevent 504s
+        ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '5000'") # 5 seconds
+
         players = organization_scoped(Player).includes(:champion_pools)
 
         players = players.by_role(params[:role]) if params[:role].present?
@@ -25,6 +30,13 @@ module Players
                          players: PlayerSerializer.render_as_hash(result[:data]),
                          pagination: result[:pagination]
                        })
+      rescue ActiveRecord::QueryCanceled => e
+        Rails.logger.error "Players index query timeout: #{e.message}"
+        render_error(
+          message: 'Request timeout - please try again',
+          code: 'QUERY_TIMEOUT',
+          status: :request_timeout
+        )
       end
 
       # GET /api/v1/players/:id
@@ -165,8 +177,9 @@ module Players
 
       # POST /api/v1/players/:id/sync_from_riot
       def sync_from_riot
-        service = Players::Services::RiotSyncService.new(@player, region: params[:region])
-        result = service.sync
+        region = params[:region] || @player.region || 'br1'
+        service = Players::Services::RiotSyncService.new(current_organization, region)
+        result = service.sync_player(@player, import_matches: true)
 
         if result[:success]
           log_user_action(
