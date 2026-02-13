@@ -17,7 +17,7 @@ module Api
           result = paginate(plans)
 
           render_success({
-                           draft_plans: ::Strategy::Serializers::DraftPlanSerializer.render_as_hash(result[:data]),
+                           draft_plans: Strategy::Serializers::DraftPlanSerializer.render_as_hash(result[:data]),
                            total: result[:pagination][:total_count],
                            page: result[:pagination][:current_page],
                            per_page: result[:pagination][:per_page],
@@ -28,7 +28,7 @@ module Api
         # GET /api/v1/strategy/draft_plans/:id
         def show
           render_success({
-                           draft_plan: ::Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
+                           draft_plan: Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
                          })
         end
 
@@ -48,7 +48,7 @@ module Api
             )
 
             render_created({
-                             draft_plan: ::Strategy::Serializers::DraftPlanSerializer.render_as_hash(plan)
+                             draft_plan: Strategy::Serializers::DraftPlanSerializer.render_as_hash(plan)
                            }, message: 'Draft plan created successfully')
           else
             render_error(
@@ -75,7 +75,7 @@ module Api
             )
 
             render_updated({
-                             draft_plan: ::Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
+                             draft_plan: Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
                            })
           else
             render_error(
@@ -122,7 +122,7 @@ module Api
         def activate
           if @draft_plan.activate!
             render_updated({
-                             draft_plan: ::Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
+                             draft_plan: Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
                            }, message: 'Draft plan activated')
           else
             render_error(
@@ -137,7 +137,7 @@ module Api
         def deactivate
           if @draft_plan.deactivate!
             render_updated({
-                             draft_plan: ::Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
+                             draft_plan: Strategy::Serializers::DraftPlanSerializer.render_as_hash(@draft_plan)
                            }, message: 'Draft plan deactivated')
           else
             render_error(
