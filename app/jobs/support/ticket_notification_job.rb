@@ -26,34 +26,69 @@ module Support
     private
 
     def send_ticket_created_email(ticket, user)
-      # TODO: Replace with actual mailer
-      Rails.logger.info("📧 Sending ticket created email to #{user.email}")
-      Rails.logger.info("   Ticket ##{ticket.ticket_number}: #{ticket.subject}")
+      Notification.create!(
+        user: user,
+        title: 'Ticket Criado',
+        message: "Seu ticket ##{ticket.ticket_number} foi criado com sucesso: #{ticket.subject}",
+        type: 'info',
+        link_url: "/support/tickets/#{ticket.id}",
+        link_type: 'support_ticket',
+        link_id: ticket.id,
+        channels: ['in_app']
+      )
 
-      # SupportMailer.ticket_created(ticket, user).deliver_later
+      Rails.logger.info("Notification created for #{user.email}")
+      Rails.logger.info("Ticket ##{ticket.ticket_number}: #{ticket.subject}")
     end
 
     def send_new_message_email(ticket, user, message_id)
       message = SupportTicketMessage.find(message_id)
 
-      Rails.logger.info("📧 Sending new message notification to #{user.email}")
-      Rails.logger.info("   Ticket ##{ticket.ticket_number}: New response from #{message.user.full_name}")
+      Notification.create!(
+        user: user,
+        title: 'Nova Mensagem no Ticket',
+        message: "Ticket ##{ticket.ticket_number}: Nova resposta de #{message.user.full_name}",
+        type: 'info',
+        link_url: "/support/tickets/#{ticket.id}",
+        link_type: 'support_ticket',
+        link_id: ticket.id,
+        channels: ['in_app']
+      )
 
-      # SupportMailer.new_message(ticket, user, message).deliver_later
+      Rails.logger.info("Notification created for #{user.email}")
+      Rails.logger.info("Ticket ##{ticket.ticket_number}: New response from #{message.user.full_name}")
     end
 
     def send_status_changed_email(ticket, user)
-      Rails.logger.info("📧 Sending status change notification to #{user.email}")
-      Rails.logger.info("   Ticket ##{ticket.ticket_number}: Status changed to #{ticket.status}")
+      Notification.create!(
+        user: user,
+        title: 'Status do Ticket Alterado',
+        message: "Ticket ##{ticket.ticket_number}: Status alterado para #{ticket.status}",
+        type: 'info',
+        link_url: "/support/tickets/#{ticket.id}",
+        link_type: 'support_ticket',
+        link_id: ticket.id,
+        channels: ['in_app']
+      )
 
-      # SupportMailer.status_changed(ticket, user).deliver_later
+      Rails.logger.info("Notification created for #{user.email}")
+      Rails.logger.info("Ticket ##{ticket.ticket_number}: Status changed to #{ticket.status}")
     end
 
     def send_ticket_resolved_email(ticket, user)
-      Rails.logger.info("📧 Sending resolution notification to #{user.email}")
-      Rails.logger.info("   Ticket ##{ticket.ticket_number}: Your ticket has been resolved")
+      Notification.create!(
+        user: user,
+        title: 'Ticket Resolvido',
+        message: "Ticket ##{ticket.ticket_number}: Seu ticket foi resolvido",
+        type: 'success',
+        link_url: "/support/tickets/#{ticket.id}",
+        link_type: 'support_ticket',
+        link_id: ticket.id,
+        channels: ['in_app']
+      )
 
-      # SupportMailer.ticket_resolved(ticket, user).deliver_later
+      Rails.logger.info("Notification created for #{user.email}")
+      Rails.logger.info("Ticket ##{ticket.ticket_number}: Your ticket has been resolved")
     end
   end
 end

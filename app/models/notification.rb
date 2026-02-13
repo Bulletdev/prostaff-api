@@ -24,6 +24,8 @@
 # @example Mark notification as read
 #   notification.mark_as_read!
 class Notification < ApplicationRecord
+  self.inheritance_column = :_type_disabled
+
   # Associations
   belongs_to :user
 
