@@ -23,13 +23,22 @@ module Support
     private
 
     def notify_staff_new_ticket(ticket)
-      # Notify available support staff
       staff_users = User.where(role: %w[support_staff admin])
 
       staff_users.each do |staff|
-        Rails.logger.info("📧 Notifying staff #{staff.email} about new ticket")
-        Rails.logger.info("   Ticket ##{ticket.ticket_number}: #{ticket.subject}")
-        # StaffMailer.new_ticket(ticket, staff).deliver_later
+        Notification.create!(
+          user: staff,
+          title: 'Novo Ticket de Suporte',
+          message: "Ticket ##{ticket.ticket_number}: #{ticket.subject}",
+          type: 'info',
+          link_url: "/support/tickets/#{ticket.id}",
+          link_type: 'support_ticket',
+          link_id: ticket.id,
+          channels: ['in_app']
+        )
+
+        Rails.logger.info("Notification created for staff #{staff.email}")
+        Rails.logger.info("Ticket ##{ticket.ticket_number}: #{ticket.subject}")
       end
     end
 
@@ -38,19 +47,38 @@ module Support
 
       message = SupportTicketMessage.find(message_id)
 
-      Rails.logger.info("📧 Notifying assigned staff #{ticket.assigned_to.email}")
-      Rails.logger.info("   Ticket ##{ticket.ticket_number}: New message from #{message.user.full_name}")
+      Notification.create!(
+        user: ticket.assigned_to,
+        title: 'Nova Mensagem de Usuario',
+        message: "Ticket ##{ticket.ticket_number}: Nova mensagem de #{message.user.full_name}",
+        type: 'info',
+        link_url: "/support/tickets/#{ticket.id}",
+        link_type: 'support_ticket',
+        link_id: ticket.id,
+        channels: ['in_app']
+      )
 
-      # StaffMailer.new_user_message(ticket, ticket.assigned_to, message).deliver_later
+      Rails.logger.info("Notification created for assigned staff #{ticket.assigned_to.email}")
+      Rails.logger.info("Ticket ##{ticket.ticket_number}: New message from #{message.user.full_name}")
     end
 
     def notify_all_staff_urgent(ticket)
       staff_users = User.where(role: %w[support_staff admin])
 
       staff_users.each do |staff|
-        Rails.logger.warn("⚠️  URGENT: Notifying #{staff.email}")
-        Rails.logger.warn("   Ticket ##{ticket.ticket_number}: #{ticket.subject}")
-        # StaffMailer.urgent_ticket(ticket, staff).deliver_later
+        Notification.create!(
+          user: staff,
+          title: 'URGENTE: Ticket Prioritario',
+          message: "Ticket ##{ticket.ticket_number}: #{ticket.subject}",
+          type: 'error',
+          link_url: "/support/tickets/#{ticket.id}",
+          link_type: 'support_ticket',
+          link_id: ticket.id,
+          channels: ['in_app']
+        )
+
+        Rails.logger.warn("URGENT: Notification created for #{staff.email}")
+        Rails.logger.warn("Ticket ##{ticket.ticket_number}: #{ticket.subject}")
       end
     end
   end

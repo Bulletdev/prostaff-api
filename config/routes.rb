@@ -31,6 +31,17 @@ Rails.application.routes.draw do
         get 'me', to: 'auth#me'
       end
 
+      # Notifications
+      resources :notifications, only: %i[index show destroy] do
+        member do
+          patch :mark_as_read, to: 'notifications#mark_as_read'
+        end
+        collection do
+          patch :mark_all_as_read, to: 'notifications#mark_all_as_read'
+          get :unread_count, to: 'notifications#unread_count'
+        end
+      end
+
       # Dashboard
       resources :dashboard, only: [:index] do
         collection do
