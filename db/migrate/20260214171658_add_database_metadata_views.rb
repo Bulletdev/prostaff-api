@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateDatabaseMetadataViews < ActiveRecord::Migration[7.2]
+class AddDatabaseMetadataViews < ActiveRecord::Migration[7.2]
   def up
     # Materialized view for table privileges (72s query, 20% of total time)
     execute <<~SQL
