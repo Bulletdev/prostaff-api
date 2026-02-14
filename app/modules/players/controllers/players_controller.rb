@@ -264,14 +264,39 @@ module Players
 
         players.update_all(sync_status: 'syncing')
 
-        players.each do |player|
-          SyncPlayerFromRiotJob.perform_later(player.id)
-        end
+        begin
+          players.each do |player|
+            SyncPlayerFromRiotJob.perform_later(player.id)
+          end
 
-        render_success({
-                         message: "#{players.count} players queued for sync",
-                         players_count: players.count
-                       })
+          render_success({
+                           message: "#{players.count} players queued for sync",
+                           players_count: players.count
+                         })
+        rescue RedisClient::CannotConnectError, Redis::CannotConnectError => e
+          Rails.logger.error "Redis connection failed during bulk_sync: #{e.message}"
+
+          # Reset sync status since we couldn't queue the jobs
+          players.update_all(sync_status: 'idle')
+
+          render_error(
+            message: 'Background job service is temporarily unavailable. Please try again later.',
+            code: 'BACKGROUND_SERVICE_UNAVAILABLE',
+            status: :service_unavailable,
+            details: {
+              hint: 'The sync service is currently down. Contact your administrator if this persists.'
+            }
+          )
+        rescue StandardError => e
+          Rails.logger.error "Unexpected error during bulk_sync: #{e.class} - #{e.message}"
+          players.update_all(sync_status: 'idle')
+
+          render_error(
+            message: 'Failed to queue sync jobs',
+            code: 'QUEUE_ERROR',
+            status: :internal_server_error
+          )
+        end
       end
 
       private

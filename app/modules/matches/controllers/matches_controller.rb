@@ -165,6 +165,18 @@ module Matches
                            already_imported: match_ids.count - imported_count,
                            player: PlayerSerializer.render_as_hash(player)
                          })
+        rescue RedisClient::CannotConnectError, Redis::CannotConnectError => e
+          Rails.logger.error "Redis connection failed during match import: #{e.message}"
+
+          render_error(
+            message: 'Background job service is temporarily unavailable. Please try again later.',
+            code: 'BACKGROUND_SERVICE_UNAVAILABLE',
+            status: :service_unavailable,
+            details: {
+              hint: 'The import service is currently down. Contact your administrator if this persists.',
+              player_id: player.id
+            }
+          )
         rescue RiotApiService::RiotApiError => e
           render_error(
             message: "Failed to fetch matches from Riot API: #{e.message}",
@@ -172,6 +184,9 @@ module Matches
             status: :bad_gateway
           )
         rescue StandardError => e
+          Rails.logger.error "Unexpected error during match import: #{e.class} - #{e.message}"
+          Rails.logger.error e.backtrace.first(5).join("\n")
+
           render_error(
             message: "Failed to import matches: #{e.message}",
             code: 'IMPORT_ERROR',
