@@ -1,15 +1,16 @@
 ---
 # Sidekiq Configuration File
 
-:concurrency: 5
-:timeout: 25
-:verbose: true
+:concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 25).to_i %>
+:timeout: <%= ENV.fetch('SIDEKIQ_TIMEOUT', 25).to_i %>
+:verbose: <%= ENV.fetch('SIDEKIQ_VERBOSE', 'true') == 'true' %>
 :queues:
   - default
   - mailers
   - critical
   - high
   - low
+  - low_priority
 
 # Sidekiq Scheduler Configuration
 :schedule:
@@ -18,6 +19,12 @@
     cron: '0 2 * * *'
     class: CleanupExpiredTokensJob
     description: 'Clean up expired password reset tokens and blacklisted JWT tokens'
+
+  # Refresh database metadata materialized views every 30 minutes
+  refresh_metadata_views:
+    every: '30m'
+    class: RefreshMetadataViewsJob
+    description: 'Refresh materialized views for database metadata (table privileges, extensions, policies)'
 
   # Additional scheduled jobs can be added here
   # Example:
