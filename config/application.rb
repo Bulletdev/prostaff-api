@@ -53,18 +53,8 @@ module ProstaffApi
     config.autoload_paths += %W[#{config.root}/app/modules]
     config.eager_load_paths += %W[#{config.root}/app/modules]
 
-    # CORS configuration
-    config.middleware.insert_before 0, Rack::Cors do
-      allow do
-        origins ENV.fetch('CORS_ORIGINS', 'http://localhost:8888').split(',')
-
-        resource '*',
-                 headers: :any,
-                 methods: %i[get post put patch delete options head],
-                 credentials: true,
-                 max_age: 86_400
-      end
-    end
+    # CORS configuration - See config/initializers/cors.rb
+    # Removed from here to avoid duplicate middleware registration
 
     # Rack Attack for rate limiting
     config.middleware.use Rack::Attack

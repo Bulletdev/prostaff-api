@@ -57,8 +57,11 @@ module Rack
     end
 
     # Block suspicious requests (no user agent)
+    # Allow OPTIONS requests (CORS preflight) even without user agent
     blocklist('block requests without user agent') do |req|
-      req.user_agent.blank? && !['/health', '/up'].include?(req.path)
+      req.user_agent.blank? &&
+      !['/health', '/up'].include?(req.path) &&
+      req.request_method != 'OPTIONS'
     end
 
     # Block requests with suspicious patterns
