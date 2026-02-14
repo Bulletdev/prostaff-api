@@ -6,10 +6,13 @@ services:
     restart: unless-stopped
     networks:
       - coolify
+    extra_hosts:
+      - "redis-database-tgkw0gwc0w448wc404s40044:10.0.1.7"
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
+      # Sobrescreve o REDIS_URL com o hostname correto do Coolify
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-}@redis-database-tgkw0gwc0w448wc404s40044:6379/0
       ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
       RAILS_LOG_TO_STDOUT: "true"
       PORT: 3000
@@ -35,10 +38,13 @@ services:
     restart: unless-stopped
     networks:
       - coolify
+    extra_hosts:
+      - "redis-database-tgkw0gwc0w448wc404s40044:10.0.1.7"
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
+      # Sobrescreve o REDIS_URL com o hostname correto do Coolify
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-}@redis-database-tgkw0gwc0w448wc404s40044:6379/0
       ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       RIOT_API_KEY: ${RIOT_API_KEY}
