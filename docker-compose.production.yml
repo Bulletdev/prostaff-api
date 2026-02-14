@@ -3,128 +3,42 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.production
-    container_name: prostaff-api
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prostaff-api.rule=Host(`prostaff.gg`) || Host(`api.prostaff.gg`)"
-      - "traefik.http.routers.prostaff-api.entrypoints=https"
-      - "traefik.http.routers.prostaff-api.tls=true"
-      - "traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.prostaff-api.loadbalancer.server.port=3000"
-      - "traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up"
-      - "traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=5s"
-      # Request Timeouts
-      - "traefik.http.services.prostaff-api.loadbalancer.responseforwardingtimeouts.dialtimeout=30s"
-      - "traefik.http.services.prostaff-api.loadbalancer.responseforwardingtimeouts.responseheadertimeout=60s"
-      - "traefik.http.services.prostaff-api.loadbalancer.responseforwardingtimeouts.idletimeout=90s"
-      # Rate Limiting (30 req/s per IP - same as nginx config)
-      - "traefik.http.middlewares.prostaff-ratelimit.ratelimit.average=30"
-      - "traefik.http.middlewares.prostaff-ratelimit.ratelimit.period=1s"
-      - "traefik.http.middlewares.prostaff-ratelimit.ratelimit.burst=50"
-      # Compression (gzip replacement)
-      - "traefik.http.middlewares.prostaff-compress.compress=true"
-      # Security Headers
-      - "traefik.http.middlewares.prostaff-security.headers.stsSeconds=63072000"
-      - "traefik.http.middlewares.prostaff-security.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.prostaff-security.headers.stsPreload=true"
-      - "traefik.http.middlewares.prostaff-security.headers.forceSTSHeader=true"
-      # Chain all middlewares
-      - "traefik.http.routers.prostaff-api.middlewares=prostaff-ratelimit,prostaff-compress,prostaff-security"
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
-      REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
-      ELASTICSEARCH_URL: http://elastic:${ELASTIC_PASSWORD:-ChangeMe123!}@elasticsearch:9200
+      REDIS_URL: ${REDIS_URL}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
       RAILS_LOG_TO_STDOUT: "true"
       PORT: 3000
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       RIOT_API_KEY: ${RIOT_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     ports:
       - "3000:3000"
-    networks:
-      - default
-      - traefik
-    depends_on:
-      redis:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   sidekiq:
     build:
       context: .
       dockerfile: Dockerfile.production
-    container_name: prostaff-sidekiq
     command: bundle exec sidekiq -C config/sidekiq.yml
+    restart: unless-stopped
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
-      REPLICA_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
-      ELASTICSEARCH_URL: http://elastic:${ELASTIC_PASSWORD:-ChangeMe123!}@elasticsearch:9200
+      REDIS_URL: ${REDIS_URL}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       RIOT_API_KEY: ${RIOT_API_KEY}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     depends_on:
-      - api
-      - redis
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: prostaff-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-prostaff_production}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe123!}
-    volumes:
-      - prostaff_pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    container_name: prostaff-redis
-    restart: always
-    volumes:
-      - prostaff_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: prostaff-elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-ChangeMe123!}
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    volumes:
-      - prostaff_es_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:-ChangeMe123!} http://localhost:9200 >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-networks:
-  traefik:
-    external: true
-    name: coolify  # Coolify's default Traefik network name
-  default:
-    driver: bridge
-
-volumes:
-  prostaff_pg_data:
-  prostaff_redis_data:
-  prostaff_es_data:
-
+      api:
+        condition: service_healthy
