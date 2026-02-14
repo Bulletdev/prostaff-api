@@ -13,6 +13,19 @@ services:
       - "coolify.http.enabled=true"
       - "coolify.http.host=api.prostaff.gg"
       - "coolify.http.port=3000"
+      # Traefik routing - override Coolify's incorrect routing
+      - "traefik.enable=true"
+      - "traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)"
+      - "traefik.http.routers.prostaff-api.entrypoints=websecure"
+      - "traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prostaff-api.loadbalancer.server.port=3000"
+      # CORS headers via Traefik
+      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD"
+      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg"
+      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400"
+      - "traefik.http.routers.prostaff-api.middlewares=prostaff-cors"
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
