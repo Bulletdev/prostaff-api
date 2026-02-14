@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_12_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_14_171659) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -176,8 +176,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_12_000000) do
     t.datetime "updated_at", null: false
     t.index ["game_start"], name: "index_matches_on_game_start"
     t.index ["match_type"], name: "index_matches_on_match_type"
+    t.index ["organization_id", "created_at"], name: "idx_matches_org_created"
     t.index ["organization_id", "game_start", "victory"], name: "idx_matches_org_game_start_victory", comment: "Otimiza queries de winrate por período"
     t.index ["organization_id", "game_start"], name: "idx_matches_org_game_start"
+    t.index ["organization_id", "id"], name: "idx_matches_org_id"
     t.index ["organization_id", "victory"], name: "idx_matches_org_victory"
     t.index ["organization_id"], name: "index_matches_on_organization_id"
     t.index ["riot_match_id"], name: "index_matches_on_riot_match_id", unique: true
