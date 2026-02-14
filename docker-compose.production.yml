@@ -1,53 +1,52 @@
-services:                                                                     
-    api:                                                                        
-      build:                                                                    
-        context: .                                                              
-        dockerfile: Dockerfile.production
-      restart: unless-stopped
-      networks:
-        - coolify
-      environment:
-        RAILS_ENV: production
-        DATABASE_URL: ${DATABASE_URL}
-        REDIS_URL: ${REDIS_URL}
-        ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
-        RAILS_LOG_TO_STDOUT: "true"
-        PORT: 3000
-        RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-        RIOT_API_KEY: ${RIOT_API_KEY}
-        CORS_ORIGINS: ${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.g
-  g,https://api.prostaff.gg}
-        JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-        SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      ports:
-        - "3000:3000"
-      healthcheck:
-        test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
-        interval: 30s
-        timeout: 5s
-        retries: 3
-        start_period: 40s
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    restart: unless-stopped
+    networks:
+      - coolify
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
+      RAILS_LOG_TO_STDOUT: "true"
+      PORT: 3000
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      RIOT_API_KEY: ${RIOT_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
-    sidekiq:
-      build:
-        context: .
-        dockerfile: Dockerfile.production
-      command: bundle exec sidekiq -C config/sidekiq.yml
-      restart: unless-stopped
-      networks:
-        - coolify
-      environment:
-        RAILS_ENV: production
-        DATABASE_URL: ${DATABASE_URL}
-        REDIS_URL: ${REDIS_URL}
-        ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
-        RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-        RIOT_API_KEY: ${RIOT_API_KEY}
-        SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      depends_on:
-        api:
-          condition: service_healthy
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    restart: unless-stopped
+    networks:
+      - coolify
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      RIOT_API_KEY: ${RIOT_API_KEY}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+    depends_on:
+      api:
+        condition: service_healthy
 
-  networks:
-    coolify:
-      external: true
+networks:
+  coolify:
+    external: true
