@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  # Handle CORS preflight requests (OPTIONS) for all routes
+  match '*path', to: proc { [204, {}, ['']] }, via: :options
+
   # Mount Rswag API documentation
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
