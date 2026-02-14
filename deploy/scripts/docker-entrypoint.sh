@@ -6,11 +6,11 @@ echo "ProStaff API - Docker Entrypoint" >&2
 echo "========================================" >&2
 
 # Remove any pre-existing server PID file
-echo "[1/4] Removing stale PID files..." >&2
+echo "[1/5] Removing stale PID files..." >&2
 rm -f /app/tmp/pids/server.pid
 
 # Wait for database to be ready
-echo "[2/4] Checking database connection..." >&2
+echo "[2/5] Checking database connection..." >&2
 DB_URL="${SUPABASE_DB_URL:-$DATABASE_URL}"
 if [ -n "$DB_URL" ]; then
   # Extract host and port from URL (format: postgresql://user:pass@host:port/db)
@@ -36,8 +36,28 @@ else
   echo "  ⚠ No DATABASE_URL configured, skipping database check" >&2
 fi
 
+# Check Redis connection (non-blocking)
+echo "[3/5] Checking Redis connection..." >&2
+if [ -n "$REDIS_URL" ]; then
+  # Extract host and port from Redis URL
+  REDIS_HOST=$(echo "$REDIS_URL" | sed -E 's|redis://([^:@]+:)?([^@:]+)(:([0-9]+))?.*|\2|')
+  REDIS_PORT=$(echo "$REDIS_URL" | sed -E 's|.*:([0-9]+)(/[0-9]+)?$|\1|')
+
+  echo "  → Redis: ${REDIS_HOST}:${REDIS_PORT}" >&2
+
+  # Try to connect to Redis (timeout after 5 seconds)
+  if timeout 5 bash -c "echo > /dev/tcp/${REDIS_HOST}/${REDIS_PORT}" 2>/dev/null; then
+    echo "  ✓ Redis is reachable" >&2
+  else
+    echo "  ⚠ Redis connection failed - Sidekiq will not work properly" >&2
+    echo "  → REDIS_URL: ${REDIS_URL}" >&2
+  fi
+else
+  echo "  ⚠ No REDIS_URL configured, Sidekiq will run in inline mode" >&2
+fi
+
 # Run database migrations
-echo "[3/4] Running database migrations..." >&2
+echo "[4/5] Running database migrations..." >&2
 if bundle exec rails db:migrate 2>&1 | tee /tmp/migration.log >&2; then
   echo "  ✓ Migrations completed" >&2
 else
@@ -48,7 +68,7 @@ else
 fi
 
 # Skip preload in production - Puma will handle it
-echo "[4/4] Starting application server..." >&2
+echo "[5/5] Starting application server..." >&2
 echo "  → Port: ${PORT:-3000}" >&2
 echo "  → Environment: ${RAILS_ENV:-development}" >&2
 echo "  → Workers: ${WEB_CONCURRENCY:-2}" >&2
