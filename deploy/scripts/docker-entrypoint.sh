@@ -39,9 +39,23 @@ fi
 # Check Redis connection (non-blocking)
 echo "[3/5] Checking Redis connection..." >&2
 if [ -n "$REDIS_URL" ]; then
-  # Extract host and port from Redis URL
-  REDIS_HOST=$(echo "$REDIS_URL" | sed -E 's|redis://([^:@]+:)?([^@:]+)(:([0-9]+))?.*|\2|')
-  REDIS_PORT=$(echo "$REDIS_URL" | sed -E 's|.*:([0-9]+)(/[0-9]+)?$|\1|')
+  # Extract host and port from Redis URL properly handling passwords with special chars
+  # Format: redis://[user[:password]@]host:port[/db]
+  # Remove protocol
+  REDIS_CONN=$(echo "$REDIS_URL" | sed 's|^redis://||')
+
+  # Extract host:port by removing everything before @ (if @ exists) and after / (if / exists)
+  if echo "$REDIS_CONN" | grep -q '@'; then
+    # Has authentication - get everything after @
+    REDIS_HOST_PORT=$(echo "$REDIS_CONN" | sed 's|.*@||' | sed 's|/.*||')
+  else
+    # No authentication - just get host:port
+    REDIS_HOST_PORT=$(echo "$REDIS_CONN" | sed 's|/.*||')
+  fi
+
+  # Split host and port
+  REDIS_HOST=$(echo "$REDIS_HOST_PORT" | cut -d: -f1)
+  REDIS_PORT=$(echo "$REDIS_HOST_PORT" | cut -d: -f2)
 
   echo "  → Redis: ${REDIS_HOST}:${REDIS_PORT}" >&2
 
@@ -50,7 +64,15 @@ if [ -n "$REDIS_URL" ]; then
     echo "  ✓ Redis is reachable" >&2
   else
     echo "  ⚠ Redis connection failed - Sidekiq will not work properly" >&2
-    echo "  → REDIS_URL: ${REDIS_URL}" >&2
+    echo "  → Hostname resolution issue or Redis not accessible" >&2
+    echo "  → Attempting DNS resolution for ${REDIS_HOST}..." >&2
+    if command -v host > /dev/null 2>&1; then
+      host "$REDIS_HOST" >&2 || echo "  ✗ DNS resolution failed" >&2
+    elif command -v nslookup > /dev/null 2>&1; then
+      nslookup "$REDIS_HOST" >&2 || echo "  ✗ DNS resolution failed" >&2
+    else
+      echo "  → No DNS tools available to diagnose" >&2
+    fi
   fi
 else
   echo "  ⚠ No REDIS_URL configured, Sidekiq will run in inline mode" >&2
