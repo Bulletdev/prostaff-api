@@ -176,7 +176,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_12_000000) do
     t.datetime "updated_at", null: false
     t.index ["game_start"], name: "index_matches_on_game_start"
     t.index ["match_type"], name: "index_matches_on_match_type"
-    t.index ["organization_id", "created_at"], name: "idx_matches_org_created"
     t.index ["organization_id", "game_start", "victory"], name: "idx_matches_org_game_start_victory", comment: "Otimiza queries de winrate por período"
     t.index ["organization_id", "game_start"], name: "idx_matches_org_game_start"
     t.index ["organization_id", "victory"], name: "idx_matches_org_victory"
