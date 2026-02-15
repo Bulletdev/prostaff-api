@@ -61,21 +61,21 @@ class AuditLog < ApplicationRecord
   def changes_summary
     return 'Created' if action == 'create'
     return 'Deleted' if action == 'delete'
-
     return 'No changes recorded' if old_values.blank? && new_values.blank?
 
-    changes = []
-
-    if old_values.present? && new_values.present?
-      new_values.each do |key, new_val|
-        old_val = old_values[key]
-        next if old_val == new_val
-
-        changes << "#{key.humanize}: #{format_value(old_val)} → #{format_value(new_val)}"
-      end
-    end
-
+    changes = build_changes_list
     changes.empty? ? 'No changes recorded' : changes.join(', ')
+  end
+
+  def build_changes_list
+    return [] unless old_values.present? && new_values.present?
+
+    new_values.each_with_object([]) do |(key, new_val), changes|
+      old_val = old_values[key]
+      next if old_val == new_val
+
+      changes << "#{key.humanize}: #{format_value(old_val)} → #{format_value(new_val)}"
+    end
   end
 
   def ip_location

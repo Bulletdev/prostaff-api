@@ -14,6 +14,16 @@ module Api
     class ImagesController < BaseController
       skip_before_action :authenticate_request!, only: [:proxy]
 
+      ALLOWED_DOMAINS = [
+        'upload.wikimedia.org',
+        'ddragon.leagueoflegends.com',
+        'raw.communitydragon.org',
+        'static.wikia.nocookie.net',
+        'commons.wikimedia.org'
+      ].freeze
+
+      HTTP_TIMEOUT_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze
+
       # GET /api/v1/images/proxy
       # Proxies and caches external images
       #
@@ -32,16 +42,6 @@ module Api
       end
 
       private
-
-      ALLOWED_DOMAINS = [
-        'upload.wikimedia.org',
-        'ddragon.leagueoflegends.com',
-        'raw.communitydragon.org',
-        'static.wikia.nocookie.net',
-        'commons.wikimedia.org'
-      ].freeze
-
-      HTTP_TIMEOUT_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze
 
       # Validates if the URL is from an allowed domain
       def valid_image_url?(url)

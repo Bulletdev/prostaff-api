@@ -42,15 +42,16 @@ if [ -n "$REDIS_URL" ]; then
   # Extract host and port from Redis URL properly handling passwords with special chars
   # Format: redis://[user[:password]@]host:port[/db]
   # Remove protocol
-  REDIS_CONN=$(echo "$REDIS_URL" | sed 's|^redis://||')
+  REDIS_CONN="${REDIS_URL#redis://}"
 
   # Extract host:port by removing everything before @ (if @ exists) and after / (if / exists)
   if echo "$REDIS_CONN" | grep -q '@'; then
     # Has authentication - get everything after @
-    REDIS_HOST_PORT=$(echo "$REDIS_CONN" | sed 's|.*@||' | sed 's|/.*||')
+    REDIS_HOST_PORT="${REDIS_CONN##*@}"
+    REDIS_HOST_PORT="${REDIS_HOST_PORT%%/*}"
   else
     # No authentication - just get host:port
-    REDIS_HOST_PORT=$(echo "$REDIS_CONN" | sed 's|/.*||')
+    REDIS_HOST_PORT="${REDIS_CONN%%/*}"
   fi
 
   # Split host and port

@@ -64,38 +64,14 @@ module Players
 
       # Import a new player from Riot API
       def import_player(summoner_name, role)
-        # Parse summoner name in format "GameName#TagLine"
-        parts = summoner_name.split('#')
-        if parts.size != 2
-          return {
-            success: false,
-            error: 'Invalid summoner name format. Use: GameName#TagLine',
-            code: 'INVALID_FORMAT'
-          }
-        end
+        parsed_name = parse_summoner_name(summoner_name)
+        return parsed_name unless parsed_name[:success]
 
-        game_name = parts[0].strip
-        tag_line = parts[1].strip
+        riot_data = search_riot_id(parsed_name[:game_name], parsed_name[:tag_line])
+        return player_not_found_error unless riot_data
 
-        # Search for the player on Riot API
-        riot_data = search_riot_id(game_name, tag_line)
-
-        unless riot_data
-          return {
-            success: false,
-            error: 'Player not found on Riot API',
-            code: 'PLAYER_NOT_FOUND'
-          }
-        end
-
-        # Check if player already exists in another organization
-        existing_player = Player.find_by(riot_puuid: riot_data[:puuid])
-        if existing_player && existing_player.organization_id != organization.id
-          log_security_warning(summoner_name, riot_data, existing_player)
-          create_security_audit_log(summoner_name, riot_data, existing_player)
-
-          return player_belongs_to_other_org_error
-        end
+        existing_check = check_existing_player(riot_data[:puuid], summoner_name, riot_data)
+        return existing_check if existing_check
 
         # Create the player in database
         player = organization.players.create!(
@@ -285,6 +261,43 @@ module Players
       end
 
       private
+
+      # Parse summoner name into game_name and tag_line
+      def parse_summoner_name(summoner_name)
+        parts = summoner_name.split('#')
+        if parts.size != 2
+          return {
+            success: false,
+            error: 'Invalid summoner name format. Use: GameName#TagLine',
+            code: 'INVALID_FORMAT'
+          }
+        end
+
+        {
+          success: true,
+          game_name: parts[0].strip,
+          tag_line: parts[1].strip
+        }
+      end
+
+      # Player not found error response
+      def player_not_found_error
+        {
+          success: false,
+          error: 'Player not found on Riot API',
+          code: 'PLAYER_NOT_FOUND'
+        }
+      end
+
+      # Check if player exists in another organization
+      def check_existing_player(puuid, summoner_name, riot_data)
+        existing_player = Player.find_by(riot_puuid: puuid)
+        return nil unless existing_player && existing_player.organization_id != organization.id
+
+        log_security_warning(summoner_name, riot_data, existing_player)
+        create_security_audit_log(summoner_name, riot_data, existing_player)
+        player_belongs_to_other_org_error
+      end
 
       # Log security warning when attempting to import player from another org
       def log_security_warning(summoner_name, riot_data, existing_player)
