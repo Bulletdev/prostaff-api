@@ -27,6 +27,10 @@ Rails.application.configure do
   config.active_storage.variant_processor = :mini_magick
 
   # SSL Configuration - Traefik terminates SSL, Rails receives HTTP
+  # Note: SSL is enforced at the Traefik layer (reverse proxy), not at the Rails layer.
+  # This is secure because: (1) Traefik handles HTTPS/TLS termination, (2) internal
+  # communication between Traefik and Rails is over a private Docker network.
+  # Setting force_ssl = true would cause redirect loops.
   config.force_ssl = false
 
 
