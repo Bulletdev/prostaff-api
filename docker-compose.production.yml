@@ -55,7 +55,7 @@ services:
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
 
       # Network configuration for Traefik
