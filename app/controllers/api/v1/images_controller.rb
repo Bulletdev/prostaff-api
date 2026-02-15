@@ -12,7 +12,7 @@ module Api
     # @example Usage from frontend
     #   <img src="https://api.prostaff.gg/api/v1/images/proxy?url=https://upload.wikimedia.org/..." />
     class ImagesController < BaseController
-      skip_before_action :authenticate_user!, only: [:proxy]
+      skip_before_action :authenticate_request!, only: [:proxy]
 
       # GET /api/v1/images/proxy
       # Proxies and caches external images
