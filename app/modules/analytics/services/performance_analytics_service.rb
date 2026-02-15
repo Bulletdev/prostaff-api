@@ -57,7 +57,13 @@ module Analytics
       # Calculates team overview statistics
       def team_overview
         stats = PlayerMatchStat.where(match: @matches)
+        build_team_overview_hash(stats)
+      rescue StandardError => e
+        log_error("team_overview", e)
+        {}
+      end
 
+      def build_team_overview_hash(stats)
         {
           total_matches: @matches.count || 0,
           wins: @matches.victories.count || 0,
@@ -72,10 +78,6 @@ module Analytics
           avg_damage_per_game: stats.average(:damage_dealt_total)&.round(0) || 0,
           avg_vision_score: stats.average(:vision_score)&.round(1) || 0
         }
-      rescue StandardError => e
-        Rails.logger.error("Error in team_overview: #{e.message}")
-        Rails.logger.error(e.backtrace.join("\n"))
-        {}
       end
 
       # Calculates win rate trend over time
@@ -169,61 +171,61 @@ module Analytics
       def player_statistics(player)
         return nil unless player.present?
 
-        begin
-          stats = PlayerMatchStat.where(player: player, match: @matches)
-          return nil if stats.empty?
+        stats = PlayerMatchStat.where(player: player, match: @matches)
+        return nil if stats.empty?
 
-          total_kills = stats.sum(:kills) || 0
-          total_deaths = stats.sum(:deaths) || 0
-          total_assists = stats.sum(:assists) || 0
-          games_played = stats.count
+        build_player_statistics_hash(player, stats)
+      rescue StandardError => e
+        log_error("player statistics", e)
+        nil
+      end
 
-          return nil if games_played.zero?
+      def build_player_statistics_hash(player, stats)
+        basic_stats = calculate_basic_player_stats(stats)
+        return nil if basic_stats[:games_played].zero?
 
-          wins = stats.joins(:match).where(matches: { victory: true }).count
-          win_rate = games_played.zero? ? 0.0 : (wins.to_f / games_played)
+        advanced_metrics = calculate_advanced_player_metrics(stats, player)
 
-          kda = calculate_kda(total_kills, total_deaths, total_assists)
+        basic_stats.merge(advanced_metrics).merge(
+          player_id: player.id,
+          summoner_name: player.summoner_name
+        )
+      end
 
-          total_cs = stats.sum(:cs) || 0
-          total_duration = @matches.where(id: stats.pluck(:match_id)).sum(:game_duration) || 0
+      def calculate_basic_player_stats(stats)
+        total_kills = stats.sum(:kills) || 0
+        total_deaths = stats.sum(:deaths) || 0
+        total_assists = stats.sum(:assists) || 0
+        games_played = stats.count
+        wins = stats.joins(:match).where(matches: { victory: true }).count
 
-          # Calculate average damage_share from saved stats
-          avg_damage_share = stats.average(:damage_share) || 0.0
-          damage_share_percentage = (avg_damage_share * 100).round(1)
+        {
+          games_played: games_played,
+          win_rate: games_played.zero? ? 0.0 : (wins.to_f / games_played),
+          kda: calculate_kda(total_kills, total_deaths, total_assists),
+          avg_kills: (total_kills.to_f / games_played).round(1),
+          avg_deaths: (total_deaths.to_f / games_played).round(1),
+          avg_assists: (total_assists.to_f / games_played).round(1),
+          total_kills: total_kills,
+          total_deaths: total_deaths,
+          total_assists: total_assists
+        }
+      end
 
-          # Calculate average farm share (cs_share) from match data
-          farm_share_percentage = calculate_farm_share(stats)
+      def calculate_advanced_player_metrics(stats, player)
+        total_cs = stats.sum(:cs) || 0
+        total_duration = @matches.where(id: stats.pluck(:match_id)).sum(:game_duration) || 0
+        avg_damage_share = stats.average(:damage_share) || 0.0
 
-          # Calculate Kill Participation %
-          kill_participation = calculate_kill_participation(stats)
-
-          # Calculate Early Game Gold Advantage (estimated from first 15 min gold rate)
-          early_gold_diff = calculate_early_gold_advantage(stats, player.role)
-
-          {
-            player_id: player.id,
-            summoner_name: player.summoner_name,
-            games_played: games_played,
-            win_rate: win_rate,
-            kda: kda,
-            cs_per_min: calculate_cs_per_min(total_cs, total_duration),
-            gold_per_min: calculate_gold_per_min(stats.sum(:gold_earned) || 0, total_duration),
-            vision_score: stats.average(:vision_score)&.round(1) || 0.0,
-            damage_share: damage_share_percentage,
-            farm_share: farm_share_percentage,
-            avg_kills: (total_kills.to_f / games_played).round(1),
-            avg_deaths: (total_deaths.to_f / games_played).round(1),
-            avg_assists: (total_assists.to_f / games_played).round(1),
-            # New Elite Metrics
-            kill_participation: kill_participation,
-            early_gold_diff: early_gold_diff
-          }
-        rescue StandardError => e
-          Rails.logger.error("Error calculating player statistics: #{e.message}")
-          Rails.logger.error(e.backtrace.join("\n"))
-          nil
-        end
+        {
+          cs_per_min: calculate_cs_per_min(total_cs, total_duration),
+          gold_per_min: calculate_gold_per_min(stats.sum(:gold_earned) || 0, total_duration),
+          vision_score: stats.average(:vision_score)&.round(1) || 0.0,
+          damage_share: (avg_damage_share * 100).round(1),
+          farm_share: calculate_farm_share(stats),
+          kill_participation: calculate_kill_participation(stats),
+          early_gold_diff: calculate_early_gold_advantage(stats, player.role)
+        }
       end
 
       # Calculates average farm share (CS share) across matches
@@ -233,35 +235,38 @@ module Analytics
       def calculate_farm_share(stats)
         return 0.0 if stats.empty?
 
-        begin
-          # Use a simpler approach: calculate based on CS field if available
-          # Otherwise, calculate from minions_killed + jungle_minions_killed
-          total_player_cs = stats.sum { |s| s.cs || ((s.minions_killed || 0) + (s.jungle_minions_killed || 0)) }
-          return 0.0 if total_player_cs.zero?
+        total_player_cs = sum_player_cs(stats)
+        return 0.0 if total_player_cs.zero?
 
-          # Get all team CS for the same matches
-          match_ids = stats.pluck(:match_id).uniq
-          return 0.0 if match_ids.empty?
+        total_team_cs = calculate_team_cs(stats)
+        return 0.0 if total_team_cs.zero?
 
-          # Get player's organization
-          player = stats.first&.player
-          return 0.0 unless player&.organization_id
+        ((total_player_cs.to_f / total_team_cs) * 100).round(1)
+      rescue StandardError => e
+        log_error("farm share", e)
+        0.0
+      end
 
-          # Calculate total team CS for all matches
-          team_stats = PlayerMatchStat.joins(:player, :match)
-                                      .where(match_id: match_ids, players: { organization_id: player.organization_id })
+      def sum_player_cs(stats)
+        stats.sum { |s| s.cs || ((s.minions_killed || 0) + (s.jungle_minions_killed || 0)) }
+      end
 
-          total_team_cs = team_stats.sum { |s| s.cs || ((s.minions_killed || 0) + (s.jungle_minions_killed || 0)) }
+      def calculate_team_cs(stats)
+        match_ids = stats.pluck(:match_id).uniq
+        return 0 if match_ids.empty?
 
-          return 0.0 if total_team_cs.zero?
+        player = stats.first&.player
+        return 0 unless player&.organization_id
 
-          # Return as percentage
-          ((total_player_cs.to_f / total_team_cs) * 100).round(1)
-        rescue StandardError => e
-          Rails.logger.error("Error calculating farm share: #{e.message}")
-          Rails.logger.error(e.backtrace.join("\n"))
-          0.0
-        end
+        team_stats = PlayerMatchStat.joins(:player, :match)
+                                    .where(match_id: match_ids, players: { organization_id: player.organization_id })
+
+        team_stats.sum { |s| s.cs || ((s.minions_killed || 0) + (s.jungle_minions_killed || 0)) }
+      end
+
+      def log_error(context, error)
+        Rails.logger.error("Error in #{context}: #{error.message}")
+        Rails.logger.error(error.backtrace.join("\n"))
       end
 
       # Helper to build KDA hash from stat object

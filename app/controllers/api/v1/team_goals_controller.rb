@@ -6,28 +6,8 @@ module Api
       before_action :set_team_goal, only: %i[show update destroy]
 
       def index
-        goals = organization_scoped(TeamGoal).includes(:player, :assigned_to, :created_by)
-
-        goals = goals.by_status(params[:status]) if params[:status].present?
-        goals = goals.by_category(params[:category]) if params[:category].present?
-        goals = goals.for_player(params[:player_id]) if params[:player_id].present?
-
-        goals = goals.team_goals if params[:type] == 'team'
-        goals = goals.player_goals if params[:type] == 'player'
-        goals = goals.active if params[:active] == 'true'
-        goals = goals.overdue if params[:overdue] == 'true'
-        goals = goals.expiring_soon(params[:expiring_days]&.to_i || 7) if params[:expiring_soon] == 'true'
-
-        goals = goals.where(assigned_to_id: params[:assigned_to_id]) if params[:assigned_to_id].present?
-
-        # Whitelist for sort parameters to prevent SQL injection
-        allowed_sort_fields = %w[created_at updated_at title status category start_date end_date progress]
-        allowed_sort_orders = %w[asc desc]
-
-        sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
-        sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'desc'
-        goals = goals.order(sort_by => sort_order)
-
+        goals = apply_goal_filters(organization_scoped(TeamGoal).includes(:player, :assigned_to, :created_by))
+        goals = apply_goal_sorting(goals)
         result = paginate(goals)
 
         render_success({
@@ -126,6 +106,43 @@ module Api
           :status, :progress, :notes,
           :player_id, :assigned_to_id
         )
+      end
+
+      def apply_goal_filters(goals)
+        goals = apply_basic_filters(goals)
+        goals = apply_type_filters(goals)
+        goals = apply_status_filters(goals)
+        goals = goals.where(assigned_to_id: params[:assigned_to_id]) if params[:assigned_to_id].present?
+        goals
+      end
+
+      def apply_basic_filters(goals)
+        goals = goals.by_status(params[:status]) if params[:status].present?
+        goals = goals.by_category(params[:category]) if params[:category].present?
+        goals = goals.for_player(params[:player_id]) if params[:player_id].present?
+        goals
+      end
+
+      def apply_type_filters(goals)
+        goals = goals.team_goals if params[:type] == 'team'
+        goals = goals.player_goals if params[:type] == 'player'
+        goals
+      end
+
+      def apply_status_filters(goals)
+        goals = goals.active if params[:active] == 'true'
+        goals = goals.overdue if params[:overdue] == 'true'
+        goals = goals.expiring_soon(params[:expiring_days]&.to_i || 7) if params[:expiring_soon] == 'true'
+        goals
+      end
+
+      def apply_goal_sorting(goals)
+        allowed_sort_fields = %w[created_at updated_at title status category start_date end_date progress]
+        allowed_sort_orders = %w[asc desc]
+
+        sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
+        sort_order = allowed_sort_orders.include?(params[:sort_order]&.downcase) ? params[:sort_order].downcase : 'desc'
+        goals.order(sort_by => sort_order)
       end
 
       def calculate_goals_summary(goals)
