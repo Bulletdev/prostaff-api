@@ -23,6 +23,9 @@ Rails.application.routes.draw do
       # Constants (public)
       get 'constants', to: 'constants#index'
 
+      # Image Proxy (public - for external images)
+      get 'images/proxy', to: 'images#proxy'
+
       # Auth
       scope :auth do
         post 'register', to: 'auth#register'
