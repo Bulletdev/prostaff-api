@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     networks:
       - coolify
+    expose:
+      - "3000"
     labels:
       # Coolify Meta
       - coolify.managed=true
@@ -34,7 +36,7 @@ services:
       # Traefik Configuration - Main Router (HTTPS)
       - traefik.enable=true
       - traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)
-      - traefik.http.routers.prostaff-api.entrypoints=websecure
+      - traefik.http.routers.prostaff-api.entrypoints=https
       - traefik.http.routers.prostaff-api.tls=true
       - traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt
       # Apply CORS middleware to the main router
@@ -42,13 +44,10 @@ services:
 
       # Service Configuration (Port 3000)
       - traefik.http.services.prostaff-api.loadbalancer.server.port=3000
-      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up
-      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=10s
-      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=10s
 
       # HTTP to HTTPS Redirect
       - traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)
-      - traefik.http.routers.prostaff-api-http.entrypoints=web
+      - traefik.http.routers.prostaff-api-http.entrypoints=http
       - traefik.http.routers.prostaff-api-http.middlewares=redirect-to-https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
 
@@ -61,6 +60,9 @@ services:
 
       # Network configuration for Traefik
       - traefik.docker.network=coolify
+
+      # Explicitly set service name for Traefik
+      - traefik.http.services.prostaff-api.loadbalancer.server.scheme=http
 
     environment:
       RAILS_ENV: production
