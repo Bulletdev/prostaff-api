@@ -59,6 +59,9 @@ services:
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=*
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
 
+      # Network configuration for Traefik
+      - traefik.docker.network=coolify
+
     environment:
       RAILS_ENV: production
       DATABASE_URL: '${DATABASE_URL}'
