@@ -7,7 +7,7 @@ class AddUniqueIndexToScoutingTargetsRiotPuuid < ActiveRecord::Migration[7.1]
 
     # Add unique composite index scoped to organization
     # This allows the same player (PUUID) to be a scouting target in multiple organizations
-    add_index :scouting_targets, [:organization_id, :riot_puuid],
+    add_index :scouting_targets, %i[organization_id riot_puuid],
               unique: true,
               name: 'index_scouting_targets_on_org_and_puuid',
               where: "riot_puuid IS NOT NULL"

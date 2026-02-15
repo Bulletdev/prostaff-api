@@ -51,7 +51,7 @@ namespace :bot_stats do
   end
 
   desc 'Show bot statistics for date range'
-  task :range, [:start_date, :end_date] => :environment do |_t, args|
+  task :range, %i[start_date end_date] => :environment do |_t, args|
     unless ENV['REDIS_URL'] && ENV['TRACK_BOT_STATS'] == 'true'
       puts '  Bot stats tracking is not enabled.'
       exit

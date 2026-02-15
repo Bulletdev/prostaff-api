@@ -6,7 +6,7 @@ module Api
       # Watchlist Controller
       # Manages organization-specific player scouting watchlists
       class WatchlistController < Api::V1::BaseController
-        before_action :set_authorized_target, only: [:create, :destroy]
+        before_action :set_authorized_target, only: %i[create destroy]
         # GET /api/v1/scouting/watchlist
         # Returns high-priority scouting targets in org's watchlist
         def index

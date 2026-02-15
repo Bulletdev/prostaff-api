@@ -21,7 +21,7 @@ class CreateTacticalBoards < ActiveRecord::Migration[7.2]
     add_foreign_key :tactical_boards, :users, column: :updated_by_id
 
     add_index :tactical_boards, :organization_id
-    add_index :tactical_boards, [:organization_id, :created_at]
+    add_index :tactical_boards, %i[organization_id created_at]
     add_index :tactical_boards, :match_id
     add_index :tactical_boards, :scrim_id
     add_index :tactical_boards, :created_by_id

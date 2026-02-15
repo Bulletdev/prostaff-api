@@ -34,7 +34,7 @@ class CreateSupportTickets < ActiveRecord::Migration[7.2]
     add_index :support_tickets, :category
     add_index :support_tickets, :priority
     add_index :support_tickets, :deleted_at
-    add_index :support_tickets, [:organization_id, :status]
-    add_index :support_tickets, [:assigned_to_id, :status]
+    add_index :support_tickets, %i[organization_id status]
+    add_index :support_tickets, %i[assigned_to_id status]
   end
 end

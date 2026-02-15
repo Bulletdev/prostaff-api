@@ -22,16 +22,16 @@ class RemoveDuplicateIndexes < ActiveRecord::Migration[7.2]
 
   def down
     # Re-create the removed indexes if rollback is needed
-    add_index :matches, [:organization_id, :game_start], name: "index_matches_on_org_and_game_start", if_not_exists: true
-    add_index :matches, [:organization_id, :victory], name: "index_matches_on_org_and_victory", if_not_exists: true
+    add_index :matches, %i[organization_id game_start], name: "index_matches_on_org_and_game_start", if_not_exists: true
+    add_index :matches, %i[organization_id victory], name: "index_matches_on_org_and_victory", if_not_exists: true
 
     add_index :player_match_stats, :match_id, name: "index_player_match_stats_on_match", if_not_exists: true
     add_index :player_match_stats, :match_id, name: "index_player_match_stats_on_match_id", if_not_exists: true
 
-    add_index :players, [:organization_id, :status], name: "index_players_on_org_and_status", if_not_exists: true
+    add_index :players, %i[organization_id status], name: "index_players_on_org_and_status", if_not_exists: true
 
-    add_index :schedules, [:organization_id, :scheduled_time, :schedule_type], name: "index_schedules_on_org_time_type", if_not_exists: true
+    add_index :schedules, %i[organization_id scheduled_time schedule_type], name: "index_schedules_on_org_time_type", if_not_exists: true
 
-    add_index :team_goals, [:organization_id, :status], name: "index_team_goals_on_org_and_status", if_not_exists: true
+    add_index :team_goals, %i[organization_id status], name: "index_team_goals_on_org_and_status", if_not_exists: true
   end
 end
