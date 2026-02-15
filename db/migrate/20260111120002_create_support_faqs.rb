@@ -27,6 +27,6 @@ class CreateSupportFaqs < ActiveRecord::Migration[7.2]
     add_index :support_faqs, :slug, unique: true
     add_index :support_faqs, :category
     add_index :support_faqs, :locale
-    add_index :support_faqs, [:published, :position]
+    add_index :support_faqs, %i[published position]
   end
 end

@@ -180,10 +180,10 @@ module Api
             our_bans: [],
             opponent_bans: [],
             priority_picks: {},
-            if_then_scenarios: [
-              :trigger,
-              :action,
-              :note
+            if_then_scenarios: %i[
+              trigger
+              action
+              note
             ]
           )
         end

@@ -106,7 +106,7 @@ Rails.application.routes.draw do
         end
 
         # FAQ
-        resources :faq, only: [:index, :show], param: :slug, controller: 'faqs' do
+        resources :faq, only: %i[index show], param: :slug, controller: 'faqs' do
           member do
             post :helpful, to: 'faqs#mark_helpful'
             post 'not-helpful', to: 'faqs#mark_not_helpful'

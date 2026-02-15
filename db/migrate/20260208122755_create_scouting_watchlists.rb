@@ -17,7 +17,7 @@ class CreateScoutingWatchlists < ActiveRecord::Migration[7.1]
       t.timestamps
 
       # Ensure one watchlist entry per org per target
-      t.index [:organization_id, :scouting_target_id], unique: true, name: 'index_watchlists_on_org_and_target'
+      t.index %i[organization_id scouting_target_id], unique: true, name: 'index_watchlists_on_org_and_target'
       t.index :priority
       t.index :status
       t.index :last_reviewed

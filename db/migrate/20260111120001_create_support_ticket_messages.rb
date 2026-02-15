@@ -16,7 +16,7 @@ class CreateSupportTicketMessages < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :support_ticket_messages, [:support_ticket_id, :created_at]
+    add_index :support_ticket_messages, %i[support_ticket_id created_at]
     add_index :support_ticket_messages, :message_type
   end
 end

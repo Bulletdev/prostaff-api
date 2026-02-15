@@ -98,7 +98,7 @@ module Rack
       req = payload[:request]
 
       # Only log if request was actually blocked or throttled
-      if [:throttle, :blocklist].include?(req.env['rack.attack.match_type'])
+      if %i[throttle blocklist].include?(req.env['rack.attack.match_type'])
         discriminator = req.env['rack.attack.matched']
         Rails.logger.warn "[Rack::Attack] #{req.env['rack.attack.match_type'].to_s.capitalize} #{discriminator}: #{req.env['REQUEST_METHOD']} #{req.url} from #{req.ip}"
       end
