@@ -44,7 +44,7 @@ services:
       - traefik.http.services.prostaff-api.loadbalancer.server.port=3000
       - traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up
       - traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=10s
-      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=3s
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=10s
 
       # HTTP to HTTPS Redirect
       - traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)
@@ -81,9 +81,9 @@ services:
         - CMD-SHELL
         - 'curl -f http://localhost:3000/up || exit 1'
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
     depends_on:
       redis:
