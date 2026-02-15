@@ -6,48 +6,60 @@ services:
     restart: unless-stopped
     networks:
       - coolify
-    extra_hosts:
-      - "redis-database-tgkw0gwc0w448wc404s40044:10.0.1.7"
     labels:
-      - "coolify.managed=true"
-      # Traefik routing
-      - "traefik.enable=true"
-      - "traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)"
-      - "traefik.http.routers.prostaff-api.entrypoints=websecure"
-      - "traefik.http.routers.prostaff-api.tls=true"
-      - "traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.prostaff-api.loadbalancer.server.port=3000"
-      # HTTP redirect
-      - "traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)"
-      - "traefik.http.routers.prostaff-api-http.entrypoints=web"
-      - "traefik.http.routers.prostaff-api-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # CORS headers via Traefik
-      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD"
-      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg"
-      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=*"
-      - "traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400"
-      - "traefik.http.routers.prostaff-api.middlewares=prostaff-cors"
+      # Coolify Meta
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+      
+      # Traefik Configuration - Main Router (HTTPS)
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api.entrypoints=websecure
+      - traefik.http.routers.prostaff-api.tls=true
+      - traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt
+      # Apply CORS middleware to the main router
+      - traefik.http.routers.prostaff-api.middlewares=prostaff-cors
+
+      # Service Configuration (Port 3000)
+      - traefik.http.services.prostaff-api.loadbalancer.server.port=3000
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=3s
+
+      # HTTP to HTTPS Redirect
+      - traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api-http.entrypoints=web
+      - traefik.http.routers.prostaff-api-http.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+
+      # CORS Middleware Definition
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
+
     environment:
       RAILS_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      # Sobrescreve o REDIS_URL com o hostname correto do Coolify
-      REDIS_URL: redis://default:${REDIS_PASSWORD:-}@redis-database-tgkw0gwc0w448wc404s40044:6379/0
-      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
-      RAILS_LOG_TO_STDOUT: "true"
+      DATABASE_URL: '${DATABASE_URL}'
+      # Connect to Redis via Docker network hostname
+      REDIS_URL: 'redis://default:${REDIS_PASSWORD:-}@redis-database-tgkw0gwc0w448wc404s40044:6379/0'
+      ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
+      RAILS_LOG_TO_STDOUT: 'true'
       PORT: 3000
-      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-    ports:
-      - "3000:3000"
+      RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
+      RIOT_API_KEY: '${RIOT_API_KEY}'
+      CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}'
+      JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
+      SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
+    
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
-      interval: 30s
-      timeout: 5s
+      test:
+        - CMD-SHELL
+        - 'curl -f http://localhost:3000/up || exit 1'
+      interval: 10s
+      timeout: 3s
       retries: 3
       start_period: 40s
 
@@ -55,24 +67,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.production
-    command: bundle exec sidekiq -C config/sidekiq.yml
+    command: 'bundle exec sidekiq -C config/sidekiq.yml'
     restart: unless-stopped
     networks:
       - coolify
-    extra_hosts:
-      - "redis-database-tgkw0gwc0w448wc404s40044:10.0.1.7"
     environment:
       RAILS_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      # Sobrescreve o REDIS_URL com o hostname correto do Coolify
-      REDIS_URL: redis://default:${REDIS_PASSWORD:-}@redis-database-tgkw0gwc0w448wc404s40044:6379/0
-      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
-      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      DATABASE_URL: '${DATABASE_URL}'
+      REDIS_URL: 'redis://default:${REDIS_PASSWORD:-}@redis-database-tgkw0gwc0w448wc404s40044:6379/0'
+      ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
+      RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
+      RIOT_API_KEY: '${RIOT_API_KEY}'
+      SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
     depends_on:
       api:
         condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
 
 networks:
   coolify:
