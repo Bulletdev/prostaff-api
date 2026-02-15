@@ -1,200 +1,110 @@
-version: '3.8'
-
-# Docker Compose configuration for STAGING environment
-# Usage: docker-compose -f docker-compose.staging.yml up -d
-
 services:
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: prostaff-staging-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./deploy/ssl:/etc/nginx/ssl:ro
-      - ./public:/app/public:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - api
-    networks:
-      - prostaff-staging-net
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: prostaff-staging-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-prostaff_staging}
-      POSTGRES_USER: ${POSTGRES_USER:-prostaff_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backups:/backups
-    networks:
-      - prostaff-staging-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prostaff_user}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
-  # Redis Cache
   redis:
-    image: redis:7-alpine
-    container_name: prostaff-staging-redis
+    image: redis:7.2-alpine
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     networks:
-      - prostaff-staging-net
+      - coolify
+    volumes:
+      - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
 
-  # Rails API
   api:
     build:
       context: .
       dockerfile: Dockerfile.production
-      args:
-        RAILS_ENV: staging
-    container_name: prostaff-staging-api
     restart: unless-stopped
-    environment:
-      RAILS_ENV: staging
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      DEVISE_JWT_SECRET_KEY: ${DEVISE_JWT_SECRET_KEY}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      RIOT_API_KEY: ${RIOT_API_KEY}
-      SENTRY_DSN: ${SENTRY_DSN}
-      SENTRY_ENVIRONMENT: staging
-      # Staging-specific settings
-      RAILS_LOG_LEVEL: info
-      ENABLE_SWAGGER_UI: "true"
-      ENABLE_PERFORMANCE_MONITORING: "true"
-    volumes:
-      - ./log:/app/log
-      - ./tmp:/app/tmp
-      - ./public:/app/public
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     networks:
-      - prostaff-staging-net
+      - coolify
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
+      RAILS_LOG_TO_STDOUT: "true"
+      PORT: 3000
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      RIOT_API_KEY: ${RIOT_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
+      interval: 10s
+      timeout: 3s
       retries: 3
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+      # Traefik routing
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api.entrypoints=websecure
+      - traefik.http.routers.prostaff-api.tls=true
+      - traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt
+      # Service configuration
+      - traefik.http.services.prostaff-api.loadbalancer.server.port=3000
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=3s
+      # HTTP to HTTPS redirect
+      - traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api-http.entrypoints=web
+      - traefik.http.routers.prostaff-api-http.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      # CORS middleware
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
+      # Apply middleware
+      - traefik.http.routers.prostaff-api.middlewares=prostaff-cors
 
-  # Sidekiq Background Jobs
   sidekiq:
     build:
       context: .
       dockerfile: Dockerfile.production
-      args:
-        RAILS_ENV: staging
-    container_name: prostaff-staging-sidekiq
-    restart: unless-stopped
     command: bundle exec sidekiq -C config/sidekiq.yml
+    restart: unless-stopped
+    networks:
+      - coolify
     environment:
-      RAILS_ENV: staging
+      RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${SIDEKIQ_REDIS_URL}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elastic:9200}
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       RIOT_API_KEY: ${RIOT_API_KEY}
-      SENTRY_DSN: ${SENTRY_DSN}
-      SENTRY_ENVIRONMENT: staging
-    volumes:
-      - ./log:/app/log
-      - ./tmp:/app/tmp
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - prostaff-staging-net
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.25'
-        reservations:
-          memory: 128M
-          cpus: '0.1'
-
-  # Backup Service
-  backup:
-    image: postgres:15-alpine
-    container_name: prostaff-staging-backup
-    restart: "no"
-    environment:
-      PGHOST: postgres
-      PGDATABASE: ${POSTGRES_DB:-prostaff_staging}
-      PGUSER: ${POSTGRES_USER:-prostaff_user}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
-    volumes:
-      - ./backups:/backups
-      - ./deploy/scripts/backup.sh:/backup.sh:ro
-    networks:
-      - prostaff-staging-net
-    entrypoint: ["/backup.sh"]
-    profiles:
-      - backup
+      api:
+        condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  nginx_logs:
+  redis-data:
     driver: local
 
 networks:
-  prostaff-staging-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.21.0.0/16
+  coolify:
+    external: true
