@@ -459,7 +459,7 @@ module Players
           game_end: Time.zone.at(info['gameEndTimestamp'] / 1000),
           game_duration: info['gameDuration'],
           victory: victory,
-          patch_version: info['gameVersion'],
+          game_version: info['gameVersion'],
           our_side: participant['teamId'] == 100 ? 'blue' : 'red'
         )
 
@@ -478,13 +478,13 @@ module Players
           kills: participant['kills'],
           deaths: participant['deaths'],
           assists: participant['assists'],
-          total_damage_dealt: participant['totalDamageDealtToChampions'],
-          total_damage_taken: participant['totalDamageTaken'],
+          damage_dealt_total: participant['totalDamageDealtToChampions'],
+          damage_taken: participant['totalDamageTaken'],
           gold_earned: participant['goldEarned'],
-          total_cs: participant['totalMinionsKilled'] + participant['neutralMinionsKilled'],
+          cs: participant['totalMinionsKilled'] + participant['neutralMinionsKilled'],
           vision_score: participant['visionScore'],
           wards_placed: participant['wardsPlaced'],
-          wards_killed: participant['wardsKilled'],
+          wards_destroyed: participant['wardsKilled'],
           first_blood: participant['firstBloodKill'],
           double_kills: participant['doubleKills'],
           triple_kills: participant['tripleKills'],
