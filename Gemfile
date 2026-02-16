@@ -81,6 +81,9 @@ gem 'elasticsearch', '~> 9.1', '>= 9.1.3'
 # LLM Integration for Support Chatbot
 gem 'ruby-openai', '~> 7.0'
 
+# HashID for URL obfuscation and shortening
+gem 'hashid-rails', '~> 1.0'
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem 'debug', platforms: %i[mri mingw x64_mingw]

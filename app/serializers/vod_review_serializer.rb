@@ -11,6 +11,21 @@ class VodReviewSerializer < Blueprinter::Base
          :status, :tags, :metadata,
          :created_at, :updated_at
 
+  # HashID for short, obfuscated public URLs
+  field :hashid do |vod_review|
+    vod_review.hashid
+  end
+
+  # Public URL using HashID (preferred) or share_link (fallback)
+  field :public_url do |vod_review|
+    vod_review.public_url
+  end
+
+  # Direct HashID URL (for explicit HashID usage)
+  field :public_hashid_url do |vod_review|
+    vod_review.public_hashid_url
+  end
+
   field :timestamps_count do |vod_review, options|
     options[:include_timestamps_count] ? vod_review.vod_timestamps.count : nil
   end
