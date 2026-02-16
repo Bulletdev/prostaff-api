@@ -66,6 +66,7 @@ services:
         bundle exec rails db:migrate &&
         bundle exec rails server -b 0.0.0.0 -p 3000
       "
+    restart: unless-stopped
 
   # Sidekiq for background jobs
   sidekiq:
@@ -87,38 +88,10 @@ services:
     command: bundle exec sidekiq -C config/sidekiq.yml
     restart: unless-stopped
 
-  # Nginx Reverse Proxy
-  nginx:
-    build:
-      context: .
-      dockerfile: nginx/Dockerfile
-    container_name: prostaff-nginx
-    ports:
-      - "${NGINX_PORT:-80}:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
-      - nginx_cache:/var/cache/nginx
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - api
-    networks:
-      - default
-      - security-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
 volumes:
   postgres_data:
   redis_data:
   bundle_cache:
-  nginx_cache:
-  nginx_logs:
 
 networks:
   security-net:
