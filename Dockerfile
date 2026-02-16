@@ -37,12 +37,12 @@ RUN chown -R app:app /app /usr/local/bundle
 # Switch to the app user
 USER app
 
-# Expose port 3333
-EXPOSE 3333
+# Expose port 3000 (Rails default)
+EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3333/up || exit 1
+    CMD curl -f http://localhost:3000/health || exit 1
 
 # Start the Rails server
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
