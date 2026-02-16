@@ -67,7 +67,7 @@ jobs:
           RAILS_ENV: test
           REDIS_URL: redis://localhost:6379/0
         run: |
-          bundle exec rails db:schema:load
+          bundle exec rails db:drop db:create db:schema:load
 
       - name: Run RSpec tests
         env:
