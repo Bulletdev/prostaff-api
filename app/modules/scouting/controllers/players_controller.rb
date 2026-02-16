@@ -161,11 +161,41 @@ module Api
         end
 
         def sync
-          # Sync functionality not yet implemented
+          return render_error_no_puuid unless @target.riot_puuid.present?
+
+          # Try to find an existing player (active or soft-deleted) with this PUUID
+          player = find_player_by_puuid(@target.riot_puuid)
+
+          if player
+            # Player exists - sync from their data
+            sync_result = sync_from_existing_player(player)
+          else
+            # Player doesn't exist - sync from Riot API
+            sync_result = sync_from_riot_api
+          end
+
+          if sync_result[:success]
+            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+            render_success({
+                             scouting_target: JSON.parse(
+                               ScoutingTargetSerializer.render(@target.reload, watchlist: watchlist)
+                             ),
+                             message: sync_result[:message]
+                           })
+          else
+            render_error(
+              message: sync_result[:error],
+              code: sync_result[:code] || 'SYNC_ERROR',
+              status: :unprocessable_entity
+            )
+          end
+        rescue StandardError => e
+          Rails.logger.error("Scouting sync error: #{e.message}")
+          Rails.logger.error(e.backtrace.join("\n"))
           render_error(
-            message: 'Sync functionality not yet implemented',
-            code: 'NOT_IMPLEMENTED',
-            status: :not_implemented
+            message: "Failed to sync scouting target: #{e.message}",
+            code: 'SYNC_ERROR',
+            status: :internal_server_error
           )
         end
 
@@ -308,6 +338,84 @@ module Api
             :email, :phone, :discord_username, :twitter_handle,
             :notes,
             champion_pool: []
+          )
+        end
+
+        # Find player by PUUID (including soft-deleted)
+        def find_player_by_puuid(puuid)
+          Player.with_deleted.find_by(riot_puuid: puuid)
+        end
+
+        # Sync from existing player in database
+        def sync_from_existing_player(player)
+          # Use RosterManagementService to calculate stats
+          service = Players::RosterManagementService.new(
+            player: player,
+            organization: player.organization,
+            current_user: current_user
+          )
+
+          # Check if player has enough matches
+          current_match_count = player.player_match_stats.count
+          if current_match_count < 50
+            # Try to sync more matches from Riot
+            begin
+              sync_service = Players::Services::RiotSyncService.new(player.organization, player.region)
+              imported = service.send(:sync_player_matches_comprehensive, sync_service, 50)
+              Rails.logger.info("Imported #{imported} additional matches during scouting sync")
+            rescue StandardError => e
+              Rails.logger.warn("Failed to import additional matches: #{e.message}")
+            end
+          end
+
+          # Calculate comprehensive stats
+          recent_perf = service.send(:calculate_recent_performance, player, limit: 50)
+          champion_stats = service.send(:calculate_champion_stats, player, limit: 50)
+          trend = service.send(:calculate_performance_trend, player, limit: 50)
+          recent_perf[:champion_pool_stats] = champion_stats
+
+          # Update scouting target
+          @target.update!(
+            summoner_name: player.summoner_name,
+            region: service.send(:normalize_region, player.region),
+            role: player.role,
+            current_tier: player.solo_queue_tier,
+            current_rank: player.solo_queue_rank,
+            current_lp: player.solo_queue_lp,
+            champion_pool: service.send(:calculate_champion_pool_from_stats, player),
+            recent_performance: recent_perf,
+            performance_trend: trend,
+            real_name: player.real_name,
+            avatar_url: player.avatar_url,
+            twitter_handle: player.twitter_handle
+          )
+
+          {
+            success: true,
+            message: "Synced from player database (#{player.player_match_stats.count} matches analyzed)"
+          }
+        rescue StandardError => e
+          Rails.logger.error("Error syncing from player: #{e.message}")
+          { success: false, error: e.message, code: 'PLAYER_SYNC_ERROR' }
+        end
+
+        # Sync from Riot API (when player doesn't exist in database)
+        def sync_from_riot_api
+          # This would require creating a temporary player or using Riot API directly
+          # For now, return not implemented for this case
+          {
+            success: false,
+            error: 'Player not found in database. Add to roster first to enable sync.',
+            code: 'PLAYER_NOT_IN_DATABASE'
+          }
+        end
+
+        # Error response when PUUID is missing
+        def render_error_no_puuid
+          render_error(
+            message: 'Cannot sync: Riot PUUID is required',
+            code: 'PUUID_REQUIRED',
+            status: :unprocessable_entity
           )
         end
       end
