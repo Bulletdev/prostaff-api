@@ -1,12 +1,14 @@
 services:
-  redis:
+  # Redis - Staging instance
+  redis-staging:
     image: redis:7.2-alpine
+    container_name: prostaff-redis-staging
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     networks:
       - coolify
     volumes:
-      - redis-data:/data
+      - redis-staging-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -15,13 +17,16 @@ services:
       start_period: 10s
     labels:
       - coolify.managed=true
-      - coolify.applicationId=1
+      - coolify.applicationId=2
       - coolify.type=application
+      - coolify.environment=staging
 
-  api:
+  # API - Staging
+  api-staging:
     build:
       context: .
       dockerfile: Dockerfile.production
+    container_name: prostaff-api-staging
     restart: unless-stopped
     networks:
       - coolify
@@ -30,53 +35,56 @@ services:
     labels:
       # Coolify Meta
       - coolify.managed=true
-      - coolify.applicationId=1
+      - coolify.applicationId=2
       - coolify.type=application
+      - coolify.environment=staging
 
       # Traefik Configuration - Main Router (HTTPS)
       - traefik.enable=true
-      - traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)
-      - traefik.http.routers.prostaff-api.entrypoints=https
-      - traefik.http.routers.prostaff-api.tls=true
-      - traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt
-      # Apply CORS middleware to the main router
-      - traefik.http.routers.prostaff-api.middlewares=prostaff-cors
+      - traefik.http.routers.prostaff-api-staging.rule=Host(`staging-api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api-staging.entrypoints=https
+      - traefik.http.routers.prostaff-api-staging.tls=true
+      - traefik.http.routers.prostaff-api-staging.tls.certresolver=letsencrypt
+      # Apply CORS middleware
+      - traefik.http.routers.prostaff-api-staging.middlewares=prostaff-staging-cors
 
       # Service Configuration (Port 3000)
-      - traefik.http.services.prostaff-api.loadbalancer.server.port=3000
+      - traefik.http.services.prostaff-api-staging.loadbalancer.server.port=3000
 
       # HTTP to HTTPS Redirect
-      - traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)
-      - traefik.http.routers.prostaff-api-http.entrypoints=http
-      - traefik.http.routers.prostaff-api-http.middlewares=redirect-to-https
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.prostaff-api-staging-http.rule=Host(`staging-api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api-staging-http.entrypoints=http
+      - traefik.http.routers.prostaff-api-staging-http.middlewares=redirect-to-https-staging
+      - traefik.http.middlewares.redirect-to-https-staging.redirectscheme.scheme=https
 
       # CORS Middleware Definition
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
+      - traefik.http.middlewares.prostaff-staging-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+      - traefik.http.middlewares.prostaff-staging-cors.headers.accesscontrolalloworiginlist=https://staging.prostaff.gg,https://staging-api.prostaff.gg
+      - traefik.http.middlewares.prostaff-staging-cors.headers.accesscontrolallowcredentials=true
+      - traefik.http.middlewares.prostaff-staging-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With
+      - traefik.http.middlewares.prostaff-staging-cors.headers.accesscontrolmaxage=86400
 
       # Network configuration for Traefik
       - traefik.docker.network=coolify
 
       # Explicitly set service name for Traefik
-      - traefik.http.services.prostaff-api.loadbalancer.server.scheme=http
+      - traefik.http.services.prostaff-api-staging.loadbalancer.server.scheme=http
 
     environment:
       RAILS_ENV: production
       DATABASE_URL: '${DATABASE_URL}'
-      # Connect to Redis via Docker network hostname
-      REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
+      REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis-staging:6379/0'
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
       RAILS_LOG_TO_STDOUT: 'true'
       PORT: 3000
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
-      CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}'
+      CORS_ORIGINS: '${CORS_ORIGINS:-https://staging.prostaff.gg,https://staging-api.prostaff.gg}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
+      # Testing flags
+      LOAD_TEST_ENABLED: 'true'
+      SECURITY_TEST_ENABLED: 'true'
 
     healthcheck:
       test:
@@ -88,13 +96,15 @@ services:
       start_period: 60s
 
     depends_on:
-      redis:
+      redis-staging:
         condition: service_healthy
 
-  sidekiq:
+  # Sidekiq - Staging
+  sidekiq-staging:
     build:
       context: .
       dockerfile: Dockerfile.production
+    container_name: prostaff-sidekiq-staging
     command: 'bundle exec sidekiq -C config/sidekiq.yml'
     restart: unless-stopped
     networks:
@@ -102,23 +112,178 @@ services:
     environment:
       RAILS_ENV: production
       DATABASE_URL: '${DATABASE_URL}'
-      REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
+      REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis-staging:6379/0'
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
     depends_on:
-      redis:
+      redis-staging:
         condition: service_healthy
-      api:
+      api-staging:
         condition: service_healthy
     labels:
       - coolify.managed=true
-      - coolify.applicationId=1
+      - coolify.applicationId=2
       - coolify.type=application
+      - coolify.environment=staging
+
+  # ========================================
+  # LOAD TESTING SERVICES
+  # ========================================
+
+  # k6 - Load & Performance Testing
+  k6:
+    image: grafana/k6:latest
+    container_name: prostaff-k6-staging
+    restart: "no"
+    networks:
+      - coolify
+    volumes:
+      - ./load_tests:/scripts:ro
+      - ./load_tests/results:/results
+    working_dir: /scripts
+    # Keep container alive for on-demand testing
+    command: sleep infinity
+    environment:
+      K6_OUT: json=/results/output.json
+      BASE_URL: http://api-staging:3000
+      TEST_EMAIL: '${TEST_EMAIL:-test@prostaff.gg}'
+      TEST_PASSWORD: '${TEST_PASSWORD:-TestPassword123}'
+    depends_on:
+      api-staging:
+        condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=2
+      - coolify.type=service
+      - coolify.environment=staging
+      - coolify.service=k6
+
+  # ========================================
+  # SECURITY TESTING SERVICES
+  # ========================================
+
+  # OWASP ZAP - Dynamic Application Security Testing
+  zap:
+    image: zaproxy/zap-stable:latest
+    container_name: prostaff-zap-staging
+    restart: "no"
+    networks:
+      - coolify
+    expose:
+      - "8080"  # ZAP Web UI
+      - "8090"  # ZAP API
+    volumes:
+      - ./security_tests/zap:/zap/wrk:rw
+      - ./security_tests/zap/reports:/zap/reports:rw
+    # Start ZAP daemon with API enabled
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true -config api.disablekey=true
+    environment:
+      ZAP_PORT: 8080
+      TARGET_URL: http://api-staging:3000
+    depends_on:
+      api-staging:
+        condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=2
+      - coolify.type=service
+      - coolify.environment=staging
+      - coolify.service=zap
+      # Expose ZAP Web UI (optional - only if you want external access)
+      # - traefik.enable=true
+      # - traefik.http.routers.zap-staging.rule=Host(`zap-staging.prostaff.gg`)
+      # - traefik.http.routers.zap-staging.entrypoints=https
+      # - traefik.http.routers.zap-staging.tls=true
+      # - traefik.http.services.zap-staging.loadbalancer.server.port=8080
+
+  # Brakeman - Rails Security Scanner (SAST)
+  brakeman:
+    image: presidentbeef/brakeman:latest
+    container_name: prostaff-brakeman-staging
+    restart: "no"
+    networks:
+      - coolify
+    volumes:
+      - .:/src:ro
+      - ./security_tests/reports/brakeman:/reports:rw
+    working_dir: /src
+    # Run once and exit
+    command: brakeman --rails7 --output /reports/brakeman-report.html --format html --no-pager
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=2
+      - coolify.type=service
+      - coolify.environment=staging
+      - coolify.service=brakeman
+
+  # Semgrep - Static Analysis Security Testing
+  semgrep:
+    image: returntocorp/semgrep:latest
+    container_name: prostaff-semgrep-staging
+    restart: "no"
+    networks:
+      - coolify
+    volumes:
+      - .:/src:ro
+      - ./security_tests/reports/semgrep:/reports:rw
+    working_dir: /src
+    # Run auto rules and output JSON
+    command: semgrep --config=auto --json --output=/reports/semgrep-report.json .
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=2
+      - coolify.type=service
+      - coolify.environment=staging
+      - coolify.service=semgrep
+
+  # Trivy - Vulnerability Scanner for Dependencies
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: prostaff-trivy-staging
+    restart: "no"
+    networks:
+      - coolify
+    volumes:
+      - .:/app:ro
+      - ./security_tests/reports/trivy:/reports:rw
+      - trivy-cache:/root/.cache/
+    working_dir: /app
+    # Scan filesystem for vulnerabilities
+    command: fs --format json --output /reports/trivy-report.json --severity HIGH,CRITICAL .
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=2
+      - coolify.type=service
+      - coolify.environment=staging
+      - coolify.service=trivy
+
+  # Nuclei - Fast vulnerability scanner
+  nuclei:
+    image: projectdiscovery/nuclei:latest
+    container_name: prostaff-nuclei-staging
+    restart: "no"
+    networks:
+      - coolify
+    volumes:
+      - ./security_tests/reports/nuclei:/reports:rw
+    # Run nuclei against staging API
+    command: -u http://api-staging:3000 -json -o /reports/nuclei-report.json
+    depends_on:
+      api-staging:
+        condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=2
+      - coolify.type=service
+      - coolify.environment=staging
+      - coolify.service=nuclei
 
 volumes:
-  redis-data:
+  redis-staging-data:
+    driver: local
+  trivy-cache:
     driver: local
 
 networks:
