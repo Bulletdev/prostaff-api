@@ -26,12 +26,10 @@ jobs:
       postgres:
         image: supabase/postgres:15.14.1.084
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: prostaff_api_test
-          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -67,6 +65,7 @@ jobs:
         env:
           RAILS_ENV: test
           REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_api_test
         run: |
           bundle exec rails db:drop db:create db:schema:load
 
@@ -74,6 +73,7 @@ jobs:
         env:
           RAILS_ENV: test
           REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_api_test
           COVERAGE: true
         run: bundle exec rspec --format documentation
 
