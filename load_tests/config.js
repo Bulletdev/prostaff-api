@@ -7,8 +7,8 @@ export const config = {
 
   // Test credentials
   testUser: {
-    email: __ENV.TEST_EMAIL || 'test@prostaff.gg',
-    password: __ENV.TEST_PASSWORD || 'Test123!@#'
+    email: 'test@prostaff.gg',
+    password: 'TestPassword123'
   },
 
   // Load test profiles
@@ -120,12 +120,14 @@ export const config = {
 
 // Helper function to get auth token
 export function getAuthToken(http) {
+  const payload = JSON.stringify({
+    email: config.testUser.email,
+    password: config.testUser.password
+  });
+
   const loginRes = http.post(
     `${config.baseUrl}${config.endpoints.auth.login}`,
-    JSON.stringify({
-      email: config.testUser.email,
-      password: config.testUser.password
-    }),
+    payload,
     {
       headers: { 'Content-Type': 'application/json' },
     }
