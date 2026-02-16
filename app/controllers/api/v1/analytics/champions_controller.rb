@@ -26,67 +26,6 @@ module Api
           render_success(build_champion_data(player, champion_stats))
         end
 
-        private
-
-        def fetch_champion_stats(player)
-          PlayerMatchStat.where(player: player)
-                         .group(:champion)
-                         .select(
-                           'champion',
-                           'COUNT(*) as games_played',
-                           'SUM(CASE WHEN matches.victory THEN 1 ELSE 0 END) as wins',
-                           'AVG((kills + assists)::float / NULLIF(deaths, 0)) as avg_kda',
-                           'AVG(cs_per_min) as avg_cs_per_min',
-                           'AVG(damage_dealt_total) as avg_damage_dealt',
-                           'AVG(damage_taken) as avg_damage_taken',
-                           'AVG(gold_per_min) as avg_gold_per_min',
-                           'AVG(vision_score) as avg_vision_score'
-                         )
-                         .joins(:match)
-                         .order('games_played DESC')
-        end
-
-        def build_champion_stats(stats)
-          riot_service = RiotCdnService.new
-          stats.map { |stat| build_champion_stat_hash(stat, riot_service) }
-        end
-
-        def build_champion_stat_hash(stat, riot_service)
-          win_rate = stat.games_played.zero? ? 0 : (stat.wins.to_f / stat.games_played)
-          {
-            champion: stat.champion,
-            games_played: stat.games_played,
-            win_rate: win_rate,
-            avg_kda: stat.avg_kda&.round(2) || 0,
-            avg_cs_per_min: stat.avg_cs_per_min&.round(1) || 0.0,
-            avg_damage_dealt: stat.avg_damage_dealt&.round(0) || 0,
-            avg_damage_taken: stat.avg_damage_taken&.round(0) || 0,
-            avg_gold_per_min: stat.avg_gold_per_min&.round(0) || 0,
-            avg_vision_score: stat.avg_vision_score&.round(1) || 0.0,
-            mastery_grade: calculate_mastery_grade(win_rate, stat.avg_kda),
-            icon_url: riot_service.champion_icon_url(stat.champion)
-          }
-        end
-
-        def build_champion_data(player, champion_stats)
-          {
-            player: PlayerSerializer.render_as_hash(player),
-            champion_stats: champion_stats,
-            top_champions: champion_stats.take(5),
-            champion_diversity: {
-              total_champions: champion_stats.count,
-              highly_played: champion_stats.count { |c| c[:games_played] >= 10 },
-              average_games: if champion_stats.empty?
-                               0
-                             else
-                               (champion_stats.sum do |c|
-                                 c[:games_played]
-                               end / champion_stats.count.to_f).round(1)
-                             end
-            }
-          }
-        end
-
         def details
           player = organization_scoped(Player).find(params[:player_id])
           champion = params[:champion]
@@ -208,6 +147,67 @@ module Api
           Rails.logger.error(e.backtrace.join("\n"))
           render_error(message: "Failed to load champion details: #{e.message}", code: 'INTERNAL_ERROR',
                        status: :internal_server_error)
+        end
+
+        private
+
+        def fetch_champion_stats(player)
+          PlayerMatchStat.where(player: player)
+                         .group(:champion)
+                         .select(
+                           'champion',
+                           'COUNT(*) as games_played',
+                           'SUM(CASE WHEN matches.victory THEN 1 ELSE 0 END) as wins',
+                           'AVG((kills + assists)::float / NULLIF(deaths, 0)) as avg_kda',
+                           'AVG(cs_per_min) as avg_cs_per_min',
+                           'AVG(damage_dealt_total) as avg_damage_dealt',
+                           'AVG(damage_taken) as avg_damage_taken',
+                           'AVG(gold_per_min) as avg_gold_per_min',
+                           'AVG(vision_score) as avg_vision_score'
+                         )
+                         .joins(:match)
+                         .order('games_played DESC')
+        end
+
+        def build_champion_stats(stats)
+          riot_service = RiotCdnService.new
+          stats.map { |stat| build_champion_stat_hash(stat, riot_service) }
+        end
+
+        def build_champion_stat_hash(stat, riot_service)
+          win_rate = stat.games_played.zero? ? 0 : (stat.wins.to_f / stat.games_played)
+          {
+            champion: stat.champion,
+            games_played: stat.games_played,
+            win_rate: win_rate,
+            avg_kda: stat.avg_kda&.round(2) || 0,
+            avg_cs_per_min: stat.avg_cs_per_min&.round(1) || 0.0,
+            avg_damage_dealt: stat.avg_damage_dealt&.round(0) || 0,
+            avg_damage_taken: stat.avg_damage_taken&.round(0) || 0,
+            avg_gold_per_min: stat.avg_gold_per_min&.round(0) || 0,
+            avg_vision_score: stat.avg_vision_score&.round(1) || 0.0,
+            mastery_grade: calculate_mastery_grade(win_rate, stat.avg_kda),
+            icon_url: riot_service.champion_icon_url(stat.champion)
+          }
+        end
+
+        def build_champion_data(player, champion_stats)
+          {
+            player: PlayerSerializer.render_as_hash(player),
+            champion_stats: champion_stats,
+            top_champions: champion_stats.take(5),
+            champion_diversity: {
+              total_champions: champion_stats.count,
+              highly_played: champion_stats.count { |c| c[:games_played] >= 10 },
+              average_games: if champion_stats.empty?
+                               0
+                             else
+                               (champion_stats.sum do |c|
+                                 c[:games_played]
+                               end / champion_stats.count.to_f).round(1)
+                             end
+            }
+          }
         end
 
         private
