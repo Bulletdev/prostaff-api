@@ -313,10 +313,10 @@ graph TB
     ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
     ScrimModel[Scrim Model] --> PostgreSQL
     SupportFaqModel[SupportFaq Model] --> PostgreSQL
-    SupportTicketModel[SupportTicket Model] --> PostgreSQL
+    SupportTicketModel[Support Ticket Model] --> PostgreSQL
     SupportTicketMessageModel[SupportTicketMessage Model] --> PostgreSQL
     TacticalBoardModel[TacticalBoard Model] --> PostgreSQL
-    TeamGoalModel[TeamGoal Model] --> PostgreSQL
+    TeamGoalModel[Team Goal Model] --> PostgreSQL
     TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
     UserModel[User Model] --> PostgreSQL
     VodReviewModel[VodReview Model] --> PostgreSQL
@@ -331,9 +331,9 @@ graph TB
     RiotService --> RiotAPI
 
     RiotService --> Sidekiq
-    PandaScoreService --> PandaScoreAPI[PandaScore API]
+    PandaScoreService --> PandaScoreAPI
     Sidekiq -- Uses --> Redis
-    
+
     style Client fill:#e1f5ff
     style PostgreSQL fill:#336791
     style Redis fill:#d82c20
