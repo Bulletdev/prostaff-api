@@ -2,16 +2,17 @@
 FROM ruby:3.4.5-slim
 
 # Install system dependencies with version pinning and no recommended packages
+# Note: Versions are pinned for security and reproducibility
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    libyaml-dev \
-    git \
-    tzdata \
-    nodejs \
-    npm \
-    curl \
-    && npm install -g yarn \
+    build-essential=12.9 \
+    libpq-dev=15.10-0+deb12u1 \
+    libyaml-dev=0.2.5-1+deb12u1 \
+    git=1:2.39.5-0+deb12u1 \
+    tzdata=2024a-0+deb12u1 \
+    nodejs=18.19.0+dfsg-6~deb12u2 \
+    npm=9.2.0~ds1-1 \
+    curl=7.88.1-10+deb12u8 \
+    && npm install -g yarn@1.22.22 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
