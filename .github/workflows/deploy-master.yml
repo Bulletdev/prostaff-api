@@ -64,8 +64,11 @@ jobs:
       - name: Setup database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
+          PGHOST: 127.0.0.1
+          PGUSER: postgres
+          PGPASSWORD: postgres
         run: |
           bundle exec rails db:create
           bundle exec rails db:schema:load
@@ -73,8 +76,8 @@ jobs:
       - name: Run RSpec tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
           COVERAGE: true
         run: bundle exec rspec --format documentation
 
