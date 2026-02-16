@@ -117,6 +117,13 @@ module Players
       target = ScoutingTarget.find_or_initialize_by(riot_puuid: player.riot_puuid) if player.riot_puuid.present?
       target ||= ScoutingTarget.new
 
+      # Calculate performance data
+      recent_perf = calculate_recent_performance(player)
+      champion_stats = calculate_champion_stats(player)
+
+      # Merge champion stats into recent performance
+      recent_perf[:champion_stats] = champion_stats
+
       # Update global player data
       target.assign_attributes(
         summoner_name: player.summoner_name,
@@ -126,7 +133,9 @@ module Players
         current_tier: player.solo_queue_tier,
         current_rank: player.solo_queue_rank,
         current_lp: player.solo_queue_lp,
-        champion_pool: player.champion_pool,
+        champion_pool: calculate_champion_pool_from_stats(player),
+        recent_performance: recent_perf,
+        performance_trend: calculate_performance_trend(player),
         playstyle: extract_playstyle_from_notes(player.notes),
         twitter_handle: player.twitter_handle,
         status: 'free_agent',
@@ -158,6 +167,137 @@ module Players
       notes << "Available since: #{Date.current.strftime('%Y-%m-%d')}"
       notes << "\n--- Original Player Notes ---\n#{player.notes}" if player.notes.present?
       notes.join("\n\n")
+    end
+
+    # Calculate champion pool from player's actual match statistics
+    # Prioritizes champions from champion_pools table, falls back to player_match_stats
+    # @param player [Player] The player to calculate champion pool for
+    # @return [Array<String>] Array of champion names (up to 10)
+    def calculate_champion_pool_from_stats(player)
+      # First, try to get from champion_pools table (most reliable)
+      champions_from_pool = player.champion_pools
+                                  .order(games_played: :desc, average_kda: :desc)
+                                  .limit(10)
+                                  .pluck(:champion)
+
+      return champions_from_pool if champions_from_pool.any?
+
+      # Fallback: get from player_match_stats
+      champions_from_stats = player.player_match_stats
+                                   .group(:champion)
+                                   .order('COUNT(*) DESC')
+                                   .limit(10)
+                                   .pluck(:champion)
+
+      return champions_from_stats if champions_from_stats.any?
+
+      # Last resort: use the champion_pool array attribute if it exists
+      player.champion_pool.presence || []
+    end
+
+    # Calculate champion statistics with winrate per champion
+    # @param player [Player] The player to calculate champion stats for
+    # @param limit [Integer] Number of recent games to analyze (default: 50)
+    # @return [Array<Hash>] Array of champion stats with name, games, wins, winrate
+    def calculate_champion_stats(player, limit: 50)
+      recent_stats = player.player_match_stats
+                           .joins(:match)
+                           .order('matches.game_start DESC')
+                           .limit(limit)
+
+      return [] if recent_stats.empty?
+
+      # Group by champion
+      champion_data = recent_stats.group_by(&:champion)
+
+      champion_data.map do |champion, stats|
+        games = stats.count
+        wins = stats.count { |s| s.match&.victory? }
+        win_rate = games.zero? ? 0.0 : ((wins.to_f / games) * 100).round(1)
+
+        {
+          champion: champion,
+          games: games,
+          wins: wins,
+          win_rate: win_rate
+        }
+      end.sort_by { |c| -c[:games] }.take(10) # Top 10 most played
+    end
+
+    # Calculate recent performance statistics from last 50 games
+    # @param player [Player] The player to calculate performance for
+    # @param limit [Integer] Number of recent games to analyze (default: 50)
+    # @return [Hash] Performance statistics
+    def calculate_recent_performance(player, limit: 50)
+      recent_stats = player.player_match_stats
+                           .joins(:match)
+                           .order('matches.game_start DESC')
+                           .limit(limit)
+
+      return {} if recent_stats.empty?
+
+      total_games = recent_stats.count
+      wins = recent_stats.count { |stat| stat.match&.victory? }
+
+      # Calculate KDA manually since it's a virtual method
+      total_kills = recent_stats.sum(:kills)
+      total_deaths = recent_stats.sum(:deaths)
+      total_assists = recent_stats.sum(:assists)
+      avg_kda = total_deaths.zero? ? total_kills + total_assists : ((total_kills + total_assists).to_f / total_deaths).round(2)
+
+      # Calculate averages only for non-null values
+      damage_shares = recent_stats.pluck(:damage_share).compact
+      kill_participations = recent_stats.pluck(:kill_participation).compact
+
+      {
+        games_played: total_games,
+        wins: wins,
+        losses: total_games - wins,
+        win_rate: total_games.zero? ? 0.0 : ((wins.to_f / total_games) * 100).round(1),
+        avg_kda: avg_kda,
+        avg_cs_per_min: recent_stats.average(:cs_per_min)&.to_f&.round(1) || 0.0,
+        avg_vision_score: recent_stats.average(:vision_score)&.to_f&.round(1) || 0.0,
+        avg_damage_share: damage_shares.any? ? (damage_shares.sum / damage_shares.size).round(1) : 0.0,
+        avg_kill_participation: kill_participations.any? ? (kill_participations.sum / kill_participations.size).round(1) : 0.0,
+        last_game_date: recent_stats.first&.match&.game_start&.to_date
+      }
+    end
+
+    # Calculate performance trend based on recent games
+    # @param player [Player] The player to calculate trend for
+    # @param limit [Integer] Number of recent games to analyze (default: 50)
+    # @return [String] 'improving', 'stable', or 'declining'
+    def calculate_performance_trend(player, limit: 50)
+      recent_stats = player.player_match_stats
+                           .joins(:match)
+                           .order('matches.game_start DESC')
+                           .limit(limit)
+
+      return 'stable' if recent_stats.count < 20
+
+      # Split into two halves
+      mid_point = recent_stats.count / 2
+      recent_half = recent_stats.first(mid_point)
+      older_half = recent_stats.last(mid_point)
+
+      recent_wr = calculate_win_rate(recent_half)
+      older_wr = calculate_win_rate(older_half)
+
+      if recent_wr > older_wr + 10
+        'improving'
+      elsif recent_wr < older_wr - 10
+        'declining'
+      else
+        'stable'
+      end
+    end
+
+    # Helper to calculate win rate from a collection of stats
+    def calculate_win_rate(stats)
+      return 0 if stats.empty?
+
+      wins = stats.count { |stat| stat.match&.victory? }
+      (wins.to_f / stats.count * 100).round(1)
     end
 
     # Extract playstyle from player notes
