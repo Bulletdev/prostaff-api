@@ -30,6 +30,9 @@ module Players
                             fetch_summoner_by_name(player.summoner_name, region, riot_api_key)
                           end
 
+          # Fetch account data to get current gameName#tagLine
+          account_data = fetch_account_by_puuid(player.riot_puuid, region, riot_api_key)
+
           # Use PUUID for league endpoint (workaround for Riot API bug where summoner_data['id'] is nil)
           # See: https://github.com/RiotGames/developer-relations/issues/1092
           ranked_data = fetch_ranked_stats_by_puuid(player.riot_puuid, region, riot_api_key)
@@ -42,6 +45,15 @@ module Players
             sync_status: 'success',
             last_sync_at: Time.current
           }
+
+          # Update summoner_name if it has changed
+          if account_data['gameName'].present? && account_data['tagLine'].present?
+            new_summoner_name = "#{account_data['gameName']}##{account_data['tagLine']}"
+            if player.summoner_name != new_summoner_name
+              Rails.logger.info("Player #{player.id} name changed: #{player.summoner_name} → #{new_summoner_name}")
+              update_data[:summoner_name] = new_summoner_name
+            end
+          end
 
           solo_queue = ranked_data.find { |q| q['queueType'] == 'RANKED_SOLO_5x5' }
           if solo_queue
@@ -75,6 +87,36 @@ module Players
       end
 
       private
+
+      def fetch_account_by_puuid(puuid, region, api_key)
+        require 'net/http'
+        require 'json'
+
+        # Determine regional endpoint
+        regional_endpoint = case region.downcase
+                            when 'br1', 'na1', 'lan', 'las1'
+                              'americas'
+                            when 'euw1', 'eune1', 'ru', 'tr1'
+                              'europe'
+                            when 'kr', 'jp1', 'oce1'
+                              'asia'
+                            else
+                              'americas'
+                            end
+
+        url = "https://#{regional_endpoint}.api.riotgames.com/riot/account/v1/accounts/by-puuid/#{puuid}"
+        uri = URI(url)
+        request = Net::HTTP::Get.new(uri)
+        request['X-Riot-Token'] = api_key
+
+        response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+          http.request(request)
+        end
+
+        raise "Riot API Error: #{response.code} - #{response.body}" unless response.is_a?(Net::HTTPSuccess)
+
+        JSON.parse(response.body)
+      end
 
       def fetch_summoner_by_name(summoner_name, region, api_key)
         require 'net/http'
