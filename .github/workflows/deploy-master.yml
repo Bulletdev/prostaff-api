@@ -1,0 +1,309 @@
+name: Deploy Master to Coolify
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_tests != 'true'
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prostaff_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: |
+          bundle config set --local without 'development'
+          bundle install --jobs 4 --retry 3
+
+      - name: Setup database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+
+      - name: Run RSpec tests
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+          COVERAGE: true
+        run: bundle exec rspec --format documentation
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel --format simple
+
+      - name: Run Brakeman security scan
+        run: bundle exec brakeman -q -w2 --no-pager
+
+  build:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: success() || github.event.inputs.skip_tests == 'true'
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=master-
+            type=raw,value=master-latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5
+        with:
+          context: .
+          file: ./Dockerfile.production
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            RAILS_ENV=production
+
+      - name: Image built successfully
+        run: |
+          echo "Docker image built and pushed successfully"
+          echo "Image tags: ${{ steps.meta.outputs.tags }}"
+
+  deploy:
+    name: Deploy to Coolify
+    runs-on: ubuntu-latest
+    needs: build
+
+    environment:
+      name: master
+      url: ${{ vars.COOLIFY_APP_URL || 'https://master-api.prostaff.gg' }}
+
+    steps:
+      - name: Trigger Coolify deployment
+        run: |
+          echo "Triggering Coolify deployment..."
+
+          HTTP_CODE=$(curl --request GET '${{ secrets.COOLIFY_WEBHOOK }}' \
+            --write-out '%{http_code}' \
+            --silent \
+            --output /tmp/coolify_response.txt)
+
+          if [ $HTTP_CODE -ge 200 ] && [ $HTTP_CODE -lt 300 ]; then
+            echo "Deployment triggered successfully (HTTP $HTTP_CODE)"
+          else
+            echo "Failed to trigger deployment (HTTP $HTTP_CODE)"
+            cat /tmp/coolify_response.txt
+            exit 1
+          fi
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for Coolify to complete deployment..."
+          echo "This usually takes 1-3 minutes..."
+          sleep 45
+
+      - name: Health check
+        run: |
+          MAX_ATTEMPTS=24
+          ATTEMPT=0
+          HEALTH_URL="${{ vars.COOLIFY_APP_URL || 'https://master-api.prostaff.gg' }}/up"
+
+          echo "Starting health check on: $HEALTH_URL"
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
+
+            HTTP_CODE=$(curl --fail --silent --show-error --max-time 10 \
+              --write-out '%{http_code}' \
+              --output /dev/null \
+              "$HEALTH_URL" || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Application is healthy (HTTP $HTTP_CODE)"
+              exit 0
+            fi
+
+            echo "HTTP $HTTP_CODE - waiting 15 seconds before retry..."
+            sleep 15
+          done
+
+          echo "Health check failed after $MAX_ATTEMPTS attempts"
+          exit 1
+
+      - name: Post-deployment verification
+        run: |
+          echo "Running post-deployment verification..."
+
+          API_URL="${{ vars.COOLIFY_APP_URL || 'https://master-api.prostaff.gg' }}"
+
+          echo "Checking health endpoint..."
+          curl -f -s "$API_URL/api/health" | jq '.' || echo "Health endpoint returned non-JSON response"
+
+          echo "Deployment verification completed"
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always()
+
+    steps:
+      - name: Prepare notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "STATUS=Success" >> $GITHUB_ENV
+            echo "MESSAGE=Master deployment completed successfully" >> $GITHUB_ENV
+            echo "COLOR=good" >> $GITHUB_ENV
+          elif [ "${{ needs.deploy.result }}" == "skipped" ]; then
+            echo "STATUS=Skipped" >> $GITHUB_ENV
+            echo "MESSAGE=Build completed but deployment was skipped" >> $GITHUB_ENV
+            echo "COLOR=warning" >> $GITHUB_ENV
+          else
+            echo "STATUS=Failed" >> $GITHUB_ENV
+            echo "MESSAGE=Master deployment failed - please check logs" >> $GITHUB_ENV
+            echo "COLOR=danger" >> $GITHUB_ENV
+          fi
+
+      - name: Display notification
+        run: |
+          echo "=========================================="
+          echo "${{ env.STATUS }}"
+          echo "${{ env.MESSAGE }}"
+          echo "=========================================="
+          echo "Branch: master"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Image: ${{ needs.build.outputs.image_tag }}"
+          echo "URL: ${{ vars.COOLIFY_APP_URL || 'https://master-api.prostaff.gg' }}"
+          echo "=========================================="
+
+      - name: Slack notification
+        if: always()
+        uses: slackapi/slack-github-action@70cd7be8e40a46e8b0eced40b0de447bdb42f68e  # v1.26.0
+        with:
+          payload: |
+            {
+              "text": "Master Deployment ${{ needs.deploy.result == 'success' && 'Success' || needs.deploy.result == 'skipped' && 'Skipped' || 'Failed' }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ needs.deploy.result == 'success' && 'Master Deployed' || needs.deploy.result == 'skipped' && 'Master Deploy Skipped' || 'Master Deploy Failed' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\nmaster"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Deployed by:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\nMaster (Coolify)"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n${{ needs.deploy.result }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Commit:* ${{ github.event.head_commit.message }}"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Deployment Logs> | <${{ vars.COOLIFY_APP_URL || 'https://master-api.prostaff.gg' }}|Open Application>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true
