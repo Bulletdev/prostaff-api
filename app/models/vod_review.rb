@@ -33,6 +33,7 @@
 class VodReview < ApplicationRecord
   include OrganizationScoped
   include Constants
+  include Hashable
 
   # Associations
   belongs_to :organization
@@ -148,9 +149,21 @@ class VodReview < ApplicationRecord
   end
 
   def public_url
-    return nil unless is_public? && share_link.present?
+    return nil unless is_public?
 
-    "#{ENV['FRONTEND_URL']}/vod-reviews/#{share_link}"
+    # Use HashID if available, fallback to share_link
+    identifier = hashid.presence || share_link
+    return nil if identifier.blank?
+
+    "#{ENV['FRONTEND_URL']}/vod-reviews/#{identifier}"
+  end
+
+  # Override from Hashable concern to use proper route
+  def public_hashid_url
+    return nil unless hashid.present?
+    return nil unless ENV['FRONTEND_URL'].present?
+
+    "#{ENV['FRONTEND_URL']}/vod-reviews/#{hashid}"
   end
 
   private

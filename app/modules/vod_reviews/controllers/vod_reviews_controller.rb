@@ -125,7 +125,19 @@ module VodReviews
       private
 
       def set_vod_review
-        @vod_review = organization_scoped(VodReview).find(params[:id])
+        # Try to find by HashID first, then fall back to UUID
+        id_param = params[:id]
+
+        @vod_review = if id_param.match?(/\A[a-zA-Z0-9]{6,12}\z/)
+                        # Looks like a HashID (Base62, 6-12 chars)
+                        VodReview.find_by_hashid(id_param)
+                      else
+                        # Looks like a UUID or numeric ID
+                        organization_scoped(VodReview).find_by(id: id_param)
+                      end
+
+        # If not found, raise 404
+        raise ActiveRecord::RecordNotFound, "Couldn't find VodReview with id=#{id_param}" if @vod_review.nil?
       end
 
       def vod_review_params
