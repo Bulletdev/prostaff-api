@@ -77,6 +77,10 @@ services:
       CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
+      # HashID Configuration
+      HASHID_SALT: '${HASHID_SALT}'
+      HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
+      FRONTEND_URL: '${FRONTEND_URL}'
 
     healthcheck:
       test:
@@ -107,6 +111,10 @@ services:
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
+      # HashID Configuration
+      HASHID_SALT: '${HASHID_SALT}'
+      HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
+      FRONTEND_URL: '${FRONTEND_URL}'
     depends_on:
       redis:
         condition: service_healthy
