@@ -85,8 +85,6 @@ module Api
                              end
             }
           }
-
-          render_success(champion_data)
         end
 
         def details
