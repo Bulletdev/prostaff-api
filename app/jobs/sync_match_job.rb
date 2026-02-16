@@ -8,27 +8,31 @@ class SyncMatchJob < ApplicationJob
 
   def perform(match_id, organization_id, region = 'BR')
     organization = Organization.find(organization_id)
-    riot_service = RiotApiService.new
 
-    match_data = riot_service.get_match_details(
-      match_id: match_id,
-      region: region
-    )
+    # Set organization context for the background job
+    Current.set(organization_id: organization_id) do
+      riot_service = RiotApiService.new
 
-    # Check if match already exists
-    match = Match.find_by(riot_match_id: match_data[:match_id])
-    if match.present?
-      Rails.logger.info("Match #{match_id} already exists")
-      return
+      match_data = riot_service.get_match_details(
+        match_id: match_id,
+        region: region
+      )
+
+      # Check if match already exists
+      match = Match.find_by(riot_match_id: match_data[:match_id])
+      if match.present?
+        Rails.logger.info("Match #{match_id} already exists")
+        return
+      end
+
+      # Create match record
+      match = create_match_record(match_data, organization)
+
+      # Create player match stats
+      create_player_match_stats(match, match_data[:participants], organization)
+
+      Rails.logger.info("Successfully synced match #{match_id}")
     end
-
-    # Create match record
-    match = create_match_record(match_data, organization)
-
-    # Create player match stats
-    create_player_match_stats(match, match_data[:participants], organization)
-
-    Rails.logger.info("Successfully synced match #{match_id}")
   rescue RiotApiService::NotFoundError => e
     Rails.logger.error("Match not found in Riot API: #{match_id} - #{e.message}")
   rescue StandardError => e
