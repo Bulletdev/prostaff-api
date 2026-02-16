@@ -43,8 +43,13 @@ RSpec.configure do |config|
   # Include request helpers
   config.include RequestSpecHelper, type: :request
 
-  # Database cleaner - allow remote URLs for test environment
-  DatabaseCleaner.allow_remote_database_url = true
+  # Database cleaner - SECURITY: Never allow remote database truncation
+  # This prevents accidentally wiping production data when running tests
+  if ENV['DATABASE_URL']&.include?('supabase') || ENV['DATABASE_URL']&.include?('prod')
+    abort('CRITICAL: Cannot run tests against production database! Use a local test database.')
+  end
+
+  DatabaseCleaner.allow_remote_database_url = false
 
   config.before(:suite) do
     DatabaseCleaner.clean_with(:truncation)
