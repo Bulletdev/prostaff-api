@@ -27,7 +27,7 @@ jobs:
         image: supabase/postgres:15.14.1.084
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
+          POSTGRES_DB: prostaff_api_test
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 10s
