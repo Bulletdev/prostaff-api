@@ -161,12 +161,68 @@ module Api
         end
 
         def sync
-          # Sync functionality not yet implemented
-          render_error(
-            message: 'Sync functionality not yet implemented',
-            code: 'NOT_IMPLEMENTED',
-            status: :not_implemented
-          )
+          # Sync player data from Riot API
+          unless @target.riot_puuid.present?
+            return render_error(
+              message: 'Cannot sync player without Riot PUUID',
+              code: 'MISSING_PUUID',
+              status: :unprocessable_entity
+            )
+          end
+
+          riot_service = RiotApiService.new
+          region = @target.region
+
+          begin
+            # Fetch updated summoner data
+            summoner_data = riot_service.get_summoner_by_puuid(
+              puuid: @target.riot_puuid,
+              region: region
+            )
+
+            # Fetch ranked stats
+            league_data = riot_service.get_league_entries(
+              summoner_id: summoner_data[:summoner_id],
+              region: region
+            )
+
+            # Fetch champion mastery
+            mastery_data = riot_service.get_champion_mastery(
+              puuid: @target.riot_puuid,
+              region: region
+            )
+
+            # Update target with fresh data
+            @target.update!(
+              riot_summoner_id: summoner_data[:summoner_id],
+              summoner_name: summoner_data[:summoner_name],
+              current_tier: league_data[:solo_queue]&.dig(:tier),
+              current_rank: league_data[:solo_queue]&.dig(:rank),
+              current_lp: league_data[:solo_queue]&.dig(:lp),
+              champion_pool: extract_champion_pool(mastery_data),
+              performance_trend: calculate_performance_trend(league_data)
+            )
+
+            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+
+            render_success({
+                             scouting_target: JSON.parse(
+                               ScoutingTargetSerializer.render(@target, watchlist: watchlist)
+                             )
+                           }, message: 'Player data synced successfully')
+          rescue RiotApiService::NotFoundError
+            render_error(
+              message: 'Player not found in Riot API',
+              code: 'PLAYER_NOT_FOUND',
+              status: :not_found
+            )
+          rescue RiotApiService::RiotApiError => e
+            render_error(
+              message: "Failed to sync player data: #{e.message}",
+              code: 'RIOT_API_ERROR',
+              status: :service_unavailable
+            )
+          end
         end
 
         private
@@ -303,6 +359,55 @@ module Api
             :notes,
             champion_pool: []
           )
+        end
+
+        # Extract top champions from mastery data
+        def extract_champion_pool(mastery_data)
+          return [] if mastery_data.blank?
+
+          # Get top 10 champions by mastery points
+          mastery_data.first(10).map do |mastery|
+            champion_id_to_name(mastery[:champion_id])
+          end.compact
+        end
+
+        # Simple champion ID to name mapping (top champions)
+        def champion_id_to_name(champion_id)
+          # This is a simplified mapping - in production you'd want a complete mapping
+          # or fetch from Data Dragon API
+          champion_map = {
+            1 => 'Annie', 2 => 'Olaf', 3 => 'Galio', 4 => 'Twisted Fate',
+            5 => 'Xin Zhao', 6 => 'Urgot', 7 => 'LeBlanc', 8 => 'Vladimir',
+            9 => 'Fiddlesticks', 10 => 'Kayle', 11 => 'Master Yi', 12 => 'Alistar',
+            13 => 'Ryze', 14 => 'Sion', 15 => 'Sivir', 16 => 'Soraka',
+            17 => 'Teemo', 18 => 'Tristana', 19 => 'Warwick', 20 => 'Nunu',
+            21 => 'Miss Fortune', 22 => 'Ashe', 23 => 'Tryndamere', 24 => 'Jax',
+            25 => 'Morgana', 26 => 'Zilean', 27 => 'Singed', 28 => 'Evelynn',
+            29 => 'Twitch', 30 => 'Karthus', 31 => 'Cho\'Gath', 32 => 'Amumu',
+            33 => 'Rammus', 34 => 'Anivia', 35 => 'Shaco', 36 => 'Dr. Mundo'
+            # Add more as needed or fetch from Data Dragon
+          }
+          champion_map[champion_id] || "Champion_#{champion_id}"
+        end
+
+        # Calculate performance trend based on win/loss ratio
+        def calculate_performance_trend(league_data)
+          solo_queue = league_data[:solo_queue]
+          return 'stable' unless solo_queue
+
+          wins = solo_queue[:wins] || 0
+          losses = solo_queue[:losses] || 0
+          total_games = wins + losses
+
+          return 'stable' if total_games.zero?
+
+          win_rate = (wins.to_f / total_games * 100).round(2)
+
+          case win_rate
+          when 0..45 then 'declining'
+          when 45..52 then 'stable'
+          else 'improving'
+          end
         end
       end
     end
