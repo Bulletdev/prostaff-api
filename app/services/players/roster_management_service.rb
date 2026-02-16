@@ -22,6 +22,9 @@ module Players
         previous_org_id = player.organization_id
         previous_org_name = player.organization.name
 
+        # Sync more matches from Riot before creating scouting target
+        sync_additional_matches_if_needed
+
         # Soft delete the player (removes from roster but keeps in database)
         player.soft_delete!(
           reason: reason,
@@ -110,6 +113,66 @@ module Players
 
     private
 
+    # Sync additional matches from Riot if player has less than 50 matches
+    # This ensures scouting targets have comprehensive statistics
+    def sync_additional_matches_if_needed
+      return unless player.riot_puuid.present?
+
+      current_match_count = player.player_match_stats.count
+      return if current_match_count >= 50
+
+      Rails.logger.info("Player #{player.summoner_name} has #{current_match_count} matches, syncing more...")
+
+      begin
+        sync_service = Players::Services::RiotSyncService.new(organization, player.region)
+        imported = sync_player_matches_comprehensive(sync_service, 50)
+
+        Rails.logger.info("Imported #{imported} additional match stats for #{player.summoner_name}")
+      rescue StandardError => e
+        # Don't fail the whole operation if sync fails - just log it
+        Rails.logger.warn("Failed to sync additional matches for #{player.summoner_name}: #{e.message}")
+      end
+    end
+
+    # Import player match stats comprehensively
+    # Unlike the standard import, this adds player stats even if the match already exists in the org
+    def sync_player_matches_comprehensive(sync_service, count)
+      match_ids = sync_service.send(:fetch_match_ids, player.riot_puuid, count)
+      return 0 if match_ids.empty?
+
+      imported = 0
+      match_ids.each do |match_id|
+        # Skip if player already has stats for this match
+        next if player.player_match_stats.joins(:match).exists?(matches: { riot_match_id: match_id })
+
+        begin
+          match_details = sync_service.send(:fetch_match_details, match_id)
+          info = match_details['info']
+          metadata = match_details['metadata']
+
+          # Find player's participant data
+          participant = info['participants'].find { |p| p['puuid'] == player.riot_puuid }
+          next unless participant
+
+          # Check if match exists in org
+          existing_match = organization.matches.find_by(riot_match_id: match_id)
+
+          if existing_match
+            # Match exists - just add player stats
+            sync_service.send(:create_player_stats, existing_match, player, participant)
+            imported += 1
+          else
+            # Import full match
+            imported += 1 if sync_service.send(:import_match, match_details, player)
+          end
+        rescue StandardError => e
+          Rails.logger.error("Failed to import match #{match_id}: #{e.message}")
+        end
+      end
+
+      imported
+    end
+
     # Create a scouting target from removed player
     # Now creates/updates GLOBAL target + watchlist entry for current org
     def create_scouting_target_from_player(previous_org_name:, removal_reason:)
@@ -122,7 +185,7 @@ module Players
       champion_stats = calculate_champion_stats(player)
 
       # Merge champion stats into recent performance
-      recent_perf[:champion_stats] = champion_stats
+      recent_perf[:champion_pool_stats] = champion_stats
 
       # Update global player data
       target.assign_attributes(
@@ -213,13 +276,15 @@ module Players
       champion_data.map do |champion, stats|
         games = stats.count
         wins = stats.count { |s| s.match&.victory? }
-        win_rate = games.zero? ? 0.0 : ((wins.to_f / games) * 100).round(1)
+        losses = games - wins
+        winrate = games.zero? ? 0.0 : ((wins.to_f / games) * 100).round(1)
 
         {
           champion: champion,
           games: games,
           wins: wins,
-          win_rate: win_rate
+          losses: losses,
+          winrate: winrate
         }
       end.sort_by { |c| -c[:games] }.take(10) # Top 10 most played
     end
