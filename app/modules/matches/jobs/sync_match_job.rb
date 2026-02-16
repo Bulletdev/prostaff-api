@@ -73,6 +73,7 @@ module Matches
         match.update!(
           game_duration: match_data[:game_duration],
           game_version: match_data[:game_version],
+          match_type: determine_match_type(match_data[:game_mode], match_data[:participants], organization),
           victory: determine_team_victory(match_data[:participants], organization)
         )
 
@@ -87,7 +88,7 @@ module Matches
         Match.create!(
           organization: organization,
           riot_match_id: match_data[:match_id],
-          match_type: determine_match_type(match_data[:game_mode]),
+          match_type: determine_match_type(match_data[:game_mode], match_data[:participants], organization),
           game_start: match_data[:game_creation],
           game_end: match_data[:game_creation] + match_data[:game_duration].seconds,
           game_duration: match_data[:game_duration],
@@ -98,14 +99,37 @@ module Matches
 
       def create_player_match_stats(match, participants, organization)
         puts "SyncMatchJob: Creating player stats for #{participants.size} participants"
+
+        # Determine if this is a competitive match (5+ org players) or solo queue (1 org player)
+        our_player_puuids = organization.players.pluck(:riot_puuid).compact
+        our_participants = participants.select { |p| our_player_puuids.include?(p[:puuid]) }
+        is_competitive = our_participants.size >= 5
+
+        puts "SyncMatchJob: Match type: #{is_competitive ? 'Competitive (team)' : 'Solo Queue'}"
+        puts "SyncMatchJob: Our players in match: #{our_participants.size}"
+
         # Calculate team totals for shares
-        team_totals = participants.group_by { |p| p[:team_id] }.transform_values do |team_participants|
-          {
-            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
-            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
-            total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
-          }
-        end
+        # For competitive: use only our organization's players
+        # For solo queue: use all players on the same team
+        team_totals = if is_competitive
+                        # Competitive: calculate shares among org players only
+                        our_participants.group_by { |p| p[:team_id] }.transform_values do |team_participants|
+                          {
+                            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
+                            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
+                            total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
+                          }
+                        end
+                      else
+                        # Solo queue: calculate shares among all team members
+                        participants.group_by { |p| p[:team_id] }.transform_values do |team_participants|
+                          {
+                            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
+                            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
+                            total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
+                          }
+                        end
+                      end
 
         participants.each do |participant_data|
           player = organization.players.find_by(riot_puuid: participant_data[:puuid])
@@ -115,12 +139,12 @@ module Matches
           puts "SyncMatchJob Debug: Raw Participant Keys: #{participant_data.keys}"
 
           team_stats = team_totals[participant_data[:team_id]]
-          damage_share = if team_stats[:total_damage].positive?
+          damage_share = if team_stats && team_stats[:total_damage].positive?
                            participant_data[:total_damage_dealt] / team_stats[:total_damage]
                          else
                            0
                          end
-          gold_share = if team_stats[:total_gold].positive?
+          gold_share = if team_stats && team_stats[:total_gold].positive?
                          participant_data[:gold_earned] / team_stats[:total_gold]
                        else
                          0
@@ -160,8 +184,20 @@ module Matches
         end
       end
 
-      def determine_match_type(game_mode)
-        game_mode.to_s.upcase == 'CLASSIC' ? 'official' : 'scrim'
+      def determine_match_type(game_mode, participants, organization)
+        # Count how many org players are in this match
+        our_player_puuids = organization.players.pluck(:riot_puuid).compact
+        our_participants = participants.select { |p| our_player_puuids.include?(p[:puuid]) }
+
+        # If we have 5 or more players from the org on the same team, it's a competitive match
+        # Otherwise, it's solo queue (classified as 'scrim' for now)
+        if our_participants.size >= 5
+          # Check if all our players are on the same team
+          team_ids = our_participants.map { |p| p[:team_id] }.uniq
+          team_ids.size == 1 ? 'official' : 'scrim'
+        else
+          'scrim' # Solo queue / ranked games
+        end
       end
 
       def determine_team_victory(participants, organization)
