@@ -16,6 +16,7 @@
 <summary>Key Features (Click to show details) </summary>
 
 -  **JWT Authentication** with refresh tokens and token blacklisting
+-  **HashID URLs** with Base62 encoding for short, obfuscated public URLs
 -  **Interactive Swagger Documentation** (170+ endpoints documented)
 -  **Riot Games API Integration** for automatic match import and player sync
 -  **Advanced Analytics** (KDA trends, champion pools, vision control, etc.)
@@ -111,6 +112,7 @@ open http://localhost:3333/api-docs
 - **Rails**: 7.2.0 (API-only mode)
 - **Database**: PostgreSQL 14+
 - **Authentication**: JWT (with refresh tokens)
+- **URL Obfuscation**: HashID with Base62 encoding
 - **Background Jobs**: Sidekiq
 - **Caching**: Redis (port 6380)
 - **API Documentation**: Swagger/OpenAPI 3.0 (rswag)
@@ -383,9 +385,12 @@ cp .env.example .env
 Edit `.env` with your configuration:
 - Database credentials
 - JWT secret key
-- Riot API key
+- Riot API key (get from https://developer.riotgames.com)
+- PandaScore API key (optional, for competitive data)
 - Redis URL
 - CORS origins
+- HashID salt (for URL obfuscation - keep secret!)
+- Frontend URL
 
 4. Setup the database:
 ```bash
@@ -747,12 +752,25 @@ open coverage/index.html
 Required environment variables for production:
 
 ```bash
+# Core
 DATABASE_URL=postgresql://user:password@host:5432/database
 REDIS_URL=redis://host:6379/0
-JWT_SECRET_KEY=your-production-secret
-RIOT_API_KEY=your-riot-api-key
-CORS_ORIGINS=https://your-frontend-domain.com
 SECRET_KEY_BASE=your-rails-secret
+
+# Authentication
+JWT_SECRET_KEY=your-production-secret
+
+# External APIs
+RIOT_API_KEY=your-riot-api-key
+PANDASCORE_API_KEY=your-pandascore-api-key
+
+# Frontend
+CORS_ORIGINS=https://your-frontend-domain.com
+FRONTEND_URL=https://your-frontend-domain.com
+
+# HashID Configuration (for URL obfuscation)
+HASHID_SALT=your-secret-salt
+HASHID_MIN_LENGTH=6
 ```
 
 ### Docker
