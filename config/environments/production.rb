@@ -31,7 +31,10 @@ Rails.application.configure do
   # This is secure because: (1) Traefik handles HTTPS/TLS termination, (2) internal
   # communication between Traefik and Rails is over a private Docker network.
   # Setting force_ssl = true would cause redirect loops.
+  #
+  # Security: We trust X-Forwarded-Proto header from Traefik to detect HTTPS
   config.force_ssl = false
+  config.ssl_options = { redirect: { exclude: ->(request) { request.path.start_with?('/health') } } }
 
 
   # Trust all proxies (Traefik, Cloudflare)
