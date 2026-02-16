@@ -26,6 +26,22 @@ module Scouting
           )
         end
 
+        # Fetch account data to update summoner_name if changed
+        if target.riot_puuid.present?
+          account_data = riot_service.get_account_by_puuid(
+            puuid: target.riot_puuid,
+            region: target.region
+          )
+
+          if account_data[:game_name].present? && account_data[:tag_line].present?
+            new_summoner_name = "#{account_data[:game_name]}##{account_data[:tag_line]}"
+            if target.summoner_name != new_summoner_name
+              Rails.logger.info("Scouting target #{target.id} name changed: #{target.summoner_name} → #{new_summoner_name}")
+              target.update!(summoner_name: new_summoner_name)
+            end
+          end
+        end
+
         if target.riot_summoner_id.present?
           league_data = riot_service.get_league_entries(
             summoner_id: target.riot_summoner_id,

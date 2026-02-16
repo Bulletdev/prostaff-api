@@ -75,6 +75,14 @@ class RiotApiService
     parse_summoner_response(response)
   end
 
+  def get_account_by_puuid(puuid:, region:)
+    regional_route = regional_route_for_region(region)
+    url = "https://#{regional_route}.api.riotgames.com/riot/account/v1/accounts/by-puuid/#{puuid}"
+
+    response = make_request(url)
+    parse_account_response(response)
+  end
+
   def get_summoner_by_puuid(puuid:, region:)
     platform = platform_for_region(region)
     url = "https://#{platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/#{puuid}"
@@ -188,6 +196,15 @@ class RiotApiService
     # Handle both 'BR' and 'br1' formats
     clean_region = region.to_s.upcase.gsub(/\d+/, '')
     REGIONS.dig(clean_region, :region) || raise(RiotApiError, "Unknown region: #{region}")
+  end
+
+  def parse_account_response(response)
+    data = JSON.parse(response.body)
+    {
+      puuid: data['puuid'],
+      game_name: data['gameName'],
+      tag_line: data['tagLine']
+    }
   end
 
   def parse_summoner_response(response)

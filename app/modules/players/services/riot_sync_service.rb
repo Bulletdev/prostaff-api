@@ -118,15 +118,18 @@ module Players
         return { success: false, error: 'Player missing PUUID' } if player.riot_puuid.blank?
 
         begin
-          # 1. Fetch current rank and profile
+          # 1. Fetch account info to get current gameName#tagLine
+          account_data = fetch_account_by_puuid(player.riot_puuid)
+
+          # 2. Fetch current rank and profile
           summoner_data = fetch_summoner_by_puuid(player.riot_puuid)
           # Use PUUID to fetch rank data (summoner_id is no longer returned by Riot API)
           rank_data = fetch_rank_data_by_puuid(player.riot_puuid)
 
-          # 2. Update player with fresh data
-          update_player_from_riot(player, summoner_data, rank_data)
+          # 3. Update player with fresh data (including summoner_name if changed)
+          update_player_from_riot(player, account_data, summoner_data, rank_data)
 
-          # 3. Optionally fetch recent matches
+          # 4. Optionally fetch recent matches
           matches_imported = 0
           matches_imported = import_player_matches(player, count: 20) if import_matches
 
@@ -144,6 +147,19 @@ module Players
             player: player
           }
         end
+      end
+
+      # Fetch account info (gameName, tagLine) by PUUID
+      def fetch_account_by_puuid(puuid)
+        regional_endpoint = get_regional_endpoint(region)
+
+        # Use whitelisted host to prevent SSRF
+        uri = URI::HTTPS.build(
+          host: regional_api_host(regional_endpoint),
+          path: "/riot/account/v1/accounts/by-puuid/#{ERB::Util.url_encode(puuid)}"
+        )
+        response = make_request(uri.to_s)
+        JSON.parse(response.body)
       end
 
       # Fetch summoner by PUUID
@@ -216,26 +232,26 @@ module Players
 
       # Search for a player by Riot ID (GameName#TagLine)
       def search_riot_id(game_name, tag_line)
-        Rails.logger.info("🎮 Searching for Riot ID: #{game_name}##{tag_line}")
-        Rails.logger.info("🌍 Region: #{region}")
+        Rails.logger.info("Searching for Riot ID: #{game_name}##{tag_line}")
+        Rails.logger.info("Region: #{region}")
 
         regional_endpoint = get_regional_endpoint(region)
-        Rails.logger.info("🗺️  Regional endpoint: #{regional_endpoint}")
+        Rails.logger.info("Regional endpoint: #{regional_endpoint}")
 
         # Use whitelisted host to prevent SSRF
         # Use ERB::Util.url_encode instead of CGI.escape to properly encode spaces as %20 (not +)
         encoded_game_name = ERB::Util.url_encode(game_name)
         encoded_tag_line = ERB::Util.url_encode(tag_line)
 
-        Rails.logger.info("📝 Encoded game_name: '#{game_name}' -> '#{encoded_game_name}'")
-        Rails.logger.info("📝 Encoded tag_line: '#{tag_line}' -> '#{encoded_tag_line}'")
+        Rails.logger.info("Encoded game_name: '#{game_name}' -> '#{encoded_game_name}'")
+        Rails.logger.info("Encoded tag_line: '#{tag_line}' -> '#{encoded_tag_line}'")
 
         uri = URI::HTTPS.build(
           host: regional_api_host(regional_endpoint),
           path: "/riot/account/v1/accounts/by-riot-id/#{encoded_game_name}/#{encoded_tag_line}"
         )
 
-        Rails.logger.info("🔗 Full URL: #{uri}")
+        Rails.logger.info("Full URL: #{uri}")
 
         response = make_request(uri.to_s)
         account_data = JSON.parse(response.body)
@@ -254,9 +270,9 @@ module Players
           rank_data: rank_data
         }
       rescue StandardError => e
-        Rails.logger.error("❌ Failed to search Riot ID #{game_name}##{tag_line}: #{e.message}")
-        Rails.logger.error("❌ Exception class: #{e.class.name}")
-        Rails.logger.error("❌ Backtrace: #{e.backtrace.first(5).join("\n")}")
+        Rails.logger.error("Failed to search Riot ID #{game_name}##{tag_line}: #{e.message}")
+        Rails.logger.error("Exception class: #{e.class.name}")
+        Rails.logger.error("Backtrace: #{e.backtrace.first(5).join("\n")}")
         nil
       end
 
@@ -302,7 +318,7 @@ module Players
       # Log security warning when attempting to import player from another org
       def log_security_warning(summoner_name, riot_data, existing_player)
         Rails.logger.warn(
-          "⚠️  SECURITY: Attempt to import player #{summoner_name} " \
+          "  SECURITY: Attempt to import player #{summoner_name} " \
           "(PUUID: #{riot_data[:puuid]}) that belongs to organization " \
           "#{existing_player.organization.name} by organization #{organization.name}"
         )
@@ -372,8 +388,8 @@ module Players
         request['X-Riot-Token'] = api_key
 
         # Debug logging
-        Rails.logger.info("🔍 Making Riot API request to: #{uri}")
-        Rails.logger.info("🔑 API Key present: #{api_key.present?} (length: #{api_key&.length || 0})")
+        Rails.logger.info(" Making Riot API request to: #{uri}")
+        Rails.logger.info(" API Key present: #{api_key.present?} (length: #{api_key&.length || 0})")
 
         response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
           http.request(request)
@@ -381,7 +397,7 @@ module Players
 
         unless response.is_a?(Net::HTTPSuccess)
           error_message = "Riot API Error: #{response.code} - #{response.body}"
-          Rails.logger.error("❌ Riot API Error - URL: #{uri} - Status: #{response.code} - Body: #{response.body}")
+          Rails.logger.error("Riot API Error - URL: #{uri} - Status: #{response.code} - Body: #{response.body}")
 
           # Create custom exception with status code for better error handling
           error = RiotApiError.new(error_message)
@@ -390,13 +406,13 @@ module Players
           raise error
         end
 
-        Rails.logger.info("✅ Riot API request successful: #{response.code}")
+        Rails.logger.info(" Riot API request successful: #{response.code}")
         response
       end
 
       # Update player with Riot data
-      def update_player_from_riot(player, summoner_data, rank_data)
-        player.update!(
+      def update_player_from_riot(player, account_data, summoner_data, rank_data)
+        update_attrs = {
           summoner_level: summoner_data['summonerLevel'],
           profile_icon_id: summoner_data['profileIconId'],
           solo_queue_tier: rank_data['tier'],
@@ -406,7 +422,18 @@ module Players
           solo_queue_losses: rank_data['losses'],
           last_sync_at: Time.current,
           sync_status: 'success'
-        )
+        }
+
+        # Update summoner_name if it has changed
+        if account_data['gameName'].present? && account_data['tagLine'].present?
+          new_summoner_name = "#{account_data['gameName']}##{account_data['tagLine']}"
+          if player.summoner_name != new_summoner_name
+            Rails.logger.info(" Player #{player.id} name changed: #{player.summoner_name} → #{new_summoner_name}")
+            update_attrs[:summoner_name] = new_summoner_name
+          end
+        end
+
+        player.update!(update_attrs)
       end
 
       # Import a match from Riot data
