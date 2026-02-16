@@ -27,8 +27,8 @@ jobs:
         image: postgres:15-alpine
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: prostaff_test
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: prostaff_api_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -65,20 +65,14 @@ jobs:
       - name: Setup database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
-          REDIS_URL: redis://127.0.0.1:6379/0
-          PGHOST: 127.0.0.1
-          PGUSER: postgres
-          PGPASSWORD: postgres
+          REDIS_URL: redis://localhost:6379/0
         run: |
-          bundle exec rails db:create
-          bundle exec rails db:schema:load
+          bin/rails db:prepare
 
       - name: Run RSpec tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
-          REDIS_URL: redis://127.0.0.1:6379/0
+          REDIS_URL: redis://localhost:6379/0
           COVERAGE: true
         run: bundle exec rspec --format documentation
 
