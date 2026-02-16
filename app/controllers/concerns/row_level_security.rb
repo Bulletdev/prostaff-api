@@ -43,17 +43,17 @@ module RowLevelSecurity
       end
 
       yield
+
+      # Reset PostgreSQL variables within the same transaction
+      begin
+        connection.execute('RESET app.current_user_id;')
+        connection.execute('RESET app.current_organization_id;')
+        connection.execute('RESET app.user_role;')
+      rescue ActiveRecord::StatementInvalid
+        # Ignore reset errors
+      end
     end
   ensure
-    # Reset PostgreSQL variables
-    begin
-      ActiveRecord::Base.connection.execute('RESET app.current_user_id;')
-      ActiveRecord::Base.connection.execute('RESET app.current_organization_id;')
-      ActiveRecord::Base.connection.execute('RESET app.user_role;')
-    rescue ActiveRecord::StatementInvalid
-      # Connection might be closed, ignore
-    end
-
     # Reset thread-local variables
     Thread.current[:current_organization_id] = nil
     Thread.current[:current_user_id] = nil
