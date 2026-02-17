@@ -256,7 +256,9 @@ module Api
           # Filter by watchlist fields if in watchlist mode
           if params[:my_watchlist] == 'true'
             targets = targets.where(scouting_watchlists: { priority: params[:priority] }) if params[:priority].present?
-            targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] }) if params[:assigned_to_id].present?
+            if params[:assigned_to_id].present?
+              targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] })
+            end
           end
 
           targets

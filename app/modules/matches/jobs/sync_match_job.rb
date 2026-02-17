@@ -100,7 +100,6 @@ module Matches
       def create_player_match_stats(match, participants, organization)
         puts "SyncMatchJob: Creating player stats for #{participants.size} participants"
 
-        # Determine if this is a competitive match (5+ org players) or solo queue (1 org player)
         our_player_puuids = organization.players.pluck(:riot_puuid).compact
         our_participants = participants.select { |p| our_player_puuids.include?(p[:puuid]) }
         is_competitive = our_participants.size >= 5
@@ -108,80 +107,69 @@ module Matches
         puts "SyncMatchJob: Match type: #{is_competitive ? 'Competitive (team)' : 'Solo Queue'}"
         puts "SyncMatchJob: Our players in match: #{our_participants.size}"
 
-        # Calculate team totals for shares
-        # For competitive: use only our organization's players
-        # For solo queue: use all players on the same team
-        team_totals = if is_competitive
-                        # Competitive: calculate shares among org players only
-                        our_participants.group_by { |p| p[:team_id] }.transform_values do |team_participants|
-                          {
-                            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
-                            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
-                            total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
-                          }
-                        end
-                      else
-                        # Solo queue: calculate shares among all team members
-                        participants.group_by { |p| p[:team_id] }.transform_values do |team_participants|
-                          {
-                            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
-                            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
-                            total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
-                          }
-                        end
-                      end
+        team_totals = calculate_team_totals(participants, our_participants, is_competitive)
 
         participants.each do |participant_data|
           player = organization.players.find_by(riot_puuid: participant_data[:puuid])
           next unless player
 
-          puts "SyncMatchJob Debug: Player #{player.summoner_name} - Items: #{participant_data[:items]}"
-          puts "SyncMatchJob Debug: Raw Participant Keys: #{participant_data.keys}"
-
-          team_stats = team_totals[participant_data[:team_id]]
-          damage_share = if team_stats && team_stats[:total_damage].positive?
-                           participant_data[:total_damage_dealt] / team_stats[:total_damage]
-                         else
-                           0
-                         end
-          gold_share = if team_stats && team_stats[:total_gold].positive?
-                         participant_data[:gold_earned] / team_stats[:total_gold]
-                       else
-                         0
-                       end
-
-          # Calculate CS (minions + jungle minions)
-          cs_total = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
-
-          PlayerMatchStat.create!(
-            match: match,
-            player: player,
-            role: normalize_role(participant_data[:role]),
-            champion: participant_data[:champion_name],
-            kills: participant_data[:kills],
-            deaths: participant_data[:deaths],
-            assists: participant_data[:assists],
-            gold_earned: participant_data[:gold_earned],
-            damage_dealt_total: participant_data[:total_damage_dealt],
-            damage_taken: participant_data[:total_damage_taken],
-            cs: cs_total,
-            vision_score: participant_data[:vision_score],
-            wards_placed: participant_data[:wards_placed],
-            wards_destroyed: participant_data[:wards_killed],
-            first_blood: participant_data[:first_blood_kill],
-            double_kills: participant_data[:double_kills],
-            triple_kills: participant_data[:triple_kills],
-            quadra_kills: participant_data[:quadra_kills],
-            penta_kills: participant_data[:penta_kills],
-            performance_score: calculate_performance_score(participant_data),
-            items: participant_data[:items],
-            runes: participant_data[:runes],
-            summoner_spell_1: participant_data[:summoner_spell_1],
-            summoner_spell_2: participant_data[:summoner_spell_2],
-            damage_share: damage_share,
-            gold_share: gold_share
-          )
+          create_stat_for_participant(match, player, participant_data, team_totals)
         end
+      end
+
+      def calculate_team_totals(participants, our_participants, is_competitive)
+        source = is_competitive ? our_participants : participants
+        source.group_by { |p| p[:team_id] }.transform_values do |team_participants|
+          {
+            total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
+            total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
+            total_cs: team_participants.sum { |p|
+                        (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0)
+                      }.to_f
+          }
+        end
+      end
+
+      def create_stat_for_participant(match, player, participant_data, team_totals)
+        team_stats = team_totals[participant_data[:team_id]]
+        damage_share = calc_share(participant_data[:total_damage_dealt], team_stats&.dig(:total_damage))
+        gold_share = calc_share(participant_data[:gold_earned], team_stats&.dig(:total_gold))
+        cs_total = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
+
+        PlayerMatchStat.create!(
+          match: match,
+          player: player,
+          role: normalize_role(participant_data[:role]),
+          champion: participant_data[:champion_name],
+          kills: participant_data[:kills],
+          deaths: participant_data[:deaths],
+          assists: participant_data[:assists],
+          gold_earned: participant_data[:gold_earned],
+          damage_dealt_total: participant_data[:total_damage_dealt],
+          damage_taken: participant_data[:total_damage_taken],
+          cs: cs_total,
+          vision_score: participant_data[:vision_score],
+          wards_placed: participant_data[:wards_placed],
+          wards_destroyed: participant_data[:wards_killed],
+          first_blood: participant_data[:first_blood_kill],
+          double_kills: participant_data[:double_kills],
+          triple_kills: participant_data[:triple_kills],
+          quadra_kills: participant_data[:quadra_kills],
+          penta_kills: participant_data[:penta_kills],
+          performance_score: calculate_performance_score(participant_data),
+          items: participant_data[:items],
+          runes: participant_data[:runes],
+          summoner_spell_1: participant_data[:summoner_spell_1],
+          summoner_spell_2: participant_data[:summoner_spell_2],
+          damage_share: damage_share,
+          gold_share: gold_share
+        )
+      end
+
+      def calc_share(value, total)
+        return 0 unless total&.positive?
+
+        value / total
       end
 
       def determine_match_type(game_mode, participants, organization)
