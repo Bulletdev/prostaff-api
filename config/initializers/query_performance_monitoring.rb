@@ -69,7 +69,7 @@ module QueryPerformanceMonitoring
 
       # Normalize query for grouping (remove values)
       normalized = normalize_query(payload[:sql])
-      stats_key = "query_stats:#{Digest::MD5.hexdigest(normalized)}"
+      stats_key = "query_stats:#{Digest::SHA256.hexdigest(normalized)}"
 
       # Update counters and query info
       Rails.cache.redis.pipelined do |pipeline|
