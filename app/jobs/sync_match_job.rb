@@ -6,6 +6,31 @@ class SyncMatchJob < ApplicationJob
   retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
   retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
 
+  ROLE_MAPPING = {
+    'top' => 'top', 'toplaner' => 'top', 'topo' => 'top',
+    'jungle' => 'jungle', 'selva' => 'jungle', 'jungler' => 'jungle',
+    'middle' => 'mid', 'mid' => 'mid', 'meio' => 'mid',
+    'bottom' => 'adc', 'adc' => 'adc', 'adcarry' => 'adc', 'carry' => 'adc', 'atirador' => 'adc',
+    'utility' => 'support', 'support' => 'support', 'suporte' => 'support'
+  }.freeze
+
+  SPELL_MAPPING = {
+    1 => 'SummonerBoost',       # Cleanse
+    3 => 'SummonerExhaust',     # Exhaust
+    4 => 'SummonerFlash',       # Flash
+    6 => 'SummonerHaste',       # Ghost
+    7 => 'SummonerHeal',        # Heal
+    11 => 'SummonerSmite',      # Smite
+    12 => 'SummonerTeleport',   # Teleport
+    13 => 'SummonerMana',       # Clarity
+    14 => 'SummonerDot',        # Ignite
+    21 => 'SummonerBarrier',    # Barrier
+    30 => 'SummonerPoroRecall', # To the King!
+    31 => 'SummonerPoroThrow',  # Poro Toss
+    32 => 'SummonerSnowball',   # Mark/Dash (ARAM)
+    39 => 'SummonerSnowURFBattle' # Ultra Rapid Fire
+  }.freeze
+
   def perform(match_id, organization_id, region = 'BR')
     organization = Organization.find(organization_id)
 
@@ -60,50 +85,55 @@ class SyncMatchJob < ApplicationJob
     created_count = 0
 
     participants.each do |participant_data|
-      # Find player by PUUID
       player = organization.players.find_by(riot_puuid: participant_data[:puuid])
-
-      if player.nil?
+      unless player
         Rails.logger.debug "Participant PUUID #{participant_data[:puuid][0..20]}... not found in organization"
         next
       end
 
-      Rails.logger.info "Creating stat for player: #{player.summoner_name}"
-
-      PlayerMatchStat.create!(
-        match: match,
-        player: player,
-        role: normalize_role(participant_data[:role]),
-        champion: participant_data[:champion_name],
-        kills: participant_data[:kills],
-        deaths: participant_data[:deaths],
-        assists: participant_data[:assists],
-        gold_earned: participant_data[:gold_earned],
-        damage_dealt_champions: participant_data[:total_damage_dealt],
-        damage_dealt_total: participant_data[:total_damage_dealt],
-        damage_taken: participant_data[:total_damage_taken],
-        cs: participant_data[:minions_killed].to_i + participant_data[:neutral_minions_killed].to_i,
-        vision_score: participant_data[:vision_score],
-        wards_placed: participant_data[:wards_placed],
-        wards_destroyed: participant_data[:wards_killed],
-        first_blood: participant_data[:first_blood_kill],
-        double_kills: participant_data[:double_kills],
-        triple_kills: participant_data[:triple_kills],
-        quadra_kills: participant_data[:quadra_kills],
-        penta_kills: participant_data[:penta_kills],
-        items: participant_data[:items] || [],
-        item_build_order: participant_data[:item_build_order] || [],
-        trinket: participant_data[:trinket],
-        summoner_spell_1: map_summoner_spell(participant_data[:summoner_spell_1]),
-        summoner_spell_2: map_summoner_spell(participant_data[:summoner_spell_2]),
-        runes: participant_data[:runes] || [],
-        performance_score: calculate_performance_score(participant_data)
-      )
+      create_participant_stat(match, player, participant_data)
       created_count += 1
-      Rails.logger.info "Stat created successfully for #{player.summoner_name}"
     end
 
     Rails.logger.info "Created #{created_count} player match stats"
+  end
+
+  def create_participant_stat(match, player, participant_data)
+    Rails.logger.info "Creating stat for player: #{player.summoner_name}"
+    PlayerMatchStat.create!(build_stat_attributes(match, player, participant_data))
+    Rails.logger.info "Stat created successfully for #{player.summoner_name}"
+  end
+
+  def build_stat_attributes(match, player, pd)
+    {
+      match: match,
+      player: player,
+      role: normalize_role(pd[:role]),
+      champion: pd[:champion_name],
+      kills: pd[:kills],
+      deaths: pd[:deaths],
+      assists: pd[:assists],
+      gold_earned: pd[:gold_earned],
+      damage_dealt_champions: pd[:total_damage_dealt],
+      damage_dealt_total: pd[:total_damage_dealt],
+      damage_taken: pd[:total_damage_taken],
+      cs: pd[:minions_killed].to_i + pd[:neutral_minions_killed].to_i,
+      vision_score: pd[:vision_score],
+      wards_placed: pd[:wards_placed],
+      wards_destroyed: pd[:wards_killed],
+      first_blood: pd[:first_blood_kill],
+      double_kills: pd[:double_kills],
+      triple_kills: pd[:triple_kills],
+      quadra_kills: pd[:quadra_kills],
+      penta_kills: pd[:penta_kills],
+      items: pd[:items] || [],
+      item_build_order: pd[:item_build_order] || [],
+      trinket: pd[:trinket],
+      summoner_spell_1: map_summoner_spell(pd[:summoner_spell_1]),
+      summoner_spell_2: map_summoner_spell(pd[:summoner_spell_2]),
+      runes: pd[:runes] || [],
+      performance_score: calculate_performance_score(pd)
+    }
   end
 
   def determine_match_type(game_mode)
@@ -125,27 +155,7 @@ class SyncMatchJob < ApplicationJob
   end
 
   def normalize_role(role)
-    role_mapping = {
-      'top' => 'top',
-      'toplaner' => 'top',
-      'topo' => 'top',
-      'jungle' => 'jungle',
-      'selva' => 'jungle',
-      'middle' => 'mid',
-      'mid' => 'mid',
-      'meio' => 'mid',
-      'bottom' => 'adc',
-      'adc' => 'adc',
-      'adcarry' => 'adc',
-      'carry' => 'adc',
-      'atirador' => 'adc',
-      'utility' => 'support',
-      'support' => 'support',
-      'suporte' => 'support'
-
-    }
-
-    role_mapping[role&.downcase] || 'mid'
+    ROLE_MAPPING[role&.downcase] || 'mid'
   end
 
   def calculate_performance_score(participant_data)
@@ -171,26 +181,8 @@ class SyncMatchJob < ApplicationJob
     total / deaths
   end
 
-  # Map summoner spell ID to name
-  # Based on Riot's Data Dragon summoner spell IDs
+  # Map summoner spell ID to name (Riot Data Dragon spell IDs)
   def map_summoner_spell(spell_id)
-    spell_mapping = {
-      1 => 'SummonerBoost',        # Cleanse
-      3 => 'SummonerExhaust',      # Exhaust
-      4 => 'SummonerFlash',        # Flash
-      6 => 'SummonerHaste',        # Ghost
-      7 => 'SummonerHeal',         # Heal
-      11 => 'SummonerSmite',       # Smite
-      12 => 'SummonerTeleport',    # Teleport
-      13 => 'SummonerMana',        # Clarity
-      14 => 'SummonerDot',         # Ignite
-      21 => 'SummonerBarrier',     # Barrier
-      30 => 'SummonerPoroRecall',  # To the King!
-      31 => 'SummonerPoroThrow',   # Poro Toss
-      32 => 'SummonerSnowball',    # Mark/Dash (ARAM)
-      39 => 'SummonerSnowURFBattle' # Ultra Rapid Fire
-    }
-
-    spell_mapping[spell_id] || "SummonerSpell#{spell_id}"
+    SPELL_MAPPING[spell_id] || "SummonerSpell#{spell_id}"
   end
 end
