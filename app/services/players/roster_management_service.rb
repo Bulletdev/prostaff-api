@@ -175,18 +175,27 @@ module Players
     # Create a scouting target from removed player
     # Now creates/updates GLOBAL target + watchlist entry for current org
     def create_scouting_target_from_player(previous_org_name:, removal_reason:)
-      # Find or create global scouting target
-      target = ScoutingTarget.find_or_initialize_by(riot_puuid: player.riot_puuid) if player.riot_puuid.present?
-      target ||= ScoutingTarget.new
+      target = find_or_build_scouting_target
+      assign_scouting_target_attributes(target)
+      target.save!
 
-      # Calculate performance data
+      upsert_watchlist_for_target(target, previous_org_name, removal_reason)
+
+      target
+    end
+
+    def find_or_build_scouting_target
+      if player.riot_puuid.present?
+        ScoutingTarget.find_or_initialize_by(riot_puuid: player.riot_puuid)
+      else
+        ScoutingTarget.new
+      end
+    end
+
+    def assign_scouting_target_attributes(target)
       recent_perf = calculate_recent_performance(player)
-      champion_stats = calculate_champion_stats(player)
+      recent_perf[:champion_pool_stats] = calculate_champion_stats(player)
 
-      # Merge champion stats into recent performance
-      recent_perf[:champion_pool_stats] = champion_stats
-
-      # Update global player data
       target.assign_attributes(
         summoner_name: player.summoner_name,
         region: normalize_region(player.region),
@@ -204,10 +213,9 @@ module Players
         real_name: player.real_name,
         avatar_url: player.avatar_url
       )
+    end
 
-      target.save!
-
-      # Create or update watchlist entry for this organization
+    def upsert_watchlist_for_target(target, previous_org_name, removal_reason)
       watchlist = target.scouting_watchlists.find_or_initialize_by(organization: organization)
       watchlist.assign_attributes(
         added_by: current_user,
@@ -216,8 +224,6 @@ module Players
         notes: build_free_agent_notes(previous_org_name, removal_reason, watchlist.notes)
       )
       watchlist.save!
-
-      target
     end
 
     # Build notes for free agent scouting target
@@ -262,30 +268,25 @@ module Players
     # @param limit [Integer] Number of recent games to analyze (default: 50)
     # @return [Array<Hash>] Array of champion stats with name, games, wins, winrate
     def calculate_champion_stats(player, limit: 50)
-      recent_stats = player.player_match_stats
-                           .joins(:match)
-                           .order('matches.game_start DESC')
-                           .limit(limit)
-
+      recent_stats = fetch_recent_stats(player, limit)
       return [] if recent_stats.empty?
 
-      # Group by champion
-      champion_data = recent_stats.group_by(&:champion)
+      recent_stats.group_by(&:champion)
+                  .map { |champion, stats| build_champion_entry(champion, stats) }
+                  .sort_by { |c| -c[:games] }
+                  .take(10)
+    end
 
-      champion_data.map do |champion, stats|
-        games = stats.count
-        wins = stats.count { |s| s.match&.victory? }
-        losses = games - wins
-        winrate = games.zero? ? 0.0 : ((wins.to_f / games) * 100).round(1)
-
-        {
-          champion: champion,
-          games: games,
-          wins: wins,
-          losses: losses,
-          winrate: winrate
-        }
-      end.sort_by { |c| -c[:games] }.take(10) # Top 10 most played
+    def build_champion_entry(champion, stats)
+      games = stats.count
+      wins = stats.count { |s| s.match&.victory? }
+      {
+        champion: champion,
+        games: games,
+        wins: wins,
+        losses: games - wins,
+        winrate: games.zero? ? 0.0 : ((wins.to_f / games) * 100).round(1)
+      }
     end
 
     # Calculate recent performance statistics from last 50 games
@@ -293,27 +294,24 @@ module Players
     # @param limit [Integer] Number of recent games to analyze (default: 50)
     # @return [Hash] Performance statistics
     def calculate_recent_performance(player, limit: 50)
-      recent_stats = player.player_match_stats
-                           .joins(:match)
-                           .order('matches.game_start DESC')
-                           .limit(limit)
-
+      recent_stats = fetch_recent_stats(player, limit)
       return {} if recent_stats.empty?
 
       total_games = recent_stats.count
       wins = recent_stats.count { |stat| stat.match&.victory? }
 
-      # Calculate KDA manually since it's a virtual method
-      total_kills = recent_stats.sum(:kills)
-      total_deaths = recent_stats.sum(:deaths)
-      total_assists = recent_stats.sum(:assists)
-      avg_kda = if total_deaths.zero?
-                  total_kills + total_assists
-                else
-                  ((total_kills + total_assists).to_f / total_deaths).round(2)
-                end
+      build_performance_hash(recent_stats, total_games, wins)
+    end
 
-      # Calculate averages only for non-null values
+    def fetch_recent_stats(player, limit)
+      player.player_match_stats
+            .joins(:match)
+            .order('matches.game_start DESC')
+            .limit(limit)
+    end
+
+    def build_performance_hash(recent_stats, total_games, wins)
+      avg_kda = compute_avg_kda(recent_stats)
       damage_shares = recent_stats.pluck(:damage_share).compact
       kill_participations = recent_stats.pluck(:kill_participation).compact
 
@@ -325,10 +323,22 @@ module Players
         avg_kda: avg_kda,
         avg_cs_per_min: recent_stats.average(:cs_per_min)&.to_f&.round(1) || 0.0,
         avg_vision_score: recent_stats.average(:vision_score)&.to_f&.round(1) || 0.0,
-        avg_damage_share: damage_shares.any? ? (damage_shares.sum / damage_shares.size).round(1) : 0.0,
+        avg_damage_share: avg_value_from(damage_shares),
         avg_kill_participation: avg_value_from(kill_participations),
         last_game_date: last_game_date_for(recent_stats)
       }
+    end
+
+    def compute_avg_kda(recent_stats)
+      total_kills = recent_stats.sum(:kills)
+      total_deaths = recent_stats.sum(:deaths)
+      total_assists = recent_stats.sum(:assists)
+
+      if total_deaths.zero?
+        total_kills + total_assists
+      else
+        ((total_kills + total_assists).to_f / total_deaths).round(2)
+      end
     end
 
     # Calculate performance trend based on recent games
@@ -446,16 +456,17 @@ module Players
         action: 'roster_removal',
         entity_type: 'Player',
         entity_id: player.id,
-        old_values: {
-          status: 'active',
-          organization_id: previous_org_id
-        },
-        new_values: {
-          status: 'removed',
-          deleted_at: player.deleted_at,
-          removed_reason: reason
-        }
+        old_values: removal_old_values(previous_org_id),
+        new_values: removal_new_values(reason)
       )
+    end
+
+    def removal_old_values(previous_org_id)
+      { status: 'active', organization_id: previous_org_id }
+    end
+
+    def removal_new_values(reason)
+      { status: 'removed', deleted_at: player.deleted_at, removed_reason: reason }
     end
 
     # Log roster addition action
@@ -468,21 +479,26 @@ module Players
         action: 'roster_addition',
         entity_type: 'Player',
         entity_id: player.id,
-        old_values: {
-          status: player.status_was,
-          organization_id: player.previous_organization_id
-        },
-        new_values: {
-          status: player.status,
-          organization_id: player.organization_id,
-          contract_start_date: player.contract_start_date,
-          contract_end_date: player.contract_end_date,
-          source: 'scouting_target',
-          scouting_target_id: scouting_target.id
-        }
+        old_values: addition_old_values(player),
+        new_values: addition_new_values(player, scouting_target)
       )
     end
 
-    private_class_method :find_or_restore_player, :log_roster_addition
+    def self.addition_old_values(player)
+      { status: player.status_was, organization_id: player.previous_organization_id }
+    end
+
+    def self.addition_new_values(player, scouting_target)
+      {
+        status: player.status,
+        organization_id: player.organization_id,
+        contract_start_date: player.contract_start_date,
+        contract_end_date: player.contract_end_date,
+        source: 'scouting_target',
+        scouting_target_id: scouting_target.id
+      }
+    end
+
+    private_class_method :find_or_restore_player, :log_roster_addition, :addition_old_values, :addition_new_values
   end
 end

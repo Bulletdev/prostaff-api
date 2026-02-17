@@ -10,53 +10,50 @@ module RowLevelSecurity
   def with_rls_context
     return yield unless current_user && current_organization
 
-    # Set thread-local variable for application-level scoping
-    # This is the primary mechanism since RLS might not work with poolers
+    set_thread_locals
+    run_with_rls_transaction { yield }
+  ensure
+    clear_thread_locals
+  end
+
+  private
+
+  def set_thread_locals
     Thread.current[:current_organization_id] = current_organization.id
     Thread.current[:current_user_id] = current_user.id
     Thread.current[:current_user_role] = current_user.role
+  end
 
-    # Try to set PostgreSQL session variables for RLS
-    # This works in direct connections but may fail with transaction-mode poolers
-    ActiveRecord::Base.transaction do
-      begin
-        connection = ActiveRecord::Base.connection
-        # Use parameterized queries to prevent SQL injection
-        connection.exec_query(
-          'SET LOCAL app.current_user_id = $1',
-          'SET LOCAL',
-          [[nil, current_user.id.to_s]]
-        )
-        connection.exec_query(
-          'SET LOCAL app.current_organization_id = $1',
-          'SET LOCAL',
-          [[nil, current_organization.id.to_s]]
-        )
-        connection.exec_query(
-          'SET LOCAL app.user_role = $1',
-          'SET LOCAL',
-          [[nil, current_user.role.to_s]]
-        )
-      rescue ActiveRecord::StatementInvalid => e
-        # SET LOCAL might fail outside transactions on some poolers
-        Rails.logger.warn("RLS SET LOCAL failed: #{e.message}. Using thread-local only.")
-      end
-
-      yield
-
-      # Reset PostgreSQL variables within the same transaction
-      begin
-        connection.execute('RESET app.current_user_id;')
-        connection.execute('RESET app.current_organization_id;')
-        connection.execute('RESET app.user_role;')
-      rescue ActiveRecord::StatementInvalid
-        # Ignore reset errors
-      end
-    end
-  ensure
-    # Reset thread-local variables
+  def clear_thread_locals
     Thread.current[:current_organization_id] = nil
     Thread.current[:current_user_id] = nil
     Thread.current[:current_user_role] = nil
+  end
+
+  def run_with_rls_transaction
+    ActiveRecord::Base.transaction do
+      set_postgres_session_vars
+      yield
+      reset_postgres_session_vars
+    end
+  end
+
+  def set_postgres_session_vars
+    connection = ActiveRecord::Base.connection
+    connection.exec_query('SET LOCAL app.current_user_id = $1', 'SET LOCAL', [[nil, current_user.id.to_s]])
+    connection.exec_query('SET LOCAL app.current_organization_id = $1', 'SET LOCAL',
+                          [[nil, current_organization.id.to_s]])
+    connection.exec_query('SET LOCAL app.user_role = $1', 'SET LOCAL', [[nil, current_user.role.to_s]])
+  rescue ActiveRecord::StatementInvalid => e
+    Rails.logger.warn("RLS SET LOCAL failed: #{e.message}. Using thread-local only.")
+  end
+
+  def reset_postgres_session_vars
+    connection = ActiveRecord::Base.connection
+    connection.execute('RESET app.current_user_id;')
+    connection.execute('RESET app.current_organization_id;')
+    connection.execute('RESET app.user_role;')
+  rescue ActiveRecord::StatementInvalid
+    # Ignore reset errors
   end
 end

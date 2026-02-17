@@ -56,31 +56,14 @@ module Api
         # Creates/finds global target and adds to org watchlist
         def create
           ActiveRecord::Base.transaction do
-            # Find or create global scouting target
             target = find_or_create_target!
-
-            # Create watchlist entry for this organization
-            watchlist = target.scouting_watchlists.create!(
-              organization: current_organization,
-              added_by: current_user,
-              priority: watchlist_params[:priority] || 'medium',
-              status: watchlist_params[:status] || 'watching',
-              notes: watchlist_params[:notes],
-              assigned_to_id: watchlist_params[:assigned_to_id]
+            watchlist = create_watchlist_for(target)
+            log_user_action(action: 'create', entity_type: 'ScoutingWatchlist',
+                            entity_id: watchlist.id, new_values: watchlist.attributes)
+            render_created(
+              { scouting_target: JSON.parse(ScoutingTargetSerializer.render(target, watchlist: watchlist)) },
+              message: 'Scouting target added successfully'
             )
-
-            log_user_action(
-              action: 'create',
-              entity_type: 'ScoutingWatchlist',
-              entity_id: watchlist.id,
-              new_values: watchlist.attributes
-            )
-
-            render_created({
-                             scouting_target: JSON.parse(
-                               ScoutingTargetSerializer.render(target, watchlist: watchlist)
-                             )
-                           }, message: 'Scouting target added successfully')
           end
         rescue ActiveRecord::RecordInvalid => e
           render_error(
@@ -95,36 +78,9 @@ module Api
         # Updates global target data OR watchlist data
         def update
           ActiveRecord::Base.transaction do
-            # Update global target fields if provided
-            if target_params.any?
-              @target.update!(target_params)
-            end
-
-            # Update watchlist fields if provided
-            if watchlist_params.any?
-              watchlist = @target.scouting_watchlists.find_or_create_by!(organization: current_organization) do |w|
-                w.added_by = current_user
-              end
-
-              old_values = watchlist.attributes.dup
-              watchlist.update!(watchlist_params)
-
-              log_user_action(
-                action: 'update',
-                entity_type: 'ScoutingWatchlist',
-                entity_id: watchlist.id,
-                old_values: old_values,
-                new_values: watchlist.attributes
-              )
-            end
-
-            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
-
-            render_updated({
-                             scouting_target: JSON.parse(
-                               ScoutingTargetSerializer.render(@target, watchlist: watchlist)
-                             )
-                           })
+            @target.update!(target_params) if target_params.any?
+            update_watchlist_if_params_present
+            render_updated(serialized_target_response)
           end
         rescue ActiveRecord::RecordInvalid => e
           render_error(
@@ -140,28 +96,17 @@ module Api
         def destroy
           watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
 
-          if watchlist
-            watchlist.destroy
-
-            log_user_action(
-              action: 'delete',
-              entity_type: 'ScoutingWatchlist',
-              entity_id: watchlist.id,
-              old_values: watchlist.attributes
-            )
-
-            render_deleted(message: 'Removed from watchlist')
-          else
-            render_error(
-              message: 'Not in your watchlist',
-              code: 'NOT_FOUND',
-              status: :not_found
-            )
+          unless watchlist
+            return render_error(message: 'Not in your watchlist', code: 'NOT_FOUND', status: :not_found)
           end
+
+          watchlist.destroy
+          log_user_action(action: 'delete', entity_type: 'ScoutingWatchlist',
+                          entity_id: watchlist.id, old_values: watchlist.attributes)
+          render_deleted(message: 'Removed from watchlist')
         end
 
         def sync
-          # Sync player data from Riot API
           unless @target.riot_puuid.present?
             return render_error(
               message: 'Cannot sync player without Riot PUUID',
@@ -170,62 +115,68 @@ module Api
             )
           end
 
-          riot_service = RiotApiService.new
-          region = @target.region
-
-          begin
-            # Fetch updated summoner data
-            summoner_data = riot_service.get_summoner_by_puuid(
-              puuid: @target.riot_puuid,
-              region: region
-            )
-
-            # Fetch ranked stats
-            league_data = riot_service.get_league_entries(
-              summoner_id: summoner_data[:summoner_id],
-              region: region
-            )
-
-            # Fetch champion mastery
-            mastery_data = riot_service.get_champion_mastery(
-              puuid: @target.riot_puuid,
-              region: region
-            )
-
-            # Update target with fresh data
-            @target.update!(
-              riot_summoner_id: summoner_data[:summoner_id],
-              summoner_name: summoner_data[:summoner_name],
-              current_tier: league_data[:solo_queue]&.dig(:tier),
-              current_rank: league_data[:solo_queue]&.dig(:rank),
-              current_lp: league_data[:solo_queue]&.dig(:lp),
-              champion_pool: extract_champion_pool(mastery_data),
-              performance_trend: calculate_performance_trend(league_data)
-            )
-
-            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
-
-            render_success({
-                             scouting_target: JSON.parse(
-                               ScoutingTargetSerializer.render(@target, watchlist: watchlist)
-                             )
-                           }, message: 'Player data synced successfully')
-          rescue RiotApiService::NotFoundError
-            render_error(
-              message: 'Player not found in Riot API',
-              code: 'PLAYER_NOT_FOUND',
-              status: :not_found
-            )
-          rescue RiotApiService::RiotApiError => e
-            render_error(
-              message: "Failed to sync player data: #{e.message}",
-              code: 'RIOT_API_ERROR',
-              status: :service_unavailable
-            )
-          end
+          perform_sync_from_riot
+        rescue RiotApiService::NotFoundError
+          render_error(message: 'Player not found in Riot API', code: 'PLAYER_NOT_FOUND', status: :not_found)
+        rescue RiotApiService::RiotApiError => e
+          render_error(message: "Failed to sync player data: #{e.message}", code: 'RIOT_API_ERROR',
+                       status: :service_unavailable)
         end
 
         private
+
+        def create_watchlist_for(target)
+          target.scouting_watchlists.create!(
+            organization: current_organization,
+            added_by: current_user,
+            priority: watchlist_params[:priority] || 'medium',
+            status: watchlist_params[:status] || 'watching',
+            notes: watchlist_params[:notes],
+            assigned_to_id: watchlist_params[:assigned_to_id]
+          )
+        end
+
+        def update_watchlist_if_params_present
+          return unless watchlist_params.any?
+
+          watchlist = @target.scouting_watchlists.find_or_create_by!(organization: current_organization) do |w|
+            w.added_by = current_user
+          end
+          old_values = watchlist.attributes.dup
+          watchlist.update!(watchlist_params)
+          log_user_action(action: 'update', entity_type: 'ScoutingWatchlist',
+                          entity_id: watchlist.id, old_values: old_values, new_values: watchlist.attributes)
+        end
+
+        def serialized_target_response
+          watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+          { scouting_target: JSON.parse(ScoutingTargetSerializer.render(@target, watchlist: watchlist)) }
+        end
+
+        def perform_sync_from_riot
+          riot_service = RiotApiService.new
+          region = @target.region
+
+          summoner_data = riot_service.get_summoner_by_puuid(puuid: @target.riot_puuid, region: region)
+          league_data = riot_service.get_league_entries(summoner_id: summoner_data[:summoner_id], region: region)
+          mastery_data = riot_service.get_champion_mastery(puuid: @target.riot_puuid, region: region)
+
+          @target.update!(
+            riot_summoner_id: summoner_data[:summoner_id],
+            summoner_name: summoner_data[:summoner_name],
+            current_tier: league_data[:solo_queue]&.dig(:tier),
+            current_rank: league_data[:solo_queue]&.dig(:rank),
+            current_lp: league_data[:solo_queue]&.dig(:lp),
+            champion_pool: extract_champion_pool(mastery_data),
+            performance_trend: calculate_performance_trend(league_data)
+          )
+
+          watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+          render_success(
+            { scouting_target: JSON.parse(ScoutingTargetSerializer.render(@target, watchlist: watchlist)) },
+            message: 'Player data synced successfully'
+          )
+        end
 
         def find_or_create_target!
           if scouting_target_params[:riot_puuid].present?
