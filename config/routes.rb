@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   # Simple health check without DB dependency (for Railway healthcheck)
   get 'up' => proc { [200, { 'Content-Type' => 'text/plain' }, ['ok']] }, as: :rails_health_check
   get 'health' => proc { [200, { 'Content-Type' => 'application/json' }, ['{"status":"ok","service":"ProStaff API"}']] }
-  get 'health/detailed' => 'health#show'  # Detailed health with DB check
+  get 'health/detailed' => 'health#show' # Detailed health with DB check
 
   # SEO - Sitemap
   get 'sitemap.xml', to: 'sitemap#index', defaults: { format: 'xml' }

@@ -35,110 +35,22 @@ module Api
                                 status: :bad_request)
           end
 
-          # Find matches for this champion (case-insensitive search)
-          matches = PlayerMatchStat.where(player: player)
-                                   .where('LOWER(champion) = ?', champion.downcase)
-                                   .joins(:match)
-                                   .includes(:match)
-                                   .order('matches.game_start DESC')
-                                   .limit(params[:limit] || 20)
+          matches = fetch_champion_matches(player, champion)
 
           if matches.empty?
             return render_error(message: "No matches found for champion #{champion}", code: 'NO_MATCHES',
                                 status: :not_found)
           end
 
-          # Calculate aggregate stats for this champion
-          matches_array = matches.to_a
-          total_kills = matches_array.sum(&:kills)
-          total_deaths = matches_array.sum(&:deaths)
-          total_assists = matches_array.sum(&:assists)
-          avg_kda = if matches_array.any?
-                      ((total_kills + total_assists).to_f / [total_deaths,
-                                                             1].max).round(2)
-                    else
-                      0
-                    end
-
-          aggregate_stats = {
-            total_games: matches_array.count,
-            wins: matches_array.count { |m| m.match&.victory? },
-            losses: matches_array.count { |m| !m.match&.victory? },
-            win_rate: if matches_array.any?
-                        (matches_array.count do |m|
-                          m.match&.victory?
-                        end.to_f / matches_array.count)
-                      else
-                        0
-                      end,
-            avg_kda: avg_kda,
-            avg_kills: matches_array.sum(&:kills).to_f / [matches_array.count, 1].max,
-            avg_deaths: matches_array.sum(&:deaths).to_f / [matches_array.count, 1].max,
-            avg_assists: matches_array.sum(&:assists).to_f / [matches_array.count, 1].max,
-            avg_cs_per_min: matches.average(:cs_per_min)&.round(1) || 0,
-            avg_damage_dealt: matches.average(:damage_dealt_total)&.round(0) || 0,
-            avg_damage_taken: matches.average(:damage_taken)&.round(0) || 0,
-            avg_gold_per_min: matches.average(:gold_per_min)&.round(0) || 0,
-            avg_vision_score: matches.average(:vision_score)&.round(1) || 0
-          }
-
           riot_service = RiotCdnService.new
-
-          matches_data = matches.map do |stat|
-            next nil unless stat.match # Skip if match is nil
-
-            {
-              match_id: stat.match.id,
-              game_id: stat.match.riot_match_id,
-              date: stat.match.game_start&.strftime('%Y-%m-%d %H:%M'),
-              victory: stat.match.victory?,
-              game_duration: stat.match.game_duration || 0,
-              kda: stat.kda_display,
-              kda_ratio: (stat.kda_ratio || 0).round(2),
-              kills: stat.kills || 0,
-              deaths: stat.deaths || 0,
-              assists: stat.assists || 0,
-              cs: stat.cs || 0,
-              cs_per_min: (stat.cs_per_min || 0).round(1),
-              damage_dealt: stat.damage_dealt_total || 0,
-              damage_taken: stat.damage_taken || 0,
-              gold_earned: stat.gold_earned || 0,
-              gold_per_min: (stat.gold_per_min || 0).round(0),
-              vision_score: stat.vision_score || 0,
-              performance_score: stat.performance_score || 0,
-              # Additional stats
-              kill_participation: stat.kill_participation || 0,
-              damage_share: stat.damage_share || 0,
-              gold_share: stat.gold_share || 0,
-              wards_placed: stat.wards_placed || 0,
-              wards_destroyed: stat.wards_destroyed || 0,
-              control_wards: stat.control_wards_purchased || 0,
-              healing_done: stat.healing_done || 0,
-              double_kills: stat.double_kills || 0,
-              triple_kills: stat.triple_kills || 0,
-              quadra_kills: stat.quadra_kills || 0,
-              penta_kills: stat.penta_kills || 0,
-              first_blood: stat.first_blood || false,
-              first_tower: stat.first_tower || false,
-              largest_killing_spree: stat.largest_killing_spree || 0,
-              largest_multi_kill: stat.largest_multi_kill || 0,
-              # Items, runes and spells
-              items: (stat.items || []).map { |id| { id: id, icon_url: riot_service.item_icon_url(id) } },
-              runes: (stat.runes || []).map { |id| { id: id, icon_url: riot_service.rune_icon_url(id) } },
-              spells: [
-                { name: stat.summoner_spell_1, icon_url: riot_service.spell_icon_url(stat.summoner_spell_1&.to_i) },
-                { name: stat.summoner_spell_2, icon_url: riot_service.spell_icon_url(stat.summoner_spell_2&.to_i) }
-              ].select { |s| s[:name].present? },
-              role: stat.role
-            }
-          end.compact
+          matches_array = matches.to_a
 
           render_success({
                            player: PlayerSerializer.render_as_hash(player),
                            champion: champion,
                            icon_url: riot_service.champion_icon_url(champion),
-                           aggregate_stats: aggregate_stats,
-                           matches: matches_data
+                           aggregate_stats: build_aggregate_stats(matches, matches_array),
+                           matches: serialize_champion_matches(matches_array, riot_service)
                          })
         rescue ActiveRecord::RecordNotFound
           render_error(message: 'Player not found', code: 'PLAYER_NOT_FOUND', status: :not_found)
@@ -150,6 +62,100 @@ module Api
         end
 
         private
+
+        def fetch_champion_matches(player, champion)
+          PlayerMatchStat.where(player: player)
+                         .where('LOWER(champion) = ?', champion.downcase)
+                         .joins(:match)
+                         .includes(:match)
+                         .order('matches.game_start DESC')
+                         .limit(params[:limit] || 20)
+        end
+
+        def build_aggregate_stats(matches, matches_array)
+          total_kills = matches_array.sum(&:kills)
+          total_deaths = matches_array.sum(&:deaths)
+          total_assists = matches_array.sum(&:assists)
+          avg_kda = if matches_array.any?
+                      ((total_kills + total_assists).to_f / [total_deaths, 1].max).round(2)
+                    else
+                      0
+                    end
+          wins = matches_array.count { |m| m.match&.victory? }
+
+          {
+            total_games: matches_array.count,
+            wins: wins,
+            losses: matches_array.count - wins,
+            win_rate: matches_array.any? ? (wins.to_f / matches_array.count) : 0,
+            avg_kda: avg_kda,
+            avg_kills: matches_array.sum(&:kills).to_f / [matches_array.count, 1].max,
+            avg_deaths: matches_array.sum(&:deaths).to_f / [matches_array.count, 1].max,
+            avg_assists: matches_array.sum(&:assists).to_f / [matches_array.count, 1].max,
+            avg_cs_per_min: matches.average(:cs_per_min)&.round(1) || 0,
+            avg_damage_dealt: matches.average(:damage_dealt_total)&.round(0) || 0,
+            avg_damage_taken: matches.average(:damage_taken)&.round(0) || 0,
+            avg_gold_per_min: matches.average(:gold_per_min)&.round(0) || 0,
+            avg_vision_score: matches.average(:vision_score)&.round(1) || 0
+          }
+        end
+
+        def serialize_champion_matches(matches_array, riot_service)
+          matches_array.filter_map do |stat|
+            next nil unless stat.match
+
+            build_match_entry(stat, riot_service)
+          end
+        end
+
+        def build_match_entry(stat, riot_service)
+          {
+            match_id: stat.match.id,
+            game_id: stat.match.riot_match_id,
+            date: stat.match.game_start&.strftime('%Y-%m-%d %H:%M'),
+            victory: stat.match.victory?,
+            game_duration: stat.match.game_duration || 0,
+            kda: stat.kda_display,
+            kda_ratio: (stat.kda_ratio || 0).round(2),
+            kills: stat.kills || 0,
+            deaths: stat.deaths || 0,
+            assists: stat.assists || 0,
+            cs: stat.cs || 0,
+            cs_per_min: (stat.cs_per_min || 0).round(1),
+            damage_dealt: stat.damage_dealt_total || 0,
+            damage_taken: stat.damage_taken || 0,
+            gold_earned: stat.gold_earned || 0,
+            gold_per_min: (stat.gold_per_min || 0).round(0),
+            vision_score: stat.vision_score || 0,
+            performance_score: stat.performance_score || 0,
+            kill_participation: stat.kill_participation || 0,
+            damage_share: stat.damage_share || 0,
+            gold_share: stat.gold_share || 0,
+            wards_placed: stat.wards_placed || 0,
+            wards_destroyed: stat.wards_destroyed || 0,
+            control_wards: stat.control_wards_purchased || 0,
+            healing_done: stat.healing_done || 0,
+            double_kills: stat.double_kills || 0,
+            triple_kills: stat.triple_kills || 0,
+            quadra_kills: stat.quadra_kills || 0,
+            penta_kills: stat.penta_kills || 0,
+            first_blood: stat.first_blood || false,
+            first_tower: stat.first_tower || false,
+            largest_killing_spree: stat.largest_killing_spree || 0,
+            largest_multi_kill: stat.largest_multi_kill || 0,
+            items: (stat.items || []).map { |id| { id: id, icon_url: riot_service.item_icon_url(id) } },
+            runes: (stat.runes || []).map { |id| { id: id, icon_url: riot_service.rune_icon_url(id) } },
+            spells: build_spells(stat, riot_service),
+            role: stat.role
+          }
+        end
+
+        def build_spells(stat, riot_service)
+          [
+            { name: stat.summoner_spell_1, icon_url: riot_service.spell_icon_url(stat.summoner_spell_1&.to_i) },
+            { name: stat.summoner_spell_2, icon_url: riot_service.spell_icon_url(stat.summoner_spell_2&.to_i) }
+          ].select { |s| s[:name].present? }
+        end
 
         def fetch_champion_stats(player)
           PlayerMatchStat.where(player: player)
@@ -196,21 +202,21 @@ module Api
             player: PlayerSerializer.render_as_hash(player),
             champion_stats: champion_stats,
             top_champions: champion_stats.take(5),
-            champion_diversity: {
-              total_champions: champion_stats.count,
-              highly_played: champion_stats.count { |c| c[:games_played] >= 10 },
-              average_games: if champion_stats.empty?
-                               0
-                             else
-                               (champion_stats.sum do |c|
-                                 c[:games_played]
-                               end / champion_stats.count.to_f).round(1)
-                             end
-            }
+            champion_diversity: build_champion_diversity(champion_stats)
           }
         end
 
-        private
+        def build_champion_diversity(champion_stats)
+          {
+            total_champions: champion_stats.count,
+            highly_played: champion_stats.count { |c| c[:games_played] >= 10 },
+            average_games: champion_stats.empty? ? 0 : average_games_per_champion(champion_stats)
+          }
+        end
+
+        def average_games_per_champion(champion_stats)
+          (champion_stats.sum { |c| c[:games_played] } / champion_stats.count.to_f).round(1)
+        end
 
         def calculate_mastery_grade(win_rate, avg_kda)
           score = (win_rate * 100 * 0.6) + ((avg_kda || 0) * 10 * 0.4)

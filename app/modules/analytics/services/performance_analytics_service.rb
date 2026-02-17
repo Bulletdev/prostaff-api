@@ -308,9 +308,10 @@ module Analytics
           player_participation = player_kills + player_assists
 
           # Team's total kills in this match (all players from same org)
-          team_kills = PlayerMatchStat.joins(:player)
-                                      .where(match_id: stat.match_id, players: { organization_id: player.organization_id })
-                                      .sum(:kills)
+          team_kills = PlayerMatchStat
+                       .joins(:player)
+                       .where(match_id: stat.match_id, players: { organization_id: player.organization_id })
+                       .sum(:kills)
 
           # Calculate KP% for this match
           if team_kills > 0

@@ -122,8 +122,12 @@ module Schedules
       end
 
       def apply_time_period_filters(schedules)
-        schedules = schedules.where(start_time: Time.current.beginning_of_day..Time.current.end_of_day) if params[:today] == 'true'
-        schedules = schedules.where(start_time: Time.current.beginning_of_week..Time.current.end_of_week) if params[:this_week] == 'true'
+        if params[:today] == 'true'
+          schedules = schedules.where(start_time: Time.current.beginning_of_day..Time.current.end_of_day)
+        end
+        if params[:this_week] == 'true'
+          schedules = schedules.where(start_time: Time.current.beginning_of_week..Time.current.end_of_week)
+        end
         schedules
       end
 
