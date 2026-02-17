@@ -62,7 +62,8 @@ module Players
     # @param salary [Decimal] Player salary (optional)
     # @param jersey_number [Integer] Jersey number (optional)
     # @return [Hash] Result with success status and player
-    def self.hire_from_scouting(scouting_target:, organization:, contract_start:, contract_end:, salary: nil, jersey_number: nil, current_user: nil)
+    def self.hire_from_scouting(scouting_target:, organization:, contract_start:, contract_end:,
+                               salary: nil, jersey_number: nil, current_user: nil)
       ActiveRecord::Base.transaction do
         # Check if this is a free agent or needs to be restored
         player = find_or_restore_player(scouting_target, organization)
@@ -148,7 +149,6 @@ module Players
         begin
           match_details = sync_service.send(:fetch_match_details, match_id)
           info = match_details['info']
-          metadata = match_details['metadata']
 
           # Find player's participant data
           participant = info['participants'].find { |p| p['puuid'] == player.riot_puuid }
@@ -161,9 +161,8 @@ module Players
             # Match exists - just add player stats
             sync_service.send(:create_player_stats, existing_match, player, participant)
             imported += 1
-          else
-            # Import full match
-            imported += 1 if sync_service.send(:import_match, match_details, player)
+          elsif sync_service.send(:import_match, match_details, player)
+            imported += 1
           end
         rescue StandardError => e
           Rails.logger.error("Failed to import match #{match_id}: #{e.message}")
@@ -308,7 +307,11 @@ module Players
       total_kills = recent_stats.sum(:kills)
       total_deaths = recent_stats.sum(:deaths)
       total_assists = recent_stats.sum(:assists)
-      avg_kda = total_deaths.zero? ? total_kills + total_assists : ((total_kills + total_assists).to_f / total_deaths).round(2)
+      avg_kda = if total_deaths.zero?
+                  total_kills + total_assists
+                else
+                  ((total_kills + total_assists).to_f / total_deaths).round(2)
+                end
 
       # Calculate averages only for non-null values
       damage_shares = recent_stats.pluck(:damage_share).compact
@@ -324,7 +327,7 @@ module Players
         avg_vision_score: recent_stats.average(:vision_score)&.to_f&.round(1) || 0.0,
         avg_damage_share: damage_shares.any? ? (damage_shares.sum / damage_shares.size).round(1) : 0.0,
         avg_kill_participation: kill_participations.any? ? (kill_participations.sum / kill_participations.size).round(1) : 0.0,
-        last_game_date: recent_stats.first&.match&.game_start&.to_date
+        last_game_date: last_game_date_for(recent_stats)
       }
     end
 
@@ -363,6 +366,17 @@ module Players
 
       wins = stats.count { |stat| stat.match&.victory? }
       (wins.to_f / stats.count * 100).round(1)
+    end
+
+    # Helper to extract last game date without deep safe navigation chain
+    def last_game_date_for(stats)
+      first_stat = stats.first
+      return nil unless first_stat
+
+      match = first_stat.match
+      return nil unless match
+
+      match.game_start&.to_date
     end
 
     # Extract playstyle from player notes
