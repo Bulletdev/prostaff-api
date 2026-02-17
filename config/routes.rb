@@ -37,6 +37,14 @@ Rails.application.routes.draw do
         get 'me', to: 'auth#me'
       end
 
+      # Profile
+      scope :profile do
+        get '', to: 'profile#show'
+        patch '', to: 'profile#update'
+        patch 'password', to: 'profile#update_password'
+        patch 'notifications', to: 'profile#update_notifications'
+      end
+
       # Notifications
       resources :notifications, only: %i[index show destroy] do
         member do
