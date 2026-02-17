@@ -326,7 +326,7 @@ module Players
         avg_cs_per_min: recent_stats.average(:cs_per_min)&.to_f&.round(1) || 0.0,
         avg_vision_score: recent_stats.average(:vision_score)&.to_f&.round(1) || 0.0,
         avg_damage_share: damage_shares.any? ? (damage_shares.sum / damage_shares.size).round(1) : 0.0,
-        avg_kill_participation: kill_participations.any? ? (kill_participations.sum / kill_participations.size).round(1) : 0.0,
+        avg_kill_participation: avg_value_from(kill_participations),
         last_game_date: last_game_date_for(recent_stats)
       }
     end
@@ -366,6 +366,11 @@ module Players
 
       wins = stats.count { |stat| stat.match&.victory? }
       (wins.to_f / stats.count * 100).round(1)
+    end
+
+    # Helper to average a compact array of values, returns 0.0 if empty
+    def avg_value_from(values)
+      values.any? ? (values.sum / values.size).round(1) : 0.0
     end
 
     # Helper to extract last game date without deep safe navigation chain
