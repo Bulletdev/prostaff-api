@@ -463,5 +463,7 @@ module Players
         }
       )
     end
+
+    private_class_method :find_or_restore_player, :log_roster_addition
   end
 end
