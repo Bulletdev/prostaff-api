@@ -25,7 +25,7 @@ module Authentication
     #   { "email": "user@example.com", "password": "secret" }
     #
     class AuthController < Api::V1::BaseController
-      skip_before_action :authenticate_request!, only: %i[register login forgot_password reset_password refresh]
+      skip_before_action :authenticate_request!, only: %i[register login player_login forgot_password reset_password refresh]
 
       # Registers a new user and organization
       #
@@ -134,6 +134,83 @@ module Authentication
           code: 'INVALID_CREDENTIALS',
           status: :unauthorized
         )
+      end
+
+      # Authenticates a player using player-specific credentials
+      #
+      # Validates player_email + password, requires player_access_enabled.
+      # Returns a player-scoped JWT (entity_type: 'player') with limited permissions.
+      #
+      # POST /api/v1/auth/player-login
+      #
+      # @param player_email [String] The player's individual access email
+      # @param password [String] The player's individual access password
+      # @return [JSON] Player info and JWT tokens
+      def player_login
+        player_email = params[:player_email]&.downcase&.strip
+        password     = params[:password]
+
+        if player_email.blank? || password.blank?
+          return render_error(
+            message: 'Email e senha são obrigatórios',
+            code: 'MISSING_CREDENTIALS',
+            status: :bad_request
+          )
+        end
+
+        player = Player.find_by(player_email: player_email)
+
+        unless player&.has_player_access? && player.authenticate_player_password(password)
+          return render_error(
+            message: 'Credenciais inválidas ou acesso não habilitado',
+            code: 'INVALID_CREDENTIALS',
+            status: :unauthorized
+          )
+        end
+
+        tokens = Authentication::Services::JwtService.generate_player_tokens(player)
+        player.update_last_login!
+
+        render_success(
+          {
+            player: {
+              id:                player.id,
+              name:              player.real_name.presence || player.summoner_name,
+              professional_name: player.professional_name,
+              summoner_name:     player.summoner_name,
+              role:              player.role,
+              status:            player.status,
+              country:           player.country,
+              profile_icon_id:   player.profile_icon_id,
+              avatar_url:        player.avatar_url.presence,
+              organization_id:   player.organization_id,
+              organization_name: player.organization&.name,
+              # Rank
+              solo_queue_tier:   player.solo_queue_tier,
+              solo_queue_rank:   player.solo_queue_rank,
+              solo_queue_lp:     player.solo_queue_lp,
+              solo_queue_wins:   player.solo_queue_wins,
+              solo_queue_losses: player.solo_queue_losses,
+              flex_queue_tier:   player.flex_queue_tier,
+              flex_queue_rank:   player.flex_queue_rank,
+              flex_queue_lp:     player.flex_queue_lp,
+              peak_tier:         player.peak_tier,
+              peak_rank:         player.peak_rank,
+              peak_season:       player.peak_season,
+              # Performance
+              win_rate:          player.win_rate,
+              # Champions
+              main_champions:    player.main_champions,
+              # Social
+              twitter_handle:    player.twitter_handle,
+              twitch_channel:    player.twitch_channel,
+            }
+          }.merge(tokens),
+          message: 'Login realizado com sucesso'
+        )
+      rescue StandardError => e
+        Rails.logger.error("Player login error: #{e.class} - #{e.message}")
+        render_error(message: 'Credenciais inválidas', code: 'INVALID_CREDENTIALS', status: :unauthorized)
       end
 
       # Refreshes an access token using a refresh token

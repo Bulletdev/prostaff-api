@@ -22,29 +22,45 @@ module Api
         # Lists all players including soft-deleted ones
         # Admins can see ALL players from ALL organizations
         def index
-          scope = params[:include_deleted] == 'true' ? Player.with_deleted : Player.all
-
-          # Admins see ALL players, regular users see only their org
-          scope = scope.where(organization: current_organization) unless current_user.admin?
+          if current_user.admin? || current_user.owner?
+            # Bypass OrganizationScoped default_scope — admins see all orgs
+            base = Player.unscoped
+            scope = params[:include_deleted] == 'true' ? base : base.where(deleted_at: nil)
+          else
+            scope = params[:include_deleted] == 'true' ? Player.with_deleted : Player.all
+            scope = scope.where(organization: current_organization)
+          end
 
           players = apply_filters(scope)
           players = apply_sorting(players)
 
           result = paginate(players)
 
-          # Calculate summary based on what admin can see (all orgs or just theirs)
-          summary_scope = current_user.admin? ? Player : Player.where(organization: current_organization)
-          deleted_scope = current_user.admin? ? Player.only_deleted : Player.only_deleted.where(organization: current_organization)
+          # Summary — admins see global counts (bypass default_scope)
+          if current_user.admin? || current_user.owner?
+            all_players   = Player.unscoped.where(deleted_at: nil)
+            deleted_players = Player.unscoped.where.not(deleted_at: nil)
+            summary = {
+              total:       all_players.count,
+              active:      all_players.where(status: 'active').count,
+              deleted:     deleted_players.count,
+              with_access: all_players.where(player_access_enabled: true).count
+            }
+          else
+            summary_scope = Player.all
+            deleted_scope = Player.unscoped.where(organization: current_organization).where.not(deleted_at: nil)
+            summary = {
+              total:       summary_scope.count,
+              active:      summary_scope.where(status: 'active').count,
+              deleted:     deleted_scope.count,
+              with_access: summary_scope.where(player_access_enabled: true).count
+            }
+          end
 
           render_success({
                            players: PlayerSerializer.render_as_hash(result[:data]),
                            pagination: result[:pagination],
-                           summary: {
-                             total: summary_scope.count,
-                             active: summary_scope.active.count,
-                             deleted: deleted_scope.count,
-                             with_access: summary_scope.with_player_access.count
-                           }
+                           summary: summary
                          })
         end
 
@@ -243,8 +259,8 @@ module Api
         end
 
         def set_player
-          scope = params[:include_deleted] == 'true' ? Player.with_deleted : Player
-          @player = scope.find(params[:id])
+          # Admin finds players across ALL orgs — must bypass OrganizationScoped default_scope
+          @player = Player.unscoped.find(params[:id])
         rescue ActiveRecord::RecordNotFound
           render_error(
             message: 'Player not found',

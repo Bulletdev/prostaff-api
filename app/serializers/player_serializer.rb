@@ -15,7 +15,8 @@ class PlayerSerializer < Blueprinter::Base
          :riot_puuid, :riot_summoner_id, :profile_icon_id,
          :twitter_handle, :twitch_channel, :instagram_handle,
          :kick_url, :professional_name,
-         :notes, :sync_status, :last_sync_at, :created_at, :updated_at
+         :notes, :sync_status, :last_sync_at, :created_at, :updated_at,
+         :player_access_enabled, :player_email, :deleted_at, :removed_reason
 
   field :age do |obj|
     obj.age

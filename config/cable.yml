@@ -1,0 +1,17 @@
+development:
+  adapter: redis
+  url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
+  channel_prefix: prostaff_development
+
+test:
+  adapter: test
+
+staging:
+  adapter: redis
+  url: <%= ENV.fetch("REDIS_URL") %>
+  channel_prefix: prostaff_staging
+
+production:
+  adapter: redis
+  url: <%= ENV.fetch("REDIS_URL") %>
+  channel_prefix: prostaff_production

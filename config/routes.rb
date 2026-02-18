@@ -4,6 +4,10 @@ Rails.application.routes.draw do
   # Handle CORS preflight requests (OPTIONS) for all routes
   match '*path', to: proc { [204, {}, ['']] }, via: :options
 
+  # Action Cable WebSocket endpoint
+  # Frontend connects via: wss://api/cable?token=<JWT>
+  mount ActionCable.server => '/cable'
+
   # Mount Rswag API documentation
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
@@ -30,6 +34,7 @@ Rails.application.routes.draw do
       scope :auth do
         post 'register', to: 'auth#register'
         post 'login', to: 'auth#login'
+        post 'player-login', to: 'auth#player_login'
         post 'refresh', to: 'auth#refresh'
         post 'logout', to: 'auth#logout'
         post 'forgot-password', to: 'auth#forgot_password'
@@ -97,6 +102,9 @@ Rails.application.routes.draw do
             post :transfer
           end
         end
+
+        # Organizations overview
+        resources :organizations, only: [:index]
 
         # Audit Logs
         resources :audit_logs, only: [:index], path: 'audit-logs'
@@ -266,6 +274,12 @@ Rails.application.routes.draw do
         post 'waitlist', to: 'waitlist#create'
         get 'waitlist/stats', to: 'waitlist#stats'
       end
+
+      # Team Messaging — DM history + soft-delete
+      resources :messages, only: %i[index destroy]
+
+      # Team members list (for chat widget)
+      get 'team-members', to: 'team_members#index'
     end
   end
 
