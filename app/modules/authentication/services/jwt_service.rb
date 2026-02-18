@@ -52,6 +52,32 @@ module Authentication
           raise TokenInvalidError, "Invalid token: #{e.message}"
         end
 
+        # Generates both access and refresh tokens for a player (individual access)
+        # @param player [Player] The player to generate tokens for
+        # @return [Hash] Contains access_token, refresh_token, expires_in, and token_type
+        def generate_player_tokens(player)
+          access_payload = {
+            entity_type:     'player',
+            player_id:       player.id,
+            organization_id: player.organization_id,
+            type:            'access'
+          }
+
+          refresh_payload = {
+            entity_type:     'player',
+            player_id:       player.id,
+            organization_id: player.organization_id,
+            type:            'refresh'
+          }
+
+          {
+            access_token:  encode(access_payload),
+            refresh_token: encode(refresh_payload, custom_expiration: REFRESH_EXPIRATION_DAYS.days.from_now.to_i),
+            expires_in:    EXPIRATION_HOURS.hours.to_i,
+            token_type:    'Bearer'
+          }
+        end
+
         # Generates both access and refresh tokens for a user
         # @param user [User] The user to generate tokens for
         # @return [Hash] Contains access_token, refresh_token, expires_in, and token_type

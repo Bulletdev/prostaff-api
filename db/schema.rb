@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_14_171659) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_17_120000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -184,6 +184,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_14_171659) do
     t.index ["organization_id"], name: "index_matches_on_organization_id"
     t.index ["riot_match_id"], name: "index_matches_on_riot_match_id", unique: true
     t.index ["victory"], name: "index_matches_on_victory"
+  end
+
+  create_table "messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "organization_id", null: false
+    t.text "content", null: false
+    t.boolean "deleted", default: false, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "created_at"], name: "idx_messages_active_by_org", where: "(deleted = false)"
+    t.index ["organization_id", "created_at"], name: "idx_messages_org_created_at"
+    t.index ["organization_id", "user_id", "created_at"], name: "idx_messages_org_user_created_at"
+    t.index ["organization_id"], name: "index_messages_on_organization_id"
+    t.index ["user_id"], name: "index_messages_on_user_id"
   end
 
   create_table "notifications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -718,6 +733,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_14_171659) do
   add_foreign_key "draft_plans", "users", column: "created_by_id"
   add_foreign_key "draft_plans", "users", column: "updated_by_id"
   add_foreign_key "matches", "organizations"
+  add_foreign_key "messages", "organizations"
+  add_foreign_key "messages", "users"
   add_foreign_key "notifications", "users"
   add_foreign_key "password_reset_tokens", "users"
   add_foreign_key "player_match_stats", "matches"

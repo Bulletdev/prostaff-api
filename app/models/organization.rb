@@ -47,6 +47,7 @@ class Organization < ApplicationRecord
   # New tier-based associations
   has_many :scrims, dependent: :destroy
   has_many :competitive_matches, dependent: :destroy
+  has_many :messages, dependent: :destroy
 
   # Validations
   validates :name, presence: true, length: { maximum: 255 }

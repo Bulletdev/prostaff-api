@@ -25,6 +25,17 @@ module Authenticatable
     begin
       @jwt_payload = Authentication::Services::JwtService.decode(token)
 
+      if @jwt_payload[:entity_type] == 'player'
+        # ── Player token ──────────────────────────────────────────────────────
+        @current_player       = Player.unscoped.find(@jwt_payload[:player_id])
+        @current_organization = Organization.find(@jwt_payload[:organization_id])
+
+        Current.organization_id = @current_organization.id
+        Rails.logger.info("[AUTH] Player token: player_id=#{@current_player.id} org=#{@current_organization.id}")
+        return
+      end
+
+      # ── Regular user token ────────────────────────────────────────────────
       # Bypass RLS for authentication queries - we need to find the user before we can set RLS context
       @current_user = User.unscoped.find(@jwt_payload[:user_id])
       @current_organization = @current_user.organization
@@ -67,6 +78,14 @@ module Authenticatable
 
   def current_user
     @current_user
+  end
+
+  def current_player
+    @current_player
+  end
+
+  def player_authenticated?
+    @current_player.present?
   end
 
   def current_organization

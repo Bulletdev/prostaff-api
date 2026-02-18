@@ -18,6 +18,7 @@ class User < ApplicationRecord
   has_many :notifications, dependent: :destroy
   has_many :audit_logs, dependent: :destroy
   has_many :password_reset_tokens, dependent: :destroy
+  has_many :messages, dependent: :nullify
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }

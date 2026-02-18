@@ -43,14 +43,25 @@ class JwtAuthentication
 
     # Decode and verify token
     payload = Authentication::Services::JwtService.decode(token)
-    user = User.find(payload[:user_id])
 
-    # Store user info in environment for controllers
+    # Store decoded payload for controllers
     env['rack.jwt.payload'] = payload
-    env['current_user'] = user
-    env['current_organization'] = user.organization
+
+    if payload[:entity_type] == 'player'
+      # Player individual access token
+      player = Player.find(payload[:player_id])
+      raise Authentication::Services::JwtService::AuthenticationError, 'Player access disabled' unless player.player_access_enabled?
+
+      env['current_player'] = player
+      env['current_organization'] = player.organization
+    else
+      # Regular user token
+      user = User.find(payload[:user_id])
+      env['current_user'] = user
+      env['current_organization'] = user.organization
+    end
   rescue ActiveRecord::RecordNotFound
-    raise Authentication::Services::JwtService::AuthenticationError, 'User not found'
+    raise Authentication::Services::JwtService::AuthenticationError, 'Entity not found'
   end
 
   def extract_token(request)
@@ -70,6 +81,7 @@ class JwtAuthentication
       '/api/v1/auth/register',
       '/api/v1/auth/forgot-password',
       '/api/v1/auth/reset-password',
+      '/api/v1/auth/player-login',
       '/up' # Health check
     ]
 

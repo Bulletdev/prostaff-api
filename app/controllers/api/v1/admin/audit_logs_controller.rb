@@ -16,8 +16,8 @@ module Api
         def index
           scope = AuditLog.includes(:user, :organization)
 
-          # Apply filters
-          scope = scope.where(action: params[:action]) if params[:action].present?
+          # Apply filters (note: use params[:filter_action] to avoid conflict with Rails' reserved params[:action])
+          scope = scope.where(action: params[:filter_action]) if params[:filter_action].present?
           scope = scope.where(entity_type: params[:entity_type]) if params[:entity_type].present?
           scope = scope.where(user_id: params[:user_id]) if params[:user_id].present?
 
@@ -36,7 +36,13 @@ module Api
         private
 
         def require_admin_access
-          render_error('Unauthorized', :unauthorized) unless current_user&.admin?
+          unless current_user&.admin? || current_user&.owner?
+            render_error(
+              message: 'Admin access required',
+              code: 'FORBIDDEN',
+              status: :forbidden
+            )
+          end
         end
 
         def serialize_audit_log(log)
