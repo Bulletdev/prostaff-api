@@ -29,8 +29,8 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  PROSTAFF API — Ruby on Rails 7.2 (API-Only)                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Backend for the ProStaff.gg esports team management platform.                ║
-║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~500ms         ║
+║  Backend for the ProStaff.gg esports team management platform.               ║
+║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~500ms        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -43,7 +43,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  [■] JWT Authentication       — Refresh tokens + token blacklisting         │
 │  [■] HashID URLs              — Base62 encoding for obfuscated URLs         │
-│  [■] Swagger Docs             — 200+ endpoints documented interactively      │
+│  [■] Swagger Docs             — 200+ endpoints documented interactively     │
 │  [■] Riot Games API           — Automatic match and player import           │
 │  [■] Advanced Analytics       — KDA trends, champion pools, vision control  │
 │  [■] Scouting System          — Talent discovery + watchlist management     │
@@ -964,7 +964,7 @@ See `.github/workflows/` for details.
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  © 2026 ProStaff.gg. All rights reserved.                                    ║
 ║                                                                              ║
-║  This repository contains the official ProStaff.gg API source code.         ║
+║  This repository contains the official ProStaff.gg API source code.          ║
 ║  Released under:                                                             ║
 ║                                                                              ║
 ║  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International     ║
