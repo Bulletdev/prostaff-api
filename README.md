@@ -1,3 +1,16 @@
+
+```
+>        ██████╗ ██████╗  ██████╗ ███████╗████████╗ █████╗ ███████╗███████╗
+>        ██╔══██╗██╔══██╗██╔═══██╗██╔════╝╚══██╔══╝██╔══██╗██╔════╝██╔════╝
+>        ██████╔╝██████╔╝██║   ██║███████╗   ██║   ███████║█████╗  █████╗
+>        ██╔═══╝ ██╔══██╗██║   ██║╚════██║   ██║   ██╔══██║██╔══╝  ██╔══╝
+>        ██║     ██║  ██║╚██████╔╝███████║   ██║   ██║  ██║██║     ██║
+>        ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝
+                  API — eSports Analytics Hub - ProStaff.gg
+```
+
+<div align="center">
+
 [![Security Scan](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml/badge.svg)](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/30bf4e093ece4ceb8ea46dbe7aecdee1)](https://app.codacy.com/gh/Bulletdev/prostaff-api/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
@@ -8,51 +21,76 @@
 [![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger)](http://localhost:3333/api-docs)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](http://creativecommons.org/licenses/by-nc-sa/4.0/)
 
-# ProStaff API
+</div>
 
-> Ruby on Rails API for the ProStaff.gg esports team management platform.
+---
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  PROSTAFF API — Ruby on Rails 7.2 (API-Only)                                 ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  Backend da plataforma ProStaff.gg para gestão de equipes de esports.        ║
+║  170+ endpoints documentados · JWT Auth · Modular Monolith · p95 ~500ms      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
+---
 
 <details>
-<summary>Key Features (Click to show details) </summary>
+<summary><kbd>▶ Key Features (click to expand)</kbd></summary>
 
--  **JWT Authentication** with refresh tokens and token blacklisting
--  **HashID URLs** with Base62 encoding for short, obfuscated public URLs
--  **Interactive Swagger Documentation** (170+ endpoints documented)
--  **Riot Games API Integration** for automatic match import and player sync
--  **Advanced Analytics** (KDA trends, champion pools, vision control, etc.)
--  **Scouting System** with talent discovery and watchlist management
--  **VOD Review System** with timestamp annotations
-- ️ **Schedule Management** for matches, scrims, and team events
--  **Goal Tracking** for team and player performance objectives
--  **Competitive Module** with PandaScore integration and draft analysis
--  **Scrims Management** with opponent tracking and analytics
--  **Strategy Module** with draft planning and tactical boards
--  **Support System** with ticketing and FAQ management
--  **Background Jobs** with Sidekiq for async processing
-- ️ **Security Hardened** (OWASP Top 10, Brakeman, ZAP tested)
--  **High Performance** (p95: ~500ms, with cache: ~50ms)
-- ️ **Modular Monolith** architecture for scalability
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  [■] JWT Authentication       — Refresh tokens + token blacklisting         │
+│  [■] HashID URLs              — Base62 encoding para URLs ofuscadas         │
+│  [■] Swagger Docs             — 170+ endpoints documentados interativamente │
+│  [■] Riot Games API           — Import automático de partidas e jogadores   │
+│  [■] Advanced Analytics       — KDA trends, champion pools, vision control  │
+│  [■] Scouting System          — Talent discovery + watchlist management     │
+│  [■] VOD Review System        — Timestamp annotations colaborativas         │
+│  [■] Schedule Management      — Partidas, scrims e eventos de equipe        │
+│  [■] Goal Tracking            — Objetivos de performance (time e jogadores) │
+│  [■] Competitive Module       — PandaScore integration + draft analysis     │
+│  [■] Scrims Management        — Opponent tracking + analytics               │
+│  [■] Strategy Module          — Draft planning + tactical boards            │
+│  [■] Support System           — Ticketing + FAQ management                  │
+│  [■] Background Jobs          — Sidekiq para processamento assíncrono       │
+│  [■] Security Hardened        — OWASP Top 10, Brakeman, ZAP tested          │
+│  [■] High Performance         — p95: ~500ms · com cache: ~50ms              │
+│  [■] Modular Monolith         — Arquitetura escalável por módulos           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 </details>
 
-##  Table of Contents
+---
 
-- [Quick Start](#quick-start)
-- [Technology Stack](#technology-stack)
-- [Architecture](#architecture)
-- [Setup](#setup)
-- [Development Tools](#️-development-tools)
-- [API Documentation](#-api-documentation)
-- [Testing](#-testing)
-- [Performance & Load Testing](#-performance--testing)
-- [Security](#security-testing-owasp)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
+## Table of Contents
+
+```
+┌──────────────────────────────────────────────────────┐
+│  01 · Quick Start                                    │
+│  02 · Technology Stack                               │
+│  03 · Architecture                                   │
+│  04 · Setup                                          │
+│  05 · Development Tools                              │
+│  06 · API Documentation                              │
+│  07 · Testing                                        │
+│  08 · Performance & Load Testing                     │
+│  09 · Security                                       │
+│  10 · Deployment                                     │
+│  11 · CI/CD                                          │
+│  12 · Contributing                                   │
+│  13 · License                                        │
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## 01 · Quick Start
 
 <details>
-<summary> Quick Start (Click to show details) </summary>
-
-### Option 1: With Docker (Recommended)
+<summary><kbd>▶ Option 1: Docker (Recommended)</kbd></summary>
 
 ```bash
 # Start all services (API, PostgreSQL, Redis, Sidekiq)
@@ -74,7 +112,10 @@ open http://localhost:3333/api-docs
 ./security_tests/scripts/brakeman-scan.sh
 ```
 
-### Option 2: Without Docker (Local Development)
+</details>
+
+<details>
+<summary><kbd>▶ Option 2: Local Development (Without Docker)</kbd></summary>
 
 ```bash
 # Install dependencies
@@ -102,42 +143,61 @@ rails server -p 3333
 open http://localhost:3333/api-docs
 ```
 
-**API will be available at:** `http://localhost:3333`
-**Swagger Docs:** `http://localhost:3333/api-docs`
 </details>
 
-## Technology Stack
+```
+  API:          http://localhost:3333
+  Swagger Docs: http://localhost:3333/api-docs
+```
 
-- **Ruby**: 3.4.5
-- **Rails**: 7.2.0 (API-only mode)
-- **Database**: PostgreSQL 14+
-- **Authentication**: JWT (with refresh tokens)
-- **URL Obfuscation**: HashID with Base62 encoding
-- **Background Jobs**: Sidekiq
-- **Caching**: Redis (port 6380)
-- **API Documentation**: Swagger/OpenAPI 3.0 (rswag)
-- **Testing**: RSpec, Integration Specs, k6, OWASP ZAP
-- **Authorization**: Pundit
-- **Serialization**: Blueprinter
+---
 
-## Architecture
+## 02 · Technology Stack
 
-This API follows a modular monolith architecture with the following modules:
+```
+╔══════════════════════╦════════════════════════════════════════════════════╗
+║  CAMADA              ║  TECNOLOGIA                                        ║
+╠══════════════════════╬════════════════════════════════════════════════════╣
+║  Language            ║  Ruby 3.4.5                                        ║
+║  Framework           ║  Rails 7.2.0 (API-only mode)                       ║
+║  Database            ║  PostgreSQL 14+                                    ║
+║  Authentication      ║  JWT (access + refresh tokens)                     ║
+║  URL Obfuscation     ║  HashID with Base62 encoding                       ║
+║  Background Jobs     ║  Sidekiq                                           ║
+║  Caching             ║  Redis (port 6380)                                 ║
+║  API Documentation   ║  Swagger/OpenAPI 3.0 (rswag)                       ║
+║  Testing             ║  RSpec, Integration Specs, k6, OWASP ZAP           ║
+║  Authorization       ║  Pundit                                            ║
+║  Serialization       ║  Blueprinter                                       ║
+╚══════════════════════╩════════════════════════════════════════════════════╝
+```
 
-- `authentication` - User authentication and authorization
-- `dashboard` - Dashboard statistics and metrics
-- `players` - Player management and statistics
-- `scouting` - Player scouting and talent discovery
-- `analytics` - Performance analytics and reporting
-- `matches` - Match data and statistics
-- `schedules` - Event and schedule management
-- `vod_reviews` - Video review and timestamp management
-- `team_goals` - Goal setting and tracking
-- `riot_integration` - Riot Games API integration
-- `competitive` - PandaScore integration, pro matches, draft analysis
-- `scrims` - Scrim management and opponent team tracking
-- `strategy` - Draft planning and tactical board system
-- `support` - Support ticket system with staff and FAQ management
+---
+
+## 03 · Architecture
+
+This API follows a **modular monolith** architecture:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MODULE             │  RESPONSABILIDADE                                     │
+├─────────────────────┼───────────────────────────────────────────────────────┤
+│  authentication     │  User auth e authorization                            │
+│  dashboard          │  Dashboard statistics e metrics                       │
+│  players            │  Player management e statistics                       │
+│  scouting           │  Player scouting e talent discovery                   │
+│  analytics          │  Performance analytics e reporting                    │
+│  matches            │  Match data e statistics                              │
+│  schedules          │  Event e schedule management                          │
+│  vod_reviews        │  Video review e timestamp management                  │
+│  team_goals         │  Goal setting e tracking                              │
+│  riot_integration   │  Riot Games API integration                           │
+│  competitive        │  PandaScore integration, pro matches, draft analysis  │
+│  scrims             │  Scrim management e opponent team tracking            │
+│  strategy           │  Draft planning e tactical board system               │
+│  support            │  Support ticket system com staff e FAQ                │
+└─────────────────────┴───────────────────────────────────────────────────────┘
+```
 
 ### Architecture Diagram
 
@@ -258,7 +318,7 @@ graph TB
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
-    
+
     Router --> AuthController
     Router --> DashboardController
     Router --> PlayersController
@@ -344,7 +404,6 @@ graph TB
     style Sidekiq fill:#b1003e
 ```
 
-
 **Key Architecture Principles:**
 
 1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
@@ -356,28 +415,32 @@ graph TB
 7. **Rate Limiting**: Rack::Attack for API rate limiting
 8. **CORS**: Configured for cross-origin requests from frontend
 
-## Setup
+---
+
+## 04 · Setup
 
 ### Prerequisites
 
-- Ruby 3.2+
-- PostgreSQL 14+
-- Redis 6+
+```
+[✓] Ruby 3.2+
+[✓] PostgreSQL 14+
+[✓] Redis 6+
+```
 
 ### Installation
 
-1. Clone the repository:
+**1. Clone the repository:**
 ```bash
 git clone <repository-url>
 cd prostaff-api
 ```
 
-2. Install dependencies:
+**2. Install dependencies:**
 ```bash
 bundle install
 ```
 
-3. Setup environment variables:
+**3. Setup environment variables:**
 ```bash
 cp .env.example .env
 ```
@@ -389,36 +452,33 @@ Edit `.env` with your configuration:
 - PandaScore API key (optional, for competitive data)
 - Redis URL
 - CORS origins
-- HashID salt (for URL obfuscation - keep secret!)
+- HashID salt (for URL obfuscation — keep secret!)
 - Frontend URL
 
-4. Setup the database:
+**4. Setup the database:**
 ```bash
 rails db:create
 rails db:migrate
 rails db:seed
 ```
 
-5. Start the services:
-
-Start Redis:
+**5. Start the services:**
 ```bash
+# Terminal 1 — Redis
 redis-server
-```
 
-Start Sidekiq (in another terminal):
-```bash
+# Terminal 2 — Sidekiq
 bundle exec sidekiq
-```
 
-Start the Rails server:
-```bash
+# Terminal 3 — Rails server
 rails server
 ```
 
-The API will be available at `http://localhost:3333`
+> API disponível em `http://localhost:3333`
 
-##  Development Tools
+---
+
+## 05 · Development Tools
 
 ### Generate Secrets
 
@@ -428,13 +488,9 @@ Generate secure secrets for your `.env` file:
 ./scripts/generate_secrets.sh
 ```
 
-This will generate:
-- `SECRET_KEY_BASE` - Rails secret key
-- `JWT_SECRET_KEY` - JWT signing key
+Generates: `SECRET_KEY_BASE` (Rails) and `JWT_SECRET_KEY` (JWT signing).
 
 ### Get JWT Token (for API testing)
-
-Generate a JWT token for testing the API:
 
 ```bash
 ./scripts/get-token.sh
@@ -458,28 +514,27 @@ curl -H "Authorization: Bearer $BEARER_TOKEN" http://localhost:3333/api/v1/playe
 ```bash
 TEST_EMAIL="admin@example.com" TEST_PASSWORD="MyPass123!" ./scripts/get-token.sh
 ```
+
+---
+
+## 06 · API Documentation
+
 <details>
-<summary> 📚 API Documentation (Click to show details) </summary>
+<summary><kbd>▶ Interactive Documentation — Swagger UI (click to expand)</kbd></summary>
 
-### Interactive Documentation (Swagger UI)
-
-The API provides interactive documentation powered by Swagger/OpenAPI 3.0:
-
-**Access the docs:**
+**Access:**
 ```
 http://localhost:3333/api-docs
 ```
 
 **Features:**
-- ✅ Try out endpoints directly from the browser
-- ✅ See request/response schemas
-- ✅ Authentication support (Bearer token)
-- ✅ Complete parameter documentation
-- ✅ Example requests and responses
+- Try out endpoints directly from the browser
+- See request/response schemas
+- Authentication support (Bearer token)
+- Complete parameter documentation
+- Example requests and responses
 
 ### Generating/Updating Documentation
-
-The Swagger documentation is automatically generated from RSpec integration tests:
 
 ```bash
 # Run integration specs and generate Swagger docs
@@ -489,7 +544,7 @@ bundle exec rake rswag:specs:swaggerize
 bundle exec rspec spec/integration/
 ```
 
-The generated documentation file is located at `swagger/v1/swagger.yaml`.
+Generated file: `swagger/v1/swagger.yaml`
 
 ### Base URL
 ```
@@ -498,16 +553,19 @@ http://localhost:3333/api/v1
 
 ### Authentication
 
-All endpoints (except auth endpoints) require a Bearer token in the Authorization header:
+All endpoints (except auth) require a Bearer token:
 
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Token Details:**
-- **Access Token**: Expires in 24 hours (configurable via `JWT_EXPIRATION_HOURS`)
-- **Refresh Token**: Expires in 7 days
-- **Token Type**: Bearer (JWT)
+```
+╔═══════════════╦══════════════════════════════════╗
+║  Token Type   ║  Bearer (JWT)                    ║
+║  Access TTL   ║  24h (via JWT_EXPIRATION_HOURS)  ║
+║  Refresh TTL  ║  7 days                          ║
+╚═══════════════╩══════════════════════════════════╝
+```
 
 **Getting a token:**
 ```bash
@@ -529,171 +587,169 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 
 ### Authentication Endpoints
 
-- `POST /auth/register` - Register new organization and admin user
-- `POST /auth/login` - Login user
-- `POST /auth/refresh` - Refresh JWT token
-- `POST /auth/logout` - Logout user
-- `POST /auth/forgot-password` - Request password reset
-- `POST /auth/reset-password` - Reset password
-- `GET /auth/me` - Get current user info
+- `POST /auth/register` — Register new organization and admin user
+- `POST /auth/login` — Login user
+- `POST /auth/refresh` — Refresh JWT token
+- `POST /auth/logout` — Logout user
+- `POST /auth/forgot-password` — Request password reset
+- `POST /auth/reset-password` — Reset password
+- `GET  /auth/me` — Get current user info
 
 ### Core Endpoints
 
 #### Dashboard
-- `GET /dashboard` - Get complete dashboard data
-- `GET /dashboard/stats` - Get quick stats
-- `GET /dashboard/activities` - Get recent activities
-- `GET /dashboard/schedule` - Get upcoming schedule
+- `GET /dashboard` — Get complete dashboard data
+- `GET /dashboard/stats` — Get quick stats
+- `GET /dashboard/activities` — Get recent activities
+- `GET /dashboard/schedule` — Get upcoming schedule
 
 #### Players
-- `GET /players` - List players
-- `GET /players/:id` - Get player details
-- `POST /players` - Create player
-- `PATCH /players/:id` - Update player
-- `DELETE /players/:id` - Delete player
-- `GET /players/stats` - Get roster statistics
-- `POST /players/import` - Import player from Riot API
+- `GET    /players` — List players
+- `GET    /players/:id` — Get player details
+- `POST   /players` — Create player
+- `PATCH  /players/:id` — Update player
+- `DELETE /players/:id` — Delete player
+- `GET    /players/stats` — Get roster statistics
+- `POST   /players/import` — Import player from Riot API
 
 #### Matches
-- `GET /matches` - List matches
-- `GET /matches/:id` - Get match details
-- `POST /matches` - Create match
-- `POST /matches/import` - Import match from Riot API
+- `GET  /matches` — List matches
+- `GET  /matches/:id` — Get match details
+- `POST /matches` — Create match
+- `POST /matches/import` — Import match from Riot API
 
 #### Scouting
-- `GET /scouting/players` - List scouting targets
-- `GET /scouting/regions` - Get available regions
-- `POST /scouting/players` - Add scouting target
+- `GET  /scouting/players` — List scouting targets
+- `GET  /scouting/regions` — Get available regions
+- `POST /scouting/players` — Add scouting target
 
 #### Analytics
-- `GET /analytics/performance` - Team performance analytics
-- `GET /analytics/team-comparison` - Compare all players
-- `GET /analytics/champions/:player_id` - Champion pool statistics
-- `GET /analytics/kda-trend/:player_id` - KDA trend over time
-- `GET /analytics/laning/:player_id` - Laning phase performance
-- `GET /analytics/teamfights/:player_id` - Teamfight performance
-- `GET /analytics/vision/:player_id` - Vision control statistics
+- `GET /analytics/performance` — Team performance analytics
+- `GET /analytics/team-comparison` — Compare all players
+- `GET /analytics/champions/:player_id` — Champion pool statistics
+- `GET /analytics/kda-trend/:player_id` — KDA trend over time
+- `GET /analytics/laning/:player_id` — Laning phase performance
+- `GET /analytics/teamfights/:player_id` — Teamfight performance
+- `GET /analytics/vision/:player_id` — Vision control statistics
 
 #### Schedules
-- `GET /schedules` - List all scheduled events
-- `GET /schedules/:id` - Get schedule details
-- `POST /schedules` - Create new event
-- `PATCH /schedules/:id` - Update event
-- `DELETE /schedules/:id` - Delete event
+- `GET    /schedules` — List all scheduled events
+- `GET    /schedules/:id` — Get schedule details
+- `POST   /schedules` — Create new event
+- `PATCH  /schedules/:id` — Update event
+- `DELETE /schedules/:id` — Delete event
 
 #### Team Goals
-- `GET /team-goals` - List all goals
-- `GET /team-goals/:id` - Get goal details
-- `POST /team-goals` - Create new goal
-- `PATCH /team-goals/:id` - Update goal progress
-- `DELETE /team-goals/:id` - Delete goal
+- `GET    /team-goals` — List all goals
+- `GET    /team-goals/:id` — Get goal details
+- `POST   /team-goals` — Create new goal
+- `PATCH  /team-goals/:id` — Update goal progress
+- `DELETE /team-goals/:id` — Delete goal
 
 #### VOD Reviews
-- `GET /vod-reviews` - List VOD reviews
-- `GET /vod-reviews/:id` - Get review details
-- `POST /vod-reviews` - Create new review
-- `PATCH /vod-reviews/:id` - Update review
-- `DELETE /vod-reviews/:id` - Delete review
-- `GET /vod-reviews/:id/timestamps` - List timestamps
-- `POST /vod-reviews/:id/timestamps` - Create timestamp
-- `PATCH /vod-timestamps/:id` - Update timestamp
-- `DELETE /vod-timestamps/:id` - Delete timestamp
+- `GET    /vod-reviews` — List VOD reviews
+- `GET    /vod-reviews/:id` — Get review details
+- `POST   /vod-reviews` — Create new review
+- `PATCH  /vod-reviews/:id` — Update review
+- `DELETE /vod-reviews/:id` — Delete review
+- `GET    /vod-reviews/:id/timestamps` — List timestamps
+- `POST   /vod-reviews/:id/timestamps` — Create timestamp
+- `PATCH  /vod-timestamps/:id` — Update timestamp
+- `DELETE /vod-timestamps/:id` — Delete timestamp
 
 #### Riot Data
-- `GET /riot-data/champions` - Get champions ID map
-- `GET /riot-data/champions/:key` - Get champion details
-- `GET /riot-data/all-champions` - Get all champions data
-- `GET /riot-data/items` - Get all items
-- `GET /riot-data/summoner-spells` - Get summoner spells
-- `GET /riot-data/version` - Get current Data Dragon version
-- `POST /riot-data/clear-cache` - Clear Data Dragon cache (owner only)
-- `POST /riot-data/update-cache` - Update Data Dragon cache (owner only)
+- `GET  /riot-data/champions` — Get champions ID map
+- `GET  /riot-data/champions/:key` — Get champion details
+- `GET  /riot-data/all-champions` — Get all champions data
+- `GET  /riot-data/items` — Get all items
+- `GET  /riot-data/summoner-spells` — Get summoner spells
+- `GET  /riot-data/version` — Get current Data Dragon version
+- `POST /riot-data/clear-cache` — Clear Data Dragon cache (owner only)
+- `POST /riot-data/update-cache` — Update Data Dragon cache (owner only)
 
 #### Riot Integration
-- `GET /riot-integration/sync-status` - Get sync status for all players
+- `GET /riot-integration/sync-status` — Get sync status for all players
 
 #### Competitive (PandaScore Integration)
-- `GET /competitive-matches` - List competitive matches
-- `GET /competitive-matches/:id` - Get competitive match details
-- `GET /competitive/pro-matches` - List all pro matches
-- `GET /competitive/pro-matches/:id` - Get pro match details
-- `GET /competitive/pro-matches/upcoming` - Get upcoming pro matches
-- `GET /competitive/pro-matches/past` - Get past pro matches
-- `POST /competitive/pro-matches/refresh` - Refresh pro matches from PandaScore
-- `POST /competitive/pro-matches/import` - Import specific pro match
-- `POST /competitive/draft-comparison` - Compare team compositions
-- `GET /competitive/meta/:role` - Get meta champions by role
-- `GET /competitive/composition-winrate` - Get composition winrate statistics
-- `GET /competitive/counters` - Get champion counter suggestions
+- `GET  /competitive-matches` — List competitive matches
+- `GET  /competitive-matches/:id` — Get competitive match details
+- `GET  /competitive/pro-matches` — List all pro matches
+- `GET  /competitive/pro-matches/:id` — Get pro match details
+- `GET  /competitive/pro-matches/upcoming` — Get upcoming pro matches
+- `GET  /competitive/pro-matches/past` — Get past pro matches
+- `POST /competitive/pro-matches/refresh` — Refresh pro matches from PandaScore
+- `POST /competitive/pro-matches/import` — Import specific pro match
+- `POST /competitive/draft-comparison` — Compare team compositions
+- `GET  /competitive/meta/:role` — Get meta champions by role
+- `GET  /competitive/composition-winrate` — Get composition winrate statistics
+- `GET  /competitive/counters` — Get champion counter suggestions
 
 #### Scrims Management
-- `GET /scrims/scrims` - List all scrims
-- `GET /scrims/scrims/:id` - Get scrim details
-- `POST /scrims/scrims` - Create new scrim
-- `PATCH /scrims/scrims/:id` - Update scrim
-- `DELETE /scrims/scrims/:id` - Delete scrim
-- `POST /scrims/scrims/:id/add_game` - Add game to scrim
-- `GET /scrims/scrims/calendar` - Get scrims calendar
-- `GET /scrims/scrims/analytics` - Get scrims analytics
-- `GET /scrims/opponent-teams` - List opponent teams
-- `GET /scrims/opponent-teams/:id` - Get opponent team details
-- `POST /scrims/opponent-teams` - Create opponent team
-- `PATCH /scrims/opponent-teams/:id` - Update opponent team
-- `DELETE /scrims/opponent-teams/:id` - Delete opponent team
-- `GET /scrims/opponent-teams/:id/scrim-history` - Get scrim history with opponent
+- `GET    /scrims/scrims` — List all scrims
+- `GET    /scrims/scrims/:id` — Get scrim details
+- `POST   /scrims/scrims` — Create new scrim
+- `PATCH  /scrims/scrims/:id` — Update scrim
+- `DELETE /scrims/scrims/:id` — Delete scrim
+- `POST   /scrims/scrims/:id/add_game` — Add game to scrim
+- `GET    /scrims/scrims/calendar` — Get scrims calendar
+- `GET    /scrims/scrims/analytics` — Get scrims analytics
+- `GET    /scrims/opponent-teams` — List opponent teams
+- `GET    /scrims/opponent-teams/:id` — Get opponent team details
+- `POST   /scrims/opponent-teams` — Create opponent team
+- `PATCH  /scrims/opponent-teams/:id` — Update opponent team
+- `DELETE /scrims/opponent-teams/:id` — Delete opponent team
+- `GET    /scrims/opponent-teams/:id/scrim-history` — Get scrim history with opponent
 
 #### Strategy Module
-- `GET /strategy/draft-plans` - List draft plans
-- `GET /strategy/draft-plans/:id` - Get draft plan details
-- `POST /strategy/draft-plans` - Create new draft plan
-- `PATCH /strategy/draft-plans/:id` - Update draft plan
-- `DELETE /strategy/draft-plans/:id` - Delete draft plan
-- `POST /strategy/draft-plans/:id/analyze` - Analyze draft plan
-- `PATCH /strategy/draft-plans/:id/activate` - Activate draft plan
-- `PATCH /strategy/draft-plans/:id/deactivate` - Deactivate draft plan
-- `GET /strategy/tactical-boards` - List tactical boards
-- `GET /strategy/tactical-boards/:id` - Get tactical board details
-- `POST /strategy/tactical-boards` - Create new tactical board
-- `PATCH /strategy/tactical-boards/:id` - Update tactical board
-- `DELETE /strategy/tactical-boards/:id` - Delete tactical board
-- `GET /strategy/tactical-boards/:id/statistics` - Get tactical board statistics
-- `GET /strategy/assets/champion/:champion_name` - Get champion assets
-- `GET /strategy/assets/map` - Get map assets
+- `GET    /strategy/draft-plans` — List draft plans
+- `GET    /strategy/draft-plans/:id` — Get draft plan details
+- `POST   /strategy/draft-plans` — Create new draft plan
+- `PATCH  /strategy/draft-plans/:id` — Update draft plan
+- `DELETE /strategy/draft-plans/:id` — Delete draft plan
+- `POST   /strategy/draft-plans/:id/analyze` — Analyze draft plan
+- `PATCH  /strategy/draft-plans/:id/activate` — Activate draft plan
+- `PATCH  /strategy/draft-plans/:id/deactivate` — Deactivate draft plan
+- `GET    /strategy/tactical-boards` — List tactical boards
+- `GET    /strategy/tactical-boards/:id` — Get tactical board details
+- `POST   /strategy/tactical-boards` — Create new tactical board
+- `PATCH  /strategy/tactical-boards/:id` — Update tactical board
+- `DELETE /strategy/tactical-boards/:id` — Delete tactical board
+- `GET    /strategy/tactical-boards/:id/statistics` — Get tactical board statistics
+- `GET    /strategy/assets/champion/:champion_name` — Get champion assets
+- `GET    /strategy/assets/map` — Get map assets
 
 #### Support System
-- `GET /support/tickets` - List user's tickets
-- `GET /support/tickets/:id` - Get ticket details
-- `POST /support/tickets` - Create new support ticket
-- `PATCH /support/tickets/:id` - Update ticket
-- `DELETE /support/tickets/:id` - Delete ticket
-- `POST /support/tickets/:id/close` - Close ticket
-- `POST /support/tickets/:id/reopen` - Reopen ticket
-- `POST /support/tickets/:id/messages` - Add message to ticket
-- `GET /support/faq` - List all FAQs
-- `GET /support/faq/:slug` - Get FAQ by slug
-- `POST /support/faq/:slug/helpful` - Mark FAQ as helpful
-- `POST /support/faq/:slug/not-helpful` - Mark FAQ as not helpful
-- `GET /support/staff/dashboard` - Support staff dashboard (staff only)
-- `GET /support/staff/analytics` - Support analytics (staff only)
-- `POST /support/staff/tickets/:id/assign` - Assign ticket to staff (staff only)
-- `POST /support/staff/tickets/:id/resolve` - Resolve ticket (staff only)
+- `GET    /support/tickets` — List user's tickets
+- `GET    /support/tickets/:id` — Get ticket details
+- `POST   /support/tickets` — Create new support ticket
+- `PATCH  /support/tickets/:id` — Update ticket
+- `DELETE /support/tickets/:id` — Delete ticket
+- `POST   /support/tickets/:id/close` — Close ticket
+- `POST   /support/tickets/:id/reopen` — Reopen ticket
+- `POST   /support/tickets/:id/messages` — Add message to ticket
+- `GET    /support/faq` — List all FAQs
+- `GET    /support/faq/:slug` — Get FAQ by slug
+- `POST   /support/faq/:slug/helpful` — Mark FAQ as helpful
+- `POST   /support/faq/:slug/not-helpful` — Mark FAQ as not helpful
+- `GET    /support/staff/dashboard` — Support staff dashboard (staff only)
+- `GET    /support/staff/analytics` — Support analytics (staff only)
+- `POST   /support/staff/tickets/:id/assign` — Assign ticket to staff (staff only)
+- `POST   /support/staff/tickets/:id/resolve` — Resolve ticket (staff only)
 
-**For complete endpoint documentation with request/response examples, visit `/api-docs`**
+> For complete endpoint documentation with request/response examples, visit `/api-docs`
 
 </details>
 
-## 🧪 Testing
+---
+
+## 07 · Testing
 
 ### Unit & Request Tests
 
-Run the complete test suite:
-
 ```bash
+# Full test suite
 bundle exec rspec
-```
 
-Run specific test types:
-```bash
 # Unit tests (models, services)
 bundle exec rspec spec/models
 bundle exec rspec spec/services
@@ -719,37 +775,97 @@ bundle exec rake rswag:specs:swaggerize
 bundle exec rspec spec/integration/players_spec.rb
 ```
 
-**Current coverage:**
-- ✅ Authentication (8 endpoints)
-- ✅ Players (9 endpoints)
-- ✅ Matches (11 endpoints)
-- ✅ Scouting (10 endpoints)
-- ✅ Schedules (8 endpoints)
-- ✅ Team Goals (8 endpoints)
-- ✅ VOD Reviews (11 endpoints)
-- ✅ Analytics (7 endpoints)
-- ✅ Riot Data (14 endpoints)
-- ✅ Riot Integration (1 endpoint)
-- ✅ Dashboard (4 endpoints)
-- ✅ Competitive (14 endpoints)
-- ✅ Scrims (14 endpoints)
-- ✅ Strategy (16 endpoints)
-- ✅ Support (15 endpoints)
+**Coverage atual:**
 
-**Total:** 170+ endpoints documented
+```
+╔══════════════════════════╦════════════════════╗
+║  MODULE                  ║  ENDPOINTS         ║
+╠══════════════════════════╬════════════════════╣
+║  Authentication          ║  8                 ║
+║  Players                 ║  9                 ║
+║  Matches                 ║  11                ║
+║  Scouting                ║  10                ║
+║  Schedules               ║  8                 ║
+║  Team Goals              ║  8                 ║
+║  VOD Reviews             ║  11                ║
+║  Analytics               ║  7                 ║
+║  Riot Data               ║  14                ║
+║  Riot Integration        ║  1                 ║
+║  Dashboard               ║  4                 ║
+║  Competitive             ║  14                ║
+║  Scrims                  ║  14                ║
+║  Strategy                ║  16                ║
+║  Support                 ║  15                ║
+╠══════════════════════════╬════════════════════╣
+║  TOTAL                   ║  170+ endpoints    ║
+╚══════════════════════════╩════════════════════╝
+```
 
 ### Code Coverage
 
-View coverage report after running tests:
 ```bash
 open coverage/index.html
 ```
 
-## Deployment
+---
+
+## 08 · Performance & Load Testing
+
+### Load Testing (k6)
+
+```bash
+# Quick smoke test (1 min)
+./load_tests/run-tests.sh smoke local
+
+# Full load test (16 min)
+./load_tests/run-tests.sh load local
+
+# Stress test (28 min)
+./load_tests/run-tests.sh stress local
+```
+
+```
+╔═══════════════════════════════════════╗
+║  PERFORMANCE BENCHMARKS               ║
+╠══════════════════╦════════════════════╣
+║  p(95) Docker    ║  ~880ms            ║
+║  p(95) Prod est. ║  ~500ms            ║
+║  With cache      ║  ~50ms             ║
+║  Error rate      ║  0%                ║
+╚══════════════════╩════════════════════╝
+```
+
+> See [TESTING_GUIDE.md](DOCS/tests/TESTING_GUIDE.md) and [QUICK_START.md](DOCS/setup/QUICK_START.md)
+
+---
+
+## 09 · Security Testing (OWASP)
+
+```bash
+# Complete security audit
+./security_tests/scripts/full-security-audit.sh
+
+# Individual scans
+./security_tests/scripts/brakeman-scan.sh          # Code analysis
+./security_tests/scripts/dependency-scan.sh        # Vulnerable gems
+./security_tests/scripts/zap-baseline-scan.sh      # Web app scan
+```
+
+```
+[✓] OWASP Top 10
+[✓] Code security (Brakeman)
+[✓] Dependency vulnerabilities
+[✓] Runtime security (ZAP)
+[✓] CI/CD integration
+```
+
+> See [security_tests/README.md](security_tests/README.md)
+
+---
+
+## 10 · Deployment
 
 ### Environment Variables
-
-Required environment variables for production:
 
 ```bash
 # Core
@@ -775,88 +891,37 @@ HASHID_MIN_LENGTH=6
 
 ### Docker
 
-A Dockerfile is provided for containerized deployment:
-
 ```bash
 docker build -t prostaff-api .
 docker run -p 3333:3000 prostaff-api
 ```
 
-## CI/CD
+---
+
+## 11 · CI/CD
 
 ### Architecture Diagram Auto-Update
 
-This project includes an automated workflow that keeps the architecture diagram in sync with the codebase:
-
-- **Trigger**: Automatically runs when changes are made to:
-  - `app/modules/**` - Module definitions
-  - `app/models/**` - Data models
-  - `app/controllers/**` - Controllers
-  - `config/routes.rb` - Route definitions
-  - `Gemfile` - Dependencies
-
-- **Process**: 
-  1. GitHub Actions workflow detects relevant code changes
-  2. Runs `scripts/update_architecture_diagram.rb`
-  3. Script analyzes project structure (modules, models, controllers, services)
-  4. Generates updated Mermaid diagram
-  5. Updates README.md with new diagram
-  6. Commits changes back to the repository
-
-- **Manual Update**: You can also manually update the diagram:
-  ```bash
-  ruby scripts/update_architecture_diagram.rb
-  ```
-
-The diagram automatically reflects:
-- New modules added to `app/modules/`
-- New models created
-- New controllers and routes
-- Service integrations (Riot API, Redis, PostgreSQL, Sidekiq)
-
-## 📊 Performance & Testing
-
-### Load Testing (k6)
-
-```bash
-# Quick smoke test (1 min)
-./load_tests/run-tests.sh smoke local
-
-# Full load test (16 min)
-./load_tests/run-tests.sh load local
-
-# Stress test (28 min)
-./load_tests/run-tests.sh stress local
+```
+┌────────────────────────────────────────────────────────────────┐
+│  TRIGGER — changes in:                                         │
+│    · app/modules/**    · app/models/**                         │
+│    · app/controllers/**  · config/routes.rb  · Gemfile         │
+├────────────────────────────────────────────────────────────────┤
+│  PROCESS                                                       │
+│    1. GitHub Actions detects relevant code changes             │
+│    2. Runs scripts/update_architecture_diagram.rb              │
+│    3. Script analyzes project structure                        │
+│    4. Generates updated Mermaid diagram                        │
+│    5. Updates README.md with new diagram                       │
+│    6. Commits changes back to the repository                   │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-**Current Performance**:
-- p(95): ~880ms (Docker dev)
-- Production estimate: ~500ms
-- With cache: ~50ms
-- Error rate: 0%
-
-**Documentation**: See [TESTING_GUIDE.md](DOCS/tests/TESTING_GUIDE.md) and [QUICK_START.md](DOCS/setup/QUICK_START.md)
-
-### Security Testing (OWASP)
-
+**Manual update:**
 ```bash
-# Complete security audit
-./security_tests/scripts/full-security-audit.sh
-
-# Individual scans
-./security_tests/scripts/brakeman-scan.sh          # Code analysis
-./security_tests/scripts/dependency-scan.sh        # Vulnerable gems
-./security_tests/scripts/zap-baseline-scan.sh      # Web app scan
+ruby scripts/update_architecture_diagram.rb
 ```
-
-**Coverage**:
-- ✅ OWASP Top 10
-- ✅ Code security (Brakeman)
-- ✅ Dependency vulnerabilities
-- ✅ Runtime security (ZAP)
-- ✅ CI/CD integration
-
-**Documentation**: See [security_tests/README.md](security_tests/README.md)
 
 ### CI/CD Workflows
 
@@ -867,28 +932,33 @@ Automated testing on every push:
 
 See `.github/workflows/` for details.
 
-## Contributing
+---
+
+## 12 · Contributing
 
 1. Create a feature branch
 2. Make your changes
 3. Add tests
-4. **Run security scan**: `./security_tests/scripts/brakeman-scan.sh`
+4. Run security scan: `./security_tests/scripts/brakeman-scan.sh`
 5. Ensure all tests pass
 6. Submit a pull request
 
-**Note**: The architecture diagram will be automatically updated when you add new modules, models, or controllers.
-## License
+> The architecture diagram will be automatically updated when you add new modules, models, or controllers.
 
-Copyright e Licenciamento
+---
 
-© 2025 ProStaff.gg. Todos os direitos reservados.
+## 13 · License
 
-Este repositório contém o código-fonte oficial da API para a plataforma de e-sports ProStaff.gg.
-
-O código-fonte contido aqui é disponibilizado sob a licença Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
-Você pode encontrar o texto completo da licença no arquivo [LICENSE](license.md) neste repositório.
-
-Shield:
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  © 2026 ProStaff.gg. Todos os direitos reservados.                           ║
+║                                                                              ║
+║  Este repositório contém o código-fonte oficial da API ProStaff.gg.          ║
+║  Disponibilizado sob a licença:                                              ║
+║                                                                              ║
+║  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
@@ -901,10 +971,20 @@ This work is licensed under a
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
-
+---
 
 ## Disclaimer
 
-Prostaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. 
+> Prostaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties.
+>
+> Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
-Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+---
+
+<div align="center">
+
+```
+▓▒░ · © 2025 PROSTAFF.GG · ░▒▓
+```
+
+</div>
