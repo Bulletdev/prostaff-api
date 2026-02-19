@@ -45,11 +45,15 @@ module Api
         # @return [JSON] Performance analytics data
         def index
           matches = apply_date_filters(organization_scoped(Match))
-          players = organization_scoped(Player).active
 
-          # Only process player_id if it's present and valid
+          # Use active players for team-wide stats (best performers, role breakdown, etc.)
+          # but validate player_id against ALL org players so that bench/trial/inactive
+          # players can still have their individual stats viewed.
+          active_players = organization_scoped(Player).active
+          all_org_players = organization_scoped(Player)
+
           player_id = params[:player_id].presence
-          if player_id.present? && !players.exists?(id: player_id)
+          if player_id.present? && !all_org_players.exists?(id: player_id)
             return render_error(
               message: 'Player not found',
               code: 'PLAYER_NOT_FOUND',
@@ -57,8 +61,8 @@ module Api
             )
           end
 
-          service = ::Analytics::Services::PerformanceAnalyticsService.new(matches, players)
-          performance_data = service.calculate_performance_data(player_id: player_id)
+          service = ::Analytics::Services::PerformanceAnalyticsService.new(matches, active_players)
+          performance_data = service.calculate_performance_data(player_id: player_id, all_players: all_org_players)
 
           render_success(performance_data)
         rescue StandardError => e
