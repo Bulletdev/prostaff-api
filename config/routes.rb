@@ -100,6 +100,7 @@ Rails.application.routes.draw do
             post :enable_access
             post :disable_access
             post :transfer
+            post :change_status
           end
         end
 

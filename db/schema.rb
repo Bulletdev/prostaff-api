@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_17_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -180,6 +180,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_17_120000) do
     t.index ["organization_id", "game_start", "victory"], name: "idx_matches_org_game_start_victory", comment: "Otimiza queries de winrate por período"
     t.index ["organization_id", "game_start"], name: "idx_matches_org_game_start"
     t.index ["organization_id", "id"], name: "idx_matches_org_id"
+    t.index ["organization_id", "match_type"], name: "idx_matches_org_match_type"
     t.index ["organization_id", "victory"], name: "idx_matches_org_victory"
     t.index ["organization_id"], name: "index_matches_on_organization_id"
     t.index ["riot_match_id"], name: "index_matches_on_riot_match_id", unique: true
@@ -333,7 +334,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_17_120000) do
     t.index ["champion"], name: "index_player_match_stats_on_champion"
     t.index ["match_id", "player_id"], name: "idx_player_stats_match_player_agg", comment: "Otimiza agregações de estatísticas (SUM kills/deaths/assists)"
     t.index ["match_id"], name: "idx_player_stats_match"
+    t.index ["player_id", "champion"], name: "idx_pms_player_champion"
+    t.index ["player_id", "cs_per_min"], name: "idx_pms_player_cs_per_min"
     t.index ["player_id", "match_id"], name: "index_player_match_stats_on_player_id_and_match_id", unique: true
+    t.index ["player_id", "performance_score"], name: "idx_pms_player_performance_score"
+    t.index ["player_id", "vision_score"], name: "idx_pms_player_vision_score"
     t.index ["player_id"], name: "index_player_match_stats_on_player_id"
   end
 

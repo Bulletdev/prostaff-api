@@ -24,8 +24,11 @@ module Analytics
       # Calculates complete performance data
       #
       # @param player_id [Integer, nil] Optional player ID for individual stats
+      # @param all_players [ActiveRecord::Relation, nil] Scope to resolve the individual player
+      #   from. Defaults to @players (active only). Pass the full org scope when you want to
+      #   allow individual stats for inactive/bench/trial players too.
       # @return [Hash] Performance analytics data
-      def calculate_performance_data(player_id: nil)
+      def calculate_performance_data(player_id: nil, all_players: nil)
         data = {
           overview: team_overview,
           win_rate_trend: win_rate_trend,
@@ -35,7 +38,9 @@ module Analytics
         }
 
         if player_id
-          player = @players.find_by(id: player_id)
+          # Use the broader scope when provided so bench/trial players can still be looked up
+          lookup_scope = all_players || @players
+          player = lookup_scope.find_by(id: player_id)
           data[:player_stats] = player_statistics(player) if player
         end
 
@@ -80,13 +85,33 @@ module Analytics
         }
       end
 
-      # Calculates win rate trend over time
+      # Calculates win rate trend over time using a single SQL GROUP BY query.
+      # DATE_TRUNC groups by ISO week in the DB, avoiding loading all rows into Ruby.
       def win_rate_trend
-        # Convert to array and filter out matches without game_start
-        matches_array = @matches.to_a.select { |m| m.game_start.present? }
-        return [] if matches_array.empty?
+        return [] if @matches.none?
 
-        calculate_win_rate_trend(matches_array, group_by: :week)
+        rows = @matches
+          .where.not(game_start: nil)
+          .group("DATE_TRUNC('week', game_start)")
+          .select(
+            "DATE_TRUNC('week', game_start) AS week",
+            'COUNT(*) AS total',
+            'SUM(CASE WHEN victory THEN 1 ELSE 0 END) AS wins'
+          )
+
+        rows.map do |row|
+          total = row.total.to_i
+          wins  = row.wins.to_i
+          win_rate = total.zero? ? 0.0 : ((wins.to_f / total) * 100).round(1)
+
+          {
+            period:   row.week.strftime('%Y-%m-%d'),
+            matches:  total,
+            wins:     wins,
+            losses:   total - wins,
+            win_rate: win_rate
+          }
+        end.sort_by { |d| d[:period] }
       rescue StandardError => e
         Rails.logger.error("Error in win_rate_trend: #{e.message}")
         Rails.logger.error(e.backtrace.join("\n"))
@@ -122,19 +147,44 @@ module Analytics
       end
 
       # Identifies top performing players
+      # Single GROUP BY query instead of 1+6N per-player queries
       def best_performers
-        @players.map do |player|
-          stats = PlayerMatchStat.where(player: player, match: @matches)
-          next if stats.empty?
+        player_ids = @players.pluck(:id)
+        match_ids  = @matches.pluck(:id)
+        return [] if player_ids.empty? || match_ids.empty?
+
+        aggregated = PlayerMatchStat
+          .joins(:match)
+          .where(player_id: player_ids, match_id: match_ids)
+          .group(:player_id)
+          .select(
+            'player_id',
+            'COUNT(*) AS games',
+            'SUM(kills) AS total_kills',
+            'SUM(deaths) AS total_deaths',
+            'SUM(assists) AS total_assists',
+            'AVG(performance_score) AS avg_performance_score',
+            'SUM(CASE WHEN matches.victory THEN 1 ELSE 0 END) AS mvp_count'
+          )
+
+        stats_by_player = aggregated.index_by(&:player_id)
+        players_by_id   = @players.index_by(&:id)
+
+        stats_by_player.filter_map do |pid, agg|
+          player = players_by_id[pid]
+          next unless player
+
+          deaths = agg.total_deaths.to_i.zero? ? 1 : agg.total_deaths.to_i
+          kda    = ((agg.total_kills.to_i + agg.total_assists.to_i).to_f / deaths).round(2)
 
           {
-            player: player_hash(player),
-            games: stats.count,
-            avg_kda: calculate_avg_kda(stats),
-            avg_performance_score: stats.average(:performance_score)&.round(1) || 0,
-            mvp_count: stats.joins(:match).where(matches: { victory: true }).count
+            player:                player_hash(player),
+            games:                 agg.games.to_i,
+            avg_kda:               kda,
+            avg_performance_score: agg.avg_performance_score.to_f.round(1),
+            mvp_count:             agg.mvp_count.to_i
           }
-        end.compact.sort_by { |p| -p[:avg_performance_score] }.take(5)
+        end.sort_by { |p| -p[:avg_performance_score] }.take(5)
       rescue StandardError => e
         Rails.logger.error("Error in best_performers: #{e.message}")
         []
@@ -248,7 +298,9 @@ module Analytics
       end
 
       def sum_player_cs(stats)
-        stats.sum { |s| s.cs || ((s.minions_killed || 0) + (s.jungle_minions_killed || 0)) }
+        stats.sum(
+          "COALESCE(cs, minions_killed + COALESCE(jungle_minions_killed, 0), 0)"
+        ).to_i
       end
 
       def calculate_team_cs(stats)
@@ -258,10 +310,11 @@ module Analytics
         player = stats.first&.player
         return 0 unless player&.organization_id
 
-        team_stats = PlayerMatchStat.joins(:player, :match)
-                                    .where(match_id: match_ids, players: { organization_id: player.organization_id })
-
-        team_stats.sum { |s| s.cs || ((s.minions_killed || 0) + (s.jungle_minions_killed || 0)) }
+        PlayerMatchStat
+          .joins(:player)
+          .where(match_id: match_ids, players: { organization_id: player.organization_id })
+          .sum("COALESCE(cs, minions_killed + COALESCE(jungle_minions_killed, 0), 0)")
+          .to_i
       end
 
       def log_error(context, error)
@@ -288,6 +341,8 @@ module Analytics
       # Measures what % of team kills the player participated in (kills + assists)
       # High KP% = Player is present in most team fights (good synergy/map awareness)
       #
+      # Uses 2 GROUP BY queries instead of one per match to avoid N+1.
+      #
       # @param stats [ActiveRecord::Relation] Player match stats
       # @return [Float] Kill participation percentage (0-100)
       def calculate_kill_participation(stats)
@@ -296,35 +351,33 @@ module Analytics
         player = stats.first&.player
         return 0.0 unless player&.organization_id
 
-        # Calculate per-match and average
-        kp_per_match = []
+        match_ids = stats.pluck(:match_id)
+        return 0.0 if match_ids.empty?
 
-        stats.each do |stat|
-          next unless stat.match
+        # Query 1: player's kills+assists per match (from the already-scoped stats relation)
+        player_participation_by_match = stats
+          .group(:match_id)
+          .select('match_id, SUM(kills + assists) AS participation')
+          .each_with_object({}) { |r, h| h[r.match_id] = r.participation.to_i }
 
-          # Player's participation in this match
-          player_kills = stat.kills || 0
-          player_assists = stat.assists || 0
-          player_participation = player_kills + player_assists
+        # Query 2: team's total kills per match (all players from same org)
+        team_kills_by_match = PlayerMatchStat
+          .joins(:player)
+          .where(match_id: match_ids, players: { organization_id: player.organization_id })
+          .group(:match_id)
+          .sum(:kills)
 
-          # Team's total kills in this match (all players from same org)
-          team_kills = PlayerMatchStat
-                       .joins(:player)
-                       .where(match_id: stat.match_id, players: { organization_id: player.organization_id })
-                       .sum(:kills)
+        kp_per_match = match_ids.filter_map do |mid|
+          team_kills = team_kills_by_match[mid].to_i
+          next if team_kills.zero?
 
-          # Calculate KP% for this match
-          if team_kills > 0
-            match_kp = (player_participation.to_f / team_kills) * 100
-            # Cap at 100% to handle edge cases (internal scrims, etc)
-            match_kp = [match_kp, 100.0].min
-            kp_per_match << match_kp
-          end
+          participation = player_participation_by_match[mid].to_i
+          match_kp = [(participation.to_f / team_kills) * 100, 100.0].min
+          match_kp
         end
 
         return 0.0 if kp_per_match.empty?
 
-        # Return average KP% across all matches
         (kp_per_match.sum / kp_per_match.size).round(1)
       rescue StandardError => e
         Rails.logger.error("Error calculating kill participation: #{e.message}")

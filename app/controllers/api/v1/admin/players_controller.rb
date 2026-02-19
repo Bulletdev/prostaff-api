@@ -16,7 +16,7 @@ module Api
       #
       class PlayersController < Api::V1::BaseController
         before_action :require_admin_access
-        before_action :set_player, only: %i[soft_delete restore enable_access disable_access transfer]
+        before_action :set_player, only: %i[soft_delete restore enable_access disable_access transfer change_status]
 
         # GET /api/v1/admin/players
         # Lists all players including soft-deleted ones
@@ -183,6 +183,55 @@ module Api
               message: 'Failed to disable player access',
               code: 'DISABLE_ACCESS_ERROR',
               status: :unprocessable_entity
+            )
+          end
+        end
+
+        # POST /api/v1/admin/players/:id/change_status
+        # Changes the status of a non-deleted player (active / inactive / benched / trial).
+        # Use soft_delete to archive a player and restore to un-archive them.
+        def change_status
+          new_status = params[:status].to_s.strip
+
+          # Disallow setting 'removed' via this endpoint — that is handled by soft_delete
+          allowed = Constants::Player::STATUSES - ['removed']
+          unless allowed.include?(new_status)
+            return render_error(
+              message: "Invalid status '#{new_status}'. Allowed: #{allowed.join(', ')}",
+              code: 'VALIDATION_ERROR',
+              status: :unprocessable_entity
+            )
+          end
+
+          if @player.deleted_at.present?
+            return render_error(
+              message: 'Cannot change status of an archived player. Use restore instead.',
+              code: 'PLAYER_ARCHIVED',
+              status: :unprocessable_entity
+            )
+          end
+
+          old_status = @player.status
+
+          if @player.update(status: new_status)
+            log_user_action(
+              action: 'change_status',
+              entity_type: 'Player',
+              entity_id: @player.id,
+              old_values: { status: old_status },
+              new_values: { status: new_status }
+            )
+
+            render_success({
+                             message: "Player status changed to #{new_status}",
+                             player: PlayerSerializer.render_as_hash(@player)
+                           })
+          else
+            render_error(
+              message: 'Failed to update player status',
+              code: 'CHANGE_STATUS_ERROR',
+              status: :unprocessable_entity,
+              details: @player.errors.as_json
             )
           end
         end
