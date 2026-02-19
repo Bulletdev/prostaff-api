@@ -29,7 +29,6 @@ module AuthSchemaInitializer
               Rails.logger.debug "Auth schema already exists"
               @created = true
             else
-              # Re-raise if it's a different error (permissions, etc)
               Rails.logger.error "Failed to create auth schema: #{e.message}"
               raise
             end
@@ -42,24 +41,32 @@ end
 
 # Initialize on boot
 Rails.application.config.after_initialize do
-  AuthSchemaInitializer.initialize!
+  # Tthe `auth` schema is created and managed by itself —
+  # running CREATE SCHEMA here generates a wasteful DDL call on every Puma
+  # worker and Sidekiq process boot (228 DDL calls seen in Query Performance).
+  # Only run when connecting to a local/non-Supabase Postgres instance.
+  db_url = ENV.fetch('SUPABASE_DB_URL', ENV.fetch('DATABASE_URL', ''))
+  if db_url.exclude?('supabase')
+    AuthSchemaInitializer.initialize!
 
-  # Run in thread to not block boot, but with retry logic
-  Thread.new do
-    retries = 0
-    max_retries = 3
+    Thread.new do
+      retries = 0
+      max_retries = 3
 
-    begin
-      sleep 0.5 # Small delay to let other processes/threads start
-      AuthSchemaInitializer.ensure_schema!
-    rescue => e
-      retries += 1
-      if retries < max_retries
-        sleep 1 * retries # Exponential backoff
-        retry
-      else
-        Rails.logger.error "Failed to ensure auth schema after #{max_retries} attempts: #{e.message}"
+      begin
+        sleep 0.5 
+        AuthSchemaInitializer.ensure_schema!
+      rescue => e
+        retries += 1
+        if retries < max_retries
+          sleep 1 * retries 
+          retry
+        else
+          Rails.logger.error "Failed to ensure auth schema after #{max_retries} attempts: #{e.message}"
+        end
       end
-    end
-  end.tap { |t| t.abort_on_exception = false }
+    end.tap { |t| t.abort_on_exception = false }
+  else
+    Rails.logger.debug 'AuthSchemaInitializer skipped — Supabase manages the auth schema'
+  end
 end

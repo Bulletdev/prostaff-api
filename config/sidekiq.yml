@@ -1,7 +1,12 @@
 ---
 # Sidekiq Configuration File
 
-:concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 25).to_i %>
+# Concurrency = number of Sidekiq threads = DB pool slots consumed.
+# Supabase Nano (2 vCPU / 2 GB) + PgBouncer session mode: keep this low.
+# Puma: 2 workers × 5 threads = 10 connections.
+# Sidekiq: DB_POOL should match concurrency (set both in your env together).
+# Recommended production env: SIDEKIQ_CONCURRENCY=10 DB_POOL=10
+:concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10).to_i %>
 :timeout: <%= ENV.fetch('SIDEKIQ_TIMEOUT', 25).to_i %>
 :verbose: <%= ENV.fetch('SIDEKIQ_VERBOSE', 'true') == 'true' %>
 :queues:
@@ -20,9 +25,11 @@
     class: CleanupExpiredTokensJob
     description: 'Clean up expired password reset tokens and blacklisted JWT tokens'
 
-  # Refresh database metadata materialized views every 30 minutes
+  # Refresh database metadata materialized views every 2 hours.
+  # These views cache table privileges, extensions and policies which change
+  # rarely. Running every 30m was consuming ~72% of total DB time (879ms avg).
   refresh_metadata_views:
-    every: '30m'
+    cron: '0 */2 * * *'
     class: RefreshMetadataViewsJob
     description: 'Refresh materialized views for database metadata (table privileges, extensions, policies)'
 
