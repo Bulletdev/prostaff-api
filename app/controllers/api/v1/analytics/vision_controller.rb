@@ -5,50 +5,31 @@ module Api
     module Analytics
       # Vision Analytics Controller
       #
-      # Tracks ward placement, ward denial, and overall vision score metrics.
-      # Compares player vision performance against team role averages and calculates percentile rankings.
+      # Returns flat vision metrics so the frontend can read them directly
+      # without unpacking nested keys.
       #
-      # @example GET /api/v1/analytics/vision/:player_id
-      #   {
-      #     vision_stats: { avg_vision_score: 45.2, avg_wards_placed: 18.5, avg_wards_killed: 8.2 },
-      #     role_comparison: { player_avg: 45.2, role_avg: 42.1, percentile: 68 }
-      #   }
-      #
-      # Main endpoints:
-      # - GET show: Returns vision statistics for the last 20 matches with role-based comparisons
       class VisionController < Api::V1::BaseController
         def show
           player = organization_scoped(Player).find(params[:player_id])
 
           stats = PlayerMatchStat.joins(:match)
+                                 .includes(:match)
                                  .where(player: player, match: { organization: current_organization })
                                  .order('matches.game_start DESC')
                                  .limit(20)
 
           vision_data = {
-            player: PlayerSerializer.render_as_hash(player),
-            vision_stats: {
-              avg_vision_score: stats.average(:vision_score)&.round(1),
-              avg_wards_placed: stats.average(:wards_placed)&.round(1),
-              avg_wards_killed: stats.average(:wards_killed)&.round(1),
-              best_vision_game: stats.maximum(:vision_score),
-              total_wards_placed: stats.sum(:wards_placed),
-              total_wards_killed: stats.sum(:wards_killed)
-            },
-            vision_per_min: calculate_avg_vision_per_min(stats),
-            by_match: stats.map do |stat|
-              {
-                match_id: stat.match.id,
-                date: stat.match.game_start,
-                vision_score: stat.vision_score,
-                wards_placed: stat.wards_placed,
-                wards_killed: stat.wards_killed,
-                champion: stat.champion,
-                role: stat.role,
-                victory: stat.match.victory
-              }
-            end,
-            role_comparison: calculate_role_comparison(player)
+            player:              PlayerSerializer.render_as_hash(player),
+            avg_vision_score:    stats.average(:vision_score)&.round(1) || 0,
+            avg_wards_placed:    stats.average(:wards_placed)&.round(1) || 0,
+            avg_wards_destroyed: stats.average(:wards_destroyed)&.round(1) || 0,
+            avg_control_wards:   stats.average(:control_wards_purchased)&.round(1) || 0,
+            best_vision_game:    stats.maximum(:vision_score) || 0,
+            total_wards_placed:  stats.sum(:wards_placed) || 0,
+            total_wards_destroyed: stats.sum(:wards_destroyed) || 0,
+            vision_per_min:      calculate_avg_vision_per_min(stats),
+            role_comparison:     calculate_role_comparison(player),
+            vision_trend:        build_vision_trend(stats)
           }
 
           render_success(vision_data)
@@ -56,33 +37,44 @@ module Api
 
         private
 
+        def build_vision_trend(stats)
+          stats.map do |stat|
+            next unless stat.match.game_start
+
+            {
+              date:         stat.match.game_start.strftime('%Y-%m-%d'),
+              vision_score: stat.vision_score || 0,
+              wards_placed: stat.wards_placed || 0,
+              wards_destroyed: stat.wards_destroyed || 0,
+              champion:     stat.champion,
+              victory:      stat.match.victory
+            }
+          end.compact.sort_by { |d| d[:date] }
+        end
+
         def calculate_avg_vision_per_min(stats)
-          total_vision = 0
+          total_vision  = 0
           total_minutes = 0
 
           stats.each do |stat|
-            if stat.match.game_duration && stat.vision_score
-              total_vision += stat.vision_score
-              total_minutes += stat.match.game_duration / 60.0
-            end
+            next unless stat.match.game_duration && stat.vision_score
+
+            total_vision  += stat.vision_score
+            total_minutes += stat.match.game_duration / 60.0
           end
 
-          return 0 if total_minutes.zero?
-
-          (total_vision / total_minutes).round(2)
+          total_minutes.zero? ? 0 : (total_vision / total_minutes).round(2)
         end
 
         def calculate_role_comparison(player)
-          # Compare player's vision score to team average for same role
-          team_stats = PlayerMatchStat.joins(:player)
-                                      .where(players: { organization: current_organization, role: player.role })
-                                      .where.not(players: { id: player.id })
-
+          team_stats   = PlayerMatchStat.joins(:player)
+                                        .where(players: { organization: current_organization, role: player.role })
+                                        .where.not(players: { id: player.id })
           player_stats = PlayerMatchStat.where(player: player)
 
           {
             player_avg: player_stats.average(:vision_score)&.round(1) || 0,
-            role_avg: team_stats.average(:vision_score)&.round(1) || 0,
+            role_avg:   team_stats.average(:vision_score)&.round(1) || 0,
             percentile: calculate_percentile(player_stats.average(:vision_score), team_stats)
           }
         end
