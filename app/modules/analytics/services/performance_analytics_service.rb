@@ -23,28 +23,38 @@ module Analytics
 
       # Calculates complete performance data
       #
+      # When player_id is provided, skips all team-level aggregations (overview,
+      # trends, role breakdown, best performers) since the frontend only uses
+      # player_stats in that context. This avoids 15+ unnecessary DB queries
+      # per player-specific request.
+      #
       # @param player_id [Integer, nil] Optional player ID for individual stats
       # @param all_players [ActiveRecord::Relation, nil] Scope to resolve the individual player
       #   from. Defaults to @players (active only). Pass the full org scope when you want to
       #   allow individual stats for inactive/bench/trial players too.
       # @return [Hash] Performance analytics data
       def calculate_performance_data(player_id: nil, all_players: nil)
-        data = {
+        if player_id
+          # Use the broader scope when provided so bench/trial players can still be looked up
+          lookup_scope = all_players || @players
+          player = lookup_scope.find_by(id: player_id)
+          return {
+            overview: {},
+            win_rate_trend: [],
+            performance_by_role: [],
+            best_performers: [],
+            match_type_breakdown: [],
+            player_stats: player ? player_statistics(player) : nil
+          }
+        end
+
+        {
           overview: team_overview,
           win_rate_trend: win_rate_trend,
           performance_by_role: performance_by_role,
           best_performers: best_performers,
           match_type_breakdown: match_type_breakdown
         }
-
-        if player_id
-          # Use the broader scope when provided so bench/trial players can still be looked up
-          lookup_scope = all_players || @players
-          player = lookup_scope.find_by(id: player_id)
-          data[:player_stats] = player_statistics(player) if player
-        end
-
-        data
       rescue StandardError => e
         Rails.logger.error("Error in calculate_performance_data: #{e.message}")
         Rails.logger.error(e.backtrace.join("\n"))
@@ -59,29 +69,66 @@ module Analytics
 
       private
 
-      # Calculates team overview statistics
+      # Calculates team overview statistics using 2 aggregated SQL queries
+      # instead of 10+ individual ones.
       def team_overview
-        stats = PlayerMatchStat.where(match: @matches)
-        build_team_overview_hash(stats)
+        build_team_overview_hash
       rescue StandardError => e
         log_error("team_overview", e)
         {}
       end
 
-      def build_team_overview_hash(stats)
+      def build_team_overview_hash
+        # Query 1: all match-level aggregates in a single pass
+        match_row = @matches
+          .select(
+            'COUNT(*) AS total',
+            'COUNT(*) FILTER (WHERE victory) AS wins',
+            'COUNT(*) FILTER (WHERE NOT victory) AS losses',
+            'ROUND(AVG(game_duration)) AS avg_duration'
+          )
+          .take
+
+        total  = match_row&.total.to_i
+        wins   = match_row&.wins.to_i
+        losses = match_row&.losses.to_i
+        win_rate = total.zero? ? 0.0 : ((wins.to_f / total) * 100).round(1)
+
+        # Query 2: all stat-level aggregates in a single pass, including sums for KDA
+        stat_row = PlayerMatchStat
+          .where(match: @matches)
+          .select(
+            'AVG(kills)               AS avg_kills',
+            'AVG(deaths)              AS avg_deaths',
+            'AVG(assists)             AS avg_assists',
+            'AVG(gold_earned)         AS avg_gold',
+            'AVG(damage_dealt_total)  AS avg_damage',
+            'AVG(vision_score)        AS avg_vision',
+            'SUM(kills)               AS total_kills',
+            'SUM(deaths)              AS total_deaths',
+            'SUM(assists)             AS total_assists'
+          )
+          .take
+
+        total_kills   = stat_row&.total_kills.to_i
+        total_deaths  = stat_row&.total_deaths.to_i
+        total_assists = stat_row&.total_assists.to_i
+        deaths_divisor = total_deaths.zero? ? 1 : total_deaths
+        avg_kda = ((total_kills + total_assists).to_f / deaths_divisor).round(2)
+
         {
-          total_matches: @matches.count || 0,
-          wins: @matches.victories.count || 0,
-          losses: @matches.defeats.count || 0,
-          win_rate: calculate_win_rate(@matches),
-          avg_game_duration: @matches.average(:game_duration)&.round(0) || 0,
-          avg_kda: calculate_avg_kda(stats),
-          avg_kills_per_game: stats.average(:kills)&.round(1) || 0,
-          avg_deaths_per_game: stats.average(:deaths)&.round(1) || 0,
-          avg_assists_per_game: stats.average(:assists)&.round(1) || 0,
-          avg_gold_per_game: stats.average(:gold_earned)&.round(0) || 0,
-          avg_damage_per_game: stats.average(:damage_dealt_total)&.round(0) || 0,
-          avg_vision_score: stats.average(:vision_score)&.round(1) || 0
+          total_matches:        total,
+          wins:                 wins,
+          losses:               losses,
+          win_rate:             win_rate,
+          avg_game_duration:    match_row&.avg_duration.to_i,
+          avg_kda:              avg_kda,
+          avg_kills_per_game:   stat_row&.avg_kills.to_f.round(1),
+          avg_deaths_per_game:  stat_row&.avg_deaths.to_f.round(1),
+          avg_assists_per_game: stat_row&.avg_assists.to_f.round(1),
+          avg_gold_per_game:    stat_row&.avg_gold.to_f.round(0),
+          avg_damage_per_game:  stat_row&.avg_damage.to_f.round(0),
+          avg_vision_score:     stat_row&.avg_vision.to_f.round(1)
         }
       end
 
@@ -147,15 +194,14 @@ module Analytics
       end
 
       # Identifies top performing players
-      # Single GROUP BY query instead of 1+6N per-player queries
+      # Single GROUP BY query instead of 1+6N per-player queries.
+      # Uses subqueries instead of pluck to avoid loading hundreds of IDs into Ruby.
       def best_performers
-        player_ids = @players.pluck(:id)
-        match_ids  = @matches.pluck(:id)
-        return [] if player_ids.empty? || match_ids.empty?
+        return [] if @players.none? || @matches.none?
 
         aggregated = PlayerMatchStat
           .joins(:match)
-          .where(player_id: player_ids, match_id: match_ids)
+          .where(player_id: @players.select(:id), match_id: @matches.select(:id))
           .group(:player_id)
           .select(
             'player_id',
@@ -298,22 +344,17 @@ module Analytics
       end
 
       def sum_player_cs(stats)
-        stats.sum(
-          "COALESCE(cs, minions_killed + COALESCE(jungle_minions_killed, 0), 0)"
-        ).to_i
+        stats.sum("COALESCE(cs, 0)").to_i
       end
 
       def calculate_team_cs(stats)
-        match_ids = stats.pluck(:match_id).uniq
-        return 0 if match_ids.empty?
-
         player = stats.first&.player
         return 0 unless player&.organization_id
 
         PlayerMatchStat
           .joins(:player)
-          .where(match_id: match_ids, players: { organization_id: player.organization_id })
-          .sum("COALESCE(cs, minions_killed + COALESCE(jungle_minions_killed, 0), 0)")
+          .where(match_id: stats.select(:match_id), players: { organization_id: player.organization_id })
+          .sum("COALESCE(cs, 0)")
           .to_i
       end
 
