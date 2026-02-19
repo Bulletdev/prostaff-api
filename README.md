@@ -29,8 +29,8 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  PROSTAFF API — Ruby on Rails 7.2 (API-Only)                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Backend da plataforma ProStaff.gg para gestão de equipes de esports.        ║
-║  200+ endpoints documentados · JWT Auth · Modular Monolith · p95 ~500ms      ║
+║  Backend for the ProStaff.gg esports team management platform.                ║
+║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~500ms         ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -42,22 +42,22 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  [■] JWT Authentication       — Refresh tokens + token blacklisting         │
-│  [■] HashID URLs              — Base62 encoding para URLs ofuscadas         │
-│  [■] Swagger Docs             — 200+ endpoints documentados interativamente │
-│  [■] Riot Games API           — Import automático de partidas e jogadores   │
+│  [■] HashID URLs              — Base62 encoding for obfuscated URLs         │
+│  [■] Swagger Docs             — 200+ endpoints documented interactively      │
+│  [■] Riot Games API           — Automatic match and player import           │
 │  [■] Advanced Analytics       — KDA trends, champion pools, vision control  │
 │  [■] Scouting System          — Talent discovery + watchlist management     │
-│  [■] VOD Review System        — Timestamp annotations colaborativas         │
-│  [■] Schedule Management      — Partidas, scrims e eventos de equipe        │
-│  [■] Goal Tracking            — Objetivos de performance (time e jogadores) │
+│  [■] VOD Review System        — Collaborative timestamp annotations         │
+│  [■] Schedule Management      — Matches, scrims and team events             │
+│  [■] Goal Tracking            — Performance goals (team and players)        │
 │  [■] Competitive Module       — PandaScore integration + draft analysis     │
 │  [■] Scrims Management        — Opponent tracking + analytics               │
 │  [■] Strategy Module          — Draft planning + tactical boards            │
-│  [■] Support System           — Ticketing + FAQ management                  │
-│  [■] Background Jobs          — Sidekiq para processamento assíncrono       │
+│  [■] Support System           — Ticketing + staff dashboard + FAQ           │
+│  [■] Background Jobs          — Sidekiq for async background processing     │
 │  [■] Security Hardened        — OWASP Top 10, Brakeman, ZAP tested          │
-│  [■] High Performance         — p95: ~500ms · com cache: ~50ms              │
-│  [■] Modular Monolith         — Arquitetura escalável por módulos           │
+│  [■] High Performance         — p95: ~500ms · cached: ~50ms                 │
+│  [■] Modular Monolith         — Scalable modular architecture               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -180,22 +180,22 @@ This API follows a **modular monolith** architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  MODULE             │  RESPONSABILIDADE                                     │
+│  MODULE             │  RESPONSIBILITY                                       │
 ├─────────────────────┼───────────────────────────────────────────────────────┤
-│  authentication     │  User auth e authorization                            │
-│  dashboard          │  Dashboard statistics e metrics                       │
-│  players            │  Player management e statistics                       │
-│  scouting           │  Player scouting e talent discovery                   │
-│  analytics          │  Performance analytics e reporting                    │
-│  matches            │  Match data e statistics                              │
-│  schedules          │  Event e schedule management                          │
-│  vod_reviews        │  Video review e timestamp management                  │
-│  team_goals         │  Goal setting e tracking                              │
+│  authentication     │  User auth and authorization                          │
+│  dashboard          │  Dashboard statistics and metrics                     │
+│  players            │  Player management and statistics                     │
+│  scouting           │  Player scouting and talent discovery                 │
+│  analytics          │  Performance analytics and reporting                  │
+│  matches            │  Match data and statistics                            │
+│  schedules          │  Event and schedule management                        │
+│  vod_reviews        │  Video review and timestamp management                │
+│  team_goals         │  Goal setting and tracking                            │
 │  riot_integration   │  Riot Games API integration                           │
 │  competitive        │  PandaScore integration, pro matches, draft analysis  │
-│  scrims             │  Scrim management e opponent team tracking            │
-│  strategy           │  Draft planning e tactical board system               │
-│  support            │  Support ticket system com staff e FAQ                │
+│  scrims             │  Scrim management and opponent team tracking          │
+│  strategy           │  Draft planning and tactical board system             │
+│  support            │  Support ticket system with staff dashboard and FAQ   │
 └─────────────────────┴───────────────────────────────────────────────────────┘
 ```
 
@@ -474,7 +474,7 @@ bundle exec sidekiq
 rails server
 ```
 
-> API disponível em `http://localhost:3333`
+> API available at `http://localhost:3333`
 
 ---
 
@@ -778,7 +778,7 @@ RSWAG_GENERATE=1 bundle exec rake rswag:specs:swaggerize
 bundle exec rspec spec/integration/players_spec.rb
 ```
 
-**Coverage atual:**
+**Current coverage:**
 
 ```
 ╔══════════════════════════╦════════════════════╗
@@ -962,10 +962,10 @@ See `.github/workflows/` for details.
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  © 2026 ProStaff.gg. Todos os direitos reservados.                           ║
+║  © 2026 ProStaff.gg. All rights reserved.                                    ║
 ║                                                                              ║
-║  Este repositório contém o código-fonte oficial da API ProStaff.gg.          ║
-║  Disponibilizado sob a licença:                                              ║
+║  This repository contains the official ProStaff.gg API source code.         ║
+║  Released under:                                                             ║
 ║                                                                              ║
 ║  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International     ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -995,7 +995,7 @@ This work is licensed under a
 <div align="center">
 
 ```
-▓▒░ · © 2025 PROSTAFF.GG · ░▒▓
+▓▒░ · © 2026 PROSTAFF.GG · ░▒▓
 ```
 
 </div>
