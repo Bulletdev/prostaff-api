@@ -83,19 +83,21 @@ class Match < ApplicationRecord
   end
 
   def kda_summary
-    stats = player_match_stats.includes(:player)
-    total_kills = stats.sum(:kills)
-    total_deaths = stats.sum(:deaths)
-    total_assists = stats.sum(:assists)
+    # Single aggregate query instead of 3 separate SUM calls
+    row = player_match_stats
+      .select('SUM(kills) AS k, SUM(deaths) AS d, SUM(assists) AS a')
+      .take
 
-    deaths = total_deaths.zero? ? 1 : total_deaths
-    kda = (total_kills + total_assists).to_f / deaths
+    total_kills   = row&.k.to_i
+    total_deaths  = row&.d.to_i
+    total_assists = row&.a.to_i
+    deaths_divisor = total_deaths.zero? ? 1 : total_deaths
 
     {
-      kills: total_kills,
-      deaths: total_deaths,
+      kills:   total_kills,
+      deaths:  total_deaths,
       assists: total_assists,
-      kda: kda.round(2)
+      kda:     ((total_kills + total_assists).to_f / deaths_divisor).round(2)
     }
   end
 

@@ -18,9 +18,8 @@ module Dashboard
       end
 
       def stats
-        cache_key = "dashboard_stats_#{current_organization.id}_#{current_organization.updated_at.to_i}"
-        cached_stats = Rails.cache.fetch(cache_key, expires_in: 5.minutes) { calculate_stats }
-        render_success(cached_stats)
+        # calculate_stats now caches internally — no need to wrap again here
+        render_success(calculate_stats)
       end
 
       def activities
@@ -46,30 +45,75 @@ module Dashboard
 
       private
 
+      # Returns dashboard stats, cached per-org for 5 minutes.
+      # Both the `index` and `stats` actions go through here so the cache
+      # is shared — only one thread ever runs the queries for a given org.
       def calculate_stats
+        Rails.cache.fetch("dashboard_stats_v2_#{current_organization.id}", expires_in: 5.minutes) do
+          compute_dashboard_stats
+        end
+      end
+
+      # Runs the actual DB queries — called only on cache miss.
+      # Reduces ~12 individual queries down to 6 by using SQL aggregates.
+      def compute_dashboard_stats
         matches = organization_scoped(Match).recent(30)
-        players = organization_scoped(Player).active
+
+        # Query 1: match aggregates — total, wins, losses in one pass
+        match_row = matches.select(
+          'COUNT(*) AS total',
+          'COUNT(*) FILTER (WHERE victory) AS wins',
+          'COUNT(*) FILTER (WHERE NOT victory) AS losses'
+        ).take
+
+        total_matches = match_row&.total.to_i
+        wins          = match_row&.wins.to_i
+        losses        = match_row&.losses.to_i
+        win_rate      = total_matches.zero? ? 0.0 : ((wins.to_f / total_matches) * 100).round(1)
+
+        # Query 2: player counts — total + active in one pass
+        # (organization_scoped already adds deleted_at IS NULL)
+        player_row = organization_scoped(Player).select(
+          "COUNT(*) AS total",
+          "COUNT(*) FILTER (WHERE status = 'active') AS active_count"
+        ).take
+
+        # Query 3: avg KDA — single aggregate instead of Exists? + 3× SUM
+        kda_row = PlayerMatchStat
+          .where(match: matches)
+          .select('SUM(kills) AS k, SUM(deaths) AS d, SUM(assists) AS a')
+          .take
+        k = kda_row&.k.to_i; d = kda_row&.d.to_i; a = kda_row&.a.to_i
+        avg_kda = ((k + a).to_f / (d.zero? ? 1 : d)).round(2)
+
+        # Query 4: recent form (5 records — small, fine as-is)
+        recent_form = calculate_recent_form(matches.order(game_start: :desc).limit(5))
+
+        # Query 5: goal counts — one GROUP BY instead of two COUNTs
+        goals_by_status = organization_scoped(TeamGoal).group(:status).count
+
+        # Query 6: upcoming matches
+        upcoming_matches = organization_scoped(Schedule)
+          .where('start_time >= ? AND event_type = ?', Time.current, 'match')
+          .count
 
         {
-          total_players: players.count,
-          active_players: players.where(status: 'active').count,
-          total_matches: matches.count,
-          wins: matches.victories.count,
-          losses: matches.defeats.count,
-          win_rate: calculate_win_rate(matches),
-          recent_form: calculate_recent_form(matches.order(game_start: :desc).limit(5)),
-          avg_kda: calculate_avg_kda(PlayerMatchStat.where(match: matches)),
-          active_goals: organization_scoped(TeamGoal).active.count,
-          completed_goals: organization_scoped(TeamGoal).where(status: 'completed').count,
-          upcoming_matches: organization_scoped(Schedule).where('start_time >= ? AND event_type = ?', Time.current,
-                                                                'match').count
+          total_players:    player_row&.total.to_i,
+          active_players:   player_row&.active_count.to_i,
+          total_matches:    total_matches,
+          wins:             wins,
+          losses:           losses,
+          win_rate:         win_rate,
+          recent_form:      recent_form,
+          avg_kda:          avg_kda,
+          active_goals:     goals_by_status['active'].to_i,
+          completed_goals:  goals_by_status['completed'].to_i,
+          upcoming_matches: upcoming_matches
         }
       end
 
-      # Methods moved to Analytics::Concerns::AnalyticsCalculations
-      # - calculate_win_rate
-      # - calculate_recent_form
-      # - calculate_avg_kda (renamed from calculate_average_kda)
+      # Methods from Analytics::Concerns::AnalyticsCalculations:
+      # - calculate_recent_form (used above for recent_form)
 
       def recent_matches_data
         matches = organization_scoped(Match)

@@ -15,7 +15,7 @@ module Api
           stats = PlayerMatchStat.joins(:match)
                                  .includes(:match)
                                  .where(player: player, match: { organization: current_organization })
-                                 .order('matches.game_start DESC')
+                                 .order('"match"."game_start" DESC')
                                  .limit(20)
 
           vision_data = {

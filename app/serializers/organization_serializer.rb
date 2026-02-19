@@ -56,25 +56,36 @@ class OrganizationSerializer < Blueprinter::Base
   end
 
   field :statistics do |org|
-    begin
+    # Cache for 2 minutes to avoid re-running these COUNT queries on every
+    # /auth/me call (the frontend fires this endpoint 3-4 times per page load).
+    Rails.cache.fetch("org_statistics_v1_#{org.id}", expires_in: 2.minutes) do
+      # Single query for both total and active player counts
+      player_row = org.players
+        .where(deleted_at: nil)
+        .select(
+          "COUNT(*) AS total_count",
+          "COUNT(*) FILTER (WHERE status = 'active') AS active_count"
+        )
+        .take
+
       {
-        total_players: org.cached_players_count,
-        active_players: org.players.where(deleted_at: nil, status: 'active').count,
-        total_matches: org.matches.count,
+        total_players:  player_row&.total_count.to_i,
+        active_players: player_row&.active_count.to_i,
+        total_matches:  org.matches.count,
         recent_matches: org.cached_monthly_matches_count,
-        total_users: org.users.count
-      }
-    rescue => e
-      Rails.logger.error("OrganizationSerializer statistics error: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace&.first(5)&.join("\n"))
-      {
-        total_players: 0,
-        active_players: 0,
-        total_matches: 0,
-        recent_matches: 0,
-        total_users: 0
+        total_users:    org.users.count
       }
     end
+  rescue => e
+    Rails.logger.error("OrganizationSerializer statistics error: #{e.class} - #{e.message}")
+    Rails.logger.error(e.backtrace&.first(5)&.join("\n"))
+    {
+      total_players: 0,
+      active_players: 0,
+      total_matches: 0,
+      recent_matches: 0,
+      total_users: 0
+    }
   end
 
   # Tier features and capabilities
