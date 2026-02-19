@@ -13,6 +13,470 @@ servers:
 - url: https://api.prostaff.gg
   description: Production server
 paths:
+  "/api/v1/admin/players":
+    get:
+      summary: List all players across all organizations (admin)
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: include_deleted
+        in: query
+        required: false
+        description: Include soft-deleted players
+        schema:
+          type: boolean
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: has_access
+        in: query
+        required: false
+        description: Filter by whether player portal access is enabled
+        schema:
+          type: boolean
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: sort_order
+        in: query
+        required: false
+        description: asc or desc
+        schema:
+          type: string
+      responses:
+        '200':
+          description: players returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  players:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Player"
+                  pagination:
+                    "$ref": "#/components/schemas/Pagination"
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      active:
+                        type: integer
+                      deleted:
+                        type: integer
+                      with_access:
+                        type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '403':
+          description: forbidden — admin/owner role required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/admin/players/{id}/soft_delete":
+    post:
+      summary: Soft-delete (archive) a player
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player archived
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  player:
+                    "$ref": "#/components/schemas/Player"
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Player left the organization
+              required:
+              - reason
+  "/api/v1/admin/players/{id}/restore":
+    post:
+      summary: Restore an archived player
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  player:
+                    "$ref": "#/components/schemas/Player"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - inactive
+                  - benched
+                  - trial
+                  example: active
+              required:
+              - status
+  "/api/v1/admin/players/{id}/enable_access":
+    post:
+      summary: Enable player portal access
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player access enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  player:
+                    "$ref": "#/components/schemas/Player"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: player@team.gg
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+              required:
+              - email
+              - password
+  "/api/v1/admin/players/{id}/disable_access":
+    post:
+      summary: Disable player portal access
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player access disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  player:
+                    "$ref": "#/components/schemas/Player"
+  "/api/v1/admin/players/{id}/change_status":
+    post:
+      summary: Change the status of a non-archived player
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player status changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  player:
+                    "$ref": "#/components/schemas/Player"
+        '422':
+          description: invalid status or player is archived
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - inactive
+                  - benched
+                  - trial
+                  example: benched
+              required:
+              - status
+  "/api/v1/admin/players/{id}/transfer":
+    post:
+      summary: Transfer player to another organization
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player transferred
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  player:
+                    "$ref": "#/components/schemas/Player"
+                  previous_organization:
+                    type: string
+                  new_organization:
+                    type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_organization_id:
+                  type: string
+                  format: uuid
+                  example: org-uuid-here
+                reason:
+                  type: string
+                  nullable: true
+                  example: Trade agreement
+              required:
+              - new_organization_id
+  "/api/v1/admin/audit-logs":
+    get:
+      summary: List audit logs
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: action
+        in: query
+        required: false
+        description: Filter by action type (e.g. soft_delete, transfer)
+        schema:
+          type: string
+      - name: entity_type
+        in: query
+        required: false
+        description: Filter by entity type (e.g. Player, Organization)
+        schema:
+          type: string
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: audit logs returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        user:
+                          type: object
+                        organization:
+                          type: object
+                        action:
+                          type: string
+                        entity_type:
+                          type: string
+                        entity_id:
+                          type: string
+                        old_values:
+                          type: object
+                          nullable: true
+                        new_values:
+                          type: object
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    "$ref": "#/components/schemas/Pagination"
+  "/api/v1/admin/organizations":
+    get:
+      summary: List all organizations (admin)
+      tags:
+      - Admin
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: tier
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: organizations returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        region:
+                          type: string
+                        tier:
+                          type: string
+                        subscription_plan:
+                          type: string
+                        subscription_status:
+                          type: string
+                        users_count:
+                          type: integer
+                        created_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    "$ref": "#/components/schemas/Pagination"
   "/api/v1/analytics/performance":
     get:
       summary: Get team performance analytics
@@ -810,6 +1274,482 @@ paths:
               - token
               - password
               - password_confirmation
+  "/api/v1/competitive-matches":
+    get:
+      summary: List competitive matches
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: Filter by status (upcoming, past)
+        schema:
+          type: string
+      responses:
+        '200':
+          description: competitive matches returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      matches:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/competitive-matches/{id}":
+    get:
+      summary: Get competitive match details
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: competitive match found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/competitive/pro-matches":
+    get:
+      summary: List all pro matches
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: league
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: team
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: pro matches returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      matches:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/competitive/pro-matches/upcoming":
+    get:
+      summary: Get upcoming pro matches
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: upcoming pro matches returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+  "/api/v1/competitive/pro-matches/past":
+    get:
+      summary: Get past pro matches
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: past pro matches returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+  "/api/v1/competitive/pro-matches/{id}":
+    get:
+      summary: Get pro match details
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: pro match found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/competitive/pro-matches/refresh":
+    post:
+      summary: Refresh pro matches from PandaScore
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: refresh triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/competitive/pro-matches/import":
+    post:
+      summary: Import a specific pro match from PandaScore
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: match imported
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                match_id:
+                  type: string
+                  example: '12345'
+              required:
+              - match_id
+  "/api/v1/competitive/draft-comparison":
+    post:
+      summary: Compare two team compositions
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: draft comparison returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      team_a_score:
+                        type: number
+                      team_b_score:
+                        type: number
+                      analysis:
+                        type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_a:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - Jinx
+                  - Lulu
+                  - Thresh
+                  - Orianna
+                  - Garen
+                team_b:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - Caitlyn
+                  - Zyra
+                  - Renekton
+                  - Azir
+                  - Lee Sin
+              required:
+              - team_a
+              - team_b
+  "/api/v1/competitive/meta/{role}":
+    get:
+      summary: Get meta champions by role
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: role
+        in: path
+        required: true
+        description: 'Role: top, jungle, mid, adc, support'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: meta champions returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        champion:
+                          type: string
+                        pick_rate:
+                          type: number
+                        win_rate:
+                          type: number
+        '422':
+          description: invalid role
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/competitive/composition-winrate":
+    get:
+      summary: Get composition win rate statistics
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: champions
+        in: query
+        required: false
+        description: Comma-separated champion names
+        schema:
+          type: string
+      responses:
+        '200':
+          description: composition win rate returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/competitive/counters":
+    get:
+      summary: Get champion counter suggestions
+      tags:
+      - Competitive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: champion
+        in: query
+        required: true
+        description: Champion name to find counters for
+        schema:
+          type: string
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: counters returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        counter_champion:
+                          type: string
+                        win_rate_vs:
+                          type: number
+  "/api/v1/constants":
+    get:
+      summary: Get application constants and enumerations
+      tags:
+      - Constants
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: constants returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player_statuses:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - active
+                        - inactive
+                        - benched
+                        - trial
+                      player_roles:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - top
+                        - jungle
+                        - mid
+                        - adc
+                        - support
+                      scrim_formats:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - bo1
+                        - bo3
+                        - bo5
+                      user_roles:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - owner
+                        - admin
+                        - coach
+                        - analyst
+                        - viewer
+                      regions:
+                        type: array
+                        items:
+                          type: string
+                      ticket_categories:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - bug
+                        - feature_request
+                        - billing
+                        - other
+                      ticket_priorities:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - low
+                        - medium
+                        - high
+                        - urgent
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/v1/dashboard":
     get:
       summary: Get dashboard overview
@@ -987,6 +1927,93 @@ paths:
                         type: array
                       count:
                         type: integer
+  "/api/v1/fantasy/waitlist":
+    post:
+      summary: Join the fantasy feature waitlist
+      tags:
+      - Fantasy
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: added to waitlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      position:
+                        type: integer
+                      created_at:
+                        type: string
+                        format: date-time
+        '422':
+          description: already on waitlist or validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: coach@team.gg
+                notes:
+                  type: string
+                  nullable: true
+                  example: Interested in using fantasy for team building decisions
+              required:
+              - email
+  "/api/v1/fantasy/waitlist/stats":
+    get:
+      summary: Get fantasy waitlist statistics
+      tags:
+      - Fantasy
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: waitlist stats returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_signups:
+                        type: integer
+                      signups_this_week:
+                        type: integer
+                      launch_target:
+                        type: integer
+                        nullable: true
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/v1/matches":
     get:
       summary: List all matches
@@ -1373,6 +2400,293 @@ paths:
                   default: 20
               required:
               - player_id
+  "/api/v1/messages":
+    get:
+      summary: List messages for the current user
+      tags:
+      - Messages
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: messages returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      messages:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            subject:
+                              type: string
+                            body:
+                              type: string
+                            sender:
+                              type: object
+                            read:
+                              type: boolean
+                            created_at:
+                              type: string
+                              format: date-time
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/messages/{id}":
+    delete:
+      summary: Delete a message
+      tags:
+      - Messages
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: message deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: message not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/notifications":
+    get:
+      summary: List notifications for the current user
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: 'Filter by status: read, unread'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: notifications returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      notifications:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            body:
+                              type: string
+                            notification_type:
+                              type: string
+                            read:
+                              type: boolean
+                            read_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                            created_at:
+                              type: string
+                              format: date-time
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/notifications/unread_count":
+    get:
+      summary: Get the count of unread notifications
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: unread count returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      unread_count:
+                        type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/notifications/mark_all_as_read":
+    patch:
+      summary: Mark all notifications as read
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: all notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      updated_count:
+                        type: integer
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/notifications/{id}":
+    get:
+      summary: Get a specific notification
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: notification found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '404':
+          description: notification not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    delete:
+      summary: Delete a notification
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: notification deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: notification not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/notifications/{id}/mark_as_read":
+    patch:
+      summary: Mark a notification as read
+      tags:
+      - Notifications
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: notification marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '404':
+          description: notification not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/v1/players":
     get:
       summary: List all players
@@ -1621,6 +2935,191 @@ paths:
                         type: array
                       performance_by_role:
                         type: array
+  "/api/v1/profile":
+    get:
+      summary: Get current user profile
+      tags:
+      - Profile
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: profile returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                      avatar_url:
+                        type: string
+                        nullable: true
+                      organization:
+                        "$ref": "#/components/schemas/Organization"
+                      notification_preferences:
+                        type: object
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update current user profile
+      tags:
+      - Profile
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    "$ref": "#/components/schemas/User"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: John Doe
+                    email:
+                      type: string
+                      format: email
+                      example: john@team.gg
+                    avatar_url:
+                      type: string
+                      nullable: true
+  "/api/v1/profile/password":
+    patch:
+      summary: Change current user password
+      tags:
+      - Profile
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '422':
+          description: validation error — wrong current password or mismatch
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                  example: OldPass123!
+                password:
+                  type: string
+                  format: password
+                  example: NewPass456!
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: NewPass456!
+              required:
+              - current_password
+              - password
+              - password_confirmation
+  "/api/v1/profile/notifications":
+    patch:
+      summary: Update notification preferences
+      tags:
+      - Profile
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: notification preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification_preferences:
+                  type: object
+                  properties:
+                    email_match_results:
+                      type: boolean
+                      example: true
+                    email_scrim_reminders:
+                      type: boolean
+                      example: true
+                    email_player_updates:
+                      type: boolean
+                      example: false
+                    push_match_results:
+                      type: boolean
+                      example: true
+                    push_scrim_reminders:
+                      type: boolean
+                      example: true
   "/api/v1/riot-data/champions":
     get:
       summary: Get champions ID map
@@ -1915,6 +3414,192 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Error"
+  "/api/v1/rosters/free-agents":
+    get:
+      summary: List free agents available for hiring
+      tags:
+      - Rosters
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: free agents returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      free_agents:
+                        type: array
+                        items:
+                          "$ref": "#/components/schemas/Player"
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/rosters/statistics":
+    get:
+      summary: Get roster statistics for the organization
+      tags:
+      - Rosters
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: roster statistics returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_players:
+                        type: integer
+                      active:
+                        type: integer
+                      inactive:
+                        type: integer
+                      benched:
+                        type: integer
+                      trial:
+                        type: integer
+                      avg_age:
+                        type: number
+                        nullable: true
+                      roles_breakdown:
+                        type: object
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/rosters/hire/{scouting_target_id}":
+    post:
+      summary: Hire a scouted player to the roster
+      tags:
+      - Rosters
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: scouting_target_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: player hired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        "$ref": "#/components/schemas/Player"
+        '404':
+          description: scouting target not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - inactive
+                  - trial
+                  example: trial
+                notes:
+                  type: string
+                  nullable: true
+              required:
+              - status
+  "/api/v1/rosters/remove/{player_id}":
+    post:
+      summary: Remove a player from the roster
+      tags:
+      - Rosters
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: player_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: player removed from roster
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: player not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Contract ended
+              required:
+              - reason
   "/api/v1/schedules":
     get:
       summary: List all schedules
@@ -2589,6 +4274,1572 @@ paths:
                             type: integer
                           high_priority:
                             type: integer
+  "/api/v1/scrims/scrims":
+    get:
+      summary: List all scrims
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: scrims returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      scrims:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a new scrim
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: scrim created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scrim:
+                  type: object
+                  properties:
+                    scheduled_at:
+                      type: string
+                      format: date-time
+                      example: '2026-03-01T18:00:00Z'
+                    opponent_team_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+                    opponent_name:
+                      type: string
+                      example: Team Rival
+                    format:
+                      type: string
+                      enum:
+                      - bo1
+                      - bo3
+                      - bo5
+                      example: bo3
+                    notes:
+                      type: string
+                      nullable: true
+                  required:
+                  - scheduled_at
+                  - format
+  "/api/v1/scrims/scrims/calendar":
+    get:
+      summary: Get scrims calendar
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: year
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: calendar returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+  "/api/v1/scrims/scrims/analytics":
+    get:
+      summary: Get scrims analytics
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: days
+        in: query
+        required: false
+        description: Lookback window in days
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: analytics returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_scrims:
+                        type: integer
+                      wins:
+                        type: integer
+                      losses:
+                        type: integer
+                      win_rate:
+                        type: number
+  "/api/v1/scrims/scrims/{id}":
+    get:
+      summary: Get scrim details
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: scrim found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '404':
+          description: scrim not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a scrim
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: scrim updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scrim:
+                  type: object
+                  properties:
+                    notes:
+                      type: string
+                    result:
+                      type: string
+                      enum:
+                      - win
+                      - loss
+                      - draw
+                      - pending
+                      nullable: true
+    delete:
+      summary: Delete a scrim
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: scrim deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/scrims/scrims/{id}/add_game":
+    post:
+      summary: Add a game result to a scrim
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: game added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                game:
+                  type: object
+                  properties:
+                    result:
+                      type: string
+                      enum:
+                      - win
+                      - loss
+                      example: win
+                    duration:
+                      type: integer
+                      example: 1800
+                      description: Game duration in seconds
+                    side:
+                      type: string
+                      enum:
+                      - blue
+                      - red
+                      example: blue
+                    notes:
+                      type: string
+                      nullable: true
+                  required:
+                  - result
+                  - side
+  "/api/v1/scrims/opponent-teams":
+    get:
+      summary: List opponent teams
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: opponent teams returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      opponent_teams:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+    post:
+      summary: Create an opponent team
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: opponent team created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                opponent_team:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: Team Rival
+                    region:
+                      type: string
+                      example: BR
+                    tier:
+                      type: string
+                      enum:
+                      - amateur
+                      - semi_pro
+                      - professional
+                      example: semi_pro
+                    notes:
+                      type: string
+                      nullable: true
+                  required:
+                  - name
+  "/api/v1/scrims/opponent-teams/{id}":
+    get:
+      summary: Get opponent team details
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: opponent team found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+    patch:
+      summary: Update an opponent team
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: opponent team updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                opponent_team:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    notes:
+                      type: string
+    delete:
+      summary: Delete an opponent team
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: opponent team deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/scrims/opponent-teams/{id}/scrim-history":
+    get:
+      summary: Get scrim history with a specific opponent
+      tags:
+      - Scrims
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: scrim history returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      scrims:
+                        type: array
+                        items:
+                          type: object
+                      summary:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          wins:
+                            type: integer
+                          losses:
+                            type: integer
+  "/api/v1/strategy/draft-plans":
+    get:
+      summary: List draft plans
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: 'Filter by status: active, inactive'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft plans returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      draft_plans:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a new draft plan
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: draft plan created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                draft_plan:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: vs Tempo Storm — Blue Side
+                    opponent_name:
+                      type: string
+                      example: Tempo Storm
+                    side:
+                      type: string
+                      enum:
+                      - blue
+                      - red
+                      example: blue
+                    picks:
+                      type: array
+                      items:
+                        type: string
+                      example:
+                      - Jinx
+                      - Lulu
+                      - Thresh
+                      - Orianna
+                      - Garen
+                    bans:
+                      type: array
+                      items:
+                        type: string
+                      example:
+                      - Zed
+                      - Katarina
+                    notes:
+                      type: string
+                      nullable: true
+                  required:
+                  - name
+                  - side
+  "/api/v1/strategy/draft-plans/{id}":
+    get:
+      summary: Get draft plan details
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft plan found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '404':
+          description: draft plan not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update a draft plan
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft plan updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                draft_plan:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    notes:
+                      type: string
+                    picks:
+                      type: array
+                      items:
+                        type: string
+                    bans:
+                      type: array
+                      items:
+                        type: string
+    delete:
+      summary: Delete a draft plan
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft plan deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/strategy/draft-plans/{id}/analyze":
+    post:
+      summary: Analyze a draft plan
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft analysis returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      strengths:
+                        type: array
+                        items:
+                          type: string
+                      weaknesses:
+                        type: array
+                        items:
+                          type: string
+                      win_condition:
+                        type: string
+                      score:
+                        type: number
+  "/api/v1/strategy/draft-plans/{id}/activate":
+    patch:
+      summary: Activate a draft plan
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft plan activated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/strategy/draft-plans/{id}/deactivate":
+    patch:
+      summary: Deactivate a draft plan
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: draft plan deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/strategy/tactical-boards":
+    get:
+      summary: List tactical boards
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: tactical boards returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      tactical_boards:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+    post:
+      summary: Create a tactical board
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: tactical board created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tactical_board:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: Dragon Control Setup
+                    description:
+                      type: string
+                      nullable: true
+                    board_data:
+                      type: object
+                      description: JSON state of the board canvas
+                  required:
+                  - name
+  "/api/v1/strategy/tactical-boards/{id}":
+    get:
+      summary: Get tactical board details
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: tactical board found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+    patch:
+      summary: Update a tactical board
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: tactical board updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tactical_board:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    board_data:
+                      type: object
+    delete:
+      summary: Delete a tactical board
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: tactical board deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/strategy/tactical-boards/{id}/statistics":
+    get:
+      summary: Get tactical board usage statistics
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: tactical board statistics returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      views:
+                        type: integer
+                      last_modified:
+                        type: string
+                        format: date-time
+  "/api/v1/strategy/assets/champion/{champion_name}":
+    get:
+      summary: Get champion assets for the tactical board
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: champion_name
+        in: path
+        required: true
+        example: Jinx
+        schema:
+          type: string
+      responses:
+        '200':
+          description: champion assets returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      icon_url:
+                        type: string
+                      splash_url:
+                        type: string
+  "/api/v1/strategy/assets/map":
+    get:
+      summary: Get Summoners Rift map assets
+      tags:
+      - Strategy
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: map assets returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      map_url:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
+  "/api/v1/support/tickets":
+    get:
+      summary: List user's support tickets
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: status
+        in: query
+        required: false
+        description: 'Filter by status: open, in_progress, resolved, closed'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: tickets returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      tickets:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create a support ticket
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: ticket created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket:
+                  type: object
+                  properties:
+                    subject:
+                      type: string
+                      example: Cannot import matches from Riot API
+                    description:
+                      type: string
+                      example: When I try to import matches, I get a 500 error.
+                    category:
+                      type: string
+                      enum:
+                      - bug
+                      - feature_request
+                      - billing
+                      - other
+                      example: bug
+                    priority:
+                      type: string
+                      enum:
+                      - low
+                      - medium
+                      - high
+                      - urgent
+                      example: high
+                  required:
+                  - subject
+                  - description
+                  - category
+  "/api/v1/support/tickets/{id}":
+    get:
+      summary: Get support ticket details
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+    patch:
+      summary: Update a support ticket
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket:
+                  type: object
+                  properties:
+                    description:
+                      type: string
+                    priority:
+                      type: string
+                      enum:
+                      - low
+                      - medium
+                      - high
+                      - urgent
+    delete:
+      summary: Delete a support ticket
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/api/v1/support/tickets/{id}/close":
+    post:
+      summary: Close a support ticket
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/support/tickets/{id}/reopen":
+    post:
+      summary: Reopen a closed support ticket
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket reopened
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/support/tickets/{id}/messages":
+    post:
+      summary: Add a message to a support ticket
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: message added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: object
+                  properties:
+                    body:
+                      type: string
+                      example: Here is additional context about the issue.
+                  required:
+                  - body
+  "/api/v1/support/faq":
+    get:
+      summary: List all FAQs
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: FAQs returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        slug:
+                          type: string
+                        question:
+                          type: string
+                        answer:
+                          type: string
+                        category:
+                          type: string
+                        helpful_count:
+                          type: integer
+  "/api/v1/support/faq/{slug}":
+    get:
+      summary: Get a FAQ by slug
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: FAQ found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        '404':
+          description: FAQ not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/support/faq/{slug}/helpful":
+    post:
+      summary: Mark a FAQ as helpful
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: FAQ marked as helpful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/support/faq/{slug}/not-helpful":
+    post:
+      summary: Mark a FAQ as not helpful
+      tags:
+      - Support
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: FAQ marked as not helpful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/support/staff/dashboard":
+    get:
+      summary: Support staff dashboard
+      tags:
+      - Support — Staff
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: staff dashboard returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      open_tickets:
+                        type: integer
+                      in_progress:
+                        type: integer
+                      resolved_today:
+                        type: integer
+                      avg_response_time_hours:
+                        type: number
+        '403':
+          description: forbidden — staff role required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/support/staff/analytics":
+    get:
+      summary: Support analytics for staff
+      tags:
+      - Support — Staff
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: support analytics returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  "/api/v1/support/staff/tickets/{id}/assign":
+    post:
+      summary: Assign a ticket to a staff member
+      tags:
+      - Support — Staff
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignee_id:
+                  type: string
+                  format: uuid
+                  example: user-uuid-here
+              required:
+              - assignee_id
+  "/api/v1/support/staff/tickets/{id}/resolve":
+    post:
+      summary: Resolve a ticket
+      tags:
+      - Support — Staff
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ticket resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolution_note:
+                  type: string
+                  example: Resolved by updating the API key.
   "/api/v1/team-goals":
     get:
       summary: List all team goals
@@ -2908,6 +6159,68 @@ paths:
                 properties:
                   message:
                     type: string
+  "/api/v1/team-members":
+    get:
+      summary: List all team members (staff) for the organization
+      tags:
+      - Team Members
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: role
+        in: query
+        required: false
+        description: 'Filter by role: owner, admin, coach, analyst, viewer'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: team members returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      team_members:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            email:
+                              type: string
+                            role:
+                              type: string
+                            avatar_url:
+                              type: string
+                              nullable: true
+                            created_at:
+                              type: string
+                              format: date-time
+                      pagination:
+                        "$ref": "#/components/schemas/Pagination"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/v1/vod-reviews":
     get:
       summary: List all VOD reviews

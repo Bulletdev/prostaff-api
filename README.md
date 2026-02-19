@@ -30,7 +30,7 @@
 ║  PROSTAFF API — Ruby on Rails 7.2 (API-Only)                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Backend da plataforma ProStaff.gg para gestão de equipes de esports.        ║
-║  170+ endpoints documentados · JWT Auth · Modular Monolith · p95 ~500ms      ║
+║  200+ endpoints documentados · JWT Auth · Modular Monolith · p95 ~500ms      ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -43,7 +43,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  [■] JWT Authentication       — Refresh tokens + token blacklisting         │
 │  [■] HashID URLs              — Base62 encoding para URLs ofuscadas         │
-│  [■] Swagger Docs             — 170+ endpoints documentados interativamente │
+│  [■] Swagger Docs             — 200+ endpoints documentados interativamente │
 │  [■] Riot Games API           — Import automático de partidas e jogadores   │
 │  [■] Advanced Analytics       — KDA trends, champion pools, vision control  │
 │  [■] Scouting System          — Talent discovery + watchlist management     │
@@ -538,11 +538,14 @@ http://localhost:3333/api-docs
 
 ```bash
 # Run integration specs and generate Swagger docs
-bundle exec rake rswag:specs:swaggerize
+RSWAG_GENERATE=1 bundle exec rake rswag:specs:swaggerize
 
 # Or run specs individually
 bundle exec rspec spec/integration/
 ```
+
+> **Note:** `RSWAG_GENERATE=1` bypasses the local test-DB requirement — the
+> swagger formatter uses `--dry-run` so no database queries are executed.
 
 Generated file: `swagger/v1/swagger.yaml`
 
@@ -769,7 +772,7 @@ Integration tests serve dual purpose:
 
 ```bash
 # Run integration tests and generate Swagger docs
-bundle exec rake rswag:specs:swaggerize
+RSWAG_GENERATE=1 bundle exec rake rswag:specs:swaggerize
 
 # Run specific integration spec
 bundle exec rspec spec/integration/players_spec.rb
@@ -795,9 +798,17 @@ bundle exec rspec spec/integration/players_spec.rb
 ║  Competitive             ║  14                ║
 ║  Scrims                  ║  14                ║
 ║  Strategy                ║  16                ║
-║  Support                 ║  15                ║
+║  Support                 ║  16                ║
+║  Admin                   ║  9                 ║
+║  Notifications           ║  6                 ║
+║  Profile                 ║  4                 ║
+║  Rosters                 ║  4                 ║
+║  Team Members            ║  1                 ║
+║  Messages                ║  2                 ║
+║  Constants               ║  1                 ║
+║  Fantasy                 ║  2                 ║
 ╠══════════════════════════╬════════════════════╣
-║  TOTAL                   ║  170+ endpoints    ║
+║  TOTAL                   ║  200+ endpoints    ║
 ╚══════════════════════════╩════════════════════╝
 ```
 
