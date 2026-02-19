@@ -13,11 +13,17 @@ require 'database_cleaner/active_record'
 # spec/support/ and its subdirectories.
 Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 
+# When generating Swagger docs (RSWAG_GENERATE=1 + --dry-run), skip all
+# database-related checks — no actual queries are executed in dry-run mode.
+RSWAG_GENERATE = ENV['RSWAG_GENERATE'] == '1'
+
 # Checks for pending migrations and applies them before tests are run.
-begin
-  ActiveRecord::Migration.maintain_test_schema!
-rescue ActiveRecord::PendingMigrationError => e
-  abort e.to_s.strip
+unless RSWAG_GENERATE
+  begin
+    ActiveRecord::Migration.maintain_test_schema!
+  rescue ActiveRecord::PendingMigrationError => e
+    abort e.to_s.strip
+  end
 end
 
 RSpec.configure do |config|
@@ -27,7 +33,7 @@ RSpec.configure do |config|
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false
   # instead of true.
-  config.use_transactional_fixtures = true
+  config.use_transactional_fixtures = !RSWAG_GENERATE
 
   # You can uncomment this line to turn off ActiveRecord support entirely.
   # config.use_active_record = false
@@ -43,28 +49,30 @@ RSpec.configure do |config|
   # Include request helpers
   config.include RequestSpecHelper, type: :request
 
-  # Database cleaner - SECURITY: Never allow remote database truncation
-  # This prevents accidentally wiping production data when running tests
-  if ENV['DATABASE_URL']&.include?('supabase') || ENV['DATABASE_URL']&.include?('prod')
-    abort('CRITICAL: Cannot run tests against production database! Use a local test database.')
-  end
+  unless RSWAG_GENERATE
+    # Database cleaner - SECURITY: Never allow remote database truncation
+    # This prevents accidentally wiping production data when running tests
+    if ENV['DATABASE_URL']&.include?('supabase') || ENV['DATABASE_URL']&.include?('prod')
+      abort('CRITICAL: Cannot run tests against production database! Use a local test database.')
+    end
 
-  DatabaseCleaner.allow_remote_database_url = false
+    DatabaseCleaner.allow_remote_database_url = false
 
-  config.before(:suite) do
-    DatabaseCleaner.clean_with(:truncation)
-  end
+    config.before(:suite) do
+      DatabaseCleaner.clean_with(:truncation)
+    end
 
-  config.before(:each) do
-    DatabaseCleaner.strategy = :transaction
-  end
+    config.before(:each) do
+      DatabaseCleaner.strategy = :transaction
+    end
 
-  config.before(:each) do
-    DatabaseCleaner.start
-  end
+    config.before(:each) do
+      DatabaseCleaner.start
+    end
 
-  config.after(:each) do
-    DatabaseCleaner.clean
+    config.after(:each) do
+      DatabaseCleaner.clean
+    end
   end
 end
 
