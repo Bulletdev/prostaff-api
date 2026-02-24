@@ -5,483 +5,711 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ProStaff Status</title>
   <meta name="description" content="ProStaff platform service status and incident history">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>⚡</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%230C223F'/><path d='M8 22L16 10L24 22' stroke='%23C89B3C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/><path d='M11 18H21' stroke='%23C89B3C' stroke-width='2.5' stroke-linecap='round'/></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── ProStaff Retro Design Tokens ─────────────────────────────── */
     :root {
-      --green:  #1a7f37;
-      --green-bg: #dafbe1;
-      --yellow: #9a6700;
-      --yellow-bg: #fff8c5;
-      --orange: #bc4c00;
-      --orange-bg: #fff1e5;
-      --red:    #cf222e;
-      --red-bg: #ffebe9;
-      --blue:   #0550ae;
-      --gray:   #57606a;
-      --border: #d0d7de;
-      --bg:     #f6f8fa;
-      --white:  #ffffff;
-      --text:   #1f2328;
-      --text-muted: #57606a;
-      --radius: 6px;
+      --gold:        #C89B3C;
+      --gold-dim:    rgba(200,155,60,0.5);
+      --gold-faint:  rgba(200,155,60,0.12);
+      --blue:        #0C223F;
+      --blue-dark:   #0A1929;
+      --bg:          #0A0E1A;
+      --card:        #0F1823;
+      --teal:        #0596AA;
+      --text:        rgba(255,255,255,0.85);
+      --text-dim:    rgba(255,255,255,0.45);
+      --green:       #00D364;
+      --yellow:      #F59E0B;
+      --orange:      #F97316;
+      --red:         #FF4444;
+      --border:      1px solid #C89B3C;
+      --font:        Verdana, Geneva, Tahoma, sans-serif;
+    }
+
+    /* ── Patterns ─────────────────────────────────────────────────── */
+    .pat-scanline {
+      background-image: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(200,155,60,0.04) 3px, rgba(200,155,60,0.04) 4px
+      );
+    }
+    .pat-diagonal {
+      background-image: repeating-linear-gradient(
+        45deg, transparent, transparent 6px,
+        rgba(200,155,60,0.03) 6px, rgba(200,155,60,0.03) 7px
+      );
+    }
+    .pat-grid {
+      background-image:
+        linear-gradient(rgba(200,155,60,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,155,60,0.06) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* ── Base ─────────────────────────────────────────────────────── */
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--text);
-      background: var(--bg);
+      background-image:
+        linear-gradient(rgba(200,155,60,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,155,60,0.035) 1px, transparent 1px);
+      background-size: 32px 32px;
     }
 
-    /* HEADER */
-    .site-header {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
+    /* ── RetroPanel ───────────────────────────────────────────────── */
+    .retro-panel { width: 100%; position: relative; }
+
+    .retro-panel-header {
+      display: flex;
+      border-top: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-header-left {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-header-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8px 12px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-category {
+      font-size: 8px;
+      color: var(--teal);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .retro-panel-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.5);
+      position: relative;
+      z-index: 1;
+    }
+
+    .retro-panel-subtitle {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.05em;
+      position: relative;
+      z-index: 1;
+      margin-top: 2px;
+    }
+
+    .retro-panel-divider {
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+    }
+
+    .retro-panel-body {
+      background: var(--card);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+    }
+
+    .retro-panel-body-stripe {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+    }
+
+    .retro-panel-body-inner { padding: 12px 12px 12px 16px; }
+
+    .retro-panel-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 56px;
+      padding: 0 12px;
+      height: 18px;
+      background: linear-gradient(to right, var(--blue), var(--bg));
+      border-bottom: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
     }
 
-    .site-header .logo {
+    .retro-panel-footer-label {
+      font-size: 8px;
+      color: var(--gold-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── RetroCorners ─────────────────────────────────────────────── */
+    .retro-corners { position: absolute; inset: 0; pointer-events: none; }
+    .rc { position: absolute; width: 10px; height: 10px; }
+    .rc-tl { top: 0; left: 0; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-tr { top: 0; right: 0; border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+    .rc-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-br { bottom: 0; right: 0; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+
+    /* ── RetroDiamond ─────────────────────────────────────────────── */
+    .diamond {
+      width: 5px; height: 5px;
+      background: var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .diamond-sm { width: 4px; height: 4px; }
+
+    /* ── RetroSeparator ───────────────────────────────────────────── */
+    .retro-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      margin: 10px 0;
+    }
+    .retro-sep-line-l { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold)); }
+    .retro-sep-line-r { flex: 1; height: 1px; background: linear-gradient(to left, transparent, var(--gold)); }
+    .retro-sep-label {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* ── Site Header ──────────────────────────────────────────────── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      border-bottom: 1px solid var(--gold-faint);
+      background: linear-gradient(to right, var(--blue-dark), var(--bg));
+      position: relative;
+    }
+
+    .site-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), var(--gold-faint) 60%, transparent);
+    }
+
+    .logo {
       display: flex;
       align-items: center;
       gap: 10px;
       text-decoration: none;
-      color: var(--text);
-      font-weight: 600;
-      font-size: 16px;
-    }
-
-    .site-header .logo svg {
-      width: 28px;
-      height: 28px;
-    }
-
-    .site-header nav a {
-      margin-left: 16px;
-      text-decoration: none;
-      color: var(--text-muted);
+      color: var(--gold);
       font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
     }
 
-    .site-header nav a:hover { color: var(--text); }
+    .logo svg { width: 28px; height: 28px; }
+
+    .site-nav { display: flex; gap: 16px; align-items: center; }
+
+    .site-nav a {
+      text-decoration: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .site-nav a:hover { color: var(--gold); }
 
     .btn-subscribe {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 5px 12px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      color: var(--text);
-      text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      padding: 5px 12px;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: var(--gold-faint);
+      border: 1px solid var(--gold-dim);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: var(--font);
+    }
+    .btn-subscribe:hover {
+      background: rgba(200,155,60,0.2);
+      border-color: var(--gold);
     }
 
-    .btn-subscribe:hover { background: var(--bg); }
-
-    /* STATUS BANNER */
+    /* ── Status Banner ────────────────────────────────────────────── */
     .status-banner {
-      padding: 24px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.3s;
-    }
-
-    .status-banner.operational  { background: var(--green-bg); }
-    .status-banner.minor        { background: var(--yellow-bg); }
-    .status-banner.critical     { background: var(--orange-bg); }
-    .status-banner.major        { background: var(--red-bg); }
-
-    .status-banner .indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .indicator-dot {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .indicator-dot.operational  { background: var(--green); }
-    .indicator-dot.minor        { background: var(--yellow); }
-    .indicator-dot.critical     { background: var(--orange); }
-    .indicator-dot.major        { background: var(--red); }
-
-    .status-banner .updated-at {
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    /* MAIN CONTENT */
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 24px 16px;
-    }
-
-    /* COMPONENTS */
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--text);
+      padding: 20px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .components-box {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid var(--gold-faint);
+      position: relative;
       overflow: hidden;
-      margin-bottom: 24px;
     }
 
+    .status-banner-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      opacity: 0.5;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.operational  { background: var(--green);  box-shadow: 0 0 8px var(--green); }
+    .status-dot.minor        { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .status-dot.critical     { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+    .status-dot.major        { background: var(--red);    box-shadow: 0 0 8px var(--red); }
+
+    .status-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
+    }
+
+    .status-updated {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Main Layout ──────────────────────────────────────────────── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Component Row ────────────────────────────────────────────── */
     .component-row {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+      padding: 12px 0 10px;
+      border-bottom: 1px solid rgba(200,155,60,0.1);
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
-
-    .component-row:last-child { border-bottom: none; }
+    .component-row:last-child { border-bottom: none; padding-bottom: 0; }
 
     .component-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .component-name {
-      font-weight: 500;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
       gap: 8px;
     }
 
+    .component-name {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--text);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
     .component-description {
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: normal;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-left: 6px;
     }
 
+    /* ── Status Badges ────────────────────────────────────────────── */
     .status-badge {
-      font-size: 12px;
-      font-weight: 500;
+      font-size: 9px;
+      font-weight: bold;
       padding: 2px 8px;
-      border-radius: 20px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
       white-space: nowrap;
+      border: 1px solid;
     }
+    .status-badge.operational        { color: var(--green);  border-color: rgba(0,211,100,0.4);  background: rgba(0,211,100,0.08); }
+    .status-badge.degraded_performance { color: var(--yellow); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
+    .status-badge.partial_outage     { color: var(--orange); border-color: rgba(249,115,22,0.4);  background: rgba(249,115,22,0.08); }
+    .status-badge.major_outage       { color: var(--red);    border-color: rgba(255,68,68,0.4);   background: rgba(255,68,68,0.08); }
+    .status-badge.under_maintenance  { color: var(--teal);   border-color: rgba(5,150,170,0.4);   background: rgba(5,150,170,0.08); }
 
-    .status-badge.operational        { color: var(--green);  background: var(--green-bg); }
-    .status-badge.degraded_performance { color: var(--yellow); background: var(--yellow-bg); }
-    .status-badge.partial_outage     { color: var(--orange); background: var(--orange-bg); }
-    .status-badge.major_outage       { color: var(--red);    background: var(--red-bg); }
-    .status-badge.under_maintenance  { color: var(--blue);   background: #ddf4ff; }
-
-    /* UPTIME BARS */
-    .uptime-section {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
+    /* ── Uptime Bars ──────────────────────────────────────────────── */
     .uptime-bars {
       display: flex;
       gap: 2px;
       align-items: flex-end;
-      height: 28px;
+      height: 24px;
     }
 
     .uptime-bar {
       flex: 1;
       height: 100%;
-      border-radius: 2px;
-      min-width: 3px;
+      min-width: 2px;
       cursor: default;
+      opacity: 0.85;
       transition: opacity 0.15s;
     }
-
-    .uptime-bar:hover { opacity: 0.75; }
-
-    .uptime-bar.operational        { background: #2da44e; }
-    .uptime-bar.degraded           { background: #d4a72c; }
-    .uptime-bar.partial            { background: #e16f24; }
-    .uptime-bar.outage             { background: #cf222e; }
-    .uptime-bar.no-data            { background: #eaeef2; }
+    .uptime-bar:hover { opacity: 1; }
+    .uptime-bar.operational { background: var(--green); }
+    .uptime-bar.degraded    { background: var(--yellow); }
+    .uptime-bar.partial     { background: var(--orange); }
+    .uptime-bar.outage      { background: var(--red); }
+    .uptime-bar.no-data     { background: rgba(200,155,60,0.15); }
 
     .uptime-meta {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
     }
 
-    .uptime-pct {
-      font-weight: 500;
-      color: var(--text-muted);
-    }
+    .uptime-pct { color: var(--gold-dim); font-weight: bold; }
 
-    /* INCIDENTS */
-    .incident-list { margin-bottom: 24px; }
-
-    .no-incidents {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .incident-card {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-
-    .incident-title {
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-
-    .incident-update {
-      padding: 8px 0 8px 16px;
-      border-left: 3px solid var(--border);
-      margin-bottom: 8px;
-    }
-
-    .incident-update:last-child { margin-bottom: 0; }
-
-    .incident-update-status {
-      font-weight: 600;
-      font-size: 13px;
-    }
-
-    .incident-update-body {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .incident-update-time {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* LEGEND */
+    /* ── Legend ───────────────────────────────────────────────────── */
     .legend {
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
-      margin-bottom: 24px;
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 0 4px;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
+      width: 8px; height: 8px;
+      border: 1px solid;
     }
 
-    /* SKELETON LOADING */
+    /* ── Incidents ────────────────────────────────────────────────── */
+    .no-incidents {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .incident-card {
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(200,155,60,0.1);
+    }
+    .incident-card:last-child { border-bottom: none; }
+
+    .incident-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .incident-update {
+      padding: 6px 0 6px 12px;
+      border-left: 2px solid var(--gold-faint);
+      margin-bottom: 6px;
+    }
+    .incident-update-status { font-size: 10px; font-weight: bold; color: var(--teal); text-transform: uppercase; letter-spacing: 0.08em; }
+    .incident-update-body   { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .incident-update-time   { font-size: 9px;  color: var(--text-dim); margin-top: 2px; letter-spacing: 0.04em; }
+
+    /* ── Skeleton ─────────────────────────────────────────────────── */
     .skeleton {
-      background: linear-gradient(90deg, #eaeef2 25%, #f3f5f7 50%, #eaeef2 75%);
+      background: linear-gradient(90deg,
+        rgba(200,155,60,0.08) 25%,
+        rgba(200,155,60,0.16) 50%,
+        rgba(200,155,60,0.08) 75%
+      );
       background-size: 200% 100%;
-      animation: skeleton-loading 1.5s infinite;
-      border-radius: 4px;
+      animation: sk 1.5s infinite;
     }
+    @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    @keyframes skeleton-loading {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+    /* ── Spinner ──────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid var(--gold-faint);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* FOOTER */
+    /* ── Footer ───────────────────────────────────────────────────── */
     .site-footer {
-      border-top: 1px solid var(--border);
-      background: var(--white);
-      padding: 16px 24px;
+      border-top: 1px solid var(--gold-faint);
+      padding: 14px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
       flex-wrap: wrap;
       gap: 8px;
+      background: linear-gradient(to right, var(--blue-dark), var(--bg));
     }
+    .site-footer a { color: var(--text-dim); text-decoration: none; }
+    .site-footer a:hover { color: var(--gold); }
 
-    .site-footer a {
-      color: var(--text-muted);
-      text-decoration: none;
+    /* ── Footer diamond row ───────────────────────────────────────── */
+    .footer-diamonds {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+    .footer-line { height: 1px; width: 32px; background: linear-gradient(to right, var(--gold), transparent); }
+    .footer-line-r { background: linear-gradient(to left, var(--gold), transparent); }
 
-    .site-footer a:hover { text-decoration: underline; }
-
-    /* SPINNER */
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid var(--border);
-      border-top-color: var(--green);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      vertical-align: middle;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* RESPONSIVE */
+    /* ── Responsive ───────────────────────────────────────────────── */
     @media (max-width: 600px) {
-      .site-header nav { display: none; }
-      .uptime-bars { height: 20px; }
+      .site-nav { display: none; }
+      .uptime-bars { height: 18px; }
     }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header class="site-header">
+<!-- ── SITE HEADER ──────────────────────────────────────────────────── -->
+<header class="site-header pat-scanline">
   <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
     <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="8" fill="#1f2328"/>
-      <path d="M8 22L16 10L24 22" stroke="#58a6ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M11 18H21" stroke="#58a6ff" stroke-width="2.5" stroke-linecap="round"/>
+      <rect width="32" height="32" rx="4" fill="#0C223F"/>
+      <path d="M8 22L16 10L24 22" stroke="#C89B3C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M11 18H21" stroke="#C89B3C" stroke-width="2.5" stroke-linecap="round"/>
     </svg>
     ProStaff Status
   </a>
 
-  <nav>
-    <a href="https://api.prostaff.gg/api-docs" target="_blank" rel="noopener">API Docs</a>
+  <nav class="site-nav">
+    <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
     <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
   </nav>
 
   <a class="btn-subscribe" href="mailto:support@prostaff.gg?subject=Status%20Updates">
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
       <path d="M1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25v-8.5C0 2.784.784 2 1.75 2ZM1.5 12.251c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V5.809L8.38 9.397a.75.75 0 0 1-.76 0L1.5 5.809v6.442Zm13-8.181v-.32a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25v.32L8 7.88Z"/>
     </svg>
-    Subscribe to updates
+    Subscribe
   </a>
 </header>
 
-<!-- STATUS BANNER -->
-<div class="status-banner" id="statusBanner">
-  <div class="indicator" id="statusIndicator">
+<!-- ── STATUS BANNER ────────────────────────────────────────────────── -->
+<div class="status-banner pat-diagonal" id="statusBanner">
+  <div class="status-banner-bg"></div>
+  <div class="status-indicator">
     <span class="spinner"></span>
-    Loading status...
+    <span class="status-label" id="statusLabel">Checking status&hellip;</span>
   </div>
-  <div class="updated-at" id="updatedAt">Checking services...</div>
+  <span class="status-updated" id="updatedAt">—</span>
 </div>
 
-<!-- MAIN -->
+<!-- ── MAIN ─────────────────────────────────────────────────────────── -->
 <main class="container">
 
-  <!-- COMPONENTS -->
-  <div class="section-title">
-    Components
-    <span style="font-size:12px;font-weight:400;color:var(--text-muted)" id="componentCount"></span>
-  </div>
-
-  <div class="components-box" id="componentList">
-    <!-- Skeleton loading rows -->
-    <div class="component-row">
-      <div class="component-header">
-        <div class="skeleton" style="width:160px;height:16px;"></div>
-        <div class="skeleton" style="width:80px;height:20px;border-radius:20px;"></div>
+  <!-- COMPONENTS PANEL -->
+  <div class="retro-panel">
+    <div class="retro-panel-header pat-diagonal">
+      <div class="retro-panel-header-left pat-scanline">
+        <div class="retro-corners">
+          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
+          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
+        </div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+        </svg>
       </div>
-      <div class="uptime-bars skeleton" style="height:28px;border-radius:2px;"></div>
+      <div class="retro-panel-header-right">
+        <span class="retro-panel-category">Infrastructure</span>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;position:relative;z-index:1">
+          <span class="retro-panel-title">Components</span>
+          <span class="retro-panel-subtitle" id="componentCount"></span>
+        </div>
+      </div>
     </div>
-    <div class="component-row">
-      <div class="component-header">
-        <div class="skeleton" style="width:120px;height:16px;"></div>
-        <div class="skeleton" style="width:80px;height:20px;border-radius:20px;"></div>
+    <div class="retro-panel-divider"></div>
+    <div class="retro-panel-body">
+      <div class="retro-panel-body-stripe"></div>
+      <div class="retro-panel-body-inner" id="componentList">
+        <!-- skeleton -->
+        <div class="component-row">
+          <div class="component-header">
+            <div class="skeleton" style="width:160px;height:13px;"></div>
+            <div class="skeleton" style="width:90px;height:18px;"></div>
+          </div>
+          <div class="skeleton" style="height:24px;margin-top:4px;"></div>
+        </div>
+        <div class="component-row">
+          <div class="component-header">
+            <div class="skeleton" style="width:120px;height:13px;"></div>
+            <div class="skeleton" style="width:90px;height:18px;"></div>
+          </div>
+          <div class="skeleton" style="height:24px;margin-top:4px;"></div>
+        </div>
+        <div class="component-row">
+          <div class="component-header">
+            <div class="skeleton" style="width:200px;height:13px;"></div>
+            <div class="skeleton" style="width:90px;height:18px;"></div>
+          </div>
+          <div class="skeleton" style="height:24px;margin-top:4px;"></div>
+        </div>
       </div>
-      <div class="uptime-bars skeleton" style="height:28px;border-radius:2px;"></div>
     </div>
-    <div class="component-row">
-      <div class="component-header">
-        <div class="skeleton" style="width:200px;height:16px;"></div>
-        <div class="skeleton" style="width:80px;height:20px;border-radius:20px;"></div>
+    <div class="retro-panel-footer">
+      <div class="footer-diamonds">
+        <span class="diamond diamond-sm"></span>
+        <div class="footer-line" style="width:20px;"></div>
       </div>
-      <div class="uptime-bars skeleton" style="height:28px;border-radius:2px;"></div>
+      <span class="retro-panel-footer-label">ProStaff Analytics</span>
+      <div class="footer-diamonds">
+        <div class="footer-line footer-line-r" style="width:20px;"></div>
+        <span class="diamond diamond-sm"></span>
+      </div>
     </div>
   </div>
 
   <!-- LEGEND -->
   <div class="legend">
     <div class="legend-item">
-      <div class="legend-dot" style="background:#2da44e"></div>
+      <div class="legend-dot" style="background:rgba(0,211,100,0.3);border-color:rgba(0,211,100,0.6);"></div>
       Operational
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#d4a72c"></div>
+      <div class="legend-dot" style="background:rgba(245,158,11,0.3);border-color:rgba(245,158,11,0.6);"></div>
       Degraded Performance
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#e16f24"></div>
+      <div class="legend-dot" style="background:rgba(249,115,22,0.3);border-color:rgba(249,115,22,0.6);"></div>
       Partial Outage
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#cf222e"></div>
+      <div class="legend-dot" style="background:rgba(255,68,68,0.3);border-color:rgba(255,68,68,0.6);"></div>
       Major Outage
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#eaeef2"></div>
+      <div class="legend-dot" style="background:rgba(200,155,60,0.15);border-color:rgba(200,155,60,0.3);"></div>
       No Data
     </div>
   </div>
 
-  <!-- PAST INCIDENTS -->
-  <div class="section-title">Past Incidents</div>
-  <div class="incident-list" id="incidentList">
-    <div class="no-incidents" id="noIncidents" style="display:none;">
-      No incidents reported.
+  <!-- INCIDENTS PANEL -->
+  <div class="retro-panel">
+    <div class="retro-panel-header pat-diagonal">
+      <div class="retro-panel-header-left pat-scanline">
+        <div class="retro-corners">
+          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
+          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
+        </div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="retro-panel-header-right">
+        <span class="retro-panel-category">Incident History</span>
+        <span class="retro-panel-title" style="position:relative;z-index:1">Past Incidents</span>
+      </div>
+    </div>
+    <div class="retro-panel-divider"></div>
+    <div class="retro-panel-body">
+      <div class="retro-panel-body-stripe"></div>
+      <div class="retro-panel-body-inner" id="incidentList">
+        <div class="no-incidents" id="noIncidents" style="display:none;">No incidents reported.</div>
+      </div>
+    </div>
+    <div class="retro-panel-footer">
+      <div class="footer-diamonds">
+        <span class="diamond diamond-sm"></span>
+        <div class="footer-line" style="width:20px;"></div>
+      </div>
+      <span class="retro-panel-footer-label">ProStaff Analytics</span>
+      <div class="footer-diamonds">
+        <div class="footer-line footer-line-r" style="width:20px;"></div>
+        <span class="diamond diamond-sm"></span>
+      </div>
     </div>
   </div>
 
 </main>
 
-<!-- FOOTER -->
-<footer class="site-footer">
-  <div>
-    &copy; <span id="currentYear"></span> ProStaff &mdash; Esports Team Management Platform
-  </div>
-  <div>
+<!-- ── SITE FOOTER ───────────────────────────────────────────────────── -->
+<footer class="site-footer pat-scanline">
+  <span>&copy; <span id="currentYear"></span> ProStaff &mdash; Esports Team Management Platform</span>
+  <div style="display:flex;gap:10px;align-items:center">
     <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
-    &nbsp;&bull;&nbsp;
+    <span class="diamond diamond-sm"></span>
     <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
-    &nbsp;&bull;&nbsp;
+    <span class="diamond diamond-sm"></span>
     <a href="mailto:support@prostaff.gg">support@prostaff.gg</a>
   </div>
 </footer>
@@ -491,11 +719,9 @@
   'use strict';
 
   const STATUS_API = 'https://api.prostaff.gg/status';
-  const REFRESH_INTERVAL = 60_000; // refresh every 60s
+  const REFRESH_INTERVAL = 60_000;
 
   document.getElementById('currentYear').textContent = new Date().getFullYear();
-
-  // ── Status label helpers ────────────────────────────────────────────────────
 
   const STATUS_LABELS = {
     operational:          'Operational',
@@ -513,42 +739,26 @@
   };
 
   const OVERALL_CSS = {
-    none:     'operational',
-    minor:    'minor',
-    critical: 'critical',
-    major:    'major',
+    none: 'operational', minor: 'minor', critical: 'critical', major: 'major',
   };
 
-  function statusLabel(status) {
-    return STATUS_LABELS[status] || status;
-  }
-
-  // ── Uptime bar generation ───────────────────────────────────────────────────
-  // We generate 90 "synthetic" bars. In a real setup these would come from a
-  // metrics store. For now we show all-green with a tiny random variance.
+  function statusLabel(s) { return STATUS_LABELS[s] || s; }
 
   function generateUptimeBars(componentStatus) {
     const bars = [];
     const today = new Date();
-
     for (let i = 89; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-
-      // Synthetic: 97-100% uptime displayed as green, occasional slight dip
-      let barClass = 'operational';
+      let cls = 'operational';
       const rand = Math.random();
       if (componentStatus !== 'operational' && i === 0) {
-        // Most recent bar reflects current status
-        barClass = componentStatus === 'major_outage' ? 'outage'
-                 : componentStatus === 'partial_outage' ? 'partial'
-                 : componentStatus === 'degraded_performance' ? 'degraded'
-                 : 'operational';
-      } else if (rand < 0.01) {
-        barClass = 'degraded'; // very rare past degraded
-      }
-
-      bars.push({ date: d, cls: barClass });
+        cls = componentStatus === 'major_outage' ? 'outage'
+            : componentStatus === 'partial_outage' ? 'partial'
+            : componentStatus === 'degraded_performance' ? 'degraded'
+            : 'operational';
+      } else if (rand < 0.01) { cls = 'degraded'; }
+      bars.push({ date: d, cls });
     }
     return bars;
   }
@@ -561,26 +771,38 @@
   }
 
   function uptimePct(bars) {
-    const operational = bars.filter(b => b.cls === 'operational').length;
-    return ((operational / bars.length) * 100).toFixed(2) + '%';
+    return ((bars.filter(b => b.cls === 'operational').length / bars.length) * 100).toFixed(2) + '%';
   }
-
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   function renderBanner(data) {
     const indicator = data.status.indicator;
     const desc = OVERALL_LABELS[indicator] || data.status.description;
     const cls  = OVERALL_CSS[indicator] || 'operational';
 
-    const banner = document.getElementById('statusBanner');
-    banner.className = 'status-banner ' + cls;
+    const dot = document.createElement('span');
+    dot.className = 'status-dot ' + cls;
 
-    document.getElementById('statusIndicator').innerHTML =
-      `<span class="indicator-dot ${cls}"></span>${desc}`;
+    const banner = document.getElementById('statusBanner');
+    banner.style.borderBottom = cls === 'major' ? '1px solid rgba(255,68,68,0.3)'
+      : cls === 'critical' ? '1px solid rgba(249,115,22,0.3)'
+      : cls === 'minor' ? '1px solid rgba(245,158,11,0.3)'
+      : '1px solid rgba(0,211,100,0.2)';
+
+    const indicator_el = document.querySelector('.status-indicator');
+    indicator_el.innerHTML = '';
+    indicator_el.appendChild(dot);
+    const lbl = document.createElement('span');
+    lbl.className = 'status-label';
+    lbl.textContent = desc;
+    lbl.style.color = cls === 'major' ? 'var(--red)'
+      : cls === 'critical' ? 'var(--orange)'
+      : cls === 'minor' ? 'var(--yellow)'
+      : 'var(--green)';
+    indicator_el.appendChild(lbl);
 
     const updatedAt = data.page && data.page.updated_at
       ? new Date(data.page.updated_at).toLocaleString('en-US', {
-          month: 'long', day: 'numeric', year: 'numeric',
+          month: 'short', day: 'numeric', year: 'numeric',
           hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
         })
       : new Date().toLocaleString();
@@ -589,13 +811,11 @@
   }
 
   function renderComponents(components) {
-    const list = document.getElementById('componentList');
     document.getElementById('componentCount').textContent =
       `${components.length} component${components.length !== 1 ? 's' : ''}`;
 
-    list.innerHTML = components.map(c => {
+    document.getElementById('componentList').innerHTML = components.map(c => {
       const bars = generateUptimeBars(c.status);
-      const pct  = uptimePct(bars);
       return `
         <div class="component-row">
           <div class="component-header">
@@ -605,13 +825,11 @@
             </div>
             <span class="status-badge ${c.status}">${statusLabel(c.status)}</span>
           </div>
-          <div class="uptime-section">
-            <div class="uptime-bars">${renderBars(bars)}</div>
-            <div class="uptime-meta">
-              <span>90 days ago</span>
-              <span class="uptime-pct">${pct} uptime</span>
-              <span>Today</span>
-            </div>
+          <div class="uptime-bars">${renderBars(bars)}</div>
+          <div class="uptime-meta">
+            <span>90 days ago</span>
+            <span class="uptime-pct">${uptimePct(bars)} uptime</span>
+            <span>Today</span>
           </div>
         </div>
       `;
@@ -638,42 +856,28 @@
           <div class="incident-update-time">${u.updated_at ? new Date(u.updated_at).toLocaleString() : ''}</div>
         </div>
       `).join('');
-
-      return `
-        <div class="incident-card">
-          <div class="incident-title">${incident.name || 'Incident'}</div>
-          ${updates}
-        </div>
-      `;
+      return `<div class="incident-card"><div class="incident-title">${incident.name || 'Incident'}</div>${updates}</div>`;
     }).join('');
   }
-
-  // ── Fetch & refresh ─────────────────────────────────────────────────────────
 
   async function fetchStatus() {
     try {
       const res = await fetch(STATUS_API, { cache: 'no-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-
       renderBanner(data);
       renderComponents(data.components || []);
       renderIncidents(data.incidents || []);
     } catch (err) {
       console.error('Failed to fetch status:', err);
-
-      // Show error state
-      const banner = document.getElementById('statusBanner');
-      banner.className = 'status-banner major';
-      document.getElementById('statusIndicator').innerHTML =
-        '<span class="indicator-dot major"></span>Status unavailable';
+      document.querySelector('.status-indicator').innerHTML =
+        '<span class="status-dot major"></span><span class="status-label" style="color:var(--red)">Status Unavailable</span>';
       document.getElementById('updatedAt').textContent = 'Could not connect to status API';
     }
   }
 
   fetchStatus();
   setInterval(fetchStatus, REFRESH_INTERVAL);
-
 })();
 </script>
 

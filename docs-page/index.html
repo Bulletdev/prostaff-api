@@ -7,507 +7,648 @@
   <meta name="description" content="ProStaff API V1 reference documentation. Esports Team Management Platform.">
   <link rel="icon" href="logo.png" type="image/png">
 
-  <!-- Google Fonts: retro mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-
   <!-- Swagger UI CSS -->
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css">
 
   <style>
-    /* ── Variables ───────────────────────────────────────────────── */
-    :root {
-      --neon-cyan:   #00f5ff;
-      --neon-green:  #39ff14;
-      --neon-purple: #bf00ff;
-      --neon-pink:   #ff00aa;
-      --bg-dark:     #020b14;
-      --bg-panel:    #050f1e;
-      --bg-card:     #071828;
-      --border-dim:  #0d3a5c;
-      --border-glow: #00f5ff44;
-      --text-main:   #c8e8f8;
-      --text-dim:    #4a7a9b;
-      --radius:      4px;
-      --font-mono:   'Share Tech Mono', 'Courier New', monospace;
-      --font-title:  'Orbitron', sans-serif;
-    }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body {
-      background: var(--bg-dark);
-      color: var(--text-main);
-      font-family: var(--font-mono);
-      min-height: 100vh;
+    /* ── ProStaff Retro Design Tokens ─────────────────────────────── */
+    :root {
+      --gold:        #C89B3C;
+      --gold-dim:    rgba(200,155,60,0.5);
+      --gold-faint:  rgba(200,155,60,0.12);
+      --blue:        #0C223F;
+      --blue-dark:   #0A1929;
+      --bg:          #0A0E1A;
+      --card:        #0F1823;
+      --teal:        #0596AA;
+      --text:        rgba(255,255,255,0.85);
+      --text-dim:    rgba(255,255,255,0.45);
+      --green:       #00D364;
+      --red:         #FF4444;
+      --border:      1px solid #C89B3C;
+      --font:        Verdana, Geneva, Tahoma, sans-serif;
     }
 
-    /* ── Scanlines overlay ───────────────────────────────────────── */
-    body::before {
-      content: '';
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.08) 2px,
-        rgba(0,0,0,0.08) 4px
+    /* ── Patterns ─────────────────────────────────────────────────── */
+    .pat-scanline {
+      background-image: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(200,155,60,0.04) 3px, rgba(200,155,60,0.04) 4px
+      );
+    }
+    .pat-diagonal {
+      background-image: repeating-linear-gradient(
+        45deg, transparent, transparent 6px,
+        rgba(200,155,60,0.03) 6px, rgba(200,155,60,0.03) 7px
       );
     }
 
-    /* ── Grid bg ─────────────────────────────────────────────────── */
-    body::after {
-      content: '';
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
-      z-index: 0;
+    /* ── Base ─────────────────────────────────────────────────────── */
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    body {
       background-image:
-        linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
+        linear-gradient(rgba(200,155,60,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,155,60,0.035) 1px, transparent 1px);
+      background-size: 32px 32px;
     }
 
-    /* ── Header ──────────────────────────────────────────────────── */
-    .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 200;
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--neon-cyan);
-      box-shadow: 0 0 20px rgba(0,245,255,0.15), 0 0 40px rgba(0,245,255,0.05);
-      padding: 0 28px;
-      height: 64px;
+    /* ── RetroPanel ───────────────────────────────────────────────── */
+    .retro-panel { width: 100%; position: relative; }
+
+    .retro-panel-header {
       display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .logo-wrap {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .logo-wrap img {
-      width: 36px;
-      height: 36px;
-      object-fit: contain;
-      filter: drop-shadow(0 0 6px var(--neon-cyan));
-    }
-
-    .logo-text {
-      font-family: var(--font-title);
-      font-weight: 900;
-      font-size: 18px;
-      letter-spacing: 3px;
-      color: var(--neon-cyan);
-      text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px rgba(0,245,255,0.5);
-    }
-
-    .badge {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--neon-green);
-      border: 1px solid var(--neon-green);
-      border-radius: 2px;
-      padding: 2px 8px;
-      letter-spacing: 2px;
-      text-shadow: 0 0 6px var(--neon-green);
-      box-shadow: 0 0 8px rgba(57,255,20,0.2);
-      animation: blink-border 3s ease-in-out infinite;
-    }
-
-    @keyframes blink-border {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.6; }
-    }
-
-    .site-header nav {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .site-header nav a {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      letter-spacing: 1.5px;
-      color: var(--text-dim);
-      text-decoration: none;
-      text-transform: uppercase;
-      transition: color 0.2s, text-shadow 0.2s;
-    }
-
-    .site-header nav a:hover {
-      color: var(--neon-cyan);
-      text-shadow: 0 0 8px var(--neon-cyan);
-    }
-
-    .btn-support {
-      font-family: var(--font-mono) !important;
-      font-size: 11px !important;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--bg-dark) !important;
-      background: var(--neon-cyan);
-      border: none;
-      padding: 6px 16px;
-      clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s, box-shadow 0.2s;
-      box-shadow: 0 0 12px rgba(0,245,255,0.4);
-    }
-
-    .btn-support:hover {
-      background: var(--neon-green) !important;
-      color: var(--bg-dark) !important;
-      box-shadow: 0 0 18px rgba(57,255,20,0.5) !important;
-    }
-
-    /* ── Announcement bar ────────────────────────────────────────── */
-    .announcement {
+      border-top: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
       position: relative;
-      z-index: 100;
-      background: rgba(0,245,255,0.04);
-      border-bottom: 1px solid var(--border-dim);
-      padding: 9px 28px;
-      font-size: 12px;
-      letter-spacing: 1px;
-      color: var(--neon-cyan);
+      overflow: hidden;
+    }
+
+    .retro-panel-header-left {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      width: 56px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
     }
 
-    .announcement::before {
-      content: '//';
-      color: var(--neon-green);
+    .retro-panel-header-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8px 12px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-category {
+      font-size: 8px;
+      color: var(--teal);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
       font-weight: bold;
+      margin-bottom: 2px;
     }
 
-    .announcement strong {
-      color: var(--neon-green);
-      text-shadow: 0 0 6px var(--neon-green);
-    }
-
-    /* ── Swagger UI wrapper ──────────────────────────────────────── */
-    #swagger-ui {
+    .retro-panel-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.5);
       position: relative;
       z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 28px 16px 56px;
     }
 
-    /* ── Swagger overrides: dark retro theme ─────────────────────── */
-    .swagger-ui { background: transparent !important; }
-    .swagger-ui .topbar { display: none !important; }
-
-    /* Info block */
-    .swagger-ui .info {
-      background: var(--bg-card) !important;
-      border: 1px solid var(--neon-cyan) !important;
-      box-shadow: 0 0 16px rgba(0,245,255,0.1) !important;
-      border-radius: var(--radius) !important;
-      padding: 24px !important;
-      margin-bottom: 24px !important;
-    }
-
-    .swagger-ui .info .title {
-      font-family: var(--font-title) !important;
-      font-size: 22px !important;
-      font-weight: 900 !important;
-      color: var(--neon-cyan) !important;
-      letter-spacing: 2px !important;
-      text-shadow: 0 0 10px var(--neon-cyan) !important;
-    }
-
-    .swagger-ui .info p,
-    .swagger-ui .info li,
-    .swagger-ui .info .base-url {
-      color: var(--text-main) !important;
-      font-family: var(--font-mono) !important;
-      font-size: 13px !important;
-    }
-
-    /* Scheme container */
-    .swagger-ui .scheme-container {
-      background: var(--bg-card) !important;
-      border: 1px solid var(--border-dim) !important;
-      box-shadow: none !important;
-      border-radius: var(--radius) !important;
-      padding: 16px 24px !important;
-      margin-bottom: 24px !important;
-    }
-
-    /* Section tags */
-    .swagger-ui .opblock-tag {
-      font-family: var(--font-title) !important;
-      font-size: 13px !important;
-      letter-spacing: 2px !important;
-      color: var(--neon-purple) !important;
-      text-shadow: 0 0 6px var(--neon-purple) !important;
-      border-bottom: 1px solid var(--border-dim) !important;
-    }
-
-    /* Operation blocks */
-    .swagger-ui .opblock {
-      background: var(--bg-card) !important;
-      border-radius: var(--radius) !important;
-      margin-bottom: 6px !important;
-      border: 1px solid var(--border-dim) !important;
-    }
-
-    .swagger-ui .opblock:hover {
-      border-color: var(--border-glow) !important;
-      box-shadow: 0 0 10px rgba(0,245,255,0.08) !important;
-    }
-
-    .swagger-ui .opblock .opblock-summary {
-      border-radius: var(--radius) !important;
-    }
-
-    /* Method colors */
-    .swagger-ui .opblock.opblock-get    { border-left: 3px solid #00f5ff !important; }
-    .swagger-ui .opblock.opblock-post   { border-left: 3px solid #39ff14 !important; }
-    .swagger-ui .opblock.opblock-put    { border-left: 3px solid #ffa500 !important; }
-    .swagger-ui .opblock.opblock-patch  { border-left: 3px solid #bf00ff !important; }
-    .swagger-ui .opblock.opblock-delete { border-left: 3px solid #ff003c !important; }
-
-    /* Text inside ops */
-    .swagger-ui .opblock-summary-description,
-    .swagger-ui .opblock-summary-path,
-    .swagger-ui label,
-    .swagger-ui p,
-    .swagger-ui li,
-    .swagger-ui td,
-    .swagger-ui th,
-    .swagger-ui .parameter__name,
-    .swagger-ui .parameter__type,
-    .swagger-ui .response-col_status,
-    .swagger-ui .tab li {
-      color: var(--text-main) !important;
-      font-family: var(--font-mono) !important;
-    }
-
-    .swagger-ui .opblock-summary-path {
-      font-family: var(--font-mono) !important;
-      font-size: 13px !important;
-    }
-
-    /* Inputs */
-    .swagger-ui input[type=text],
-    .swagger-ui input[type=email],
-    .swagger-ui input[type=password],
-    .swagger-ui textarea,
-    .swagger-ui select {
-      background: #020b14 !important;
-      border: 1px solid var(--border-dim) !important;
-      color: var(--neon-cyan) !important;
-      font-family: var(--font-mono) !important;
-      border-radius: var(--radius) !important;
-    }
-
-    .swagger-ui input:focus,
-    .swagger-ui textarea:focus {
-      border-color: var(--neon-cyan) !important;
-      box-shadow: 0 0 6px rgba(0,245,255,0.3) !important;
-      outline: none !important;
-    }
-
-    /* Authorize button */
-    .swagger-ui .btn.authorize {
-      background: transparent !important;
-      color: var(--neon-cyan) !important;
-      border: 1px solid var(--neon-cyan) !important;
-      font-family: var(--font-mono) !important;
-      font-size: 12px !important;
-      letter-spacing: 1px !important;
-      border-radius: var(--radius) !important;
-      text-shadow: 0 0 6px var(--neon-cyan) !important;
-      box-shadow: 0 0 10px rgba(0,245,255,0.2) !important;
-      transition: all 0.2s !important;
-    }
-
-    .swagger-ui .btn.authorize:hover {
-      background: rgba(0,245,255,0.1) !important;
-      box-shadow: 0 0 16px rgba(0,245,255,0.4) !important;
-    }
-
-    .swagger-ui .btn.authorize svg { fill: var(--neon-cyan) !important; }
-
-    /* Execute button */
-    .swagger-ui .btn.execute {
-      background: var(--neon-green) !important;
-      border-color: var(--neon-green) !important;
-      color: #020b14 !important;
-      font-family: var(--font-mono) !important;
-      font-weight: bold !important;
-      border-radius: var(--radius) !important;
-      box-shadow: 0 0 10px rgba(57,255,20,0.3) !important;
-    }
-
-    /* Cancel / misc buttons */
-    .swagger-ui .btn {
-      font-family: var(--font-mono) !important;
-      border-radius: var(--radius) !important;
-    }
-
-    /* Model / schema */
-    .swagger-ui .model-box,
-    .swagger-ui .model {
-      background: var(--bg-panel) !important;
-      border: 1px solid var(--border-dim) !important;
-      border-radius: var(--radius) !important;
-    }
-
-    .swagger-ui section.models {
-      border: 1px solid var(--border-dim) !important;
-      background: var(--bg-panel) !important;
-    }
-
-    .swagger-ui section.models h4 {
-      color: var(--neon-purple) !important;
-      font-family: var(--font-title) !important;
-      letter-spacing: 2px !important;
-    }
-
-    /* Response / code blocks */
-    .swagger-ui .highlight-code pre,
-    .swagger-ui .microlight {
-      background: #020b14 !important;
-      border: 1px solid var(--border-dim) !important;
-      color: var(--neon-green) !important;
-      font-family: var(--font-mono) !important;
-      font-size: 12px !important;
-      border-radius: var(--radius) !important;
-    }
-
-    /* Response codes */
-    .swagger-ui .response-col_status .response-undocumented,
-    .swagger-ui .response-col_status { color: var(--neon-cyan) !important; font-family: var(--font-mono) !important; }
-
-    /* Filter input */
-    .swagger-ui .filter .operation-filter-input {
-      background: var(--bg-card) !important;
-      border: 1px solid var(--border-dim) !important;
-      color: var(--neon-cyan) !important;
-      font-family: var(--font-mono) !important;
-      border-radius: var(--radius) !important;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-dark); }
-    ::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); }
-
-    /* ── Footer ──────────────────────────────────────────────────── */
-    .site-footer {
+    .retro-panel-subtitle {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.05em;
       position: relative;
       z-index: 1;
-      border-top: 1px solid var(--neon-cyan);
-      background: var(--bg-panel);
-      box-shadow: 0 -2px 20px rgba(0,245,255,0.08);
-      padding: 16px 28px;
+      margin-top: 2px;
+    }
+
+    .retro-panel-divider {
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+    }
+
+    .retro-panel-body {
+      background: var(--card);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+    }
+
+    .retro-panel-body-stripe {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .retro-panel-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 1px;
-      color: var(--text-dim);
-      flex-wrap: wrap;
-      gap: 8px;
+      padding: 0 12px;
+      height: 18px;
+      background: linear-gradient(to right, var(--blue), var(--bg));
+      border-bottom: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
     }
 
-    .site-footer .footer-brand {
+    .retro-panel-footer-label {
+      font-size: 8px;
+      color: var(--gold-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── RetroCorners ─────────────────────────────────────────────── */
+    .retro-corners { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+    .rc { position: absolute; width: 10px; height: 10px; }
+    .rc-tl { top: 0; left: 0; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-tr { top: 0; right: 0; border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+    .rc-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-br { bottom: 0; right: 0; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+
+    /* ── RetroDiamond ─────────────────────────────────────────────── */
+    .diamond {
+      width: 5px; height: 5px;
+      background: var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .diamond-sm { width: 4px; height: 4px; }
+
+    /* ── Footer diamonds ──────────────────────────────────────────── */
+    .footer-diamonds { display: flex; align-items: center; gap: 6px; }
+    .footer-line { height: 1px; width: 20px; background: linear-gradient(to right, var(--gold), transparent); }
+    .footer-line-r { background: linear-gradient(to left, var(--gold), transparent); }
+
+    /* ── Site Header ──────────────────────────────────────────────── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: linear-gradient(to right, var(--blue-dark), var(--bg));
+      position: relative;
+    }
+    .site-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), var(--gold-faint) 60%, transparent);
+    }
+
+    .logo {
       display: flex;
       align-items: center;
       gap: 10px;
-    }
-
-    .site-footer .footer-brand img {
-      width: 22px;
-      height: 22px;
-      object-fit: contain;
-      filter: drop-shadow(0 0 4px var(--neon-cyan)) opacity(0.7);
-    }
-
-    .site-footer a {
-      color: var(--text-dim);
       text-decoration: none;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
+    }
+    .logo img { width: 28px; height: 28px; object-fit: contain; }
+
+    .site-nav { display: flex; gap: 16px; align-items: center; }
+    .site-nav a {
+      text-decoration: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       transition: color 0.2s;
     }
+    .site-nav a:hover { color: var(--gold); }
 
-    .site-footer a:hover {
-      color: var(--neon-cyan);
-      text-shadow: 0 0 6px var(--neon-cyan);
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      font-size: 9px;
+      font-weight: bold;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      border: 1px solid rgba(5,150,170,0.4);
+      background: rgba(5,150,170,0.08);
     }
 
-    .footer-sep { color: var(--border-dim); margin: 0 6px; }
-
-    /* ── Cursor blink on header ──────────────────────────────────── */
-    .cursor {
-      display: inline-block;
-      width: 10px;
-      height: 18px;
-      background: var(--neon-cyan);
-      margin-left: 4px;
-      vertical-align: middle;
-      animation: cursor-blink 1s step-end infinite;
-      box-shadow: 0 0 6px var(--neon-cyan);
+    /* ── Main container ───────────────────────────────────────────── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px;
     }
 
-    @keyframes cursor-blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0; }
+    /* ── Swagger wrapper ──────────────────────────────────────────── */
+    #swagger-ui-wrapper {
+      padding: 0;
+      min-height: 400px;
+    }
+
+    /* ── Site Footer ──────────────────────────────────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--gold-faint);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: linear-gradient(to right, var(--blue-dark), var(--bg));
+      margin-top: 24px;
+    }
+    .site-footer a { color: var(--text-dim); text-decoration: none; }
+    .site-footer a:hover { color: var(--gold); }
+
+    /* ══════════════════════════════════════════════════════════════
+       SWAGGER UI DARK THEME OVERRIDES
+       ══════════════════════════════════════════════════════════════ */
+
+    /* ── Base reset ─────────────────────────────────────────────── */
+    .swagger-ui {
+      font-family: var(--font) !important;
+      color: var(--text) !important;
+    }
+
+    /* Hide default topbar */
+    .swagger-ui .topbar { display: none !important; }
+
+    /* ── Info section ───────────────────────────────────────────── */
+    .swagger-ui .info { margin: 16px 0 !important; }
+    .swagger-ui .info .title {
+      font-family: var(--font) !important;
+      font-size: 20px !important;
+      font-weight: bold !important;
+      color: var(--gold) !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+      text-shadow: 0 1px 8px rgba(200,155,60,0.4) !important;
+    }
+    .swagger-ui .info .title small {
+      background: rgba(5,150,170,0.15) !important;
+      border: 1px solid rgba(5,150,170,0.4) !important;
+      color: var(--teal) !important;
+      padding: 2px 8px !important;
+      font-size: 10px !important;
+      letter-spacing: 0.1em !important;
+      border-radius: 0 !important;
+    }
+    .swagger-ui .info p,
+    .swagger-ui .info li { color: var(--text-dim) !important; font-size: 12px !important; }
+    .swagger-ui .info a { color: var(--teal) !important; }
+
+    /* ── Scheme container (servers) ─────────────────────────────── */
+    .swagger-ui .scheme-container {
+      background: var(--blue-dark) !important;
+      border: 1px solid var(--gold-faint) !important;
+      box-shadow: none !important;
+      padding: 12px 16px !important;
+      border-radius: 0 !important;
+    }
+    .swagger-ui .schemes > label {
+      color: var(--gold-dim) !important;
+      font-family: var(--font) !important;
+      font-size: 10px !important;
+      letter-spacing: 0.1em !important;
+      text-transform: uppercase !important;
+    }
+    .swagger-ui .servers > label {
+      color: var(--gold-dim) !important;
+      font-family: var(--font) !important;
+      font-size: 10px !important;
+    }
+    .swagger-ui select {
+      background: var(--card) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--gold-faint) !important;
+      border-radius: 0 !important;
+      font-family: var(--font) !important;
+      font-size: 12px !important;
+      padding: 4px 8px !important;
+    }
+
+    /* ── Authorize button ───────────────────────────────────────── */
+    .swagger-ui .btn.authorize {
+      background: var(--gold-faint) !important;
+      border: 1px solid var(--gold-dim) !important;
+      border-radius: 0 !important;
+      color: var(--gold) !important;
+      font-family: var(--font) !important;
+      font-size: 10px !important;
+      font-weight: bold !important;
+      letter-spacing: 0.1em !important;
+      text-transform: uppercase !important;
+      padding: 5px 14px !important;
+    }
+    .swagger-ui .btn.authorize svg { fill: var(--gold) !important; }
+    .swagger-ui .btn.authorize:hover {
+      background: rgba(200,155,60,0.2) !important;
+      border-color: var(--gold) !important;
+    }
+
+    /* ── Tags (operation groups) ────────────────────────────────── */
+    .swagger-ui .opblock-tag {
+      border-bottom: 1px solid var(--gold-faint) !important;
+      font-family: var(--font) !important;
+    }
+    .swagger-ui .opblock-tag a.nostyle {
+      color: var(--gold) !important;
+      font-size: 13px !important;
+      font-weight: bold !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+    }
+    .swagger-ui .opblock-tag:hover { background: var(--gold-faint) !important; }
+    .swagger-ui .opblock-tag small {
+      color: var(--text-dim) !important;
+      font-size: 11px !important;
+    }
+
+    /* ── Operation blocks ───────────────────────────────────────── */
+    .swagger-ui .opblock {
+      border-radius: 0 !important;
+      margin: 4px 0 !important;
+      border: 1px solid var(--gold-faint) !important;
+      background: var(--card) !important;
+      box-shadow: none !important;
+    }
+    .swagger-ui .opblock .opblock-summary {
+      border: none !important;
+      background: transparent !important;
+    }
+    .swagger-ui .opblock .opblock-summary-method {
+      border-radius: 0 !important;
+      font-family: var(--font) !important;
+      font-size: 10px !important;
+      font-weight: bold !important;
+      letter-spacing: 0.08em !important;
+      min-width: 60px !important;
+    }
+    .swagger-ui .opblock .opblock-summary-path {
+      color: var(--text) !important;
+      font-family: var(--font) !important;
+      font-size: 12px !important;
+    }
+    .swagger-ui .opblock .opblock-summary-description {
+      color: var(--text-dim) !important;
+      font-family: var(--font) !important;
+      font-size: 11px !important;
+    }
+
+    /* Method colors */
+    .swagger-ui .opblock.opblock-get    { border-color: rgba(5,150,170,0.35) !important; }
+    .swagger-ui .opblock.opblock-post   { border-color: rgba(0,211,100,0.35) !important; }
+    .swagger-ui .opblock.opblock-put    { border-color: rgba(245,158,11,0.35) !important; }
+    .swagger-ui .opblock.opblock-patch  { border-color: rgba(200,155,60,0.35) !important; }
+    .swagger-ui .opblock.opblock-delete { border-color: rgba(255,68,68,0.35) !important; }
+
+    .swagger-ui .opblock.opblock-get    .opblock-summary { background: rgba(5,150,170,0.05) !important; }
+    .swagger-ui .opblock.opblock-post   .opblock-summary { background: rgba(0,211,100,0.05) !important; }
+    .swagger-ui .opblock.opblock-put    .opblock-summary { background: rgba(245,158,11,0.05) !important; }
+    .swagger-ui .opblock.opblock-patch  .opblock-summary { background: rgba(200,155,60,0.05) !important; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary { background: rgba(255,68,68,0.05) !important; }
+
+    .swagger-ui .opblock.opblock-get    .opblock-summary-method { background: var(--teal) !important; }
+    .swagger-ui .opblock.opblock-post   .opblock-summary-method { background: var(--green) !important; color: #000 !important; }
+    .swagger-ui .opblock.opblock-put    .opblock-summary-method { background: #F59E0B !important; color: #000 !important; }
+    .swagger-ui .opblock.opblock-patch  .opblock-summary-method { background: var(--gold) !important; color: #000 !important; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: var(--red) !important; }
+
+    /* ── Expanded operation body ────────────────────────────────── */
+    .swagger-ui .opblock-body { background: var(--bg) !important; }
+    .swagger-ui .opblock-description-wrapper p { color: var(--text-dim) !important; font-family: var(--font) !important; }
+    .swagger-ui table thead tr td, .swagger-ui table thead tr th {
+      color: var(--gold-dim) !important;
+      font-family: var(--font) !important;
+      font-size: 10px !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      border-bottom: 1px solid var(--gold-faint) !important;
+    }
+    .swagger-ui table tbody tr td {
+      color: var(--text) !important;
+      font-family: var(--font) !important;
+      font-size: 12px !important;
+      border-bottom: 1px solid rgba(200,155,60,0.06) !important;
+    }
+
+    /* ── Parameters ─────────────────────────────────────────────── */
+    .swagger-ui .parameters-col_description p { color: var(--text-dim) !important; font-family: var(--font) !important; }
+    .swagger-ui .parameter__name { color: var(--gold) !important; font-family: var(--font) !important; }
+    .swagger-ui .parameter__in { color: var(--teal) !important; font-size: 10px !important; }
+    .swagger-ui .parameter__type { color: var(--text-dim) !important; font-size: 11px !important; }
+    .swagger-ui .prop-format { color: var(--text-dim) !important; font-size: 10px !important; }
+
+    /* ── Input fields ────────────────────────────────────────────── */
+    .swagger-ui input[type=text], .swagger-ui textarea {
+      background: var(--blue-dark) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--gold-faint) !important;
+      border-radius: 0 !important;
+      font-family: var(--font) !important;
+      font-size: 12px !important;
+    }
+    .swagger-ui input[type=text]:focus, .swagger-ui textarea:focus {
+      border-color: var(--gold-dim) !important;
+      outline: none !important;
+      box-shadow: 0 0 0 2px var(--gold-faint) !important;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .swagger-ui .btn {
+      border-radius: 0 !important;
+      font-family: var(--font) !important;
+      font-size: 10px !important;
+      font-weight: bold !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+    }
+    .swagger-ui .btn-sm { padding: 3px 8px !important; }
+    .swagger-ui .execute-wrapper .btn.execute {
+      background: var(--gold) !important;
+      color: var(--blue-dark) !important;
+      border: none !important;
+    }
+    .swagger-ui .execute-wrapper .btn.execute:hover {
+      background: #d4a84a !important;
+    }
+    .swagger-ui .btn.cancel {
+      background: transparent !important;
+      border: 1px solid var(--gold-faint) !important;
+      color: var(--text-dim) !important;
+    }
+    .swagger-ui .btn.try-out__btn {
+      border-color: var(--gold-dim) !important;
+      color: var(--gold) !important;
+      background: var(--gold-faint) !important;
+    }
+
+    /* ── Response section ───────────────────────────────────────── */
+    .swagger-ui .responses-wrapper { background: var(--bg) !important; }
+    .swagger-ui .response-col_status { color: var(--gold) !important; font-family: var(--font) !important; font-weight: bold !important; }
+    .swagger-ui .response-col_description { color: var(--text-dim) !important; font-family: var(--font) !important; }
+    .swagger-ui .response-col_links { color: var(--teal) !important; }
+    .swagger-ui .response { background: var(--card) !important; }
+    .swagger-ui .highlight-code { background: var(--blue-dark) !important; }
+    .swagger-ui .microlight { background: var(--blue-dark) !important; color: var(--teal) !important; font-size: 11px !important; }
+
+    /* ── Models section ─────────────────────────────────────────── */
+    .swagger-ui section.models {
+      border: 1px solid var(--gold-faint) !important;
+      border-radius: 0 !important;
+      background: var(--card) !important;
+    }
+    .swagger-ui section.models h4 {
+      color: var(--gold) !important;
+      font-family: var(--font) !important;
+      font-size: 12px !important;
+      font-weight: bold !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+    }
+    .swagger-ui section.models .model-container {
+      background: var(--bg) !important;
+      border: 1px solid var(--gold-faint) !important;
+    }
+    .swagger-ui .model-title { color: var(--gold-dim) !important; font-family: var(--font) !important; }
+    .swagger-ui .model { color: var(--text) !important; font-family: var(--font) !important; font-size: 12px !important; }
+    .swagger-ui .prop-type { color: var(--teal) !important; }
+    .swagger-ui .prop-name { color: var(--text) !important; }
+
+    /* ── Labels & misc text ─────────────────────────────────────── */
+    .swagger-ui label {
+      color: var(--text-dim) !important;
+      font-family: var(--font) !important;
+      font-size: 11px !important;
+    }
+    .swagger-ui .required { color: var(--red) !important; }
+    .swagger-ui .markdown p { color: var(--text-dim) !important; font-family: var(--font) !important; }
+    .swagger-ui .loading-container .loading::after { border-color: var(--gold) transparent transparent !important; }
+
+    /* ── Errors ─────────────────────────────────────────────────── */
+    .swagger-ui .errors-wrapper {
+      background: rgba(255,68,68,0.08) !important;
+      border: 1px solid rgba(255,68,68,0.3) !important;
+      border-radius: 0 !important;
+    }
+    .swagger-ui .errors-wrapper .errors h4 { color: var(--red) !important; font-family: var(--font) !important; }
+    .swagger-ui .errors-wrapper .errors .message { color: var(--text-dim) !important; font-family: var(--font) !important; font-size: 11px !important; }
+
+    /* ── Wrapper background ─────────────────────────────────────── */
+    .swagger-ui .wrapper { background: transparent !important; padding: 0 !important; max-width: 100% !important; }
+    .swagger-ui .opblock-tag-section { background: transparent !important; }
+
+    /* ── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--gold-faint); border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .site-nav { display: none; }
     }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header class="site-header">
-  <a class="logo-wrap" href="https://prostaff.gg" target="_blank" rel="noopener">
-    <img src="logo.png" alt="ProStaff Logo">
-    <span class="logo-text">PROSTAFF<span class="cursor"></span></span>
+<!-- ── SITE HEADER ──────────────────────────────────────────────────── -->
+<header class="site-header pat-scanline">
+  <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+    <img src="logo.png" alt="ProStaff">
+    ProStaff API
   </a>
-  <span class="badge">API v1</span>
 
-  <nav>
+  <nav class="site-nav">
     <a href="https://status.prostaff.gg" target="_blank" rel="noopener">Status</a>
-    <a href="https://prostaff.gg" target="_blank" rel="noopener">Dashboard</a>
-    <a href="mailto:support@prostaff.gg" class="btn-support">Support</a>
+    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
+    <a href="mailto:support@prostaff.gg">Support</a>
   </nav>
+
+  <div class="header-badge">
+    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
+      <circle cx="4" cy="4" r="3"/>
+    </svg>
+    v1
+  </div>
 </header>
 
-<!-- ANNOUNCEMENT -->
-<div class="announcement">
-  Use the <strong>Authorize</strong> button to authenticate with a Bearer JWT token before testing endpoints.
-</div>
+<!-- ── MAIN ─────────────────────────────────────────────────────────── -->
+<main class="container">
 
-<!-- SWAGGER UI -->
-<div id="swagger-ui"></div>
-
-<!-- FOOTER -->
-<footer class="site-footer">
-  <div class="footer-brand">
-    <img src="logo.png" alt="ProStaff">
-    &copy; <span id="currentYear"></span>&nbsp;ProStaff &mdash; Esports Team Management Platform
+  <!-- DOCS PANEL -->
+  <div class="retro-panel" style="margin-top: 0;">
+    <div class="retro-panel-header pat-diagonal">
+      <div class="retro-panel-header-left pat-scanline">
+        <div class="retro-corners">
+          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
+          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
+        </div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <div class="retro-panel-header-right">
+        <span class="retro-panel-category">REST API Reference</span>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;position:relative;z-index:1">
+          <span class="retro-panel-title">ProStaff API v1</span>
+          <span class="retro-panel-subtitle">Use Authorize to authenticate with a Bearer JWT token</span>
+        </div>
+      </div>
+    </div>
+    <div class="retro-panel-divider"></div>
+    <div class="retro-panel-body">
+      <div class="retro-panel-body-stripe"></div>
+      <div id="swagger-ui-wrapper">
+        <div id="swagger-ui"></div>
+      </div>
+    </div>
+    <div class="retro-panel-footer">
+      <div class="footer-diamonds">
+        <span class="diamond diamond-sm"></span>
+        <div class="footer-line"></div>
+      </div>
+      <span class="retro-panel-footer-label">ProStaff Analytics</span>
+      <div class="footer-diamonds">
+        <div class="footer-line footer-line-r"></div>
+        <span class="diamond diamond-sm"></span>
+      </div>
+    </div>
   </div>
-  <div>
+
+</main>
+
+<!-- ── SITE FOOTER ───────────────────────────────────────────────────── -->
+<footer class="site-footer pat-scanline">
+  <span>&copy; <span id="currentYear"></span> ProStaff &mdash; Esports Team Management Platform</span>
+  <div style="display:flex;gap:10px;align-items:center">
     <a href="https://status.prostaff.gg" target="_blank" rel="noopener">Status</a>
-    <span class="footer-sep">//</span>
+    <span class="diamond diamond-sm"></span>
     <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
-    <span class="footer-sep">//</span>
+    <span class="diamond diamond-sm"></span>
     <a href="mailto:support@prostaff.gg">support@prostaff.gg</a>
   </div>
 </footer>
@@ -531,16 +672,11 @@
         SwaggerUIBundle.plugins.DownloadUrl
       ],
       layout: 'StandaloneLayout',
-      persistAuthorization: true,
-      displayRequestDuration: true,
-      filter: true,
-      tryItOutEnabled: false,
-      supportedSubmitMethods: ['get', 'post', 'put', 'patch', 'delete', 'head'],
       defaultModelsExpandDepth: 1,
       defaultModelExpandDepth: 1,
       docExpansion: 'list',
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
+      filter: true,
+      tryItOutEnabled: false,
     });
   };
 </script>
