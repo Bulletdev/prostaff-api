@@ -74,13 +74,14 @@ services:
       PORT: 3000
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
-      CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg}'
+      CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg,https://status.prostaff.gg,https://docs.prostaff.gg}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
       # HashID Configuration
       HASHID_SALT: '${HASHID_SALT}'
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
+      APP_HOST: '${APP_HOST:-api.prostaff.gg}'
 
     healthcheck:
       test:
@@ -124,6 +125,86 @@ services:
       - coolify.managed=true
       - coolify.applicationId=1
       - coolify.type=application
+
+  # ── status.prostaff.gg ────────────────────────────────────────────────────
+  status:
+    build:
+      context: ./status-page
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - coolify
+    expose:
+      - "80"
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+      # Traefik — HTTPS router
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-status.rule=Host(`status.prostaff.gg`)
+      - traefik.http.routers.prostaff-status.entrypoints=https
+      - traefik.http.routers.prostaff-status.tls=true
+      - traefik.http.routers.prostaff-status.tls.certresolver=letsencrypt
+
+      # Service
+      - traefik.http.services.prostaff-status.loadbalancer.server.port=80
+      - traefik.http.services.prostaff-status.loadbalancer.server.scheme=http
+
+      # HTTP → HTTPS redirect
+      - traefik.http.routers.prostaff-status-http.rule=Host(`status.prostaff.gg`)
+      - traefik.http.routers.prostaff-status-http.entrypoints=http
+      - traefik.http.routers.prostaff-status-http.middlewares=redirect-to-https
+
+      # Network
+      - traefik.docker.network=coolify
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── docs.prostaff.gg ──────────────────────────────────────────────────────
+  docs:
+    build:
+      context: ./docs-page
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - coolify
+    expose:
+      - "80"
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+      # Traefik — HTTPS router
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-docs.rule=Host(`docs.prostaff.gg`)
+      - traefik.http.routers.prostaff-docs.entrypoints=https
+      - traefik.http.routers.prostaff-docs.tls=true
+      - traefik.http.routers.prostaff-docs.tls.certresolver=letsencrypt
+
+      # Service
+      - traefik.http.services.prostaff-docs.loadbalancer.server.port=80
+      - traefik.http.services.prostaff-docs.loadbalancer.server.scheme=http
+
+      # HTTP → HTTPS redirect
+      - traefik.http.routers.prostaff-docs-http.rule=Host(`docs.prostaff.gg`)
+      - traefik.http.routers.prostaff-docs-http.entrypoints=http
+      - traefik.http.routers.prostaff-docs-http.middlewares=redirect-to-https
+
+      # Network
+      - traefik.docker.network=coolify
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   redis-data:
