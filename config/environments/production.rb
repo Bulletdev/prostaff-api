@@ -74,7 +74,7 @@ Rails.application.configure do
   # Action Mailer configuration
   config.action_mailer.delivery_method = ENV.fetch('MAILER_DELIVERY_METHOD', 'smtp').to_sym
   config.action_mailer.default_url_options = {
-    host: ENV.fetch('APP_HOST', 'prostaff-api-production.up.railway.app'),
+    host: ENV.fetch('APP_HOST', 'api.prostaff.gg'),
     protocol: 'https'
   }
 
@@ -104,4 +104,7 @@ Rails.application.configure do
   end
 
   config.active_record.dump_schema_after_migration = false
+
+  # Remove X-Runtime header — vaza tempo de processamento, facilita timing attacks
+  config.middleware.delete(Rack::Runtime)
 end
