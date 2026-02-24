@@ -152,10 +152,13 @@ services:
       - traefik.http.services.prostaff-status.loadbalancer.server.port=80
       - traefik.http.services.prostaff-status.loadbalancer.server.scheme=http
 
-      # HTTP → HTTPS redirect
+      # HTTP → HTTPS redirect (middleware próprio, independente do api)
+      - traefik.http.middlewares.status-redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.status-redirect-https.redirectscheme.permanent=true
       - traefik.http.routers.prostaff-status-http.rule=Host(`status.prostaff.gg`)
       - traefik.http.routers.prostaff-status-http.entrypoints=http
-      - traefik.http.routers.prostaff-status-http.middlewares=redirect-to-https
+      - traefik.http.routers.prostaff-status-http.middlewares=status-redirect-https
+      - traefik.http.routers.prostaff-status-http.service=prostaff-status
 
       # Network
       - traefik.docker.network=coolify
@@ -192,10 +195,13 @@ services:
       - traefik.http.services.prostaff-docs.loadbalancer.server.port=80
       - traefik.http.services.prostaff-docs.loadbalancer.server.scheme=http
 
-      # HTTP → HTTPS redirect
+      # HTTP → HTTPS redirect (middleware próprio, independente do api)
+      - traefik.http.middlewares.docs-redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.docs-redirect-https.redirectscheme.permanent=true
       - traefik.http.routers.prostaff-docs-http.rule=Host(`docs.prostaff.gg`)
       - traefik.http.routers.prostaff-docs-http.entrypoints=http
-      - traefik.http.routers.prostaff-docs-http.middlewares=redirect-to-https
+      - traefik.http.routers.prostaff-docs-http.middlewares=docs-redirect-https
+      - traefik.http.routers.prostaff-docs-http.service=prostaff-docs
 
       # Network
       - traefik.docker.network=coolify
