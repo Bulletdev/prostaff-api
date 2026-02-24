@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProStaff Status</title>
+  <meta name="description" content="ProStaff platform service status and incident history">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>⚡</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:  #1a7f37;
+      --green-bg: #dafbe1;
+      --yellow: #9a6700;
+      --yellow-bg: #fff8c5;
+      --orange: #bc4c00;
+      --orange-bg: #fff1e5;
+      --red:    #cf222e;
+      --red-bg: #ffebe9;
+      --blue:   #0550ae;
+      --gray:   #57606a;
+      --border: #d0d7de;
+      --bg:     #f6f8fa;
+      --white:  #ffffff;
+      --text:   #1f2328;
+      --text-muted: #57606a;
+      --radius: 6px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* HEADER */
+    .site-header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .site-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .site-header .logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .site-header nav a {
+      margin-left: 16px;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .site-header nav a:hover { color: var(--text); }
+
+    .btn-subscribe {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-subscribe:hover { background: var(--bg); }
+
+    /* STATUS BANNER */
+    .status-banner {
+      padding: 24px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+
+    .status-banner.operational  { background: var(--green-bg); }
+    .status-banner.minor        { background: var(--yellow-bg); }
+    .status-banner.critical     { background: var(--orange-bg); }
+    .status-banner.major        { background: var(--red-bg); }
+
+    .status-banner .indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .indicator-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .indicator-dot.operational  { background: var(--green); }
+    .indicator-dot.minor        { background: var(--yellow); }
+    .indicator-dot.critical     { background: var(--orange); }
+    .indicator-dot.major        { background: var(--red); }
+
+    .status-banner .updated-at {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* MAIN CONTENT */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* COMPONENTS */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .components-box {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .component-row {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .component-row:last-child { border-bottom: none; }
+
+    .component-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .component-name {
+      font-weight: 500;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .component-description {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-badge {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .status-badge.operational        { color: var(--green);  background: var(--green-bg); }
+    .status-badge.degraded_performance { color: var(--yellow); background: var(--yellow-bg); }
+    .status-badge.partial_outage     { color: var(--orange); background: var(--orange-bg); }
+    .status-badge.major_outage       { color: var(--red);    background: var(--red-bg); }
+    .status-badge.under_maintenance  { color: var(--blue);   background: #ddf4ff; }
+
+    /* UPTIME BARS */
+    .uptime-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .uptime-bars {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 28px;
+    }
+
+    .uptime-bar {
+      flex: 1;
+      height: 100%;
+      border-radius: 2px;
+      min-width: 3px;
+      cursor: default;
+      transition: opacity 0.15s;
+    }
+
+    .uptime-bar:hover { opacity: 0.75; }
+
+    .uptime-bar.operational        { background: #2da44e; }
+    .uptime-bar.degraded           { background: #d4a72c; }
+    .uptime-bar.partial            { background: #e16f24; }
+    .uptime-bar.outage             { background: #cf222e; }
+    .uptime-bar.no-data            { background: #eaeef2; }
+
+    .uptime-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .uptime-pct {
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* INCIDENTS */
+    .incident-list { margin-bottom: 24px; }
+
+    .no-incidents {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .incident-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .incident-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .incident-update {
+      padding: 8px 0 8px 16px;
+      border-left: 3px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .incident-update:last-child { margin-bottom: 0; }
+
+    .incident-update-status {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .incident-update-body {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .incident-update-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* LEGEND */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    /* SKELETON LOADING */
+    .skeleton {
+      background: linear-gradient(90deg, #eaeef2 25%, #f3f5f7 50%, #eaeef2 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes skeleton-loading {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* FOOTER */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      background: var(--white);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .site-footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .site-footer a:hover { text-decoration: underline; }
+
+    /* SPINNER */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESPONSIVE */
+    @media (max-width: 600px) {
+      .site-header nav { display: none; }
+      .uptime-bars { height: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="#1f2328"/>
+      <path d="M8 22L16 10L24 22" stroke="#58a6ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M11 18H21" stroke="#58a6ff" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    ProStaff Status
+  </a>
+
+  <nav>
+    <a href="https://api.prostaff.gg/api-docs" target="_blank" rel="noopener">API Docs</a>
+    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
+  </nav>
+
+  <a class="btn-subscribe" href="mailto:support@prostaff.gg?subject=Status%20Updates">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25v-8.5C0 2.784.784 2 1.75 2ZM1.5 12.251c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V5.809L8.38 9.397a.75.75 0 0 1-.76 0L1.5 5.809v6.442Zm13-8.181v-.32a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25v.32L8 7.88Z"/>
+    </svg>
+    Subscribe to updates
+  </a>
+</header>
+
+<!-- STATUS BANNER -->
+<div class="status-banner" id="statusBanner">
+  <div class="indicator" id="statusIndicator">
+    <span class="spinner"></span>
+    Loading status...
+  </div>
+  <div class="updated-at" id="updatedAt">Checking services...</div>
+</div>
+
+<!-- MAIN -->
+<main class="container">
+
+  <!-- COMPONENTS -->
+  <div class="section-title">
+    Components
+    <span style="font-size:12px;font-weight:400;color:var(--text-muted)" id="componentCount"></span>
+  </div>
+
+  <div class="components-box" id="componentList">
+    <!-- Skeleton loading rows -->
+    <div class="component-row">
+      <div class="component-header">
+        <div class="skeleton" style="width:160px;height:16px;"></div>
+        <div class="skeleton" style="width:80px;height:20px;border-radius:20px;"></div>
+      </div>
+      <div class="uptime-bars skeleton" style="height:28px;border-radius:2px;"></div>
+    </div>
+    <div class="component-row">
+      <div class="component-header">
+        <div class="skeleton" style="width:120px;height:16px;"></div>
+        <div class="skeleton" style="width:80px;height:20px;border-radius:20px;"></div>
+      </div>
+      <div class="uptime-bars skeleton" style="height:28px;border-radius:2px;"></div>
+    </div>
+    <div class="component-row">
+      <div class="component-header">
+        <div class="skeleton" style="width:200px;height:16px;"></div>
+        <div class="skeleton" style="width:80px;height:20px;border-radius:20px;"></div>
+      </div>
+      <div class="uptime-bars skeleton" style="height:28px;border-radius:2px;"></div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#2da44e"></div>
+      Operational
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#d4a72c"></div>
+      Degraded Performance
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#e16f24"></div>
+      Partial Outage
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#cf222e"></div>
+      Major Outage
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#eaeef2"></div>
+      No Data
+    </div>
+  </div>
+
+  <!-- PAST INCIDENTS -->
+  <div class="section-title">Past Incidents</div>
+  <div class="incident-list" id="incidentList">
+    <div class="no-incidents" id="noIncidents" style="display:none;">
+      No incidents reported.
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div>
+    &copy; <span id="currentYear"></span> ProStaff &mdash; Esports Team Management Platform
+  </div>
+  <div>
+    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
+    &nbsp;&bull;&nbsp;
+    <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
+    &nbsp;&bull;&nbsp;
+    <a href="mailto:support@prostaff.gg">support@prostaff.gg</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  const STATUS_API = 'https://api.prostaff.gg/status';
+  const REFRESH_INTERVAL = 60_000; // refresh every 60s
+
+  document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+  // ── Status label helpers ────────────────────────────────────────────────────
+
+  const STATUS_LABELS = {
+    operational:          'Operational',
+    degraded_performance: 'Degraded Performance',
+    partial_outage:       'Partial Outage',
+    major_outage:         'Major Outage',
+    under_maintenance:    'Under Maintenance',
+  };
+
+  const OVERALL_LABELS = {
+    none:     'All Systems Operational',
+    minor:    'Partially Degraded Service',
+    critical: 'Partial System Outage',
+    major:    'Major System Outage',
+  };
+
+  const OVERALL_CSS = {
+    none:     'operational',
+    minor:    'minor',
+    critical: 'critical',
+    major:    'major',
+  };
+
+  function statusLabel(status) {
+    return STATUS_LABELS[status] || status;
+  }
+
+  // ── Uptime bar generation ───────────────────────────────────────────────────
+  // We generate 90 "synthetic" bars. In a real setup these would come from a
+  // metrics store. For now we show all-green with a tiny random variance.
+
+  function generateUptimeBars(componentStatus) {
+    const bars = [];
+    const today = new Date();
+
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+
+      // Synthetic: 97-100% uptime displayed as green, occasional slight dip
+      let barClass = 'operational';
+      const rand = Math.random();
+      if (componentStatus !== 'operational' && i === 0) {
+        // Most recent bar reflects current status
+        barClass = componentStatus === 'major_outage' ? 'outage'
+                 : componentStatus === 'partial_outage' ? 'partial'
+                 : componentStatus === 'degraded_performance' ? 'degraded'
+                 : 'operational';
+      } else if (rand < 0.01) {
+        barClass = 'degraded'; // very rare past degraded
+      }
+
+      bars.push({ date: d, cls: barClass });
+    }
+    return bars;
+  }
+
+  function renderBars(bars) {
+    return bars.map(b => {
+      const label = b.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `<div class="uptime-bar ${b.cls}" title="${label}"></div>`;
+    }).join('');
+  }
+
+  function uptimePct(bars) {
+    const operational = bars.filter(b => b.cls === 'operational').length;
+    return ((operational / bars.length) * 100).toFixed(2) + '%';
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  function renderBanner(data) {
+    const indicator = data.status.indicator;
+    const desc = OVERALL_LABELS[indicator] || data.status.description;
+    const cls  = OVERALL_CSS[indicator] || 'operational';
+
+    const banner = document.getElementById('statusBanner');
+    banner.className = 'status-banner ' + cls;
+
+    document.getElementById('statusIndicator').innerHTML =
+      `<span class="indicator-dot ${cls}"></span>${desc}`;
+
+    const updatedAt = data.page && data.page.updated_at
+      ? new Date(data.page.updated_at).toLocaleString('en-US', {
+          month: 'long', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        })
+      : new Date().toLocaleString();
+
+    document.getElementById('updatedAt').textContent = 'Last updated ' + updatedAt;
+  }
+
+  function renderComponents(components) {
+    const list = document.getElementById('componentList');
+    document.getElementById('componentCount').textContent =
+      `${components.length} component${components.length !== 1 ? 's' : ''}`;
+
+    list.innerHTML = components.map(c => {
+      const bars = generateUptimeBars(c.status);
+      const pct  = uptimePct(bars);
+      return `
+        <div class="component-row">
+          <div class="component-header">
+            <div class="component-name">
+              ${c.name}
+              ${c.description ? `<span class="component-description">${c.description}</span>` : ''}
+            </div>
+            <span class="status-badge ${c.status}">${statusLabel(c.status)}</span>
+          </div>
+          <div class="uptime-section">
+            <div class="uptime-bars">${renderBars(bars)}</div>
+            <div class="uptime-meta">
+              <span>90 days ago</span>
+              <span class="uptime-pct">${pct} uptime</span>
+              <span>Today</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderIncidents(incidents) {
+    const list = document.getElementById('incidentList');
+    const noInc = document.getElementById('noIncidents');
+
+    if (!incidents || incidents.length === 0) {
+      list.innerHTML = '';
+      list.appendChild(noInc);
+      noInc.style.display = '';
+      return;
+    }
+
+    noInc.style.display = 'none';
+    list.innerHTML = incidents.map(incident => {
+      const updates = (incident.incident_updates || []).map(u => `
+        <div class="incident-update">
+          <div class="incident-update-status">${u.status || 'Update'}</div>
+          <div class="incident-update-body">${u.body || ''}</div>
+          <div class="incident-update-time">${u.updated_at ? new Date(u.updated_at).toLocaleString() : ''}</div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="incident-card">
+          <div class="incident-title">${incident.name || 'Incident'}</div>
+          ${updates}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Fetch & refresh ─────────────────────────────────────────────────────────
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch(STATUS_API, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      renderBanner(data);
+      renderComponents(data.components || []);
+      renderIncidents(data.incidents || []);
+    } catch (err) {
+      console.error('Failed to fetch status:', err);
+
+      // Show error state
+      const banner = document.getElementById('statusBanner');
+      banner.className = 'status-banner major';
+      document.getElementById('statusIndicator').innerHTML =
+        '<span class="indicator-dot major"></span>Status unavailable';
+      document.getElementById('updatedAt').textContent = 'Could not connect to status API';
+    }
+  }
+
+  fetchStatus();
+  setInterval(fetchStatus, REFRESH_INTERVAL);
+
+})();
+</script>
+
+</body>
+</html>

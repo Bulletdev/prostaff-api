@@ -18,6 +18,9 @@ Rails.application.routes.draw do
   get 'health' => proc { [200, { 'Content-Type' => 'application/json' }, ['{"status":"ok","service":"ProStaff API"}']] }
   get 'health/detailed' => 'health#show' # Detailed health with DB check
 
+  # Public status page API (used by status.prostaff.gg)
+  get 'status' => 'status#index'
+
   # SEO - Sitemap
   get 'sitemap.xml', to: 'sitemap#index', defaults: { format: 'xml' }
 
