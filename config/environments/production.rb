@@ -107,4 +107,12 @@ Rails.application.configure do
 
   # Remove X-Runtime header — vaza tempo de processamento, facilita timing attacks
   config.middleware.delete(Rack::Runtime)
+
+  # Security headers
+  config.action_dispatch.default_headers.merge!(
+    'X-Frame-Options'           => 'DENY',
+    'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
+    'Content-Security-Policy'   => "default-src 'none'; frame-ancestors 'none'",
+    'Permissions-Policy'        => 'geolocation=(), camera=(), microphone=(), payment=()'
+  )
 end
