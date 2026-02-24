@@ -157,13 +157,16 @@ module Api
           riot_service = RiotApiService.new
           region = @target.region
 
+          # Get account info for name (Riot API no longer returns name in summoner endpoint)
+          account_data = riot_service.get_account_by_puuid(puuid: @target.riot_puuid, region: region)
           summoner_data = riot_service.get_summoner_by_puuid(puuid: @target.riot_puuid, region: region)
-          league_data = riot_service.get_league_entries(summoner_id: summoner_data[:summoner_id], region: region)
+          # Use PUUID to get league entries (Riot API no longer returns summoner_id)
+          league_data = riot_service.get_league_entries_by_puuid(puuid: @target.riot_puuid, region: region)
           mastery_data = riot_service.get_champion_mastery(puuid: @target.riot_puuid, region: region)
 
           @target.update!(
-            riot_summoner_id: summoner_data[:summoner_id],
-            summoner_name: summoner_data[:summoner_name],
+            # riot_summoner_id is no longer returned by Riot API
+            summoner_name: "#{account_data[:game_name]}##{account_data[:tag_line]}",
             current_tier: league_data[:solo_queue]&.dig(:tier),
             current_rank: league_data[:solo_queue]&.dig(:rank),
             current_lp: league_data[:solo_queue]&.dig(:lp),

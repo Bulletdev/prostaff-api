@@ -100,6 +100,15 @@ class RiotApiService
     parse_league_entries(response)
   end
 
+  # Get league entries by PUUID (new method - Riot API no longer returns summoner_id)
+  def get_league_entries_by_puuid(puuid:, region:)
+    platform = platform_for_region(region)
+    url = "https://#{platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/#{puuid}"
+
+    response = make_request(url)
+    parse_league_entries(response)
+  end
+
   # Match endpoints
   def get_match_history(puuid:, region:, count: 20, start: 0)
     regional_route = regional_route_for_region(region)
