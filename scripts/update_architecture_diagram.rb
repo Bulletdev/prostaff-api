@@ -6,6 +6,8 @@
 
 require 'pathname'
 
+# Generates and updates the Mermaid architecture diagram in README.md
+# by introspecting Rails modules, models, controllers, and services.
 class ArchitectureDiagramGenerator
   RAILS_ROOT = Pathname.new(__dir__).join('..')
   README_PATH = RAILS_ROOT.join('README.md')
@@ -164,9 +166,7 @@ class ArchitectureDiagramGenerator
   end
 
   def extended_module_sections
-    strategy_module = if @models.include?('draft_plan') || @models.include?('tactical_board')
-                        generate_strategy_module
-                      end
+    strategy_module = (generate_strategy_module if @models.include?('draft_plan') || @models.include?('tactical_board'))
     [
       (@modules.include?('competitive') ? generate_competitive_module : nil),
       (@modules.include?('scrims') ? generate_scrims_module : nil),
@@ -182,148 +182,148 @@ class ArchitectureDiagramGenerator
 
   def generate_auth_module
     indent_module(<<~MODULE.chomp)
-subgraph "Authentication Module"
-    AuthController[Auth Controller]
-    JWTService[JWT Service]
-    UserModel[User Model]
-end
+      subgraph "Authentication Module"
+          AuthController[Auth Controller]
+          JWTService[JWT Service]
+          UserModel[User Model]
+      end
     MODULE
   end
 
   def generate_generic_module(name)
     indent_module(<<~MODULE.chomp)
-subgraph "#{name.capitalize} Module"
-    #{name.capitalize}Controller[#{name.capitalize} Controller]
-end
+      subgraph "#{name.capitalize} Module"
+          #{name.capitalize}Controller[#{name.capitalize} Controller]
+      end
     MODULE
   end
 
   def generate_dashboard_module
     indent_module(<<~MODULE.chomp)
-subgraph "Dashboard Module"
-    DashboardController[Dashboard Controller]
-    DashStats[Statistics Service]
-end
+      subgraph "Dashboard Module"
+          DashboardController[Dashboard Controller]
+          DashStats[Statistics Service]
+      end
     MODULE
   end
 
   def generate_players_module
     indent_module(<<~MODULE.chomp)
-subgraph "Players Module"
-    PlayersController[Players Controller]
-    PlayerModel[Player Model]
-    ChampionPoolModel[Champion Pool Model]
-end
+      subgraph "Players Module"
+          PlayersController[Players Controller]
+          PlayerModel[Player Model]
+          ChampionPoolModel[Champion Pool Model]
+      end
     MODULE
   end
 
   def generate_scouting_module
     indent_module(<<~MODULE.chomp)
-subgraph "Scouting Module"
-    ScoutingController[Scouting Controller]
-    ScoutingTargetModel[Scouting Target Model]
-    Watchlist[Watchlist Service]
-end
+      subgraph "Scouting Module"
+          ScoutingController[Scouting Controller]
+          ScoutingTargetModel[Scouting Target Model]
+          Watchlist[Watchlist Service]
+      end
     MODULE
   end
 
   def generate_analytics_module
     indent_module(<<~MODULE.chomp)
-subgraph "Analytics Module"
-    AnalyticsController[Analytics Controller]
-    PerformanceService[Performance Service]
-    KDAService[KDA Trend Service]
-end
+      subgraph "Analytics Module"
+          AnalyticsController[Analytics Controller]
+          PerformanceService[Performance Service]
+          KDAService[KDA Trend Service]
+      end
     MODULE
   end
 
   def generate_matches_module
     indent_module(<<~MODULE.chomp)
-subgraph "Matches Module"
-    MatchesController[Matches Controller]
-    MatchModel[Match Model]
-    PlayerMatchStatModel[Player Match Stat Model]
-end
+      subgraph "Matches Module"
+          MatchesController[Matches Controller]
+          MatchModel[Match Model]
+          PlayerMatchStatModel[Player Match Stat Model]
+      end
     MODULE
   end
 
   def generate_schedules_module
     indent_module(<<~MODULE.chomp)
-subgraph "Schedules Module"
-    SchedulesController[Schedules Controller]
-    ScheduleModel[Schedule Model]
-end
+      subgraph "Schedules Module"
+          SchedulesController[Schedules Controller]
+          ScheduleModel[Schedule Model]
+      end
     MODULE
   end
 
   def generate_vod_module
     indent_module(<<~MODULE.chomp)
-subgraph "VOD Reviews Module"
-    VODController[VOD Reviews Controller]
-    VodReviewModel[VOD Review Model]
-    VodTimestampModel[VOD Timestamp Model]
-end
+      subgraph "VOD Reviews Module"
+          VODController[VOD Reviews Controller]
+          VodReviewModel[VOD Review Model]
+          VodTimestampModel[VOD Timestamp Model]
+      end
     MODULE
   end
 
   def generate_goals_module
     indent_module(<<~MODULE.chomp)
-subgraph "Team Goals Module"
-    GoalsController[Team Goals Controller]
-    TeamGoalModel[Team Goal Model]
-end
+      subgraph "Team Goals Module"
+          GoalsController[Team Goals Controller]
+          TeamGoalModel[Team Goal Model]
+      end
     MODULE
   end
 
   def generate_riot_module
     indent_module(<<~MODULE.chomp)
-subgraph "Riot Integration Module"
-    RiotService[Riot API Service]
-    RiotSync[Sync Service]
-end
+      subgraph "Riot Integration Module"
+          RiotService[Riot API Service]
+          RiotSync[Sync Service]
+      end
     MODULE
   end
 
   def generate_competitive_module
     indent_module(<<~MODULE.chomp)
-subgraph "Competitive Module"
-    CompetitiveController[Competitive Controller]
-    ProMatchesController[Pro Matches Controller]
-    PandaScoreService[PandaScore Service]
-    DraftAnalyzer[Draft Analyzer]
-end
+      subgraph "Competitive Module"
+          CompetitiveController[Competitive Controller]
+          ProMatchesController[Pro Matches Controller]
+          PandaScoreService[PandaScore Service]
+          DraftAnalyzer[Draft Analyzer]
+      end
     MODULE
   end
 
   def generate_scrims_module
     indent_module(<<~MODULE.chomp)
-subgraph "Scrims Module"
-    ScrimsController[Scrims Controller]
-    OpponentTeamsController[Opponent Teams Controller]
-    ScrimAnalytics[Scrim Analytics Service]
-end
+      subgraph "Scrims Module"
+          ScrimsController[Scrims Controller]
+          OpponentTeamsController[Opponent Teams Controller]
+          ScrimAnalytics[Scrim Analytics Service]
+      end
     MODULE
   end
 
   def generate_strategy_module
     indent_module(<<~MODULE.chomp)
-subgraph "Strategy Module"
-    DraftPlansController[Draft Plans Controller]
-    TacticalBoardsController[Tactical Boards Controller]
-    DraftAnalysisService[Draft Analysis Service]
-end
+      subgraph "Strategy Module"
+          DraftPlansController[Draft Plans Controller]
+          TacticalBoardsController[Tactical Boards Controller]
+          DraftAnalysisService[Draft Analysis Service]
+      end
     MODULE
   end
 
   def generate_support_module
     indent_module(<<~MODULE.chomp)
-subgraph "Support Module"
-    SupportTicketsController[Support Tickets Controller]
-    SupportFaqsController[Support FAQs Controller]
-    SupportStaffController[Support Staff Controller]
-    SupportTicketModel[Support Ticket Model]
-    SupportFaqModel[Support FAQ Model]
-end
+      subgraph "Support Module"
+          SupportTicketsController[Support Tickets Controller]
+          SupportFaqsController[Support FAQs Controller]
+          SupportStaffController[Support Staff Controller]
+          SupportTicketModel[Support Ticket Model]
+          SupportFaqModel[Support FAQ Model]
+      end
     MODULE
   end
 
@@ -334,14 +334,14 @@ end
   def basic_router_connections
     {
       @modules.include?('authentication') => '    Router --> AuthController',
-      has_dashboard_routes?               => '    Router --> DashboardController',
-      @models.include?('player')          => '    Router --> PlayersController',
+      has_dashboard_routes? => '    Router --> DashboardController',
+      @models.include?('player') => '    Router --> PlayersController',
       @models.include?('scouting_target') => '    Router --> ScoutingController',
-      has_analytics_routes?               => '    Router --> AnalyticsController',
-      @models.include?('match')           => '    Router --> MatchesController',
-      @models.include?('schedule')        => '    Router --> SchedulesController',
-      @models.include?('vod_review')      => '    Router --> VODController',
-      @models.include?('team_goal')       => '    Router --> GoalsController'
+      has_analytics_routes? => '    Router --> AnalyticsController',
+      @models.include?('match') => '    Router --> MatchesController',
+      @models.include?('schedule') => '    Router --> SchedulesController',
+      @models.include?('vod_review') => '    Router --> VODController',
+      @models.include?('team_goal') => '    Router --> GoalsController'
     }.filter_map { |condition, connection| connection if condition }
   end
 
@@ -478,14 +478,10 @@ end
     end
 
     # PandaScore connections
-    if @modules.include?('competitive')
-      connections << '    PandaScoreService --> PandaScoreAPI[PandaScore API]'
-    end
+    connections << '    PandaScoreService --> PandaScoreAPI[PandaScore API]' if @modules.include?('competitive')
 
     # Sidekiq connections (simplified)
-    if has_riot_integration?
-      connections << '    Sidekiq -- Uses --> Redis'
-    end
+    connections << '    Sidekiq -- Uses --> Redis' if has_riot_integration?
 
     connections.compact.join("\n")
   end
@@ -513,9 +509,9 @@ end
 
   def validate_path_within_project(path)
     rails_root_realpath = RAILS_ROOT.realpath
-    unless path.to_s.start_with?(rails_root_realpath.to_s)
-      raise SecurityError, "Path is outside project root: #{path}"
-    end
+    return if path.to_s.start_with?(rails_root_realpath.to_s)
+
+    raise SecurityError, "Path is outside project root: #{path}"
   end
 
   def update_readme(diagram)
