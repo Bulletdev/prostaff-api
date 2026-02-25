@@ -78,8 +78,14 @@ gem 'rswag-ui'
 # Elasticsearch client (for analytics queries)
 gem 'elasticsearch', '~> 9.1', '>= 9.1.3'
 
+# Meilisearch — full-text search for players, organizations, scouting targets, etc.
+gem 'meilisearch', '~> 0.33'
+
 # LLM Integration for Support Chatbot
 gem 'ruby-openai', '~> 7.0'
+
+# Structured JSON logging (12-Factor XI)
+gem 'lograge'
 
 # HashID for URL obfuscation and shortening
 gem 'hashid-rails', '~> 1.0'
