@@ -255,6 +255,49 @@
       padding: 24px 16px;
     }
 
+    /* ── Custom Search Bar ────────────────────────────────────────── */
+    .custom-search-wrap {
+      padding: 14px 0 10px;
+      border-bottom: 1px solid var(--gold-faint);
+      margin-bottom: 12px;
+    }
+    .custom-search-wrap label {
+      display: block;
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .custom-search-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--blue-dark);
+      border: 1px solid var(--gold-faint);
+      padding: 7px 12px;
+      transition: border-color 0.2s;
+    }
+    .custom-search-row:focus-within { border-color: var(--gold-dim); }
+    .custom-search-row svg { flex-shrink: 0; color: var(--gold-dim); }
+    .custom-search-row input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      width: 100%;
+    }
+    .custom-search-row input::placeholder { color: var(--text-dim); }
+    #search-count {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 5px;
+      min-height: 14px;
+    }
+    #search-count span { color: var(--gold); }
+
     /* ── Swagger wrapper ──────────────────────────────────────────── */
     #swagger-ui-wrapper {
       padding: 0 16px 16px 20px;
@@ -623,6 +666,17 @@
     <div class="retro-panel-body">
       <div class="retro-panel-body-stripe"></div>
       <div id="swagger-ui-wrapper">
+        <!-- Custom endpoint search -->
+        <div class="custom-search-wrap">
+          <label for="custom-search">Search endpoints</label>
+          <div class="custom-search-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="custom-search" type="text" placeholder="Filter by route, method, description… e.g. /players, POST, authentication">
+          </div>
+          <div id="search-count"></div>
+        </div>
         <div id="swagger-ui"></div>
       </div>
     </div>
@@ -675,11 +729,76 @@
       defaultModelsExpandDepth: 1,
       defaultModelExpandDepth: 1,
       docExpansion: 'list',
-      filter: true,
       tryItOutEnabled: false,
       validatorUrl: false,
     });
   };
+</script>
+
+<script>
+// ── Custom Endpoint Search ────────────────────────────────────────────
+(function () {
+  var timer;
+  var ready = false;
+  var input = document.getElementById('custom-search');
+  var counter = document.getElementById('search-count');
+
+  function allOps() { return document.querySelectorAll('.opblock'); }
+
+  function doFilter(raw) {
+    var query = raw.trim().toLowerCase();
+
+    // Reset
+    if (!query) {
+      document.querySelectorAll('.opblock-tag-section').forEach(function (s) { s.style.display = ''; });
+      allOps().forEach(function (op) { op.style.display = ''; });
+      counter.innerHTML = '';
+      return;
+    }
+
+    var terms = query.split(/\s+/).filter(Boolean);
+    var matched = 0;
+    var total = allOps().length;
+
+    document.querySelectorAll('.opblock-tag-section').forEach(function (section) {
+      // Tag name itself (e.g. "Authentication", "Players")
+      var tagText = (section.querySelector('.opblock-tag') || {}).textContent || '';
+      var tagMatches = terms.every(function (t) { return tagText.toLowerCase().includes(t); });
+
+      var sectionHasMatch = false;
+
+      section.querySelectorAll('.opblock').forEach(function (op) {
+        var path    = (op.querySelector('.opblock-summary-path')        || {}).textContent || '';
+        var summary = (op.querySelector('.opblock-summary-description') || {}).textContent || '';
+        var method  = (op.querySelector('.opblock-summary-method')      || {}).textContent || '';
+        var full    = (path + ' ' + summary + ' ' + method).toLowerCase();
+
+        var opMatch = tagMatches || terms.every(function (t) { return full.includes(t); });
+        op.style.display = opMatch ? '' : 'none';
+        if (opMatch) { sectionHasMatch = true; matched++; }
+      });
+
+      section.style.display = sectionHasMatch ? '' : 'none';
+    });
+
+    counter.innerHTML = '<span>' + matched + '</span> of <span>' + total + '</span> endpoints';
+  }
+
+  input.addEventListener('input', function (e) {
+    clearTimeout(timer);
+    timer = setTimeout(function () { doFilter(e.target.value); }, 200);
+  });
+
+  // Wait for SwaggerUI to render before first filter run
+  var observer = new MutationObserver(function () {
+    if (!ready && document.querySelector('.opblock')) {
+      ready = true;
+      if (input.value) doFilter(input.value);
+    }
+  });
+  var root = document.getElementById('swagger-ui') || document.body;
+  observer.observe(root, { childList: true, subtree: true });
+})();
 </script>
 
 </body>

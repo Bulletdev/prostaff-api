@@ -14,7 +14,10 @@ module Api
         def index
           scope = Organization.includes(:users).order(created_at: :desc)
 
-          scope = scope.where('LOWER(name) LIKE ?', "%#{params[:search].downcase}%") if params[:search].present?
+          if params[:search].present?
+            meili = SearchService.scope(Organization, query: params[:search])
+            scope = meili ? scope.where(id: meili.pluck(:id)) : scope.where('LOWER(name) LIKE ?', "%#{params[:search].downcase}%")
+          end
           scope = scope.where(tier: params[:tier]) if params[:tier].present?
           scope = scope.where(subscription_status: params[:status]) if params[:status].present?
 

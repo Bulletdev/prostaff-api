@@ -20,6 +20,7 @@ class ScoutingTarget < ApplicationRecord
   # Concerns
   # REMOVED: include OrganizationScoped (this is now global)
   include Constants
+  include Searchable
 
   # Associations
   # REMOVED: belongs_to :organization
@@ -40,6 +41,28 @@ class ScoutingTarget < ApplicationRecord
 
   # Callbacks
   before_save :normalize_summoner_name
+
+  # ── Meilisearch ────────────────────────────────────────────────────
+  def self.meili_searchable_attributes
+    %w[summoner_name real_name region role status current_tier]
+  end
+
+  def self.meili_filterable_attributes
+    %w[role region status current_tier]
+  end
+
+  def to_meili_document
+    {
+      id:            id.to_s,
+      summoner_name: summoner_name,
+      real_name:     real_name,
+      role:          role,
+      region:        region,
+      status:        status,
+      current_tier:  current_tier,
+      current_rank:  current_rank
+    }
+  end
 
   # Scopes - GLOBAL scopes (no org filtering)
   scope :by_status, ->(status) { where(status: status) }
