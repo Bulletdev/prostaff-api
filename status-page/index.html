@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ProStaff Status</title>
   <meta name="description" content="ProStaff platform service status and incident history">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%230C223F'/><path d='M8 22L16 10L24 22' stroke='%23C89B3C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/><path d='M11 18H21' stroke='%23C89B3C' stroke-width='2.5' stroke-linecap='round'/></svg>">
+  <link rel="icon" href="logo.png" type="image/png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -240,7 +240,7 @@
       text-shadow: 0 1px 6px rgba(200,155,60,0.4);
     }
 
-    .logo svg { width: 28px; height: 28px; }
+    .logo img { width: 28px; height: 28px; object-fit: contain; }
 
     .site-nav { display: flex; gap: 16px; align-items: center; }
 
@@ -542,11 +542,7 @@
 <!-- ── SITE HEADER ──────────────────────────────────────────────────── -->
 <header class="site-header pat-scanline">
   <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
-    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="4" fill="#0C223F"/>
-      <path d="M8 22L16 10L24 22" stroke="#C89B3C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M11 18H21" stroke="#C89B3C" stroke-width="2.5" stroke-linecap="round"/>
-    </svg>
+    <img src="logo.png" alt="ProStaff">
     ProStaff Status
   </a>
 
