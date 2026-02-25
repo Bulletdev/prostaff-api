@@ -44,14 +44,14 @@ class SupportFaq < ApplicationRecord
 
   def to_meili_document
     {
-      id:        id.to_s,
-      question:  question,
-      answer:    answer,
-      keywords:  keywords,
-      category:  category,
-      locale:    locale,
+      id: id.to_s,
+      question: question,
+      answer: answer,
+      keywords: keywords,
+      category: category,
+      locale: locale,
       published: published,
-      slug:      slug
+      slug: slug
     }
   end
 

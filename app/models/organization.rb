@@ -79,11 +79,11 @@ class Organization < ApplicationRecord
 
   def to_meili_document
     {
-      id:                  id.to_s,
-      name:                name,
-      slug:                slug,
-      region:              region,
-      tier:                tier,
+      id: id.to_s,
+      name: name,
+      slug: slug,
+      region: region,
+      tier: tier,
       subscription_status: subscription_status
     }
   end
@@ -150,9 +150,9 @@ class Organization < ApplicationRecord
 
   # Automatically expire trial if expiration date has passed
   def check_trial_expiration
-    if trial_expires_at.present? && trial_expires_at <= Time.current
-      self.subscription_status = 'expired'
-    end
+    return unless trial_expires_at.present? && trial_expires_at <= Time.current
+
+    self.subscription_status = 'expired'
   end
 
   def generate_slug

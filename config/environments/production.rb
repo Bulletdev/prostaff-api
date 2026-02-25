@@ -9,8 +9,8 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
-# Disable Rails Host Authorization. 
-  # Traefik already filters traffic by domain (prostaff.gg), and this 
+  # Disable Rails Host Authorization.
+  # Traefik already filters traffic by domain (prostaff.gg), and this
   # prevents health checks on internal IPs (like 10.0.x.x) from being blocked.
   config.hosts = nil
 
@@ -36,14 +36,13 @@ Rails.application.configure do
   config.force_ssl = false
   config.ssl_options = { redirect: { exclude: ->(request) { request.path.start_with?('/health') } } }
 
-
   # Trust all proxies (Traefik, Cloudflare)
   require 'ipaddr'
   config.action_dispatch.trusted_proxies = [
-    IPAddr.new("10.0.0.0/8"),
-    IPAddr.new("172.16.0.0/12"),
-    IPAddr.new("172.16.0.0/16"),
-    IPAddr.new("127.0.0.1"),
+    IPAddr.new('10.0.0.0/8'),
+    IPAddr.new('172.16.0.0/12'),
+    IPAddr.new('172.16.0.0/16'),
+    IPAddr.new('127.0.0.1')
   ]
 
   config.log_level = :info
@@ -110,9 +109,9 @@ Rails.application.configure do
 
   # Security headers
   config.action_dispatch.default_headers.merge!(
-    'X-Frame-Options'           => 'DENY',
+    'X-Frame-Options' => 'DENY',
     'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
-    'Content-Security-Policy'   => "default-src 'none'; frame-ancestors 'none'",
-    'Permissions-Policy'        => 'geolocation=(), camera=(), microphone=(), payment=()'
+    'Content-Security-Policy' => "default-src 'none'; frame-ancestors 'none'",
+    'Permissions-Policy' => 'geolocation=(), camera=(), microphone=(), payment=()'
   )
 end

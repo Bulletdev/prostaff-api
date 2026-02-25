@@ -53,14 +53,14 @@ class ScoutingTarget < ApplicationRecord
 
   def to_meili_document
     {
-      id:            id.to_s,
+      id: id.to_s,
       summoner_name: summoner_name,
-      real_name:     real_name,
-      role:          role,
-      region:        region,
-      status:        status,
-      current_tier:  current_tier,
-      current_rank:  current_rank
+      real_name: real_name,
+      role: role,
+      region: region,
+      status: status,
+      current_tier: current_tier,
+      current_rank: current_rank
     }
   end
 

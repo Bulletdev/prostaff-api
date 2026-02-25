@@ -11,15 +11,15 @@ module Api
         # GET /api/v1/support/faq
         def index
           faqs = SupportFaq.published
-                          .by_locale(params[:locale] || 'pt-BR')
+                           .by_locale(params[:locale] || 'pt-BR')
 
           faqs = faqs.by_category(params[:category]) if params[:category].present?
 
           if params[:q].present?
             meili = SearchService.scope(
               SupportFaq,
-              query:   params[:q],
-              filters: { published: true, locale: (params[:locale] || 'pt-BR') }
+              query: params[:q],
+              filters: { published: true, locale: params[:locale] || 'pt-BR' }
             )
             faqs = meili ? faqs.where(id: meili.pluck(:id)) : faqs.search(params[:q])
           end
@@ -29,10 +29,10 @@ module Api
           result = paginate(faqs)
 
           render_success({
-            faqs: result[:data].map { |f| serialize_faq(f) },
-            pagination: result[:pagination],
-            categories: SupportFaq::CATEGORIES
-          })
+                           faqs: result[:data].map { |f| serialize_faq(f) },
+                           pagination: result[:pagination],
+                           categories: SupportFaq::CATEGORIES
+                         })
         end
 
         # GET /api/v1/support/faq/:slug
@@ -47,9 +47,9 @@ module Api
           @faq.mark_helpful!
 
           render_success({
-            helpful_count: @faq.helpful_count,
-            helpfulness_ratio: @faq.helpfulness_ratio
-          })
+                           helpful_count: @faq.helpful_count,
+                           helpfulness_ratio: @faq.helpfulness_ratio
+                         })
         end
 
         # POST /api/v1/support/faq/:id/not-helpful
@@ -57,9 +57,9 @@ module Api
           @faq.mark_not_helpful!
 
           render_success({
-            not_helpful_count: @faq.not_helpful_count,
-            helpfulness_ratio: @faq.helpfulness_ratio
-          })
+                           not_helpful_count: @faq.not_helpful_count,
+                           helpfulness_ratio: @faq.helpfulness_ratio
+                         })
         end
 
         private
