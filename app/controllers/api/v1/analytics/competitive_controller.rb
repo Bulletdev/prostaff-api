@@ -73,10 +73,10 @@ module Api
 
           opponents_list = build_opponents_data(rows)
 
-          render_success(
+          render_success({
             opponents:               opponents_list,
             total_unique_opponents:  opponents_list.size
-          )
+          })
         rescue StandardError => e
           Rails.logger.error("[CompetitiveAnalytics] opponents: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
           render_error(message: 'Failed to load opponent analysis', code: 'INTERNAL_ERROR', status: :internal_server_error)
