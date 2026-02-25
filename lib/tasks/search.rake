@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 namespace :search do
-  SEARCHABLE_MODELS = [Player, Organization, ScoutingTarget, OpponentTeam, SupportFaq].freeze
+  # Lazily evaluated — models are only referenced after :environment loads Rails
+  SEARCHABLE_MODELS_PROC = -> { [Player, Organization, ScoutingTarget, OpponentTeam, SupportFaq] }
 
   desc 'Configure Meilisearch index settings and reindex all searchable models'
   task reindex: :environment do
@@ -10,7 +11,7 @@ namespace :search do
       exit 1
     end
 
-    SEARCHABLE_MODELS.each do |model|
+    SEARCHABLE_MODELS_PROC.call.each do |model|
       print "→ Reindexing #{model.name}… "
       model.meili_reindex!
       puts "#{model.count} documents"
@@ -26,7 +27,7 @@ namespace :search do
       exit 1
     end
 
-    SEARCHABLE_MODELS.each do |model|
+    SEARCHABLE_MODELS_PROC.call.each do |model|
       index = MEILISEARCH_CLIENT.index(model.meili_index_name)
       index.update_settings(
         searchable_attributes: model.meili_searchable_attributes,
@@ -45,7 +46,7 @@ namespace :search do
       exit 1
     end
 
-    SEARCHABLE_MODELS.each do |model|
+    SEARCHABLE_MODELS_PROC.call.each do |model|
       index = MEILISEARCH_CLIENT.index(model.meili_index_name)
       puts "#{model.meili_index_name.ljust(20)} #{index.number_of_documents} docs"
     rescue StandardError => e
