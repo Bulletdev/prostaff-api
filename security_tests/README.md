@@ -1,47 +1,47 @@
 # ProStaff API - Security Testing Lab
 
-Laboratório completo de testes de segurança para a API ProStaff, incluindo análise estática, análise dinâmica e varredura de vulnerabilidades.
+Laboratorio completo de testes de segurança para a API ProStaff, incluindo analise estatica, analise dinamica e varredura de vulnerabilidades.
 
-## Ferramentas Incluídas
+## Ferramentas Incluidas
 
-| Ferramenta | Tipo | Descrição |
+| Ferramenta | Tipo | Descricao |
 |------------|------|-----------|
-| **OWASP ZAP** | DAST | Análise dinâmica de segurança web |
-| **Brakeman** | SAST | Analisador de segurança específico para Rails |
-| **Semgrep** | SAST | Análise estática de código com regras customizáveis |
-| **Trivy** | SCA | Scanner de vulnerabilidades em dependências |
-| **Dependency-Check** | SCA | Análise de vulnerabilidades conhecidas (CVE) |
-| **Nuclei** | DAST | Scanner de vulnerabilidades web rápido |
+| **OWASP ZAP** | DAST | Analise dinamica de segurança web |
+| **Brakeman** | SAST | Analisador de segurança especifico para Rails |
+| **Semgrep** | SAST | Analise estatica de codigo com regras customizaveis |
+| **Trivy** | SCA | Scanner de vulnerabilidades em dependencias |
+| **Dependency-Check** | SCA | Analise de vulnerabilidades conhecidas (CVE) |
+| **Nuclei** | DAST | Scanner de vulnerabilidades web rapido |
 
-##  Quick Start
+## Quick Start
 
-### 1. Iniciar o Laboratório Completo
+### 1. Iniciar o Laboratorio Completo
 
-\`\`\`bash
+```bash
 ./security_tests/start-security-lab.sh
-\`\`\`
+```
 
-Este comando irá:
-- ✅ Iniciar todos os containers de ferramentas de segurança
-- ✅ Iniciar a aplicação ProStaff API  
-- ✅ Aguardar a API ficar pronta
-- ✅ Conectar tudo na mesma rede Docker
+Este comando ira:
+- Iniciar todos os containers de ferramentas de segurança
+- Iniciar a aplicacao ProStaff API
+- Aguardar a API ficar pronta
+- Conectar tudo na mesma rede Docker
 
 ### 2. Executar Todos os Scans
 
-\`\`\`bash
+```bash
 ./security_tests/run-security-scans.sh
-\`\`\`
+```
 
-### 3. Parar o Laboratório
+### 3. Parar o Laboratorio
 
-\`\`\`bash
+```bash
 ./security_tests/stop-security-lab.sh
-\`\`\`
+```
 
-## 📊 Relatórios
+## Relatorios
 
-Após executar os scans, os relatórios estarão disponíveis em:
+Apos executar os scans, os relatorios estarao disponiveis em:
 
 ```
 security_tests/
@@ -63,7 +63,7 @@ security_tests/
         └── zap-report.json
 ```
 
-### Visualizar Relatórios
+### Visualizar Relatorios
 
 ```bash
 # Brakeman
@@ -82,7 +82,7 @@ cat security_tests/reports/trivy/trivy-report.json | jq
 
 ## Executar Scans Individuais
 
-### Brakeman (já executado automaticamente ao iniciar)
+### Brakeman (ja executado automaticamente ao iniciar)
 ```bash
 docker exec prostaff-brakeman brakeman --rails7 --output /reports/brakeman-report.html --format html
 ```
@@ -128,13 +128,13 @@ docker exec prostaff-zap zap-full-scan.py \
   -r /zap/reports/zap-full-report.html
 ```
 
-## 🌐 Interfaces Web
+## Interfaces Web
 
 - **ProStaff API**: http://localhost:3333
 - **ZAP Web Interface**: http://localhost:8087/zap
 - **ZAP API**: http://localhost:8097
 
-## Comandos Úteis
+## Comandos Uteis
 
 ### Verificar Status dos Containers
 ```bash
@@ -152,25 +152,25 @@ docker logs prostaff-zap -f
 # Brakeman
 docker logs prostaff-brakeman
 
-# Todos os containers de segurança
+# Todos os containers de seguranca
 docker compose -f security_tests/docker-compose.security.yml -p security_tests logs -f
 ```
 
-### Reiniciar um Container Específico
+### Reiniciar um Container Especifico
 ```bash
 docker restart prostaff-zap
 docker restart prostaff-api
 ```
 
-### Reconstruir a Aplicação
+### Reconstruir a Aplicacao
 ```bash
-docker-compose build api
-docker-compose up -d api
+docker compose build api
+docker compose up -d api
 ```
 
-## Configuração
+## Configuracao
 
-### Variáveis de Ambiente (.env)
+### Variaveis de Ambiente (.env)
 
 Crie um arquivo `.env` na raiz do projeto com:
 
@@ -195,22 +195,22 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:3333
 RIOT_API_KEY=your_riot_api_key_here
 ```
 
-##  Boas Práticas
+## Boas Praticas
 
 1. **Execute os scans regularmente**: Idealmente em cada commit ou antes de cada release
-2. **Revise todos os relatórios**: Priorize vulnerabilidades críticas e altas
+2. **Revise todos os relatorios**: Priorize vulnerabilidades criticas e altas
 3. **Mantenha as ferramentas atualizadas**:
    ```bash
    docker compose -f security_tests/docker-compose.security.yml pull
    ```
-4. **Documente falsos positivos**: Use arquivos de supressão quando apropriado
+4. **Documente falsos positivos**: Use arquivos de supressao quando apropriado
 5. **Integre ao CI/CD**: Automatize os scans em seu pipeline
 
 ## Troubleshooting
 
-### API não está acessível
+### API nao esta acessivel
 ```bash
-# Verifique se a API está rodando
+# Verifique se a API esta rodando
 docker ps | grep prostaff-api
 
 # Verifique os logs
@@ -220,29 +220,29 @@ docker logs prostaff-api
 curl http://localhost:3333/up
 ```
 
-### ZAP pedindo autenticação
-- Acesse: http://localhost:8087/zap (não http://localhost:8087)
-- A autenticação foi desabilitada na configuração
+### ZAP pedindo autenticacao
+- Acesse: http://localhost:8087/zap (nao http://localhost:8087)
+- A autenticacao foi desabilitada na configuracao
 
 ### Nuclei sem resultados
-- Confirme que a API está rodando: `curl http://localhost:3333/up`
-- Verifique se o container está na rede correta: `docker network inspect security_tests_security-net`
+- Confirme que a API esta rodando: `curl http://localhost:3333/up`
+- Verifique se o container esta na rede correta: `docker network inspect security_tests_security-net`
 
 ### Containers encerrando imediatamente
 - Verifique os logs: `docker logs <container_name>`
-- Confirme que os volumes estão corretos no docker-compose.yml
-- Verifique se a aplicação Rails está no diretório pai: `../`
+- Confirme que os volumes estao corretos no docker-compose.yml
+- Verifique se a aplicacao Rails esta no diretorio pai: `../`
 
-### Erro de bundle/gems não encontradas
+### Erro de bundle/gems nao encontradas
 ```bash
 # Reconstrua a imagem
-docker-compose build api
+docker compose build api
 
 # Force bundle install
-docker-compose run --rm api bundle install
+docker compose run --rm api bundle install
 ```
 
-## 📚 Documentação
+## Documentacao
 
 - [OWASP ZAP](https://www.zaproxy.org/docs/)
 - [Brakeman](https://brakemanscanner.org/docs/)
@@ -251,16 +251,16 @@ docker-compose run --rm api bundle install
 - [Dependency-Check](https://jeremylong.github.io/DependencyCheck/)
 - [Nuclei](https://docs.projectdiscovery.io/tools/nuclei/overview)
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Para adicionar novas ferramentas ou melhorar os scans:
 
 1. Edite `docker-compose.security.yml`
-2. Adicione scripts de execução em `run-security-scans.sh`
-3. Documente as mudanças neste README
+2. Adicione scripts de execucao em `run-security-scans.sh`
+3. Documente as mudancas neste README
 4. Teste completamente antes de commitar
 
-## 🎯 Arquitetura
+## Arquitetura
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -291,6 +291,6 @@ Para adicionar novas ferramentas ou melhorar os scans:
 └─────────────────────────────────────────────────────┘
 ```
 
-## 📝 Licença
+## Licenca
 
-Este laboratório de segurança é parte do projeto ProStaff API.
+Este laboratorio de seguranca e parte do projeto ProStaff API.
