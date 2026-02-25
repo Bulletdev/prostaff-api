@@ -28,17 +28,18 @@ module Api
           rows = matches.select(:our_picks, :our_bans, :victory, :side).to_a
 
           render_success({
-            pick_performance: build_pick_performance(rows, total),
-            ban_performance:  build_ban_performance(rows, total),
-            side_performance: build_side_performance(rows),
-            role_performance: build_role_performance(rows),
-            meta_champions:   extract_meta_champions(matches),
-            total_matches:    total,
-            date_range:       build_date_range(matches)
-          })
+                           pick_performance: build_pick_performance(rows, total),
+                           ban_performance: build_ban_performance(rows, total),
+                           side_performance: build_side_performance(rows),
+                           role_performance: build_role_performance(rows),
+                           meta_champions: extract_meta_champions(matches),
+                           total_matches: total,
+                           date_range: build_date_range(matches)
+                         })
         rescue StandardError => e
           Rails.logger.error("[CompetitiveAnalytics] draft_performance: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
-          render_error(message: 'Failed to load draft performance', code: 'INTERNAL_ERROR', status: :internal_server_error)
+          render_error(message: 'Failed to load draft performance', code: 'INTERNAL_ERROR',
+                       status: :internal_server_error)
         end
 
         # ── Tournament stats ───────────────────────────────────────────
@@ -51,35 +52,37 @@ module Api
           total_losses = total_games - total_wins
 
           render_success({
-            tournaments:      build_tournament_stats(matches),
-            total_games:      total_games,
-            total_wins:       total_wins,
-            total_losses:     total_losses,
-            overall_win_rate: total_games.positive? ? (total_wins.to_f / total_games * 100).round(1) : 0
-          })
+                           tournaments: build_tournament_stats(matches),
+                           total_games: total_games,
+                           total_wins: total_wins,
+                           total_losses: total_losses,
+                           overall_win_rate: total_games.positive? ? (total_wins.to_f / total_games * 100).round(1) : 0
+                         })
         rescue StandardError => e
           Rails.logger.error("[CompetitiveAnalytics] tournament_stats: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
-          render_error(message: 'Failed to load tournament stats', code: 'INTERNAL_ERROR', status: :internal_server_error)
+          render_error(message: 'Failed to load tournament stats', code: 'INTERNAL_ERROR',
+                       status: :internal_server_error)
         end
 
         # ── Opponent analysis ──────────────────────────────────────────
         # Returns aggregated win/loss record against each unique opponent.
         def opponents
           rows = apply_filters(organization_scoped(CompetitiveMatch))
-                   .where.not(opponent_team_name: [nil, ''])
-                   .select(:opponent_team_name, :victory, :match_date, :tournament_name)
-                   .order(match_date: :desc)
-                   .to_a
+                 .where.not(opponent_team_name: [nil, ''])
+                 .select(:opponent_team_name, :victory, :match_date, :tournament_name)
+                 .order(match_date: :desc)
+                 .to_a
 
           opponents_list = build_opponents_data(rows)
 
           render_success({
-            opponents:               opponents_list,
-            total_unique_opponents:  opponents_list.size
-          })
+                           opponents: opponents_list,
+                           total_unique_opponents: opponents_list.size
+                         })
         rescue StandardError => e
           Rails.logger.error("[CompetitiveAnalytics] opponents: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
-          render_error(message: 'Failed to load opponent analysis', code: 'INTERNAL_ERROR', status: :internal_server_error)
+          render_error(message: 'Failed to load opponent analysis', code: 'INTERNAL_ERROR',
+                       status: :internal_server_error)
         end
 
         # ── Private helpers ────────────────────────────────────────────
@@ -116,12 +119,12 @@ module Api
           stats.map do |champ, s|
             losses = s[:games] - s[:wins]
             {
-              champion:  champ,
-              games:     s[:games],
-              wins:      s[:wins],
-              losses:    losses,
-              win_rate:  (s[:wins].to_f / s[:games] * 100).round(1),
-              role:      s[:role] || 'unknown',
+              champion: champ,
+              games: s[:games],
+              wins: s[:wins],
+              losses: losses,
+              win_rate: (s[:wins].to_f / s[:games] * 100).round(1),
+              role: s[:role] || 'unknown',
               pick_rate: (s[:games].to_f / total_games * 100).round(1)
             }
           end.sort_by { |s| -s[:games] }
@@ -139,9 +142,9 @@ module Api
 
           counts.map do |champ, count|
             {
-              champion:  champ,
+              champion: champ,
               ban_count: count,
-              ban_rate:  (count.to_f / total_games * 100).round(1)
+              ban_rate: (count.to_f / total_games * 100).round(1)
             }
           end.sort_by { |s| -s[:ban_count] }
         end
@@ -152,9 +155,9 @@ module Api
             games     = side_rows.size
             wins      = side_rows.count(&:victory)
             result[side] = {
-              games:    games,
-              wins:     wins,
-              losses:   games - wins,
+              games: games,
+              wins: wins,
+              losses: games - wins,
               win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0
             }
           end
@@ -182,12 +185,12 @@ module Api
           role_stats.map do |role, s|
             most_played = s[:champions].max_by { |_, c| c }&.first || 'N/A'
             {
-              role:                  role,
-              games:                 s[:games],
-              wins:                  s[:wins],
-              win_rate:              s[:games].positive? ? (s[:wins].to_f / s[:games] * 100).round(1) : 0,
-              most_played_champion:  most_played,
-              champion_pool_size:    s[:champions].size
+              role: role,
+              games: s[:games],
+              wins: s[:wins],
+              win_rate: s[:games].positive? ? (s[:wins].to_f / s[:games] * 100).round(1) : 0,
+              most_played_champion: most_played,
+              champion_pool_size: s[:champions].size
             }
           end
         end
@@ -209,7 +212,7 @@ module Api
 
           {
             start: scoped.minimum(:match_date)&.strftime('%Y-%m-%d'),
-            end:   scoped.maximum(:match_date)&.strftime('%Y-%m-%d')
+            end: scoped.maximum(:match_date)&.strftime('%Y-%m-%d')
           }
         end
 
@@ -229,21 +232,21 @@ module Api
             t_dates = t_matches.where.not(match_date: nil)
 
             date_range = if t_dates.exists?
-              {
-                start: t_dates.minimum(:match_date)&.strftime('%Y-%m-%d'),
-                end:   t_dates.maximum(:match_date)&.strftime('%Y-%m-%d')
-              }
-            end
+                           {
+                             start: t_dates.minimum(:match_date)&.strftime('%Y-%m-%d'),
+                             end: t_dates.maximum(:match_date)&.strftime('%Y-%m-%d')
+                           }
+                         end
 
             {
-              name:           name,
-              games:          games,
-              wins:           wins,
-              losses:         losses,
-              win_rate:       (wins.to_f / games * 100).round(1),
-              stages:         build_stage_stats(t_matches),
+              name: name,
+              games: games,
+              wins: wins,
+              losses: losses,
+              win_rate: (wins.to_f / games * 100).round(1),
+              stages: build_stage_stats(t_matches),
               patch_versions: patches,
-              date_range:     date_range
+              date_range: date_range
             }
           end.sort_by { |t| -t[:games] }
         end
@@ -258,9 +261,9 @@ module Api
             games     = s_matches.count
             wins      = s_matches.victories.count
             result[stage] = {
-              games:    games,
-              wins:     wins,
-              losses:   games - wins,
+              games: games,
+              wins: wins,
+              losses: games - wins,
               win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0
             }
           end
@@ -276,13 +279,13 @@ module Api
             tournaments = opp_rows.filter_map(&:tournament_name).uniq.sort
 
             {
-              name:            name,
-              matches:         games,
-              wins:            wins,
-              losses:          games - wins,
-              win_rate:        (wins.to_f / games * 100).round(1),
+              name: name,
+              matches: games,
+              wins: wins,
+              losses: games - wins,
+              win_rate: (wins.to_f / games * 100).round(1),
               last_match_date: last_match&.strftime('%Y-%m-%d'),
-              tournaments:     tournaments
+              tournaments: tournaments
             }
           end.sort_by { |o| -o[:matches] }
         end
@@ -292,11 +295,11 @@ module Api
         def empty_draft_performance
           {
             pick_performance: [],
-            ban_performance:  [],
+            ban_performance: [],
             side_performance: { blue: side_zeros, red: side_zeros },
             role_performance: [],
-            meta_champions:   [],
-            total_matches:    0
+            meta_champions: [],
+            total_matches: 0
           }
         end
 

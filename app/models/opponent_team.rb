@@ -37,11 +37,11 @@ class OpponentTeam < ApplicationRecord
 
   def to_meili_document
     {
-      id:     id.to_s,
-      name:   name,
-      tag:    tag,
+      id: id.to_s,
+      name: name,
+      tag: tag,
       region: region,
-      tier:   tier,
+      tier: tier,
       league: league
     }
   end

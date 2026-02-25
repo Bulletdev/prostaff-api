@@ -105,15 +105,15 @@ class Player < ApplicationRecord
 
   def to_meili_document
     {
-      id:               id.to_s,
-      summoner_name:    summoner_name,
-      real_name:        real_name,
-      role:             role,
-      status:           status,
-      country:          country,
-      solo_queue_tier:  solo_queue_tier,
-      solo_queue_rank:  solo_queue_rank,
-      organization_id:  organization_id.to_s
+      id: id.to_s,
+      summoner_name: summoner_name,
+      real_name: real_name,
+      role: role,
+      status: status,
+      country: country,
+      solo_queue_tier: solo_queue_tier,
+      solo_queue_rank: solo_queue_rank,
+      organization_id: organization_id.to_s
     }
   end
 

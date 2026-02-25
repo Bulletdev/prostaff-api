@@ -16,7 +16,12 @@ module Api
 
           if params[:search].present?
             meili = SearchService.scope(Organization, query: params[:search])
-            scope = meili ? scope.where(id: meili.pluck(:id)) : scope.where('LOWER(name) LIKE ?', "%#{params[:search].downcase}%")
+            scope = if meili
+                      scope.where(id: meili.pluck(:id))
+                    else
+                      scope.where('LOWER(name) LIKE ?',
+                                  "%#{params[:search].downcase}%")
+                    end
           end
           scope = scope.where(tier: params[:tier]) if params[:tier].present?
           scope = scope.where(subscription_status: params[:status]) if params[:status].present?
@@ -24,34 +29,34 @@ module Api
           result = paginate(scope)
 
           render_success({
-            organizations: result[:data].map { |org| serialize_org(org) },
-            pagination:    result[:pagination]
-          })
+                           organizations: result[:data].map { |org| serialize_org(org) },
+                           pagination: result[:pagination]
+                         })
         end
 
         private
 
         def require_admin_access
-          unless current_user&.admin? || current_user&.owner?
-            render_error(
-              message: 'Admin access required',
-              code: 'FORBIDDEN',
-              status: :forbidden
-            )
-          end
+          return if current_user&.admin? || current_user&.owner?
+
+          render_error(
+            message: 'Admin access required',
+            code: 'FORBIDDEN',
+            status: :forbidden
+          )
         end
 
         def serialize_org(org)
           {
-            id:                  org.id,
-            name:                org.name,
-            slug:                org.slug,
-            region:              org.region,
-            tier:                org.tier,
-            subscription_plan:   org.subscription_plan,
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            region: org.region,
+            tier: org.tier,
+            subscription_plan: org.subscription_plan,
             subscription_status: org.subscription_status,
-            users_count:         org.users.size,
-            created_at:          org.created_at.iso8601
+            users_count: org.users.size,
+            created_at: org.created_at.iso8601
           }
         end
       end

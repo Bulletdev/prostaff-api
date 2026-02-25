@@ -28,10 +28,10 @@ module Api
         results = SearchService.global(query: query, types: types, per_page: per_page)
 
         render_success({
-          query:   query,
-          types:   (types || ALLOWED_TYPES),
-          results: results
-        })
+                         query: query,
+                         types: types || ALLOWED_TYPES,
+                         results: results
+                       })
       end
 
       private

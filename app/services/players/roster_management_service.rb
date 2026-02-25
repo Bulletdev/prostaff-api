@@ -63,7 +63,7 @@ module Players
     # @param jersey_number [Integer] Jersey number (optional)
     # @return [Hash] Result with success status and player
     def self.hire_from_scouting(scouting_target:, organization:, contract_start:, contract_end:,
-                               salary: nil, jersey_number: nil, current_user: nil)
+                                salary: nil, jersey_number: nil, current_user: nil)
       ActiveRecord::Base.transaction do
         # Check if this is a free agent or needs to be restored
         player = find_or_restore_player(scouting_target, organization)

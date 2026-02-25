@@ -5,11 +5,11 @@
 class SearchService
   # Models exposed to global search, keyed by the string callers pass in `types`
   INDEXES = {
-    'players'         => Player,
-    'organizations'   => Organization,
-    'scouting_targets'=> ScoutingTarget,
-    'opponent_teams'  => OpponentTeam,
-    'support_faqs'    => SupportFaq
+    'players' => Player,
+    'organizations' => Organization,
+    'scouting_targets' => ScoutingTarget,
+    'opponent_teams' => OpponentTeam,
+    'support_faqs' => SupportFaq
   }.freeze
 
   # ── Global multi-index search ─────────────────────────────────────
