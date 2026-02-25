@@ -27,7 +27,7 @@ module Api
           # Load only the columns needed for JSONB aggregation in Ruby
           rows = matches.select(:our_picks, :our_bans, :victory, :side).to_a
 
-          render_success(
+          render_success({
             pick_performance: build_pick_performance(rows, total),
             ban_performance:  build_ban_performance(rows, total),
             side_performance: build_side_performance(rows),
@@ -35,7 +35,7 @@ module Api
             meta_champions:   extract_meta_champions(matches),
             total_matches:    total,
             date_range:       build_date_range(matches)
-          )
+          })
         rescue StandardError => e
           Rails.logger.error("[CompetitiveAnalytics] draft_performance: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
           render_error(message: 'Failed to load draft performance', code: 'INTERNAL_ERROR', status: :internal_server_error)
@@ -50,13 +50,13 @@ module Api
           total_wins   = matches.victories.count
           total_losses = total_games - total_wins
 
-          render_success(
+          render_success({
             tournaments:      build_tournament_stats(matches),
             total_games:      total_games,
             total_wins:       total_wins,
             total_losses:     total_losses,
             overall_win_rate: total_games.positive? ? (total_wins.to_f / total_games * 100).round(1) : 0
-          )
+          })
         rescue StandardError => e
           Rails.logger.error("[CompetitiveAnalytics] tournament_stats: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
           render_error(message: 'Failed to load tournament stats', code: 'INTERNAL_ERROR', status: :internal_server_error)

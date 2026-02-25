@@ -20,7 +20,7 @@ module Api
           .select(:id, :full_name, :role, :last_login_at)
 
         render_success(
-          members: members.map { |u| serialize_member(u) }
+          { members: members.map { |u| serialize_member(u) } }
         )
       end
 
