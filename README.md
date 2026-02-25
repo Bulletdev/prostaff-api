@@ -158,7 +158,7 @@ open http://localhost:3333/api-docs
 
 ```
 ╔══════════════════════╦════════════════════════════════════════════════════╗
-║  CAMADA              ║  TECNOLOGIA                                        ║
+║  LAYER               ║  TECNOLOGY                                         ║
 ╠══════════════════════╬════════════════════════════════════════════════════╣
 ║  Language            ║  Ruby 3.4.5                                        ║
 ║  Framework           ║  Rails 7.2.0 (API-only mode)                       ║
