@@ -122,6 +122,13 @@ module Authenticatable
     render_forbidden("Required role: #{allowed_roles.join(' or ')}")
   end
 
+  # Rejects player tokens — for endpoints that are staff-only (e.g. chat members)
+  def require_user_auth!
+    return if user_signed_in?
+
+    render_forbidden('User authentication required — player tokens are not accepted here')
+  end
+
   def organization_scoped(model_class)
     model_class.where(organization: current_organization)
   end

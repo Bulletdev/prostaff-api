@@ -6,9 +6,12 @@ module Api
     #
     # Used by the frontend to populate the team member list in the chat widget.
     # Returns all users except the current user.
+    # Player tokens are rejected — this endpoint is for staff only.
     #
     # GET /api/v1/team-members
     class TeamMembersController < BaseController
+      before_action :require_user_auth!
+
       def index
         members = current_organization
           .users
