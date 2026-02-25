@@ -188,6 +188,11 @@ Rails.application.routes.draw do
         get 'teamfights/:player_id', to: 'teamfights#show'
         get 'vision/:player_id', to: 'vision#show'
         get 'team-comparison', to: 'team_comparison#index'
+
+        # Competitive analytics (draft performance, tournament stats, opponent analysis)
+        get 'competitive/draft-performance', to: 'competitive#draft_performance'
+        get 'competitive/tournament-stats',  to: 'competitive#tournament_stats'
+        get 'competitive/opponents',         to: 'competitive#opponents'
       end
 
       # Matches
