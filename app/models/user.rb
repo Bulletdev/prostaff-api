@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authenticated user within an organization, with role-based access and notification support.
 class User < ApplicationRecord
   has_secure_password
 

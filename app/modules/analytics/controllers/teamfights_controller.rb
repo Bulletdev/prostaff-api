@@ -2,6 +2,7 @@
 
 module Analytics
   module Controllers
+    # Returns teamfight and combat analytics (damage dealt/taken, kill participation) per player.
     class TeamfightsController < Api::V1::BaseController
       def show
         player = organization_scoped(Player).find(params[:player_id])

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Serializes user notifications with type, read status, link metadata, and time-ago formatting.
 class NotificationSerializer < Blueprinter::Base
   identifier :id
 

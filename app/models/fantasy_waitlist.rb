@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Email sign-up record for the Fantasy feature early-access waitlist.
 class FantasyWaitlist < ApplicationRecord
   # Associations
   belongs_to :organization, optional: true

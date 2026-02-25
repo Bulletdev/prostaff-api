@@ -2,6 +2,7 @@
 
 module RiotIntegration
   module Controllers
+    # Exposes Riot sync status and triggers manual player sync operations.
     class RiotIntegrationController < Api::V1::BaseController
       def sync_status
         players = organization_scoped(Player)

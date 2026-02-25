@@ -2,6 +2,7 @@
 
 module Api
   module V1
+    # CRUD API for team performance goals with filtering, sorting, and progress tracking.
     class TeamGoalsController < Api::V1::BaseController
       before_action :set_team_goal, only: %i[show update destroy]
 

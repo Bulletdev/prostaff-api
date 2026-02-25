@@ -2,6 +2,7 @@
 
 module Dashboard
   module Controllers
+    # Aggregates team dashboard data: stats, recent matches, schedule, goals, and roster.
     class DashboardController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
 

@@ -2,6 +2,8 @@
 
 module Matches
   module Controllers
+    # API controller for organization-scoped matches.
+    # Supports CRUD operations, filtering, sorting, and per-match player stats.
     class MatchesController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
       include ParameterValidation

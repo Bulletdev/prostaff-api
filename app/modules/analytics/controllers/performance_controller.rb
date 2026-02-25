@@ -2,6 +2,7 @@
 
 module Analytics
   module Controllers
+    # Returns team and individual player performance analytics over a date range.
     class PerformanceController < Api::V1::BaseController
       include ::Analytics::Concerns::AnalyticsCalculations
 

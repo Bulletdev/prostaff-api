@@ -2,6 +2,7 @@
 
 module Analytics
   module Controllers
+    # Returns champion pool statistics (win rate, KDA, mastery grade) for a player.
     class ChampionsController < Api::V1::BaseController
       def show
         player = organization_scoped(Player).find(params[:player_id])

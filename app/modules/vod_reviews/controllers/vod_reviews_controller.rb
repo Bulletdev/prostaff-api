@@ -2,6 +2,7 @@
 
 module VodReviews
   module Controllers
+    # CRUD API for VOD review sessions, with filtering by status, match, and reviewer.
     class VodReviewsController < Api::V1::BaseController
       before_action :set_vod_review, only: %i[show update destroy]
 

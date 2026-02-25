@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Represents an opposing team tracked across scrims and competitive matches.
 class OpponentTeam < ApplicationRecord
   # Concerns
   include Constants

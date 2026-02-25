@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# SearchService — centralizes all Meilisearch queries.
-
+# Centralizes all Meilisearch queries, supporting global multi-index search
+# and scoped per-model queries with optional organization filtering.
 class SearchService
   # Models exposed to global search, keyed by the string callers pass in `types`
   INDEXES = {

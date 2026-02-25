@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# A timestamped annotation within a VOD review, categorized by type and importance.
 class VodTimestamp < ApplicationRecord
   # Concerns
   include Constants

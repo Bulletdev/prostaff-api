@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Stores per-player performance statistics for a single match.
+# Includes KDA, CS, damage, vision score, items, runes, and computed derived stats.
 class PlayerMatchStat < ApplicationRecord
   belongs_to :match
   belongs_to :player

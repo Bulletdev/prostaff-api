@@ -2,6 +2,7 @@
 
 module Api
   module V1
+    # Manages user notifications: listing, filtering by type, and marking as read.
     class NotificationsController < Api::V1::BaseController
       before_action :set_notification, only: %i[show mark_as_read]
 
