@@ -276,7 +276,43 @@
       border-color: var(--gold);
     }
 
-    /* ── Status Banner ────────────────────────────────────────────── */
+    /* ── Hero Header (full-width image, githubstatus-style) ──────── */
+    .hero-header {
+      position: relative;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .hero-header img {
+      display: block;
+      width: 100%;
+      max-width: 1176px;
+      height: auto;
+      margin: 0 auto;
+    }
+
+    /* gradient: transparent on top -> page dark bg on bottom, to blend */
+    .hero-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 55%;
+      background: linear-gradient(to bottom, transparent 0%, var(--bg) 100%);
+      pointer-events: none;
+    }
+
+    /* left and right side fade into page bg */
+    .hero-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to right, var(--bg) 0%, transparent 8%, transparent 92%, var(--bg) 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ── Status Banner (status bar below the image) ───────────────── */
     .status-banner {
       padding: 20px 24px;
       display: flex;
@@ -504,24 +540,111 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Footer ───────────────────────────────────────────────────── */
-    .site-footer {
-      border-top: 1px solid var(--gold-faint);
-      padding: 14px 24px;
+    /* ── Full Footer ──────────────────────────────────────────────── */
+    .site-footer-full {
+      background: var(--bg);
+      border-top: 1px solid var(--gold);
+      font-family: var(--font);
+    }
+    .footer-container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px 24px;
+    }
+    .footer-top-bar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      font-size: 10px;
-      color: var(--text-dim);
-      letter-spacing: 0.05em;
-      flex-wrap: wrap;
-      gap: 8px;
-      background: linear-gradient(to right, var(--blue-dark), var(--bg));
+      gap: 10px;
+      margin-bottom: 32px;
     }
-    .site-footer a { color: var(--text-dim); text-decoration: none; }
-    .site-footer a:hover { color: var(--gold); }
+    .footer-top-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), transparent);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 28px;
+      margin-bottom: 36px;
+    }
+    .footer-col-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .footer-col-logo img { width: 28px; height: 28px; object-fit: contain; }
+    .footer-col-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+    .footer-col-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .footer-links-col {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .footer-links-col a {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links-col a:hover { color: var(--gold); }
+    .footer-bottom-bar {
+      border-top: 1px solid var(--gold-faint);
+      padding-top: 20px;
+    }
+    .footer-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .footer-sep-line { flex: 1; height: 1px; }
+    .footer-sep-line-l { background: linear-gradient(to right, transparent, var(--gold)); }
+    .footer-sep-line-r { background: linear-gradient(to left, transparent, var(--gold)); }
+    .footer-sep-label {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .footer-riot {
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-dim);
+      line-height: 1.8;
+      max-width: 620px;
+      margin: 14px auto 0;
+    }
+    @media (max-width: 700px) {
+      .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .footer-brand-col { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
 
-    /* ── Footer diamond row ───────────────────────────────────────── */
+    /* ── Footer diamond row (panels) ─────────────────────────────── */
     .footer-diamonds {
       display: flex;
       align-items: center;
@@ -558,6 +681,11 @@
     Subscribe
   </a>
 </header>
+
+<!-- ── HERO HEADER ───────────────────────────────────────────────────── -->
+<div class="hero-header">
+  <img src="header.png" alt="ProStaff platform" loading="eager">
+</div>
 
 <!-- ── STATUS BANNER ────────────────────────────────────────────────── -->
 <div class="status-banner pat-diagonal" id="statusBanner">
@@ -699,14 +827,92 @@
 </main>
 
 <!-- ── SITE FOOTER ───────────────────────────────────────────────────── -->
-<footer class="site-footer pat-scanline">
-  <span>&copy; <span id="currentYear"></span> ProStaff &mdash; Esports Team Management Platform</span>
-  <div style="display:flex;gap:10px;align-items:center">
-    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
-    <span class="diamond diamond-sm"></span>
-    <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
-    <span class="diamond diamond-sm"></span>
-    <a href="mailto:support@prostaff.gg">support@prostaff.gg</a>
+<footer class="site-footer-full pat-scanline">
+  <div class="footer-container">
+
+    <!-- Top bar -->
+    <div class="footer-top-bar">
+      <span class="diamond diamond-sm"></span>
+      <div class="footer-top-line"></div>
+    </div>
+
+    <!-- Grid -->
+    <div class="footer-grid">
+
+      <!-- Brand -->
+      <div class="footer-brand-col">
+        <a class="footer-col-logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+          <img src="logo.png" alt="ProStaff">
+          ProStaff
+        </a>
+        <p class="footer-col-desc">Esports Team Management Platform. Advanced analytics, scouting, and performance tracking for professional organizations.</p>
+      </div>
+
+      <!-- Product -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Product
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/features" target="_blank" rel="noopener">Features</a>
+          <a href="https://prostaff.gg/pricing" target="_blank" rel="noopener">Pricing</a>
+          <a href="https://prostaff.gg/comparison" target="_blank" rel="noopener">Comparison</a>
+        </div>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Company
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/about" target="_blank" rel="noopener">About</a>
+          <a href="https://prostaff.gg/contact" target="_blank" rel="noopener">Contact</a>
+        </div>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Legal
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+          <a href="https://prostaff.gg/tos" target="_blank" rel="noopener">Terms of Service</a>
+          <a href="https://developer.riotgames.com/policies/general" target="_blank" rel="noopener">Riot API Policies</a>
+        </div>
+      </div>
+
+      <!-- Resources -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Resources
+        </div>
+        <div class="footer-links-col">
+          <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
+          <a href="https://status.prostaff.gg" target="_blank" rel="noopener">System Status</a>
+          <a href="mailto:support@prostaff.gg">Support</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom -->
+    <div class="footer-bottom-bar">
+      <div class="footer-sep">
+        <div class="footer-sep-line footer-sep-line-l"></div>
+        <span class="footer-sep-label">ProStaff.gg</span>
+        <div class="footer-sep-line footer-sep-line-r"></div>
+      </div>
+      <p class="footer-riot">
+        ProStaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+      </p>
+    </div>
+
   </div>
 </footer>
 
@@ -716,8 +922,6 @@
 
   const STATUS_API = 'https://api.prostaff.gg/status';
   const REFRESH_INTERVAL = 60_000;
-
-  document.getElementById('currentYear').textContent = new Date().getFullYear();
 
   const STATUS_LABELS = {
     operational:          'Operational',
