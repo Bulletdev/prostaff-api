@@ -1,469 +1,514 @@
-# ProStaff API - Production Deployment Guide
+# ProStaff API - Guia de Deploy
 
-Guia completo para deploy da aplicação em ambientes de staging e produção.
+Guia de referencia para deploy da aplicacao em producao via Coolify.
 
-##  Índice
+## Indice
 
-- [Pré-requisitos](#pré-requisitos)
-- [Configuração Inicial](#configuração-inicial)
-- [Deploy em Staging](#deploy-em-staging)
-- [Deploy em Production](#deploy-em-production)
 - [Infraestrutura](#infraestrutura)
-- [Monitoramento](#monitoramento)
-- [Backup e Recovery](#backup-e-recovery)
+- [Pre-requisitos](#pre-requisitos)
+- [Configuracao de Ambiente](#configuracao-de-ambiente)
+- [CI/CD - GitHub Actions](#cicd---github-actions)
+- [Deploy Manual](#deploy-manual)
+- [Servicos e Portas](#servicos-e-portas)
+- [Health Checks](#health-checks)
+- [Backup e Restauracao](#backup-e-restauracao)
+- [Manutencao](#manutencao)
 - [Troubleshooting](#troubleshooting)
 
-##  Pré-requisitos
+---
+
+## Infraestrutura
+
+A aplicacao roda via **Coolify** (self-hosted PaaS) com **Traefik** como reverse proxy. O SSL e gerenciado automaticamente pelo Coolify via Let's Encrypt.
+
+### Stack
+
+| Componente    | Tecnologia               | Versao     |
+|---------------|--------------------------|------------|
+| Runtime       | Ruby                     | 3.4.5      |
+| Framework     | Rails                    | 7.2        |
+| Servidor web  | Puma                     | ~> 6.0     |
+| Banco de dados| PostgreSQL               | 15+        |
+| Cache/Jobs    | Redis                    | 7.2        |
+| Busca         | Meilisearch              | v1.11      |
+| Background    | Sidekiq + sidekiq-scheduler | ~> 7.0  |
+| Container     | Docker (multi-stage)     | -          |
+| Proxy         | Traefik (via Coolify)    | -          |
+| Deploy        | Coolify + GitHub Actions | -          |
+
+### Dominios
+
+| Servico        | Dominio                  |
+|----------------|--------------------------|
+| API            | `api.prostaff.gg`        |
+| Status page    | `status.prostaff.gg`     |
+| Documentacao   | `docs.prostaff.gg`       |
+
+### Servicos Docker (producao)
+
+O `docker-compose.production.yml` sobe os seguintes servicos na rede `coolify`:
+
+- `redis` - Redis 7.2 com autenticacao por senha
+- `meilisearch` - Meilisearch v1.11 (busca full-text)
+- `api` - Rails API via Puma, exposta na porta 3000
+- `sidekiq` - Worker de background jobs
+- `status` - Status page estatica (status.prostaff.gg)
+- `docs` - Documentacao estatica (docs.prostaff.gg)
+
+O banco de dados PostgreSQL e externo (DATABASE_URL apontando para Supabase ou outro provider).
+
+---
+
+## Pre-requisitos
 
 ### Servidor
 
-- **Sistema Operacional**: Ubuntu 22.04 LTS ou superior
-- **RAM**: Mínimo 4GB (Recomendado: 8GB+)
-- **CPU**: 2+ cores
-- **Disco**: 50GB+ SSD
-- **Docker**: 24.0+
-- **Docker Compose**: 2.20+
+- Coolify instalado e configurado
+- Docker e Docker Compose disponiveis
+- Rede Docker `coolify` criada
+- Acesso SSH para operacoes manuais (se necessario)
 
-### Domínios
+### Repositorio
 
-- **Production**: `api.prostaff.gg`
-- **Staging**: `staging-api.prostaff.gg`
+- Acesso ao repositorio GitHub
+- GitHub Secrets configurados (ver [SECRETS_SETUP.md](SECRETS_SETUP.md))
+- GitHub Environments configurados: `staging`, `production-approval`, `production`
 
-### Serviços Externos
+### Servicos externos
 
-- **Database**: PostgreSQL 15+ (ou RDS/Cloud SQL)
-- **Cache**: Redis 7+ (ou ElastiCache/MemoryStore)
-- **Storage**: AWS S3 ou compatível
-- **Email**: SendGrid, Mailgun ou SMTP
-- **Monitoring**: Sentry (opcional)
+- **PostgreSQL** - Provider gerenciado (Supabase, Neon, RDS, etc.)
+- **Redis** - Container Docker na rede `coolify`
+- **Riot API** - Chave de API da Riot Games
+- **Elasticsearch** - Instancia acessivel via URL (opcional para analytics avancado)
 
-##  Configuração Inicial
+---
 
-### 1. Preparar Servidor
+## Configuracao de Ambiente
+
+### Variaveis obrigatorias
+
+Estas variaveis devem estar presentes no ambiente de producao:
 
 ```bash
-# Atualizar sistema
-sudo apt update && sudo apt upgrade -y
+# Rails
+RAILS_ENV=production
+RAILS_MASTER_KEY=<master_key_do_credentials.yml.enc>
+SECRET_KEY_BASE=<64_hex_chars>
+RAILS_LOG_TO_STDOUT=true
+PORT=3000
 
-# Instalar Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
+# Banco de dados
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
-# Instalar Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+# Redis
+REDIS_URL=redis://default:<REDIS_PASSWORD>@redis:6379/0
+REDIS_PASSWORD=<senha_forte>
 
-# Instalar ferramentas essenciais
-sudo apt install -y git curl wget nano ufw fail2ban
+# JWT
+JWT_SECRET_KEY=<chave_jwt>
 
-# Configurar firewall
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
+# HashID (ofuscacao de IDs)
+HASHID_SALT=<salt_aleatorio>
+HASHID_MIN_LENGTH=8
+
+# Riot API
+RIOT_API_KEY=<chave_riot_games>
+
+# Meilisearch
+MEILISEARCH_URL=http://meilisearch:7700
+MEILI_MASTER_KEY=<chave_meilisearch>
+
+# CORS
+CORS_ORIGINS=https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg,https://status.prostaff.gg,https://docs.prostaff.gg
+
+# Frontend
+FRONTEND_URL=https://prostaff.gg
+APP_HOST=api.prostaff.gg
+
+# Elasticsearch (opcional)
+ELASTICSEARCH_URL=http://elastic:9200
 ```
 
-### 2. Configurar SSL/TLS (Let's Encrypt)
+### Gerando secrets
 
 ```bash
-# Instalar Certbot
-sudo apt install -y certbot python3-certbot-nginx
+# RAILS_MASTER_KEY - obtido de config/master.key (nunca commitar)
+cat config/master.key
 
-# Obter certificados
-sudo certbot certonly --standalone -d api.prostaff.gg
-sudo certbot certonly --standalone -d staging-api.prostaff.gg
-
-# Certificados estarão em:
-# /etc/letsencrypt/live/api.prostaff.gg/fullchain.pem
-# /etc/letsencrypt/live/api.prostaff.gg/privkey.pem
-```
-
-### 3. Clonar Repositório
-
-```bash
-# Criar diretório
-sudo mkdir -p /var/www
-cd /var/www
-
-# Clonar projeto
-sudo git clone https://github.com/seu-usuario/prostaff-api.git
-cd prostaff-api
-
-# Definir permissões
-sudo chown -R $USER:$USER /var/www/prostaff-api
-```
-
-### 4. Configurar Variáveis de Ambiente
-
-```bash
-# Copiar exemplo de staging
-cp .env.staging.example .env
-
-# Editar arquivo
-nano .env
-```
-
-**Importante**: Gere secrets fortes com:
-
-```bash
-# Gerar SECRET_KEY_BASE
+# SECRET_KEY_BASE
 bundle exec rails secret
-
-# Ou use OpenSSL
+# ou
 openssl rand -hex 64
+
+# JWT_SECRET_KEY
+openssl rand -hex 64
+
+# HASHID_SALT
+openssl rand -hex 32
+
+# REDIS_PASSWORD
+openssl rand -base64 32
+
+# MEILI_MASTER_KEY
+openssl rand -hex 32
 ```
 
-##  Deploy em Staging
+---
 
-### Configuração
+## CI/CD - GitHub Actions
+
+O pipeline automatizado e definido em `.github/workflows/`.
+
+### Workflows disponiveis
+
+| Workflow                  | Arquivo                       | Gatilho                              |
+|---------------------------|-------------------------------|--------------------------------------|
+| Deploy Staging            | `deploy-staging.yml`          | Push em `develop`                    |
+| Deploy Production         | `deploy-production.yml`       | Tag `v*.*.*` ou trigger manual       |
+| Security Scan             | `security-scan.yml`           | Push em `master`/`develop`, PRs, semanal |
+| Load Test                 | `load-test.yml`               | Manual, schedule noturno             |
+| Nightly Security Audit    | `nightly-security.yml`        | Toda noite, 1h UTC                   |
+
+### Deploy em staging
 
 ```bash
-# Usar configuração de staging
-cp .env.staging.example .env
-nano .env  # Ajustar valores
+# Push para develop dispara deploy automatico
+git checkout develop
+git push origin develop
 
-# Copiar certificados SSL
-sudo mkdir -p deploy/ssl
-sudo cp /etc/letsencrypt/live/staging-api.prostaff.gg/fullchain.pem deploy/ssl/staging-fullchain.pem
-sudo cp /etc/letsencrypt/live/staging-api.prostaff.gg/privkey.pem deploy/ssl/staging-privkey.pem
+# Ou disparo manual via GitHub CLI
+gh workflow run deploy-staging.yml
 ```
 
-### Build e Deploy
+O pipeline de staging executa:
+1. Testes RSpec
+2. RuboCop
+3. Brakeman
+4. Build da imagem Docker
+5. Deploy no servidor de staging
+6. Health check pos-deploy
+
+### Deploy em producao
 
 ```bash
-# Build da imagem
-docker-compose -f docker-compose.production.yml build
+# Criar tag semantica dispara deploy de producao
+git tag -a v1.2.0 -m "Release v1.2.0"
+git push origin v1.2.0
 
-# Iniciar serviços
-docker-compose -f docker-compose.production.yml up -d
-
-# Verificar logs
-docker-compose -f docker-compose.production.yml logs -f api
-
-# Executar migrations
-docker-compose -f docker-compose.production.yml exec api bundle exec rails db:migrate
-
-# Verificar saúde
-curl https://staging-api.prostaff.gg/up
+# Ou disparo manual
+gh workflow run deploy-production.yml -f version=v1.2.0
 ```
 
-### Seeds (Opcional)
+O pipeline de producao executa:
+1. Validacao do formato da tag (semver obrigatorio)
+2. Suite completa de testes (RSpec, RuboCop, Brakeman)
+3. Scan de segurança (Trivy)
+4. Build da imagem Docker (publicada no GHCR: `ghcr.io/<org>/prostaff-api`)
+5. **Aprovacao manual obrigatoria** (ambiente `production-approval`)
+6. Backup do banco antes do deploy
+7. Rolling update zero-downtime
+8. Migrations
+9. Health checks
+10. Rollback automatico em caso de falha
+11. Criacao de GitHub Release
 
-```bash
-# Popular dados de teste
-docker-compose -f docker-compose.production.yml exec api bundle exec rails db:seed
+### Fluxo de branches
+
+```
+feature/* -> develop -> staging (auto-deploy)
+                   |
+                review/QA
+                   |
+              master + tag -> production (aprovacao manual)
 ```
 
-##  Deploy em Production
+---
 
-### Checklist Pré-Deploy
+## Deploy Manual
 
-- [ ] Backup do banco de dados atual
-- [ ] Testar em staging
-- [ ] Revisar mudanças de schema (migrations)
-- [ ] Verificar secrets e variáveis de ambiente
-- [ ] Notificar equipe sobre deploy
-- [ ] Preparar rollback plan
+Para situacoes que exigem intervencao direta no servidor.
 
-### Deploy
+### Via scripts
 
 ```bash
-# 1. Backup
-./deploy/scripts/backup.sh
+# Deploy em staging
+./deploy/scripts/deploy.sh staging
 
-# 2. Atualizar código
+# Deploy em producao
+./deploy/scripts/deploy.sh production
+
+# Rollback
+./deploy/scripts/rollback.sh staging
+./deploy/scripts/rollback.sh production
+```
+
+### Via Docker Compose direto
+
+```bash
+# No servidor, dentro do diretorio do projeto
+cd /var/www/prostaff-api
+
+# Atualizar codigo
 git pull origin master
 
-# 3. Build nova versão
-docker-compose -f docker-compose.production.yml build
+# Build e subir servicos
+docker compose -f docker-compose.production.yml up -d --build
 
-# 4. Deploy com zero-downtime
-docker-compose -f docker-compose.production.yml up -d --no-deps --build api
+# Executar migrations
+docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate
 
-# 5. Executar migrations
-docker-compose -f docker-compose.production.yml exec api bundle exec rails db:migrate
+# Verificar logs
+docker compose -f docker-compose.production.yml logs -f api
 
-# 6. Restart services
-docker-compose -f docker-compose.production.yml restart
-
-# 7. Verificar saúde
+# Health check
 curl https://api.prostaff.gg/up
 ```
 
-### Rollback (se necessário)
+### Rollback manual
 
 ```bash
-# Reverter para versão anterior
+# Reverter para commit anterior
 git checkout <commit-hash>
-docker-compose -f docker-compose.production.yml up -d --force-recreate
+docker compose -f docker-compose.production.yml up -d --force-recreate
 
-# Reverter migrations
-docker-compose -f docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
+# Reverter ultima migration
+docker compose -f docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
 ```
 
-## 🏗️ Infraestrutura
+---
 
-### Arquitetura Recomendada
+## Servicos e Portas
 
-```
-┌─────────────────────────────────────────────┐
-│           Load Balancer / CDN               │
-│         (CloudFlare / AWS ALB)              │
-└─────────────────┬───────────────────────────┘
-                  │
-      ┌───────────┴───────────┐
-      │                       │
-┌─────▼─────┐         ┌───────▼──────┐
-│  Staging  │         │  Production  │
-│  Server   │         │   Servers    │
-│           │         │  (2+ nodes)  │
-└─────┬─────┘         └───────┬──────┘
-      │                       │
-┌─────▼────────────────────────▼──────┐
-│         Managed Services             │
-│  - RDS (PostgreSQL)                  │
-│  - ElastiCache (Redis)               │
-│  - S3 (Storage)                      │
-│  - SES/SendGrid (Email)              │
-└──────────────────────────────────────┘
-```
-
-### Opções de Hosting
-
-#### 1. AWS (Recomendado para escala)
+### Desenvolvimento local
 
 ```bash
-# Serviços necessários:
-- EC2 (t3.medium ou superior)
-- RDS PostgreSQL
-- ElastiCache Redis
-- S3
-- ALB (Load Balancer)
-- Route 53 (DNS)
-- CloudWatch (Monitoring)
+# Subir apenas Redis + API + Sidekiq (sem PostgreSQL local)
+docker compose up -d
+
+# Subir com PostgreSQL local (desenvolvimento offline)
+docker compose --profile local-db up -d
 ```
 
-#### 2. DigitalOcean (Simples e econômico)
+A API roda localmente na porta `3333` (configuravel via `API_PORT` no `.env`).
+Redis roda na porta `6380` (configuravel via `REDIS_PORT`).
+
+### Producao (rede `coolify`)
+
+Os servicos nao expõem portas diretamente. O Traefik roteia o trafego externo via labels Docker:
+
+- `api.prostaff.gg` -> container `api` (porta 3000)
+- `status.prostaff.gg` -> container `status` (porta 80)
+- `docs.prostaff.gg` -> container `docs` (porta 80)
+
+O Meilisearch (porta 7700) e o Redis (porta 6379) sao acessiveis apenas internamente na rede `coolify`.
+
+---
+
+## Health Checks
+
+### Endpoints
+
+| Endpoint           | Descricao                             | Uso                          |
+|--------------------|---------------------------------------|------------------------------|
+| `GET /up`          | Retorna 200 "ok" (sem DB)            | Traefik, Docker healthcheck  |
+| `GET /health`      | JSON `{"status":"ok","service":"..."}` | Monitoramento simples        |
+| `GET /health/detailed` | Health com verificacao do banco  | Diagnostico                  |
+| `GET /status`      | Status page API                       | status.prostaff.gg           |
 
 ```bash
-# Droplets + Managed Databases
-- Droplet 4GB ($24/mês)
-- Managed PostgreSQL ($15/mês)
-- Managed Redis ($15/mês)
-- Spaces (S3-compatible)
+# Verificar saude da API
+curl https://api.prostaff.gg/up
+# -> ok
+
+curl https://api.prostaff.gg/health
+# -> {"status":"ok","service":"ProStaff API"}
+
+# Verificar Redis
+docker compose -f docker-compose.production.yml exec redis redis-cli -a $REDIS_PASSWORD ping
+# -> PONG
+
+# Verificar Meilisearch
+curl http://meilisearch:7700/health  # dentro da rede coolify
 ```
 
-#### 3. Google Cloud Platform
+### Docker healthcheck (configurado no Dockerfile.production)
+
+```
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3
+  CMD curl -f http://localhost:3000/up || exit 1
+```
+
+---
+
+## Backup e Restauracao
+
+### Backup do banco
 
 ```bash
-# Compute Engine + Cloud SQL
-- e2-medium instance
-- Cloud SQL PostgreSQL
-- Memorystore Redis
-- Cloud Storage
+# Backup manual via script
+./scripts/backup_database.sh
+
+# Backup via Docker Compose
+docker compose -f docker-compose.production.yml run --rm backup
+
+# Backup direto com pg_dump (substituir variaveis)
+pg_dump $DATABASE_URL | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 ```
 
-## 📊 Monitoramento
+O pipeline de producao cria backup automatico antes de cada deploy.
 
-### Logs
+### Restaurar backup
 
 ```bash
-# Ver logs em tempo real
-docker-compose -f docker-compose.production.yml logs -f
-
-# Logs específicos
-docker-compose -f docker-compose.production.yml logs -f api
-docker-compose -f docker-compose.production.yml logs -f sidekiq
-docker-compose -f docker-compose.production.yml logs -f nginx
-
-# Logs do sistema
-tail -f /var/log/syslog
-```
-
-### Métricas
-
-Instalar Prometheus + Grafana (opcional):
-
-```bash
-# Em outro servidor ou mesmo servidor
-docker run -d -p 9090:9090 prom/prometheus
-docker run -d -p 3001:3000 grafana/grafana
-```
-
-### Alertas
-
-Configurar Sentry para erros:
-
-```ruby
-# config/initializers/sentry.rb
-Sentry.init do |config|
-  config.dsn = ENV['SENTRY_DSN']
-  config.environment = ENV['RAILS_ENV']
-  config.traces_sample_rate = 0.1
-end
-```
-
-## 💾 Backup e Recovery
-
-### Backup Automático
-
-```bash
-# Adicionar ao crontab
-crontab -e
-
-# Backup diário às 2h
-0 2 * * * cd /var/www/prostaff-api && docker-compose -f docker-compose.production.yml run --rm backup
-
-# Limpeza semanal
-0 3 * * 0 find /var/www/prostaff-api/backups -name "*.sql.gz" -mtime +30 -delete
-```
-
-### Restaurar Backup
-
-```bash
-# Listar backups
+# Listar backups disponiveis
 ls -lh backups/
 
 # Restaurar
-gunzip < backups/prostaff_production_YYYYMMDD_HHMMSS.sql.gz | \
-docker-compose -f docker-compose.production.yml exec -T postgres psql -U prostaff_user -d prostaff_production
+gunzip < backups/backup_YYYYMMDD_HHMMSS.sql.gz | psql $DATABASE_URL
 ```
 
-### Backup para S3
+### Retencao
+
+Backups sao mantidos por 30 dias por padrao. Limpeza manual:
 
 ```bash
-# Instalar AWS CLI
-sudo apt install -y awscli
-
-# Configurar
-aws configure
-
-# Upload manual
-aws s3 cp backups/ s3://prostaff-backups/database/ --recursive
-
-# Script automático (adicionar ao backup.sh)
-aws s3 sync backups/ s3://prostaff-backups/database/
+find backups/ -name "*.sql.gz" -mtime +30 -delete
 ```
 
-##  Manutenção
+---
 
-### Atualizar Dependências
+## Manutencao
+
+### Atualizar gems
 
 ```bash
-# Atualizar gems
-docker-compose -f docker-compose.production.yml exec api bundle update
+# Dentro do container
+docker compose -f docker-compose.production.yml exec api bundle update
 
-# Rebuild
-docker-compose -f docker-compose.production.yml build
-
-# Deploy
-docker-compose -f docker-compose.production.yml up -d
+# Rebuild apos atualizacao
+docker compose -f docker-compose.production.yml up -d --build api
 ```
 
-### Limpar Recursos
+### Limpar recursos Docker
 
 ```bash
 # Remover containers parados
 docker container prune -f
 
-# Remover imagens não utilizadas
-docker image prune -a -f
+# Remover imagens nao utilizadas (manter ultimas 72h)
+docker image prune -af --filter "until=72h"
 
-# Remover volumes órfãos
+# Remover volumes orfaos (CUIDADO: nao executar em producao sem verificar)
 docker volume prune -f
-
-# Limpar tudo (CUIDADO!)
-docker system prune -a --volumes -f
 ```
 
-### Atualizar SSL
+### Console Rails
 
 ```bash
-# Renovar certificados (automático com certbot)
-sudo certbot renew
-
-# Ou manualmente
-sudo certbot renew --force-renewal
-
-# Copiar novos certificados
-sudo cp /etc/letsencrypt/live/api.prostaff.gg/fullchain.pem deploy/ssl/
-sudo cp /etc/letsencrypt/live/api.prostaff.gg/privkey.pem deploy/ssl/
-
-# Restart nginx
-docker-compose -f docker-compose.production.yml restart nginx
+docker compose -f docker-compose.production.yml exec api bundle exec rails console
 ```
 
-##  Troubleshooting
-
-### Application não inicia
+### Ver logs
 
 ```bash
-# Verificar logs
-docker-compose -f docker-compose.production.yml logs api
+# Todos os servicos
+docker compose -f docker-compose.production.yml logs -f
 
-# Verificar variáveis de ambiente
-docker-compose -f docker-compose.production.yml exec api env | grep RAILS
-
-# Teste de console
-docker-compose -f docker-compose.production.yml exec api bundle exec rails console
+# Servico especifico
+docker compose -f docker-compose.production.yml logs -f api
+docker compose -f docker-compose.production.yml logs -f sidekiq
+docker compose -f docker-compose.production.yml logs -f meilisearch
 ```
 
-### Banco de dados inacessível
+### Reiniciar servicos
 
 ```bash
-# Verificar status
-docker-compose -f docker-compose.production.yml exec postgres pg_isready
+# Reiniciar tudo
+docker compose -f docker-compose.production.yml restart
 
-# Conectar ao banco
-docker-compose -f docker-compose.production.yml exec postgres psql -U prostaff_user -d prostaff_production
-
-# Verificar conexões
-docker-compose -f docker-compose.production.yml exec postgres psql -U prostaff_user -c "SELECT count(*) FROM pg_stat_activity;"
+# Reiniciar servico especifico
+docker compose -f docker-compose.production.yml restart api
+docker compose -f docker-compose.production.yml restart sidekiq
 ```
-
-### Performance Issues
-
-```bash
-# Ver processos
-docker-compose -f docker-compose.production.yml exec api ps aux
-
-# Ver uso de recursos
-docker stats
-
-# Analisar queries lentas
-docker-compose -f docker-compose.production.yml exec postgres psql -U prostaff_user -c "SELECT * FROM pg_stat_statements ORDER BY total_time DESC LIMIT 10;"
-```
-
-### SSL/HTTPS não funciona
-
-```bash
-# Verificar certificados
-sudo certbot certificates
-
-# Testar nginx config
-docker-compose -f docker-compose.production.yml exec nginx nginx -t
-
-# Ver logs nginx
-docker-compose -f docker-compose.production.yml logs nginx
-```
-
-##  Recursos Adicionais
-
-- [Documentação Rails Deployment](https://guides.rubyonrails.org/deploying.html)
-- [Docker Production Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [PostgreSQL Tuning](https://pgtune.leopard.in.ua/)
-- [Redis Configuration](https://redis.io/docs/manual/config/)
-
-## 🆘 Suporte
-
-Em caso de problemas críticos:
-
-1. Verificar logs (`docker-compose logs`)
-2. Consultar este guia
-3. Abrir issue no GitHub
-4. Contactar equipe de DevOps
 
 ---
 
-**Última atualização**: $(date +"%Y-%m-%d")
+## Troubleshooting
+
+### API nao sobe
+
+```bash
+# Ver logs detalhados
+docker compose -f docker-compose.production.yml logs api
+
+# Verificar variaveis de ambiente
+docker compose -f docker-compose.production.yml exec api env | grep RAILS
+
+# Testar conexao com banco
+docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate:status
+```
+
+### Redis nao conecta
+
+```bash
+# Verificar status do container
+docker compose -f docker-compose.production.yml ps redis
+
+# Testar ping
+docker compose -f docker-compose.production.yml exec redis redis-cli -a $REDIS_PASSWORD ping
+
+# Ver logs
+docker compose -f docker-compose.production.yml logs redis
+```
+
+Para problemas especificos de Redis no Coolify, consultar [COOLIFY_REDIS_FIX.md](../../COOLIFY_REDIS_FIX.md).
+
+### Meilisearch nao indexa
+
+```bash
+# Verificar saude do Meilisearch
+docker compose -f docker-compose.production.yml exec api curl http://meilisearch:7700/health
+
+# Ver logs
+docker compose -f docker-compose.production.yml logs meilisearch
+
+# Reiniciar indexacao (via Rails console)
+docker compose -f docker-compose.production.yml exec api bundle exec rails console
+# > Meilisearch::IndexingJob.perform_now
+```
+
+### Migrations falharam
+
+```bash
+# Ver status das migrations
+docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate:status
+
+# Executar migrations pendentes
+docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate
+
+# Reverter ultima migration
+docker compose -f docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
+```
+
+### Performance lenta
+
+```bash
+# Ver uso de recursos dos containers
+docker stats
+
+# Ver processos dentro do container
+docker compose -f docker-compose.production.yml exec api ps aux
+
+# Queries lentas no banco (dentro do console Rails)
+# ActiveRecord::Base.connection.execute("SELECT query, total_exec_time FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;")
+```
+
+---
+
+## Recursos
+
+- [Coolify Docs](https://coolify.io/docs)
+- [Traefik Docs](https://doc.traefik.io/traefik/)
+- [Meilisearch Docs](https://www.meilisearch.com/docs)
+- [Rails Deployment Guide](https://guides.rubyonrails.org/deploying.html)
+- [Sidekiq Best Practices](https://github.com/sidekiq/sidekiq/wiki/Best-Practices)

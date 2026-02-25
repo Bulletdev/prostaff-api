@@ -1,148 +1,85 @@
-# lab completo de testes de carga e segurança para 
+# Lab de Testes - Resumo
 
-O que foi criado
+Resumo do ambiente de testes configurado para o ProStaff API.
 
-📊 Load Testing (k6)
+---
 
-E
+## O que esta configurado
 
-Para que serve?: Decidir se usar GraphQL futuramente... 
-vale a pena baseado em dados reais de performance xd
+### Testes de carga (k6)
 
-🔒 Security Testing (OWASP)
+Localizado em `load_tests/`. Usa k6 para avaliar performance dos endpoints REST.
 
+Tipos de cenario disponivel:
+- Smoke (1 min) - validacao rapida
+- Load (16 min) - trafego normal
+- Stress (28 min) - limite da aplicacao
+- Spike (7.5 min) - picos de trafego
+- Soak (3h+) - leaks de memoria
 
-Ferramentas incluídas:
-- OWASP ZAP (web app scanner)
-- Brakeman (Rails security)
-- Bundle Audit (dependency check)
-- Semgrep (static analysis)
-- Trivy (container scan)
-- Nuclei (vulnerability scanner)
-
-🔄 CI/CD Integration
-
-
-Automações:
-- ✅ Security scan em todo PR
-- ✅ Smoke test diário automático
-- ✅ Audit completo noturno
-- ✅ Cria issue se vulnerabilidades
-
-📚 Documentação
-
-- QUICK_START.md - Start rápido em 5 min
-- TESTING_GUIDE.md - Guia completo + runbooks
-- load_tests/README.md - Load testing
-  detalhado
-- security_tests/README.md - Security testing
-  detalhado
-- OWASP_TOP_10_CHECKLIST.md - Checklist
-  A01-A10
-
-Como usar
-
-Setup (uma vez)
-
-# 1. Instalar k6
+Setup:
+```bash
 ./load_tests/k6-setup.sh
+bundle exec rails server
+./load_tests/run-tests.sh smoke local
+```
 
-# 2. Instalar ferramentas de segurança
-(precisa Docker)
+### Testes de seguranca (OWASP)
+
+Localizado em `security_tests/`.
+
+Ferramentas incluidas:
+- OWASP ZAP (scanner web)
+- Brakeman (analise estatica Rails)
+- Bundle Audit (vulnerabilidades em gems)
+- Semgrep (SAST)
+- Trivy (scan de containers)
+- TruffleHog (deteccao de secrets)
+- Nuclei (scanner de vulnerabilidades)
+
+Setup:
+```bash
 ./security_tests/zap-setup.sh
+./security_tests/scripts/brakeman-scan.sh
+./security_tests/scripts/full-security-audit.sh
+```
 
-# 3. Configurar secrets no GitHub (opcional por enquanto)
-# Settings → Secrets → Actions
-# TEST_EMAIL=test@prostaff.gg
-# TEST_PASSWORD=Test123!@#
+### Automacao CI/CD
 
-Uso diário
+- Security scan em todo PR (`.github/workflows/security-scan.yml`)
+- Smoke test automatico diario (`.github/workflows/load-test.yml`)
+- Audit completo noturno, 1h UTC (`.github/workflows/nightly-security.yml`)
+- Cria GitHub Issue automaticamente se vulnerabilidades forem encontradas
 
-# Testar performance
+---
+
+## Uso rapido
+
+### Verificar performance
+
+```bash
 bundle exec rails server
 ./load_tests/run-tests.sh smoke local    # 1 min
+./load_tests/run-tests.sh load local     # 16 min
+```
 
-# Testar segurança
-./security_tests/scripts/brakeman-scan.sh  # 30s
+### Verificar seguranca
 
-Antes de release
+```bash
+./security_tests/scripts/brakeman-scan.sh   # ~30s
+bundle-audit update && bundle-audit check   # ~10s
+```
 
-# Deploy staging
-git push staging master
+### Pre-release completo
 
-# Testes completos
+```bash
+# Staging
 ./load_tests/run-tests.sh load staging
-./security_tests/scripts/full-security-audit
+./security_tests/scripts/full-security-audit.sh https://staging-api.prostaff.gg
+```
 
-sh https://staging-api.prostaff.gg
+---
 
-# Se passou, deploy production
-git push production master
+## Referencias
 
-📊 Decisão GraphQL - Framework
-
-Agora posso decidir baseado em dados:
-
-# 1. Rodar load test
-./load_tests/run-tests.sh load local
-
-# 2. Analisar resultados
-cat load_tests/results/load_*/summary.json |
-jq '.metrics.http_req_duration.values'
-
-✅ Ficar com REST se:
-- p(95) < 500ms ✅
-- 1-2 API calls por página ✅
-- Payloads < 50KB ✅
-- Sem overfetching ✅
-
-⚠️ Considerar GraphQL se:
-- 5+ requests por página
-- Dashboard > 2s
-- Overfetching significativo
-- Múltiplos clientes (web/mobile)
-
-Alternativas antes de GraphQL:
-- Sparse fieldsets (?fields=id,name)
-- Include relationships
-  (?include=champion_pools)
-- Blueprinter views
-- Batch endpoint
-- Caching agressivo
-
-🔐 Continuous Security
-
-Agora temos:
-
-✅ Automated scans no CI/CD
-✅ OWASP Top 10 coverage
-✅ Pre-commit hooks opcionais
-✅ Nightly audits automáticos
-✅ GitHub issues auto-criados
-✅ Runbooks para incidentes
-
-📈 Próximos passos 
-
-1. Hoje:
-
-   ./load_tests/run-tests.sh smoke local
-   ./security_tests/scripts/brakeman-scan.sh
-
-2. durante a semana:
-
-   - Configurar GitHub secrets
-   - Rodar load test completo
-   - Revisar OWASP checklist
-   - Decidir sobre GraphQL
-   
-3. Antes de produção:
-
-   - Full security audit
-   - Load test em staging
-   - Fixar critical/high issues
-   - Configurar monitoring
-   
-4. Ongoing:
-   - Weekly: dependency check
-   - Monthly: full audit
-   - Quarterly: pentest profissional
+Ver [TESTING_GUIDE.md](TESTING_GUIDE.md) para documentacao completa com runbooks e boas praticas.

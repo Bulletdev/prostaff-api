@@ -1,24 +1,27 @@
 # Security Troubleshooting Guide
 
-Este documento contém instruções para executar manualmente os scans de segurança do projeto e resolver problemas comuns.
-
-## Índice
-
-- [Pré-requisitos](#pré-requisitos)
-- [1. Brakeman - Security Scanner](#1-brakeman---security-scanner)
-- [2. Bundle Audit - Dependency Vulnerabilities](#2-bundle-audit---dependency-vulnerabilities)
-- [3. Semgrep - Static Analysis](#3-semgrep---static-analysis)
-- [4. TruffleHog - Secret Detection](#4-trufflehog---secret-detection)
-- [5. Resolvendo Problemas Comuns](#5-resolvendo-problemas-comuns)
-- [6. Referências](#6-referências)
+Instrucoes para executar scans de seguranca manualmente e resolver problemas comuns.
 
 ---
 
-## Pré-requisitos
+## Indice
+
+- [Pre-requisitos](#pre-requisitos)
+- [1. Brakeman - Analise do codigo Rails](#1-brakeman---analise-do-codigo-rails)
+- [2. Bundle Audit - Vulnerabilidades em gems](#2-bundle-audit---vulnerabilidades-em-gems)
+- [3. Semgrep - Analise estatica](#3-semgrep---analise-estatica)
+- [4. TruffleHog - Deteccao de secrets](#4-trufflehog---deteccao-de-secrets)
+- [5. Problemas comuns e solucoes](#5-problemas-comuns-e-solucoes)
+- [6. Workflows GitHub Actions](#6-workflows-github-actions)
+- [7. Thresholds e criterios de falha](#7-thresholds-e-criterios-de-falha)
+- [8. Referencias](#8-referencias)
+
+---
+
+## Pre-requisitos
 
 ```bash
-ruby --version  # 3.4.5
-
+ruby --version   # 3.4.5
 docker --version
 
 # jq (opcional, para parsing de JSON)
@@ -27,31 +30,38 @@ sudo apt-get install jq
 
 ---
 
-## 1. Brakeman - Security Scanner
+## 1. Brakeman - Analise do codigo Rails
 
-### Instalação
+### Instalacao
 
 ```bash
 gem install brakeman --no-document
 ```
 
-### Executar Scan Completo
+### Executar scan
 
 ```bash
+# Scan basico
 brakeman --rails7
 
+# Com output JSON
 brakeman --rails7 \
   --format json \
   --output brakeman-report.json \
   --no-exit-on-warn \
   --no-exit-on-error
+
+# Apenas issues de alta confianca (usado no CI)
+brakeman --rails7 -w2 --no-pager
 ```
 
-### Verificar High Confidence Issues
+### Verificar issues de alta confianca
 
 ```bash
+# Com jq
 jq '[.warnings[] | select(.confidence == "High")] | length' brakeman-report.json
 
+# Com Ruby
 ruby -rjson -e "
   data = JSON.parse(File.read('brakeman-report.json'))
   high = data['warnings'].select{|w| w['confidence'] == 'High'}
@@ -63,71 +73,67 @@ ruby -rjson -e "
 "
 ```
 
-### Interpretando Resultados
+### Interpretar resultados
 
-- **Confidence Levels**: High, Medium, Weak
-- **High confidence**: Deve ser corrigido imediatamente
-- **Medium confidence**: Revisar e avaliar
-- **Weak confidence**: Pode ser falso positivo
+| Nivel      | Acao                                                   |
+|------------|--------------------------------------------------------|
+| High       | Corrigir imediatamente. Bloqueia o CI.                 |
+| Medium     | Revisar e avaliar. Pode ser falso positivo.            |
+| Weak       | Provavelmente falso positivo. Avaliar caso a caso.     |
 
-### Ignorar False Positives
+### Ignorar falsos positivos
 
 ```bash
+# Modo interativo para marcar falsos positivos
 brakeman -I
 
-# Editar .brakeman.ignore manualmente sempre que necessário skipar um warning
+# Editar .brakeman.ignore manualmente para adicionar excecoes permanentes
 ```
 
 ---
 
-## 2. Bundle Audit - Dependency Vulnerabilities
+## 2. Bundle Audit - Vulnerabilidades em gems
 
-### Instalação
+### Instalacao
 
 ```bash
 gem install bundler-audit --no-document
 ```
 
-### Executar Scan
+### Executar scan
 
 ```bash
-# Atualizar database de vulnerabilidades
+# Atualizar base de dados de CVEs
 bundle-audit update
 
+# Verificar vulnerabilidades
 bundle-audit check
 
-# Checar com output para arquivo
+# Salvar output
 bundle-audit check --output bundle-audit.txt
 ```
 
-### Atualizar Gems Vulneráveis
+### Resolver vulnerabilidades encontradas
 
 ```bash
-# Ver qual gem tem vulnerabilidade
+# Ver qual gem esta vulneravel
 bundle-audit check
 
-# Atualizar gem específica
+# Atualizar gem especifica
 bundle update nome-da-gem
 
-# Atualizar todas as gems
-bundle update
-```
-
-### Verificar Versões
-
-```bash
-# Ver versão atual de uma gem
+# Ver versao atual
 bundle list | grep nome-da-gem
 
-# Ver versão no Gemfile.lock
-grep -A 1 "nome-da-gem (" Gemfile.lock
+# Ver informacoes da gem
+bundle info nome-da-gem
 ```
 
 ---
 
-## 3. Semgrep - Static Analysis
+## 3. Semgrep - Analise estatica
 
-### Executar com Docker
+### Executar via Docker
 
 ```bash
 # Scan completo
@@ -137,7 +143,7 @@ docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
   --json \
   --output=/src/semgrep-report.json
 
-# Scan com exclusões
+# Scan com exclusoes (recomendado para este projeto)
 docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
   semgrep scan \
   --config=auto \
@@ -149,7 +155,14 @@ docker run --rm -v "${PWD}:/src" returntocorp/semgrep \
   --exclude='security_tests/**'
 ```
 
-### Verificar Erros
+### Executar localmente (sem Docker)
+
+```bash
+pip install semgrep
+semgrep scan --config=auto
+```
+
+### Verificar erros encontrados
 
 ```bash
 # Com jq
@@ -158,9 +171,8 @@ jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-report.j
 # Com Ruby
 ruby -rjson -e "
   data = JSON.parse(File.read('semgrep-report.json'))
-  results = data['results']
-  errors = results.select{|r| r.dig('extra', 'severity') == 'ERROR'}
-  puts \"ERROR severity findings: #{errors.count}\"
+  errors = data['results'].select{|r| r.dig('extra', 'severity') == 'ERROR'}
+  puts \"ERROR findings: #{errors.count}\"
   errors.each do |r|
     puts \"- #{r['check_id']}\"
     puts \"  File: #{r['path']}:#{r['start']['line']}\"
@@ -170,54 +182,53 @@ ruby -rjson -e "
 "
 ```
 
-### Suprimir False Positives
+### Suprimir falsos positivos
+
+```ruby
+# Suprimir regra especifica com comentario inline
+# nosemgrep: rule-id
+codigo_aqui
+
+# Suprimir qualquer regra
+# nosemgrep
+codigo_aqui
+```
 
 ```bash
-# Adicionar comentário no código
-# nosemgrep: rule-id
-código_aqui
-
-# Ou comentário genérico
-# nosemgrep
-código_aqui
-
-# Criar .semgrepignore
+# Criar arquivo de ignore
 echo "scripts/" >> .semgrepignore
 echo "load_tests/" >> .semgrepignore
 ```
 
 ---
 
-## 4. TruffleHog - Secret Detection
+## 4. TruffleHog - Deteccao de secrets
 
-### Executar com Docker
+### Executar via Docker
 
 ```bash
-# Scan apenas verified secrets
+# Apenas secrets verificados (recomendado para CI)
 docker run --rm -v "${PWD}:/src" trufflesecurity/trufflehog:latest \
   filesystem /src \
   --only-verified
 
-# Scan incluindo unverified
+# Incluindo nao verificados (mais ruidoso)
 docker run --rm -v "${PWD}:/src" trufflesecurity/trufflehog:latest \
   filesystem /src
 
-# Scan em commits do Git
+# Scan no historico git
 docker run --rm -v "${PWD}:/src" trufflesecurity/trufflehog:latest \
   git file:///src \
   --only-verified
 ```
 
-### Verificar Resultados
+TruffleHog so produz output se encontrar secrets. Sem output = sem secrets detectados.
 
-TruffleHog mostra secrets encontrados diretamente no output. Se nenhum secret for encontrado, não haverá output.
+### Ignorar falsos positivos
 
-### Ignorar False Positives
+Criar `.trufflehogignore`:
 
-Crie um `.trufflehogignore`:
-
-```bash
-# Exemplo
+```
 .env.example
 *.md
 test_data/
@@ -225,38 +236,33 @@ test_data/
 
 ---
 
-## 5. Resolvendo Problemas Comuns
+## 5. Problemas comuns e solucoes
 
-### Problema: Brakeman encontra Rails EOL
+### Brakeman: Rails EOL detectado
 
-**Solução:**
 ```bash
 # Atualizar Rails no Gemfile
-# Mudar de: gem "rails", "~> 7.1.0"
-# Para:     gem "rails", "~> 7.2.0"
-
+# gem "rails", "~> 7.2.0"
 bundle update rails
+bundle exec rspec  # garantir que testes passam
 ```
 
-### Problema: Bundle Audit encontra CVE em gem
+### Bundle Audit: CVE em gem
 
-**Solução:**
 ```bash
-# 1. Identificar a gem vulnerável
+# 1. Identificar a gem
 bundle-audit check
 
-# 2. Atualizar a gem
+# 2. Atualizar
 bundle update nome-da-gem
 
-# 3. Se não houver versão segura, avaliar alternativas
+# 3. Se nao houver versao segura, avaliar alternativas ou abrir issue
 bundle info nome-da-gem
 ```
 
-### Problema: Semgrep encontra mass assignment em :role
+### Semgrep: mass assignment em :role
 
-**Solução:**
-
-Este é geralmente um falso positivo quando `:role` se refere a posição no jogo (top/jungle/mid/adc/support) e não a role de usuário.
+Falso positivo comum neste projeto. O campo `:role` refere-se a posicao no jogo (top/jungle/mid/adc/support), nao a role de usuario do sistema.
 
 ```ruby
 def player_params
@@ -268,99 +274,75 @@ def player_params
 end
 ```
 
-### Problema: GitHub Actions shell injection
+### GitHub Actions: shell injection
 
-**Solução:**
-
-Nunca use `${{ github.* }}` diretamente em `run:` scripts. Use environment variables:
+Nunca usar `${{ github.* }}` diretamente em `run:`. Usar variaveis de ambiente:
 
 ```yaml
-# ❌ Vulnerável
+# Vulneravel
 - name: Example
-  run: |
-    echo "Value: ${{ github.event.inputs.value }}"
+  run: echo "Value: ${{ github.event.inputs.value }}"
 
-# ✅ Seguro
+# Seguro
 - name: Example
   env:
     INPUT_VALUE: ${{ github.event.inputs.value }}
-  run: |
-    echo "Value: $INPUT_VALUE"
+  run: echo "Value: $INPUT_VALUE"
 ```
 
-### Problema: TruffleHog error "flag 'fail' cannot be repeated"
-
-**Solução:**
-
-Remova o flag `--fail` duplicado no workflow:
+### TruffleHog: flag duplicado
 
 ```yaml
-# ❌ Errado
+# Errado
 extra_args: --only-verified --fail
 
-# ✅ Correto
-*extra_args: --only-verified
+# Correto
+extra_args: --only-verified
 ```
 
-### Problema: Docker não disponível para Semgrep
-
-**Solução:**
-
-Instale Semgrep localmente:
+### Docker indisponivel para Semgrep
 
 ```bash
 pip install semgrep
-
 semgrep scan --config=auto
 ```
 
----
+### Brakeman: warning sobre SQL injection em query dinamica
 
-## 6. Comandos Rápidos de Verificação
+Verificar se a query usa `sanitize_sql` ou parametros bind corretamente:
 
-### Script All-in-One
+```ruby
+# Inseguro - gera warning
+User.where("name = '#{params[:name]}'")
 
-Crie um arquivo `scripts/security-check.sh`:
-
-```bash
-#!/bin/bash
-set -e
-
-echo "🔍 Running security checks..."
-echo
-
-echo "1️⃣  Brakeman..."
-brakeman --rails7 --format json --output brakeman-report.json --no-exit-on-warn --no-exit-on-error
-HIGH=$(ruby -rjson -e "puts JSON.parse(File.read('brakeman-report.json'))['warnings'].select{|w| w['confidence'] == 'High'}.count")
-echo "   High confidence issues: $HIGH"
-echo
-
-echo "2️⃣  Bundle Audit..."
-bundle-audit update
-bundle-audit check || echo "   ⚠️  Vulnerabilities found"
-echo
-
-echo "3️⃣  Semgrep..."
-docker run --rm -v "${PWD}:/src" returntocorp/semgrep semgrep scan --config=auto --json --output=/src/semgrep-report.json --exclude='scripts/*.rb' --exclude='load_tests/**' || true
-ERRORS=$(ruby -rjson -e "puts JSON.parse(File.read('semgrep-report.json'))['results'].select{|r| r.dig('extra', 'severity') == 'ERROR'}.count")
-echo "   ERROR severity findings: $ERRORS"
-echo
-
-echo "✅ Security checks complete!"
+# Seguro
+User.where(name: params[:name])
+User.where("name = ?", params[:name])
 ```
 
-Executar:
+### Rate limiting nao funcionando (rack-attack)
 
 ```bash
-chmod +x scripts/security-check.sh
-./scripts/security-check.sh
+# Verificar configuracao no ambiente correto
+# config/initializers/rack_attack.rb
+# Rails.cache deve estar configurado (Redis)
+
+# Testar rate limit
+./scripts/test_rate_limit.sh
 ```
 
 ---
 
-## 7. Verificar Workflows GitHub Actions
+## 6. Workflows GitHub Actions
 
-### Testar Localmente com Act
+### Ver execucoes recentes
+
+```bash
+gh run list --workflow=security-scan.yml
+gh run view <run-id> --log
+```
+
+### Testar workflows localmente com Act
 
 ```bash
 curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
@@ -370,78 +352,78 @@ act -j dependency-check
 act -j semgrep
 ```
 
-### Ver Logs de Workflows
+### Workflows de seguranca
 
-```bash
-gh run list --workflow=security-scan.yml
-gh run view <run-id> --log
-```
-
----
-
-## 8. Thresholds e Critérios
-
-### Quando Falhar o Build
-
-- **Brakeman**: High confidence issues > 0
-- **Bundle Audit**: Qualquer vulnerabilidade conhecida
-- **Semgrep**: ERROR severity > 0
-- **TruffleHog**: Verified secrets encontrados
-
-### Quando Apenas Alertar
-
-- **Brakeman**: Medium/Weak confidence issues
-- **Semgrep**: WARNING severity
-- **TruffleHog**: Unverified secrets
+| Workflow                   | Gatilho                          | O que verifica                   |
+|----------------------------|----------------------------------|----------------------------------|
+| `security-scan.yml`        | Push master/develop, PRs, semanal | Brakeman, Bundle Audit, Semgrep, TruffleHog |
+| `nightly-security.yml`     | Todo dia 1h UTC                  | Audit completo com ZAP           |
+| `deploy-production.yml`    | Tag v*.*.*                       | Trivy (imagem Docker)            |
 
 ---
 
-## Referências
+## 7. Thresholds e criterios de falha
 
-### Documentação Oficial
+### Criterios que bloqueiam o build (CI falha)
+
+| Ferramenta   | Criterio                                          |
+|--------------|---------------------------------------------------|
+| Brakeman     | Issues de alta confianca > 0 (`-w2`)              |
+| Bundle Audit | Qualquer vulnerabilidade conhecida                |
+| Semgrep      | Findings de severidade ERROR > 0                  |
+| TruffleHog   | Verified secrets encontrados                      |
+| RSpec        | Qualquer teste falhando                           |
+| RuboCop      | Qualquer offense (no CI com `--parallel`)         |
+
+### Criterios que geram alerta (build passa)
+
+| Ferramenta   | Criterio                                          |
+|--------------|---------------------------------------------------|
+| Brakeman     | Issues de confianca Medium ou Weak                |
+| Semgrep      | Findings de severidade WARNING                    |
+| TruffleHog   | Unverified secrets                                |
+
+---
+
+## 8. Referencias
+
+### Documentacao oficial
 
 - **Brakeman**: https://brakemanscanner.org/
 - **Bundle Audit**: https://github.com/rubysec/bundler-audit
 - **Semgrep**: https://semgrep.dev/docs/
 - **TruffleHog**: https://github.com/trufflesecurity/trufflehog
+- **OWASP ZAP**: https://www.zaproxy.org/docs/
 
-### Banco de Dados de Vulnerabilidades
+### Bancos de dados de vulnerabilidades
 
 - **Ruby Advisory Database**: https://github.com/rubysec/ruby-advisory-db
 - **CVE Database**: https://cve.mitre.org/
-- **National Vulnerability Database**: https://nvd.nist.gov/
+- **NVD**: https://nvd.nist.gov/
 
-### OWASP Resources
+### OWASP
 
 - **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 - **Rails Security Guide**: https://guides.rubyonrails.org/security.html
-- **Ruby on Rails Cheatsheet**: https://cheatsheetseries.owasp.org/cheatsheets/Ruby_on_Rails_Cheat_Sheet.html
+- **Rails Cheatsheet**: https://cheatsheetseries.owasp.org/cheatsheets/Ruby_on_Rails_Cheat_Sheet.html
 
 ---
 
-## Manutenção
-
-### Atualizar Tools Regularmente
+## Manutencao das ferramentas
 
 ```bash
+# Atualizar ferramentas regularmente
 gem update brakeman
-
 gem update bundler-audit
 bundle-audit update
 
 docker pull returntocorp/semgrep:latest
-
 docker pull trufflesecurity/trufflehog:latest
 ```
 
-### Agendar Scans Automático
+### Schedule dos scans automatizados (GitHub Actions)
 
-Os workflows do GitHub Actions já estão configurados para rodar:
-
-- **On Push**: Branches master e develop
-- **On PR**: Pull requests para master e develop
-- **Schedule**: Semanalmente às segundas-feiras 9h UTC
-
----
-
-**Última atualização**: 2025-10-08
+- **On Push**: Branches `master` e `develop`
+- **On PR**: Pull requests para `master` e `develop`
+- **Schedule**: Semanalmente nas segundas-feiras, 9h UTC
+- **Nightly audit**: Todo dia, 1h UTC
