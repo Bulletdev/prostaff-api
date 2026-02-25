@@ -3,6 +3,7 @@
 class OpponentTeam < ApplicationRecord
   # Concerns
   include Constants
+  include Searchable
 
   # Associations
   has_many :scrims, dependent: :nullify
@@ -24,6 +25,26 @@ class OpponentTeam < ApplicationRecord
 
   # Callbacks
   before_save :normalize_name_and_tag
+
+  # ── Meilisearch ────────────────────────────────────────────────────
+  def self.meili_searchable_attributes
+    %w[name tag region tier league]
+  end
+
+  def self.meili_filterable_attributes
+    %w[region tier]
+  end
+
+  def to_meili_document
+    {
+      id:     id.to_s,
+      name:   name,
+      tag:    tag,
+      region: region,
+      tier:   tier,
+      league: league
+    }
+  end
 
   # Scopes
   scope :by_region, ->(region) { where(region: region) }

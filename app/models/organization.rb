@@ -33,6 +33,7 @@ class Organization < ApplicationRecord
   # Concerns
   include TierFeatures
   include Constants
+  include Searchable
 
   # Associations
   has_many :users, dependent: :destroy
@@ -66,6 +67,26 @@ class Organization < ApplicationRecord
   scope :active_subscription, -> { where(subscription_status: 'active') }
   scope :trial_active, -> { where(subscription_status: 'trial').where('trial_expires_at > ?', Time.current) }
   scope :trial_expired, -> { where(subscription_status: 'trial').where('trial_expires_at <= ?', Time.current) }
+
+  # ── Meilisearch ────────────────────────────────────────────────────
+  def self.meili_searchable_attributes
+    %w[name slug region tier]
+  end
+
+  def self.meili_filterable_attributes
+    %w[region tier subscription_status]
+  end
+
+  def to_meili_document
+    {
+      id:                  id.to_s,
+      name:                name,
+      slug:                slug,
+      region:              region,
+      tier:                tier,
+      subscription_status: subscription_status
+    }
+  end
 
   # Callbacks for trial management
   before_create :set_trial_period, if: -> { subscription_plan.blank? || subscription_plan == 'free' }

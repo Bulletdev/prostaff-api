@@ -236,6 +236,10 @@ module Api
         def apply_search_filter(targets)
           return targets unless params[:search].present?
 
+          meili = SearchService.scope(ScoutingTarget, query: params[:search])
+          return meili if meili
+
+          # Fallback to SQL when Meilisearch is unavailable
           search_term = "%#{params[:search]}%"
           targets.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
         end

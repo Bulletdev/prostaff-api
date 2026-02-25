@@ -28,8 +28,13 @@ module Api
 
           # Search
           if params[:search].present?
-            search_term = ActiveRecord::Base.sanitize_sql_like(params[:search])
-            teams = teams.where('name ILIKE ? OR tag ILIKE ?', "%#{search_term}%", "%#{search_term}%")
+            meili = SearchService.scope(OpponentTeam, query: params[:search])
+            if meili
+              teams = teams.where(id: meili.pluck(:id))
+            else
+              s = ActiveRecord::Base.sanitize_sql_like(params[:search])
+              teams = teams.where('name ILIKE ? OR tag ILIKE ?', "%#{s}%", "%#{s}%")
+            end
           end
 
           # Pagination

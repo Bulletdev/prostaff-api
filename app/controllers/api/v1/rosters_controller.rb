@@ -84,8 +84,11 @@ module Api
         players = players.by_tier(params[:tier]) if params[:tier].present?
 
         if params[:search].present?
-          search_term = "%#{params[:search]}%"
-          players = players.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
+          meili = SearchService.scope(Player, query: params[:search])
+          players = meili || players.where(
+            'summoner_name ILIKE ? OR real_name ILIKE ?',
+            "%#{params[:search]}%", "%#{params[:search]}%"
+          )
         end
 
         result = paginate(players)

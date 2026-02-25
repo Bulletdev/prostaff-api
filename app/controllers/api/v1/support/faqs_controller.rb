@@ -14,7 +14,16 @@ module Api
                           .by_locale(params[:locale] || 'pt-BR')
 
           faqs = faqs.by_category(params[:category]) if params[:category].present?
-          faqs = faqs.search(params[:q]) if params[:q].present?
+
+          if params[:q].present?
+            meili = SearchService.scope(
+              SupportFaq,
+              query:   params[:q],
+              filters: { published: true, locale: (params[:locale] || 'pt-BR') }
+            )
+            faqs = meili ? faqs.where(id: meili.pluck(:id)) : faqs.search(params[:q])
+          end
+
           faqs = faqs.ordered
 
           result = paginate(faqs)

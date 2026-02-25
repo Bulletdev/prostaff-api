@@ -21,6 +21,9 @@
 #
 class SupportFaq < ApplicationRecord
   CATEGORIES = %w[getting_started riot_integration billing features technical other].freeze
+
+  include Searchable
+
   # Validations
   validates :question, presence: true, length: { minimum: 10, maximum: 300 }
   validates :answer, presence: true, length: { minimum: 20 }
@@ -29,6 +32,28 @@ class SupportFaq < ApplicationRecord
   }
   validates :locale, presence: true, inclusion: { in: %w[pt-BR en-US] }
   validates :slug, presence: true, uniqueness: true
+
+  # ── Meilisearch ────────────────────────────────────────────────────
+  def self.meili_searchable_attributes
+    %w[question answer category keywords]
+  end
+
+  def self.meili_filterable_attributes
+    %w[category locale published]
+  end
+
+  def to_meili_document
+    {
+      id:        id.to_s,
+      question:  question,
+      answer:    answer,
+      keywords:  keywords,
+      category:  category,
+      locale:    locale,
+      published: published,
+      slug:      slug
+    }
+  end
 
   # Scopes
   scope :published, -> { where(published: true) }

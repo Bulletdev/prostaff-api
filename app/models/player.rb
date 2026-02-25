@@ -35,6 +35,7 @@ class Player < ApplicationRecord
   include Constants
   include OrganizationScoped
   include SoftDeletable
+  include Searchable
 
   # Associations
   belongs_to :organization
@@ -92,6 +93,29 @@ class Player < ApplicationRecord
           ))
   }
   scope :with_player_access, -> { where(player_access_enabled: true) }
+
+  # ── Meilisearch ────────────────────────────────────────────────────
+  def self.meili_searchable_attributes
+    %w[summoner_name real_name role status country solo_queue_tier]
+  end
+
+  def self.meili_filterable_attributes
+    %w[role status organization_id solo_queue_tier]
+  end
+
+  def to_meili_document
+    {
+      id:               id.to_s,
+      summoner_name:    summoner_name,
+      real_name:        real_name,
+      role:             role,
+      status:           status,
+      country:          country,
+      solo_queue_tier:  solo_queue_tier,
+      solo_queue_rank:  solo_queue_rank,
+      organization_id:  organization_id.to_s
+    }
+  end
 
   # Instance methods
   # Returns formatted display of current ranked status

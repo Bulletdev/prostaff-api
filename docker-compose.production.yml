@@ -18,6 +18,28 @@ services:
       - coolify.applicationId=1
       - coolify.type=application
 
+  # ── Meilisearch (self-hosted) ─────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    networks:
+      - coolify
+    volumes:
+      - meilisearch-data:/meili_data
+    environment:
+      MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      MEILI_ENV: production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
   api:
     build:
       context: .
@@ -82,6 +104,9 @@ services:
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
       APP_HOST: '${APP_HOST:-api.prostaff.gg}'
+      # Meilisearch (self-hosted — same Docker network)
+      MEILISEARCH_URL: 'http://meilisearch:7700'
+      MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
 
     healthcheck:
       test:
@@ -116,6 +141,9 @@ services:
       HASHID_SALT: '${HASHID_SALT}'
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
+      # Meilisearch (self-hosted — same Docker network)
+      MEILISEARCH_URL: 'http://meilisearch:7700'
+      MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
     depends_on:
       redis:
         condition: service_healthy
@@ -214,6 +242,8 @@ services:
 
 volumes:
   redis-data:
+    driver: local
+  meilisearch-data:
     driver: local
 
 networks:

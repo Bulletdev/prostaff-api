@@ -10,10 +10,11 @@
 :timeout: <%= ENV.fetch('SIDEKIQ_TIMEOUT', 25).to_i %>
 :verbose: <%= ENV.fetch('SIDEKIQ_VERBOSE', 'true') == 'true' %>
 :queues:
-  - default
-  - mailers
   - critical
   - high
+  - default
+  - search
+  - mailers
   - low
   - low_priority
 

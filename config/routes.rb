@@ -27,6 +27,9 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      # Global full-text search (Meilisearch)
+      get 'search', to: 'search#index'
+
       # Constants (public)
       get 'constants', to: 'constants#index'
 
