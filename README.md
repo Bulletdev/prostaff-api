@@ -54,6 +54,8 @@
 │  [■] Scrims Management        — Opponent tracking + analytics               │
 │  [■] Strategy Module          — Draft planning + tactical boards            │
 │  [■] Support System           — Ticketing + staff dashboard + FAQ           │
+│  [■] Global Search            — Meilisearch full-text search across models  │
+│  [■] Real-time Messaging      — Action Cable WebSocket team chat            │
 │  [■] Background Jobs          — Sidekiq for async background processing     │
 │  [■] Security Hardened        — OWASP Top 10, Brakeman, ZAP tested          │
 │  [■] High Performance         — p95: ~500ms · cached: ~50ms                 │
@@ -169,6 +171,8 @@ open http://localhost:3333/api-docs
 ║  Testing             ║  RSpec, Integration Specs, k6, OWASP ZAP           ║
 ║  Authorization       ║  Pundit                                            ║
 ║  Serialization       ║  Blueprinter                                       ║
+║  Full-text Search    ║  Meilisearch                                       ║
+║  Real-time           ║  Action Cable (WebSocket)                          ║
 ╚══════════════════════╩════════════════════════════════════════════════════╝
 ```
 
@@ -186,7 +190,7 @@ This API follows a **modular monolith** architecture:
 │  dashboard          │  Dashboard statistics and metrics                     │
 │  players            │  Player management and statistics                     │
 │  scouting           │  Player scouting and talent discovery                 │
-│  analytics          │  Performance analytics and reporting                  │
+│  analytics          │  Performance, competitive draft, tournament & opponent│
 │  matches            │  Match data and statistics                            │
 │  schedules          │  Event and schedule management                        │
 │  vod_reviews        │  Video review and timestamp management                │
@@ -196,6 +200,9 @@ This API follows a **modular monolith** architecture:
 │  scrims             │  Scrim management and opponent team tracking          │
 │  strategy           │  Draft planning and tactical board system             │
 │  support            │  Support ticket system with staff dashboard and FAQ   │
+│  messaging          │  Real-time team chat via Action Cable WebSocket       │
+│  search             │  Global full-text search powered by Meilisearch       │
+│  notifications      │  In-app notification system                           │
 └─────────────────────┴───────────────────────────────────────────────────────┘
 ```
 
@@ -414,6 +421,67 @@ graph TB
 6. **External Integration**: Riot Games API integration for real-time data
 7. **Rate Limiting**: Rack::Attack for API rate limiting
 8. **CORS**: Configured for cross-origin requests from frontend
+
+### Deployment Architecture
+
+```mermaid
+graph TB
+    subgraph "Clients"
+        FrontendApp["ProStaff.gg<br/>Front + TypeScript SPA"]
+        PlayerPortal["Player Portal<br/>JWT player token"]
+    end
+
+    subgraph "Production — Coolify"
+        Traefik["Traefik<br/>TLS + Let's Encrypt<br/>WebSocket proxy"]
+    end
+
+    subgraph "Rails — Puma"
+        Cable["Action Cable<br/>WebSocket /cable<br/>(team chat)"]
+        Router["Rails Router<br/>REST API v1<br/>200+ endpoints"]
+        Sidekiq["Sidekiq<br/>Background Workers<br/>(Riot sync · reindex)"]
+    end
+
+    subgraph "Data"
+        PG[("PostgreSQL")]
+        RD[("Redis")]
+        Meili[("Meilisearch")]
+    end
+
+    subgraph "External APIs"
+        RiotAPI["Riot Games API"]
+        PandaScore["PandaScore API"]
+    end
+
+    FrontendApp -- "HTTPS REST" --> Traefik
+    FrontendApp -- "WSS /cable" --> Traefik
+    PlayerPortal -- "HTTPS REST" --> Traefik
+
+    Traefik -- "HTTP" --> Router
+    Traefik -- "WS upgrade" --> Cable
+
+    Router -- "reads / writes" --> PG
+    Router -- "cache · JWT blacklist" --> RD
+    Router -- "full-text search" --> Meili
+    Cable -- "pub/sub" --> RD
+    Sidekiq -- "async jobs" --> PG
+    Sidekiq -- "queue · cache" --> RD
+    Sidekiq -- "reindex docs" --> Meili
+
+    Router -- "player data" --> RiotAPI
+    Sidekiq -- "match sync" --> RiotAPI
+    Router -- "pro matches" --> PandaScore
+
+    style FrontendApp fill:#1e88e5
+    style PlayerPortal fill:#5c6bc0
+    style Traefik fill:#1565c0
+    style Cable fill:#b1003e
+    style Sidekiq fill:#b1003e
+    style PG fill:#336791
+    style RD fill:#d82c20
+    style Meili fill:#ff5722
+    style RiotAPI fill:#eb0029
+    style PandaScore fill:#ff6b35
+```
 
 ---
 
@@ -634,6 +702,11 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `GET /analytics/laning/:player_id` — Laning phase performance
 - `GET /analytics/teamfights/:player_id` — Teamfight performance
 - `GET /analytics/vision/:player_id` — Vision control statistics
+- `GET /analytics/competitive/draft-performance` — Pick/ban/side/role performance from competitive matches
+- `GET /analytics/competitive/tournament-stats` — Win/loss breakdown per tournament and stage
+- `GET /analytics/competitive/opponents` — Aggregated record against each unique opponent
+
+> All competitive analytics endpoints accept optional query filters: `tournament`, `patch`, `region`, `start_date`, `end_date`
 
 #### Schedules
 - `GET    /schedules` — List all scheduled events
@@ -738,6 +811,24 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `GET    /support/staff/analytics` — Support analytics (staff only)
 - `POST   /support/staff/tickets/:id/assign` — Assign ticket to staff (staff only)
 - `POST   /support/staff/tickets/:id/resolve` — Resolve ticket (staff only)
+
+#### Global Search
+- `GET /search?q=:query` — Full-text search across players, organizations, scouting targets, opponent teams and FAQs
+
+#### Notifications
+- `GET    /notifications` — List user notifications
+- `GET    /notifications/:id` — Get notification
+- `PATCH  /notifications/:id/mark-as-read` — Mark as read
+- `PATCH  /notifications/mark-all-as-read` — Mark all as read
+- `GET    /notifications/unread-count` — Get unread count
+- `DELETE /notifications/:id` — Delete notification
+
+#### Team Members (chat)
+- `GET /team-members` — List organization members (staff only — rejects player tokens)
+
+#### Messages (DM)
+- `GET    /messages` — List direct message history with a member
+- `DELETE /messages/:id` — Soft-delete a message
 
 > For complete endpoint documentation with request/response examples, visit `/api-docs`
 
