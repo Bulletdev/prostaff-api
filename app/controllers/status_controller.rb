@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Public status page endpoint returning component health in Statuspage-compatible JSON.
 class StatusController < ActionController::API
   skip_before_action :verify_authenticity_token, raise: false
 

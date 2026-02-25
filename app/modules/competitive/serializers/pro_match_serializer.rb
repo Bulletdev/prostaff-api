@@ -2,6 +2,7 @@
 
 module Competitive
   module Serializers
+    # Serializes professional match records including draft, scores, and VOD links.
     class ProMatchSerializer < Blueprinter::Base
       identifier :id
 

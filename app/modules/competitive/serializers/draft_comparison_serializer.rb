@@ -2,6 +2,7 @@
 
 module Competitive
   module Serializers
+    # Serializes draft comparison results: similarity score, win rate, meta score, and insights.
     class DraftComparisonSerializer < Blueprinter::Base
       fields :similarity_score,
              :composition_winrate,

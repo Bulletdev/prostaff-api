@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Wrapper around the Riot Games API with built-in rate limiting and regional routing.
+# Provides methods for summoner, match, league, and champion mastery lookups.
 class RiotApiService
   RATE_LIMITS = {
     per_second: 20,

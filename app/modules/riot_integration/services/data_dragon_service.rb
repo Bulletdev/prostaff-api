@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Fetches and caches static game data from Riot Data Dragon (champion IDs, items, spells).
 class DataDragonService
   BASE_URL = 'https://ddragon.leagueoflegends.com'
 

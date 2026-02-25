@@ -2,6 +2,7 @@
 
 module Competitive
   module Controllers
+    # Compares a submitted champion draft against professional meta data via DraftComparatorService.
     class DraftComparisonController < Api::V1::BaseController
       # POST /api/v1/competitive/draft-comparison
       # Compare user's draft with professional meta

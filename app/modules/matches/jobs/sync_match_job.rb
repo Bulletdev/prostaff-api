@@ -2,6 +2,8 @@
 
 module Matches
   module Jobs
+    # Background job that fetches full match data from the Riot API and persists
+    # per-player stats, items, and runes for a given match ID and organization.
     class SyncMatchJob < ApplicationJob
       queue_as :default
 

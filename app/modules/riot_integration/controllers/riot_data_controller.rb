@@ -2,6 +2,8 @@
 
 module RiotIntegration
   module Controllers
+    # Serves Riot static data (champions, items, version) from Data Dragon cache.
+    # Public endpoints skip authentication for client-side consumption.
     class RiotDataController < Api::V1::BaseController
       skip_before_action :authenticate_request!, only: %i[champions champion_details items version]
 

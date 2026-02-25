@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Provides application health check endpoints (liveness and readiness).
+# Skips authentication; used by load balancers and container orchestrators.
 class HealthController < ActionController::API
   # Skip authentication and authorization for health checks
   skip_before_action :verify_authenticity_token, raise: false

@@ -2,6 +2,7 @@
 
 module Analytics
   module Controllers
+    # Returns laning phase metrics (CS, gold, first-blood) for a player.
     class LaningController < Api::V1::BaseController
       def show
         player = organization_scoped(Player).find(params[:player_id])

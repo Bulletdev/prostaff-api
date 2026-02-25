@@ -2,6 +2,7 @@
 
 module Analytics
   module Controllers
+    # Returns vision control analytics (ward placement, destruction, vision score) per player.
     class VisionController < Api::V1::BaseController
       def show
         player = organization_scoped(Player).find(params[:player_id])

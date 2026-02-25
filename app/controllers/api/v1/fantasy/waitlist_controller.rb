@@ -3,6 +3,7 @@
 module Api
   module V1
     module Fantasy
+      # Handles email sign-ups for the Fantasy feature early-access waitlist.
       class WaitlistController < ApplicationController
         # POST /api/v1/fantasy/waitlist
         def create

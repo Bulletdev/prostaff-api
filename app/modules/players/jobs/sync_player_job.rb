@@ -2,6 +2,7 @@
 
 module Players
   module Jobs
+    # Background job to sync a player's summoner name and ranked data from the Riot API.
     class SyncPlayerJob < ApplicationJob
       include RankComparison
 

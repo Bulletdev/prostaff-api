@@ -2,6 +2,7 @@
 
 module Schedules
   module Controllers
+    # CRUD API for practice and match schedules within an organization.
     class SchedulesController < Api::V1::BaseController
       before_action :set_schedule, only: %i[show update destroy]
 

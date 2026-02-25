@@ -2,6 +2,7 @@
 
 module Analytics
   module Controllers
+    # Returns KDA trend data across the player's most recent matches.
     class KdaTrendController < Api::V1::BaseController
       def show
         player = organization_scoped(Player).find(params[:player_id])

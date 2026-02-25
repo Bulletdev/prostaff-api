@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Secure, single-use expiring token for user password reset flows.
 class PasswordResetToken < ApplicationRecord
   belongs_to :user
 

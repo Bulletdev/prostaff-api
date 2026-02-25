@@ -2,6 +2,8 @@
 
 module Competitive
   module Controllers
+    # Lists and shows professional match results from the competitive scene.
+    # Data is sourced from PandaScore and cached in the organization's competitive_matches.
     class ProMatchesController < Api::V1::BaseController
       include Paginatable
 
