@@ -36,13 +36,15 @@ Metrics/MethodLength:
   Exclude:
     - 'db/migrate/*'
     - 'app/**/services/*_service.rb'  # Complex business logic services
-    - 'app/**/controllers/*_controller.rb'  # Controllers with multiple actions
+    - 'app/**/controllers/**/*_controller.rb'  # Controllers with multiple actions (all nesting levels)
+    - 'app/**/jobs/*_job.rb'  # Background jobs with sequential Riot API calls
 
 Metrics/ClassLength:
   Max: 150
   Exclude:
     - 'app/**/services/*_service.rb'  # Allow larger service classes
-    - 'app/**/controllers/*_controller.rb'  # Controllers with many actions
+    - 'app/**/controllers/**/*_controller.rb'  # Controllers with many actions (all nesting levels)
+    - 'app/**/jobs/*_job.rb'  # Background jobs with multiple helper methods
     - 'config/initializers/**/*'
 
 Metrics/AbcSize:
@@ -50,7 +52,8 @@ Metrics/AbcSize:
   Exclude:
     - 'db/migrate/*'
     - 'app/**/services/*_service.rb'  # Complex business logic
-    - 'app/**/controllers/*_controller.rb'  # Controller actions
+    - 'app/**/controllers/**/*_controller.rb'  # Controller actions (all nesting levels)
+    - 'app/**/jobs/*_job.rb'  # Background jobs
 
 Metrics/CyclomaticComplexity:
   Max: 10

@@ -18,30 +18,9 @@ module Api
 
         # GET /api/v1/scrims/opponent_teams
         def index
-          teams = OpponentTeam.all.order(:name)
-
-          # Filters
-          teams = teams.by_region(params[:region]) if params[:region].present?
-          teams = teams.by_tier(params[:tier]) if params[:tier].present?
-          teams = teams.by_league(params[:league]) if params[:league].present?
-          teams = teams.with_scrims if params[:with_scrims] == 'true'
-
-          # Search
-          if params[:search].present?
-            meili = SearchService.scope(OpponentTeam, query: params[:search])
-            if meili
-              teams = teams.where(id: meili.pluck(:id))
-            else
-              s = ActiveRecord::Base.sanitize_sql_like(params[:search])
-              teams = teams.where('name ILIKE ? OR tag ILIKE ?', "%#{s}%", "%#{s}%")
-            end
-          end
-
-          # Pagination
-          page = params[:page] || 1
-          per_page = params[:per_page] || 20
-
-          teams = teams.page(page).per(per_page)
+          teams = apply_opponent_team_filters(OpponentTeam.all.order(:name))
+          teams = apply_opponent_team_search(teams)
+          teams = teams.page(params[:page] || 1).per(params[:per_page] || 20)
 
           render json: {
             data: {
@@ -112,6 +91,26 @@ module Api
 
         private
 
+        def apply_opponent_team_filters(teams)
+          teams = teams.by_region(params[:region]) if params[:region].present?
+          teams = teams.by_tier(params[:tier]) if params[:tier].present?
+          teams = teams.by_league(params[:league]) if params[:league].present?
+          teams = teams.with_scrims if params[:with_scrims] == 'true'
+          teams
+        end
+
+        def apply_opponent_team_search(teams)
+          return teams unless params[:search].present?
+
+          meili = SearchService.scope(OpponentTeam, query: params[:search])
+          if meili
+            teams.where(id: meili.pluck(:id))
+          else
+            s = ActiveRecord::Base.sanitize_sql_like(params[:search])
+            teams.where('name ILIKE ? OR tag ILIKE ?', "%#{s}%", "%#{s}%")
+          end
+        end
+
         # Finds opponent team by ID
         # Security Note: OpponentTeam is a shared resource across organizations.
         # Access control is enforced via verify_team_usage! before_action for
@@ -124,7 +123,7 @@ module Api
           return render json: { error: 'Opponent team not found' }, status: :not_found unless id
 
           @opponent_team = OpponentTeam.find_by(id: id)
-          return render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
+          render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
         end
 
         # Verifies that current organization has used this opponent team
