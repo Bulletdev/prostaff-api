@@ -1,26 +1,50 @@
 # frozen_string_literal: true
 
+# Removes expired password reset tokens and blacklisted JWT tokens from the database.
+#
+# Scheduled daily at 2 AM via sidekiq.yml.
+# Emits structured log fields so monitoring tools can alert if the job
+# stops executing (gap 2 from FAILURE_MODE_ANALYSIS.md).
+#
+# @example Trigger manually via Rails console
+#   CleanupExpiredTokensJob.perform_now
 class CleanupExpiredTokensJob < ApplicationJob
   queue_as :default
 
-  # This job should be scheduled to run periodically (e.g., daily)
-  # You can use cron, sidekiq-scheduler, or a similar tool to schedule this job
-
   def perform
-    Rails.logger.info 'Starting cleanup of expired tokens...'
+    start_time = Time.current
 
-    # Cleanup expired password reset tokens
+    Rails.logger.info(
+      event: 'job_started',
+      job: self.class.name,
+      queue: queue_name.to_s
+    )
+
     password_reset_deleted = PasswordResetToken.cleanup_old_tokens
-    Rails.logger.info "Cleaned up #{password_reset_deleted} expired password reset tokens"
+    blacklist_deleted      = TokenBlacklist.cleanup_expired
 
-    # Cleanup expired blacklisted tokens
-    blacklist_deleted = TokenBlacklist.cleanup_expired
-    Rails.logger.info "Cleaned up #{blacklist_deleted} expired blacklisted tokens"
+    duration_ms = ((Time.current - start_time) * 1000).round
 
-    Rails.logger.info 'Token cleanup completed successfully'
+    Rails.logger.info(
+      event: 'job_completed',
+      job: self.class.name,
+      status: 'success',
+      duration_ms: duration_ms,
+      password_reset_deleted: password_reset_deleted,
+      blacklist_deleted: blacklist_deleted
+    )
   rescue StandardError => e
-    Rails.logger.error "Error during token cleanup: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    raise e
+    duration_ms = ((Time.current - start_time) * 1000).round
+
+    Rails.logger.error(
+      event: 'job_failed',
+      job: self.class.name,
+      status: 'error',
+      duration_ms: duration_ms,
+      error_class: e.class.to_s,
+      error: e.message
+    )
+
+    raise
   end
 end

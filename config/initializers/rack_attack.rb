@@ -7,26 +7,28 @@ module Rack
     # Production: Redis DB 0 (persistente, compartilhado entre replicas)
     # Falls back to MemoryStore if Redis is unavailable
     Rack::Attack.cache.store = if Rails.env.production? && ENV['REDIS_URL'].present?
-                                  begin
-                                    ActiveSupport::Cache::RedisCacheStore.new(
-                                      url: ENV['REDIS_URL'],
-                                      reconnect_attempts: 3,
-                                      error_handler: ->(method:, returning:, exception:) {
-                                        Rails.logger.warn "Rack::Attack Redis error: #{exception.message}"
-                                      },
-                                      namespace: 'rack_attack'
-                                    )
-                                  rescue => e
-                                    Rails.logger.warn "Failed to connect to Redis for Rack::Attack, falling back to MemoryStore: #{e.message}"
-                                    ActiveSupport::Cache::MemoryStore.new
-                                  end
-                                else
-                                  ActiveSupport::Cache::MemoryStore.new
-                                end
+                                 begin
+                                   ActiveSupport::Cache::RedisCacheStore.new(
+                                     url: ENV['REDIS_URL'],
+                                     reconnect_attempts: 3,
+                                     error_handler: lambda { |_method:, _returning:, exception:|
+                                       Rails.logger.warn "Rack::Attack Redis error: #{exception.message}"
+                                     },
+                                     namespace: 'rack_attack'
+                                   )
+                                 rescue StandardError => e
+                                   Rails.logger.warn "Failed to connect to Redis for Rack::Attack, falling back to MemoryStore: #{e.message}"
+                                   ActiveSupport::Cache::MemoryStore.new
+                                 end
+                               else
+                                 ActiveSupport::Cache::MemoryStore.new
+                               end
 
-    # Allow health check endpoints (Docker healthchecks, monitoring, etc.)
+    # Allow health check endpoints (Docker healthchecks, monitoring, load balancers)
+    HEALTH_PATHS = %w[/health /health/live /health/ready /health/detailed /up /api/health].freeze
+
     safelist('allow health checks') do |req|
-      ['/health', '/up', '/api/health'].include?(req.path)
+      HEALTH_PATHS.any? { |p| req.path == p }
     end
 
     # Allow SEO-friendly endpoints (sitemap, robots.txt)
@@ -40,15 +42,8 @@ module Rack
     end
 
     # Block known malicious bots and scrapers
-    MALICIOUS_BOTS = %w[
-      AhrefsBot SemrushBot MJ12bot DotBot rogerBot SiteExplorer
-      OpenLinkProfiler SEOkicks Lipperhey Exabot BLEXBot
-      MegaIndex.ru Cliqzbot PetalBot AspiegelBot ZoominfoBot
-      DataForSeoBot Bytespider GPTBot ChatGPT-User CCBot
-      anthropic-ai Claude-Web cohere-ai PerplexityBot
-      EmailCollector EmailSiphon EmailWolf HTTrack WebCopier
-      Teleport TeleportPro WebReaper WebStripper WebZip
-      BackDoorBot Screaming\ Frog\ SEO\ Spider
+    MALICIOUS_BOTS = [
+      'AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'rogerBot', 'SiteExplorer', 'OpenLinkProfiler', 'SEOkicks', 'Lipperhey', 'Exabot', 'BLEXBot', 'MegaIndex.ru', 'Cliqzbot', 'PetalBot', 'AspiegelBot', 'ZoominfoBot', 'DataForSeoBot', 'Bytespider', 'GPTBot', 'ChatGPT-User', 'CCBot', 'anthropic-ai', 'Claude-Web', 'cohere-ai', 'PerplexityBot', 'EmailCollector', 'EmailSiphon', 'EmailWolf', 'HTTrack', 'WebCopier', 'Teleport', 'TeleportPro', 'WebReaper', 'WebStripper', 'WebZip', 'BackDoorBot', 'Screaming Frog SEO Spider'
     ].freeze
 
     blocklist('block malicious bots') do |req|
@@ -57,11 +52,11 @@ module Rack
     end
 
     # Block suspicious requests (no user agent)
-    # Allow OPTIONS requests (CORS preflight) even without user agent
+    # Allow OPTIONS requests (CORS preflight) and health probes even without user agent
     blocklist('block requests without user agent') do |req|
       req.user_agent.blank? &&
-      !['/health', '/up'].include?(req.path) &&
-      req.request_method != 'OPTIONS'
+        HEALTH_PATHS.none? { |p| req.path == p } &&
+        req.request_method != 'OPTIONS'
     end
 
     # Block requests with suspicious patterns

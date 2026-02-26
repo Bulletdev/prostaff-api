@@ -12,11 +12,20 @@ Rails.application.routes.draw do
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
 
-  # Health check endpoints (Railway external health check)
-  # Simple health check without DB dependency (for Railway healthcheck)
+  # Health check endpoints
+  #
+  # /up              — backward-compatible alias (no dependency checks)
+  # /health          — static 200 (no dependency checks, used by Traefik)
+  # /health/live     — liveness probe: is Puma alive? Never checks dependencies.
+  # /health/ready    — readiness probe: checks PostgreSQL + Redis + Meilisearch.
+  # /health/detailed — legacy alias for /health/ready (backwards compat)
+  #
+  # See FAILURE_MODE_ANALYSIS.md: never add DB/Redis checks to /health/live.
   get 'up' => proc { [200, { 'Content-Type' => 'text/plain' }, ['ok']] }, as: :rails_health_check
   get 'health' => proc { [200, { 'Content-Type' => 'application/json' }, ['{"status":"ok","service":"ProStaff API"}']] }
-  get 'health/detailed' => 'health#show' # Detailed health with DB check
+  get 'health/live'     => 'health#live'
+  get 'health/ready'    => 'health#ready'
+  get 'health/detailed' => 'health#show'
 
   # Public status page API (used by status.prostaff.gg)
   get 'status' => 'status#index'
@@ -116,6 +125,10 @@ Rails.application.routes.draw do
         # Audit Logs
         resources :audit_logs, only: [:index], path: 'audit-logs'
       end
+
+      # Monitoring (admin-only observability endpoints)
+      # Gap 1 + Gap 4: Sidekiq queue depth and dead queue monitoring
+      get 'monitoring/sidekiq', to: 'monitoring#sidekiq'
 
       # Support System
       namespace :support do

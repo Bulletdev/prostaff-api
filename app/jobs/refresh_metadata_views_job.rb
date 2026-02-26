@@ -1,59 +1,89 @@
 # frozen_string_literal: true
 
-# Job to refresh database metadata materialized views periodically
-# Keeps cached data fresh without impacting request performance
+# Refreshes PostgreSQL materialized views for database metadata periodically.
+#
+# Scheduled every 2 hours via sidekiq.yml. Uses a distributed Redis lock to
+# prevent concurrent runs. Emits structured log fields so monitoring tools
+# can alert if the job stops executing (gap 2 from FAILURE_MODE_ANALYSIS.md).
+#
+# @example Trigger manually via Rails console
+#   RefreshMetadataViewsJob.perform_now
 class RefreshMetadataViewsJob < ApplicationJob
   queue_as :low_priority
 
   LOCK_KEY = 'refresh_metadata_views:lock'
   LOCK_TTL = 30.minutes.to_i
 
-  # Run every 30 minutes (configure in sidekiq.yml)
   def perform
-    # Prevent concurrent execution using Redis distributed lock
+    start_time = Time.current
+
+    Rails.logger.info(
+      event: 'job_started',
+      job: self.class.name,
+      queue: queue_name.to_s
+    )
+
     acquired = acquire_lock
 
     unless acquired
-      Rails.logger.warn 'Refresh job already running, skipping this execution'
+      Rails.logger.warn(
+        event: 'job_skipped',
+        job: self.class.name,
+        reason: 'lock_already_held'
+      )
       return
     end
 
     begin
-      Rails.logger.info 'Starting materialized views refresh...'
+      refresh_views
+      invalidate_caches
 
-      start_time = Time.current
+      duration_ms = ((Time.current - start_time) * 1000).round
 
-      # Refresh all metadata views concurrently
-      ActiveRecord::Base.connection.execute('SELECT refresh_database_metadata_views();')
+      Rails.logger.info(
+        event: 'job_completed',
+        job: self.class.name,
+        status: 'success',
+        duration_ms: duration_ms
+      )
 
-      duration = Time.current - start_time
-
-      Rails.logger.info "Materialized views refreshed in #{duration.round(2)}s"
-
-      # Also clear Redis caches to force fresh reads from materialized views
-      DatabaseMetadataCacheService.invalidate_all! if defined?(DatabaseMetadataCacheService)
-      PgTypeCache.invalidate_all! if defined?(PgTypeCache)
-
-      duration
+      duration_ms
     ensure
       release_lock
     end
-  rescue => e
-    Rails.logger.error "Failed to refresh materialized views: #{e.message}"
-    Rails.logger.error e.backtrace.first(5).join("\n")
+  rescue StandardError => e
+    duration_ms = ((Time.current - start_time) * 1000).round
+
+    Rails.logger.error(
+      event: 'job_failed',
+      job: self.class.name,
+      status: 'error',
+      duration_ms: duration_ms,
+      error_class: e.class.to_s,
+      error: e.message
+    )
+
     release_lock
     raise
   end
 
   private
 
+  def refresh_views
+    ActiveRecord::Base.connection.execute('SELECT refresh_database_metadata_views();')
+  end
+
+  def invalidate_caches
+    DatabaseMetadataCacheService.invalidate_all! if defined?(DatabaseMetadataCacheService)
+    PgTypeCache.invalidate_all! if defined?(PgTypeCache)
+  end
+
   def acquire_lock
     return true unless redis_available?
 
-    # SET NX EX - Set if Not eXists with EXpiration
     result = Rails.cache.redis.set(LOCK_KEY, Time.current.to_i, nx: true, ex: LOCK_TTL)
-    result == true || result == 'OK'
-  rescue => e
+    [true, 'OK'].include?(result)
+  rescue StandardError => e
     Rails.logger.warn "Failed to acquire lock: #{e.message}"
     false
   end
@@ -62,13 +92,13 @@ class RefreshMetadataViewsJob < ApplicationJob
     return unless redis_available?
 
     Rails.cache.redis.del(LOCK_KEY)
-  rescue => e
+  rescue StandardError => e
     Rails.logger.warn "Failed to release lock: #{e.message}"
   end
 
   def redis_available?
     Rails.cache.respond_to?(:redis) && Rails.cache.redis.ping == 'PONG'
-  rescue
+  rescue StandardError
     false
   end
 end

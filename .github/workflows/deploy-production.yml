@@ -392,7 +392,7 @@ jobs:
           # Health check
           for i in {1..5}; do
             if curl -f https://api.prostaff.gg/up; then
-              echo "✅ Health check passed"
+              echo "Health check passed"
               break
             else
               echo "Retry $i/5..."
@@ -404,7 +404,59 @@ jobs:
           echo "Checking API version..."
           curl -s https://api.prostaff.gg/api/health | jq '.' || true
 
-          echo "✅ All post-deployment checks passed!"
+          echo "All post-deployment checks passed!"
+
+      - name: CORS smoke test
+        # Gap 6 from FAILURE_MODE_ANALYSIS.md: verify CORS is not broken after deploy.
+        # Sends a preflight request from each allowed origin and checks that the
+        # Access-Control-Allow-Origin header matches. Fails the pipeline if CORS is
+        # misconfigured, so frontend teams are notified before users are affected.
+        env:
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+        run: |
+          echo "Running CORS smoke test..."
+
+          API_URL="https://api.prostaff.gg"
+          ORIGINS="${CORS_ORIGINS:-https://app.prostaff.gg,https://prostaff.gg}"
+          FAILED=0
+
+          IFS=',' read -ra ORIGIN_LIST <<< "$ORIGINS"
+          for ORIGIN in "${ORIGIN_LIST[@]}"; do
+            ORIGIN="${ORIGIN// /}"
+            echo "  Testing origin: $ORIGIN"
+
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X OPTIONS \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization" \
+              "$API_URL/api/v1/constants")
+
+            ALLOW_ORIGIN=$(curl -sI \
+              -X OPTIONS \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization" \
+              "$API_URL/api/v1/constants" | grep -i "access-control-allow-origin" | tr -d '\r\n')
+
+            echo "    HTTP status: $RESPONSE"
+            echo "    $ALLOW_ORIGIN"
+
+            if echo "$ALLOW_ORIGIN" | grep -qi "$ORIGIN\|\*"; then
+              echo "    CORS OK for $ORIGIN"
+            else
+              echo "    CORS FAILED for $ORIGIN — missing Access-Control-Allow-Origin header"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "CORS smoke test FAILED for $FAILED origin(s)"
+            echo "Check CORS_ORIGINS environment variable and cors.rb initializer"
+            exit 1
+          fi
+
+          echo "CORS smoke test passed for all origins"
 
       - name: Create GitHub Release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e  # v1

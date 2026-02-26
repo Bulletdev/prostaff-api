@@ -43,6 +43,7 @@ module ProstaffApi
 
     # Load custom middleware
     require Rails.root.join('lib', 'bot_logger_middleware')
+    require Rails.root.join('lib', 'middleware', 'auth_failure_tracker')
 
     # Only loads a smaller set of middleware suitable for API only apps.
     # Middleware like session, flash, cookies can be added back manually.
@@ -58,6 +59,10 @@ module ProstaffApi
 
     # Rack Attack for rate limiting
     config.middleware.use Rack::Attack
+
+    # 401 rate spike tracker — alerts when unauthorized responses exceed threshold
+    # Gap 7 from FAILURE_MODE_ANALYSIS.md (JWT rotation detection)
+    config.middleware.use Middleware::AuthFailureTracker
 
     # Bot Logger Middleware for monitoring bot activity
     config.middleware.use BotLoggerMiddleware
