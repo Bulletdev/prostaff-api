@@ -46,7 +46,7 @@ class ProStaffScraperService
     cached = Rails.cache.read(cache_key)
     return cached if cached
 
-    response = get("/api/v1/matches", { league: league, limit: limit, skip: skip })
+    response = get('/api/v1/matches', { league: league, limit: limit, skip: skip })
     result = parse_json(response)
     Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_MATCHES)
     result

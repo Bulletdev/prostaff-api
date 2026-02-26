@@ -3,6 +3,16 @@
     {
       "warning_type": "Mass Assignment",
       "warning_code": 105,
+      "fingerprint": "a53e36aea1309fb0af3b08b9d5403838087ed98264a2a158a98adde5f6d496d3",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/modules/meta_intelligence/controllers/builds_controller.rb",
+      "line": 128,
+      "note": "Explicit permit list — items/runes/item_build_order are game data arrays, not auth/role fields"
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
       "fingerprint": "0439d7819e41e304c9092860b9e8e5948407871a10e850a1d4b7d92193efb608",
       "check_name": "PermitAttributes",
       "message": "Potentially dangerous key allowed for mass assignment",

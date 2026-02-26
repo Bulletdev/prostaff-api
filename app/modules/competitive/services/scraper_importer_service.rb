@@ -16,26 +16,26 @@ module Competitive
     class ScraperImporterService
       # Leaguepedia role values mapped to our internal lowercase convention
       ROLE_MAP = {
-        'Top'     => 'top',
-        'Jungle'  => 'jungle',
-        'Mid'     => 'mid',
-        'Bot'     => 'adc',
+        'Top' => 'top',
+        'Jungle' => 'jungle',
+        'Mid' => 'mid',
+        'Bot' => 'adc',
         'Support' => 'support'
       }.freeze
 
       # Derive broad tournament region from league slug
       LEAGUE_REGION = {
-        'CBLOL'    => 'BR',
-        'LCS'      => 'NA',
-        'LEC'      => 'EUW',
-        'LCK'      => 'KR',
-        'LPL'      => 'CN',
-        'LLA'      => 'LATAM',
-        'PCS'      => 'SEA',
-        'VCS'      => 'VCS',
-        'TCL'      => 'TR',
-        'LJL'      => 'JP',
-        'CBLOL_A'  => 'BR'
+        'CBLOL' => 'BR',
+        'LCS' => 'NA',
+        'LEC' => 'EUW',
+        'LCK' => 'KR',
+        'LPL' => 'CN',
+        'LLA' => 'LATAM',
+        'PCS' => 'SEA',
+        'VCS' => 'VCS',
+        'TCL' => 'TR',
+        'LJL' => 'JP',
+        'CBLOL_A' => 'BR'
       }.freeze
 
       def initialize(organization)
@@ -111,23 +111,23 @@ module Competitive
         our_resolved, opp_resolved = resolve_teams(team1_name, team2_name, win_team, our_team)
 
         {
-          organization:       @organization,
-          tournament_name:    league,
-          tournament_stage:   match['stage'],
-          tournament_region:  LEAGUE_REGION[league],
-          external_match_id:  ext_id,
-          match_date:         parse_date(match['start_time']),
-          game_number:        match['game_number'],
-          patch_version:      match['patch'],
-          vod_url:            build_vod_url(match['vod_youtube_id']),
-          our_team_name:      our_resolved,
+          organization: @organization,
+          tournament_name: league,
+          tournament_stage: match['stage'],
+          tournament_region: LEAGUE_REGION[league],
+          external_match_id: ext_id,
+          match_date: parse_date(match['start_time']),
+          game_number: match['game_number'],
+          patch_version: match['patch'],
+          vod_url: build_vod_url(match['vod_youtube_id']),
+          our_team_name: our_resolved,
           opponent_team_name: opp_resolved,
-          victory:            determine_victory(our_resolved, win_team),
+          victory: determine_victory(our_resolved, win_team),
           # In Leaguepedia/LoL Esports convention, team1 is always blue side.
-          side:               derive_side(our_resolved, team1_name),
-          our_picks:          build_picks(match['participants'], our_resolved),
-          opponent_picks:     build_picks(match['participants'], opp_resolved),
-          game_stats:         build_game_stats(match, team1_name, team2_name)
+          side: derive_side(our_resolved, team1_name),
+          our_picks: build_picks(match['participants'], our_resolved),
+          opponent_picks: build_picks(match['participants'], opp_resolved),
+          game_stats: build_game_stats(match, team1_name, team2_name)
         }
       end
 
@@ -174,13 +174,13 @@ module Competitive
           .select { |p| teams_match?(p['team_name'].to_s, team_name) }
           .map do |p|
             {
-              'champion'      => p['champion_name'],
-              'role'          => normalize_role(p['role']),
+              'champion' => p['champion_name'],
+              'role' => normalize_role(p['role']),
               'summoner_name' => p['summoner_name'],
-              'kills'         => p['kills'],
-              'deaths'        => p['deaths'],
-              'assists'       => p['assists'],
-              'win'           => p['win']
+              'kills' => p['kills'],
+              'deaths' => p['deaths'],
+              'assists' => p['assists'],
+              'win' => p['win']
             }.compact
           end
       end
@@ -194,15 +194,15 @@ module Competitive
       # so that side can be retroactively derived (team1 = blue side convention).
       def build_game_stats(match, team1_name = nil, team2_name = nil)
         {
-          'source'             => 'prostaff_scraper',
-          'enrichment_source'  => match['enrichment_source'],
-          'leaguepedia_page'   => match['leaguepedia_page'],
-          'gamelength'         => match['gamelength'],
+          'source' => 'prostaff_scraper',
+          'enrichment_source' => match['enrichment_source'],
+          'leaguepedia_page' => match['leaguepedia_page'],
+          'gamelength' => match['gamelength'],
           'game_duration_seconds' => match['game_duration_seconds'],
-          'win_team'           => match['win_team'],
-          'team1_name'         => team1_name.presence || match.dig('team1', 'name'),
-          'team2_name'         => team2_name.presence || match.dig('team2', 'name'),
-          'participants'       => match['participants'] || []
+          'win_team' => match['win_team'],
+          'team1_name' => team1_name.presence || match.dig('team1', 'name'),
+          'team2_name' => team2_name.presence || match.dig('team2', 'name'),
+          'participants' => match['participants'] || []
         }.compact
       end
 
