@@ -2,7 +2,7 @@
 
 require 'active_support/core_ext/integer/time'
 
-Rails.application.configure do
+Rails.application.configure do # rubocop:disable Metrics/BlockLength
   config.cache_classes = true
 
   config.eager_load = true
@@ -60,7 +60,7 @@ Rails.application.configure do
                            {
                              url: ENV['REDIS_URL'],
                              reconnect_attempts: 3,
-                             error_handler: lambda { |method:, returning:, exception:|
+                             error_handler: lambda { |_method:, _returning:, exception:|
                                Rails.logger.warn "Rails cache Redis error: #{exception.message}"
                              }
                            }
