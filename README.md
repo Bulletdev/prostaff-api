@@ -60,6 +60,9 @@
 │  [■] Security Hardened        — OWASP Top 10, Brakeman, ZAP tested          │
 │  [■] High Performance         — p95: ~500ms · cached: ~50ms                 │
 │  [■] Modular Monolith         — Scalable modular architecture               │
+│  [■] Observability            — /health/live + /health/ready + Sidekiq mon. │
+│  [■] 401 Rate Spike Detection — Sliding-window middleware, alerts at >5%    │
+│  [■] Job Heartbeat Tracking   — Stale scheduled job detection via Redis     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,10 +83,11 @@
 │  07 · Testing                                        │
 │  08 · Performance & Load Testing                     │
 │  09 · Security                                       │
-│  10 · Deployment                                     │
-│  11 · CI/CD                                          │
-│  12 · Contributing                                   │
-│  13 · License                                        │
+│  10 · Observability & Monitoring                     │
+│  11 · Deployment                                     │
+│  12 · CI/CD                                          │
+│  13 · Contributing                                   │
+│  14 · License                                        │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -823,6 +827,30 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `GET    /notifications/unread-count` — Get unread count
 - `DELETE /notifications/:id` — Delete notification
 
+#### Health & Observability
+
+```
+GET /health/live              — Liveness probe: is Puma alive? Never checks deps.
+                                Always returns 200 while the process responds.
+                                Use for container restart policies (Coolify/K8s).
+
+GET /health/ready             — Readiness probe: checks PostgreSQL + Redis + Meilisearch.
+                                Returns 200 (ok/disabled) or 503 (any dep unreachable).
+                                Use for load balancer traffic routing.
+
+GET /api/v1/monitoring/sidekiq  — Admin only. Full Sidekiq snapshot:
+                                  queue depths, worker count, dead queue, retry queue,
+                                  scheduled job heartbeats (stale detection), alert flags.
+                                  Returns 503 if Redis unavailable.
+```
+
+> **Monitoring endpoint response includes:**
+> - `scheduled_jobs` — last run timestamp + `stale: true/false` per cron job
+> - `alerts.stale_jobs` — true if any scheduled job exceeded its alert window
+> - `alerts.no_workers` — true if no Sidekiq workers running
+> - `alerts.dead_queue_exceeded` — true if dead queue > 10 jobs
+> - `alerts.queue_depth_exceeded` — true if total queue depth > 100 jobs
+
 #### Team Members (chat)
 - `GET /team-members` — List organization members (staff only — rejects player tokens)
 
@@ -965,7 +993,88 @@ open coverage/index.html
 
 ---
 
-## 10 · Deployment
+## 10 · Observability & Monitoring
+
+### Health Probes
+
+| Endpoint | Purpose | Returns |
+|---|---|---|
+| `GET /health/live` | Liveness — is Puma responding? | Always 200 |
+| `GET /health/ready` | Readiness — all deps reachable? | 200 / 503 |
+| `GET /up` | Legacy backward-compatible alias | 200 |
+
+> **Rule**: never point the liveness probe at an endpoint that checks Redis or DB.
+> A Redis crash → liveness fail → container restart → reconnect storm → worse incident.
+
+### Sidekiq Monitoring
+
+```bash
+# Requires admin Bearer token
+curl -H "Authorization: Bearer $TOKEN" https://api.prostaff.gg/api/v1/monitoring/sidekiq
+```
+
+Response shape:
+```json
+{
+  "status": "ok | degraded | critical",
+  "processes": { "count": 1, "workers": [...] },
+  "queues": { "default": 0, "high": 0 },
+  "stats": { "enqueued": 0, "dead": 0, "retry": 0 },
+  "scheduled_jobs": {
+    "RefreshMetadataViewsJob": { "last_run_at": "...", "stale": false },
+    "CleanupExpiredTokensJob":  { "last_run_at": "...", "stale": false }
+  },
+  "alerts": {
+    "no_workers": false,
+    "queue_depth_exceeded": false,
+    "dead_queue_exceeded": false,
+    "stale_jobs": false
+  }
+}
+```
+
+**Status rules:**
+
+| status                 |                   condition                        |
+|------------------------|----------------------------------------------------|
+| `ok`                   | all thresholds within bounds                       |
+| `degraded`             | queue > 100, dead > 10, or any scheduled job stale |
+| `critical`             | no Sidekiq workers running                         |
+
+### 401 Rate Spike Detection
+
+`Middleware::AuthFailureTracker` counts 401s vs total requests using Redis
+sliding-window counters (5-minute window). Emits a structured log alert when
+the ratio exceeds 5%:
+
+```json
+{
+  "event": "auth_spike_detected",
+  "level": "CRITICAL",
+  "rate_pct": 8.3,
+  "threshold_pct": 5.0,
+  "total_requests": 240,
+  "total_401s": 20
+}
+```
+
+Threshold and window are configurable via env:
+
+```bash
+AUTH_TRACKER_THRESHOLD=0.05   # default: 5%
+AUTH_TRACKER_WINDOW=5         # default: 5 minutes
+```
+
+### Configurable Alert Thresholds
+
+```bash
+SIDEKIQ_QUEUE_ALERT_THRESHOLD=100   # queue depth that triggers degraded
+SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue size that triggers degraded
+```
+
+---
+
+## 11 · Deployment
 
 ### Environment Variables
 
@@ -989,6 +1098,12 @@ FRONTEND_URL=https://your-frontend-domain.com
 # HashID Configuration (for URL obfuscation)
 HASHID_SALT=your-secret-salt
 HASHID_MIN_LENGTH=6
+
+# Observability thresholds (optional, defaults shown)
+SIDEKIQ_QUEUE_ALERT_THRESHOLD=100   # queue depth → degraded
+SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue   → degraded
+AUTH_TRACKER_THRESHOLD=0.05         # 401 rate spike threshold (5%)
+AUTH_TRACKER_WINDOW=5               # sliding window in minutes
 ```
 
 ### Docker
@@ -1000,7 +1115,7 @@ docker run -p 3333:3000 prostaff-api
 
 ---
 
-## 11 · CI/CD
+## 12 · CI/CD
 
 ### Architecture Diagram Auto-Update
 
@@ -1031,12 +1146,13 @@ Automated testing on every push:
 - **Security Scan**: Brakeman + dependency check
 - **Load Test**: Nightly smoke tests
 - **Nightly Audit**: Complete security scan
+- **CORS Smoke Test**: Runs after every production deploy — sends a preflight request from each allowed origin and fails the pipeline if CORS is misconfigured
 
 See `.github/workflows/` for details.
 
 ---
 
-## 12 · Contributing
+## 13 · Contributing
 
 1. Create a feature branch
 2. Make your changes
@@ -1049,7 +1165,7 @@ See `.github/workflows/` for details.
 
 ---
 
-## 13 · License
+## 14 · License
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
