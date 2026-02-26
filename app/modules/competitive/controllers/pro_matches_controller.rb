@@ -134,6 +134,95 @@ module Competitive
         }, status: :forbidden
       end
 
+      # POST /api/v1/competitive/pro-matches/sync-from-scraper
+      # Enqueue a background job to import enriched matches from the ProStaff Scraper.
+      #
+      # The scraper collects data from LoL Esports (schedules) and Leaguepedia
+      # (per-player stats). Only fully enriched matches (riot_enriched=true) are imported.
+      # Duplicates are skipped automatically via external_match_id uniqueness.
+      #
+      # @param league   [String]  required — league slug (e.g. 'CBLOL', 'LCS')
+      # @param our_team [String]  required — org's team name exactly as listed in Leaguepedia
+      #                           (e.g. 'paiN Gaming'). Without this, ALL tournament games
+      #                           would be imported — always required.
+      # @param limit    [Integer] optional — max matches to import (default 100)
+      def sync_from_scraper
+        league   = params.require(:league)
+        our_team = params[:our_team].presence
+        raise ActionController::ParameterMissing.new(:our_team) if our_team.blank?
+
+        limit    = params.fetch(:limit, 100).to_i.clamp(1, 500)
+
+        job = SyncScraperMatchesJob.perform_later(
+          current_organization.id,
+          league: league,
+          our_team: our_team,
+          limit: limit
+        )
+
+        render json: {
+          message: 'Scraper sync started in background',
+          data: {
+            job_id:   job.job_id,
+            league:   league,
+            our_team: our_team,
+            limit:    limit
+          }
+        }, status: :accepted
+      rescue ActionController::ParameterMissing => e
+        render json: {
+          error: { code: 'MISSING_PARAM', message: e.message }
+        }, status: :unprocessable_entity
+      rescue ProStaffScraperService::UnavailableError => e
+        render json: {
+          error: { code: 'SCRAPER_UNAVAILABLE', message: e.message }
+        }, status: :service_unavailable
+      end
+
+      # POST /api/v1/competitive/pro-matches/sync-from-leaguepedia
+      # Trigger the Leaguepedia native pipeline on the scraper for a full tournament import.
+      #
+      # Unlike sync-from-scraper (which fetches already-indexed LoL Esports data),
+      # this endpoint queries Leaguepedia ScoreboardGames directly by OverviewPage,
+      # allowing import of historical regular-season games that have fallen out of
+      # the LoL Esports API's 300-event rolling window.
+      #
+      # The pipeline runs asynchronously on the scraper. Once it completes, call
+      # sync-from-scraper to import the newly indexed docs into the Rails DB.
+      #
+      # @param tournament [String] required — Leaguepedia OverviewPage
+      #                            (e.g. 'CBLOL/2026 Season/Cup')
+      # @param our_team   [String] optional — passed through to sync-from-scraper later
+      def sync_from_leaguepedia
+        tournament = params.require(:tournament)
+        our_team   = params[:our_team].presence
+
+        scraper = ProStaffScraperService.new
+        result  = scraper.trigger_leaguepedia_sync(tournament: tournament)
+
+        render json: {
+          message: 'Leaguepedia pipeline triggered on scraper',
+          data: {
+            tournament: tournament,
+            our_team:   our_team,
+            scraper:    result,
+            note: 'Pipeline runs in background. Call sync-from-scraper after it completes to import data into Rails.'
+          }
+        }, status: :accepted
+      rescue ActionController::ParameterMissing => e
+        render json: {
+          error: { code: 'MISSING_PARAM', message: e.message }
+        }, status: :unprocessable_entity
+      rescue ProStaffScraperService::UnauthorizedError => e
+        render json: {
+          error: { code: 'SCRAPER_UNAUTHORIZED', message: e.message }
+        }, status: :service_unavailable
+      rescue ProStaffScraperService::UnavailableError => e
+        render json: {
+          error: { code: 'SCRAPER_UNAVAILABLE', message: e.message }
+        }, status: :service_unavailable
+      end
+
       # POST /api/v1/competitive/pro-matches/import
       # Import a match from PandaScore to our database
       def import

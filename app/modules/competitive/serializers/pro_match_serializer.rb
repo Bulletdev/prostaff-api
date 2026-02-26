@@ -37,15 +37,25 @@ module Competitive
         match.opponent_bans.presence || []
       end
 
-      field :result, &:result_text
+      field :result do |match|
+        match.result_text
+      end
 
-      field :tournament_display, &:tournament_display
+      field :tournament_display do |match|
+        match.tournament_display
+      end
 
-      field :game_label, &:game_label
+      field :game_label do |match|
+        match.game_label
+      end
 
-      field :has_complete_draft, &:has_complete_draft?
+      field :has_complete_draft do |match|
+        match.has_complete_draft?
+      end
 
-      field :meta_relevant, &:meta_relevant?
+      field :meta_relevant do |match|
+        match.meta_relevant?
+      end
 
       field :created_at
       field :updated_at

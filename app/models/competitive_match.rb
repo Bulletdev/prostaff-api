@@ -40,7 +40,7 @@ class CompetitiveMatch < ApplicationRecord
 
   # Validations
   validates :tournament_name, presence: true
-  validates :external_match_id, uniqueness: true, allow_blank: true
+  validates :external_match_id, uniqueness: { scope: :organization_id }, allow_blank: true
 
   validates :match_format, inclusion: {
     in: Constants::CompetitiveMatch::FORMATS,
@@ -75,7 +75,7 @@ class CompetitiveMatch < ApplicationRecord
 
   # Instance methods
   def result_text
-    return 'Unknown' unless victory
+    return 'Unknown' if victory.nil?
 
     victory? ? 'Victory' : 'Defeat'
   end
