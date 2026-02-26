@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_26_084910) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -100,9 +100,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.string "external_stats_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["external_match_id"], name: "index_competitive_matches_on_external_match_id", unique: true
     t.index ["match_date"], name: "index_competitive_matches_on_match_date"
     t.index ["opponent_team_id"], name: "index_competitive_matches_on_opponent_team_id"
+    t.index ["organization_id", "external_match_id"], name: "index_competitive_matches_on_org_and_external_match_id", unique: true
     t.index ["organization_id", "tournament_name"], name: "idx_comp_matches_org_tournament"
     t.index ["organization_id"], name: "index_competitive_matches_on_organization_id"
     t.index ["patch_version"], name: "index_competitive_matches_on_patch_version"

@@ -88,11 +88,14 @@ module Api
         # ── Private helpers ────────────────────────────────────────────
         private
 
-        # Apply all optional query filters to a CompetitiveMatch scope
+        # Apply all optional query filters to a CompetitiveMatch scope.
+        # `league` filters by tournament_name (the league slug stored by the scraper,
+        #  e.g. 'CBLOL', 'LCS'). `region` filters by tournament_region (e.g. 'BR', 'NA').
         def apply_filters(scope)
           scope = scope.by_tournament(params[:tournament]) if params[:tournament].present?
           scope = scope.by_patch(params[:patch])           if params[:patch].present?
           scope = scope.by_region(params[:region])         if params[:region].present?
+          scope = scope.where(tournament_name: params[:league]) if params[:league].present?
           if params[:start_date].present? && params[:end_date].present?
             scope = scope.in_date_range(params[:start_date], params[:end_date])
           end

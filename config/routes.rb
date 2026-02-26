@@ -253,22 +253,32 @@ Rails.application.routes.draw do
       resources :competitive_matches, path: 'competitive-matches', only: %i[index show]
 
       # Competitive Module - PandaScore Integration
-      namespace :competitive do
-        # Pro Matches from PandaScore
-        resources :pro_matches, path: 'pro-matches', only: %i[index show] do
+      # Controllers live in Competitive::Controllers:: (app/modules/competitive/controllers/).
+      # Leading slash in controller paths bypasses namespace module prepending.
+      scope '/competitive', as: 'competitive' do
+        # Pro Matches from PandaScore / ProStaff Scraper
+        resources :pro_matches, path: 'pro-matches',
+                                controller: '/competitive/controllers/pro_matches',
+                                only: %i[index show] do
           collection do
             get :upcoming
             get :past
             post :refresh
             post :import
+            post 'sync-from-scraper',      action: :sync_from_scraper
+            post 'sync-from-leaguepedia',  action: :sync_from_leaguepedia
           end
         end
 
         # Draft Comparison & Meta Analysis
-        post 'draft-comparison', to: 'draft_comparison#compare'
-        get 'meta/:role', to: 'draft_comparison#meta_by_role'
-        get 'composition-winrate', to: 'draft_comparison#composition_winrate'
-        get 'counters', to: 'draft_comparison#suggest_counters'
+        post 'draft-comparison', to: '/competitive/controllers/draft_comparison#compare',
+                                 as: 'draft_comparison'
+        get 'meta/:role',        to: '/competitive/controllers/draft_comparison#meta_by_role',
+                                 as: 'meta'
+        get 'composition-winrate', to: '/competitive/controllers/draft_comparison#composition_winrate',
+                                   as: 'composition_winrate'
+        get 'counters',          to: '/competitive/controllers/draft_comparison#suggest_counters',
+                                 as: 'counters'
       end
 
       # Strategy Module - Draft & Tactical Planning
