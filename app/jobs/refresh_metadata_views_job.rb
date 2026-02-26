@@ -47,6 +47,7 @@ class RefreshMetadataViewsJob < ApplicationJob
         duration_ms: duration_ms
       )
 
+      record_job_heartbeat
       duration_ms
     ensure
       release_lock

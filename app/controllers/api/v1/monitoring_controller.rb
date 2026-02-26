@@ -11,6 +11,7 @@ module Api
     #
     # Gap coverage (FAILURE_MODE_ANALYSIS.md):
     #   Gap 1  — Sidekiq queue depth alert
+    #   Gap 2  — Scheduled job heartbeat monitoring (stale job detection)
     #   Gap 4  — Dead queue monitoring
     #
     # @example Check Sidekiq health
@@ -22,14 +23,23 @@ module Api
       QUEUE_DEPTH_ALERT_THRESHOLD = ENV.fetch('SIDEKIQ_QUEUE_ALERT_THRESHOLD', 100).to_i
       DEAD_QUEUE_ALERT_THRESHOLD  = ENV.fetch('SIDEKIQ_DEAD_ALERT_THRESHOLD', 10).to_i
 
+      # Scheduled jobs to monitor. Each entry defines the job class name,
+      # expected run interval, and the threshold after which it is considered stale.
+      SCHEDULED_JOBS = [
+        { name: 'RefreshMetadataViewsJob',  interval_hours: 2,  alert_after_hours: 3  },
+        { name: 'CleanupExpiredTokensJob',  interval_hours: 24, alert_after_hours: 25 }
+      ].freeze
+
       # GET /api/v1/monitoring/sidekiq
       #
       # Returns a snapshot of Sidekiq operational state including queue depths,
-      # process count, scheduled and dead job counts.
+      # process count, scheduled and dead job counts, and heartbeat status of
+      # cron jobs (gap 2 — detects if a scheduled job has not run in its window).
       #
       # Healthy thresholds (logged as alerts when exceeded):
-      #   - queue_depth > 100 jobs for more than 5 min → Sidekiq may be down
-      #   - dead_count   > 10 jobs                      → jobs are failing silently
+      #   - queue_depth > 100 jobs  → Sidekiq may be down
+      #   - dead_count   > 10 jobs  → jobs are failing silently
+      #   - job stale               → scheduled job has not run within expected interval
       #
       # @return [JSON] Sidekiq stats with health indicators
       def sidekiq
@@ -45,12 +55,15 @@ module Api
         stats     = Sidekiq::Stats.new
         processes = Sidekiq::ProcessSet.new.to_a
 
-        queue_depths  = build_queue_depths
-        total_depth   = queue_depths.values.sum
-        dead_count    = stats.dead_size
+        queue_depths   = build_queue_depths
+        total_depth    = queue_depths.values.sum
+        dead_count     = stats.dead_size
+        job_heartbeats = build_job_heartbeats
+        any_stale      = job_heartbeats.values.any? { |j| j[:stale] }
 
-        health_status = determine_health(total_depth, dead_count, processes.size)
+        health_status = determine_health(total_depth, dead_count, processes.size, any_stale: any_stale)
         emit_alerts(total_depth, dead_count, processes.size)
+        emit_stale_job_alerts(job_heartbeats)
 
         render json: {
           status: health_status,
@@ -70,12 +83,14 @@ module Api
             retry: stats.retry_size,
             dead: dead_count
           },
+          scheduled_jobs: job_heartbeats,
           alerts: {
             queue_depth_threshold: QUEUE_DEPTH_ALERT_THRESHOLD,
             dead_queue_threshold: DEAD_QUEUE_ALERT_THRESHOLD,
             queue_depth_exceeded: total_depth > QUEUE_DEPTH_ALERT_THRESHOLD,
             dead_queue_exceeded: dead_count > DEAD_QUEUE_ALERT_THRESHOLD,
-            no_workers: processes.empty?
+            no_workers: processes.empty?,
+            stale_jobs: any_stale
           }
         }, status: health_status == 'ok' ? :ok : :service_unavailable
       end
@@ -98,10 +113,37 @@ module Api
         end
       end
 
-      def determine_health(total_depth, dead_count, process_count)
+      # Reads last-run timestamps from Redis for each scheduled job and returns
+      # a hash with staleness status. Jobs that have never run return stale: true.
+      def build_job_heartbeats
+        Sidekiq.redis do |redis|
+          SCHEDULED_JOBS.each_with_object({}) do |config, hash|
+            hash[config[:name]] = build_heartbeat_entry(redis, config)
+          end
+        end
+      rescue StandardError => e
+        Rails.logger.warn(event: 'monitoring_heartbeat_read_error', error: e.message)
+        {}
+      end
+
+      def build_heartbeat_entry(redis, config)
+        raw = redis.call('GET', "prostaff:job_heartbeat:#{config[:name]}")
+        last_run = raw ? Time.zone.parse(raw) : nil
+        stale = last_run.nil? || last_run < config[:alert_after_hours].hours.ago
+
+        {
+          last_run_at: last_run&.iso8601,
+          expected_interval_hours: config[:interval_hours],
+          alert_after_hours: config[:alert_after_hours],
+          stale: stale
+        }
+      end
+
+      def determine_health(total_depth, dead_count, process_count, any_stale: false)
         return 'critical' if process_count.zero?
         return 'degraded' if dead_count > DEAD_QUEUE_ALERT_THRESHOLD
         return 'degraded' if total_depth > QUEUE_DEPTH_ALERT_THRESHOLD
+        return 'degraded' if any_stale
 
         'ok'
       end
@@ -134,6 +176,21 @@ module Api
           dead_count: dead_count,
           threshold: DEAD_QUEUE_ALERT_THRESHOLD
         )
+      end
+
+      def emit_stale_job_alerts(heartbeats)
+        heartbeats.each do |job_name, data|
+          next unless data[:stale]
+
+          Rails.logger.error(
+            event: 'scheduled_job_stale',
+            level: 'ALERT',
+            message: 'Scheduled job has not run within expected interval',
+            job: job_name,
+            last_run_at: data[:last_run_at],
+            alert_after_hours: data[:alert_after_hours]
+          )
+        end
       end
     end
   end

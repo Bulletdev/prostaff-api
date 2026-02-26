@@ -33,6 +33,8 @@ class CleanupExpiredTokensJob < ApplicationJob
       password_reset_deleted: password_reset_deleted,
       blacklist_deleted: blacklist_deleted
     )
+
+    record_job_heartbeat
   rescue StandardError => e
     duration_ms = ((Time.current - start_time) * 1000).round
 
