@@ -163,10 +163,10 @@ module Competitive
         render json: {
           message: 'Scraper sync started in background',
           data: {
-            job_id:   job.job_id,
-            league:   league,
+            job_id: job.job_id,
+            league: league,
             our_team: our_team,
-            limit:    limit
+            limit: limit
           }
         }, status: :accepted
       rescue ActionController::ParameterMissing => e
@@ -204,8 +204,8 @@ module Competitive
           message: 'Leaguepedia pipeline triggered on scraper',
           data: {
             tournament: tournament,
-            our_team:   our_team,
-            scraper:    result,
+            our_team: our_team,
+            scraper: result,
             note: 'Pipeline runs in background. Call sync-from-scraper after it completes to import data into Rails.'
           }
         }, status: :accepted
