@@ -9,18 +9,22 @@ Rails.application.configure do
 
   config.consider_all_requests_local = false
 
-  # Disable Rails Host Authorization.
-  # Traefik already filters traffic by domain (prostaff.gg), and this
-  # prevents health checks on internal IPs (like 10.0.x.x) from being blocked.
-  config.hosts = nil
-
-  # REMOVE OR COMMENT OUT THESE OLD LINES:
-  # config.hosts << 'prostaff.gg'
-  # config.hosts << 'www.prostaff.gg'
-  # config.hosts << 'api.prostaff.gg'
-  # config.hosts << 'prostaff-api-production.up.railway.app'
-  # config.hosts << 'localhost'
-  # config.hosts << '127.0.0.1'
+  # Rails Host Authorization allowlist.
+  #
+  # Traefik terminates external traffic and forwards with the correct Host header.
+  # Docker/Coolify health checks originate from internal IPs (10.x.x.x, 172.16-31.x.x),
+  # so those ranges are allowed via regex to prevent blocking liveness/readiness probes.
+  #
+  # Gap 9 fix (FAILURE_MODE_ANALYSIS.md): replaces config.hosts = nil so that
+  # Host header injection is rejected if traffic bypasses Traefik.
+  config.hosts = [
+    'api.prostaff.gg',
+    'prostaff.gg',
+    'www.prostaff.gg',
+    ENV.fetch('APP_HOST', nil),
+    # Internal IPs: Docker bridge, Coolify overlay, localhost — used by health check probes
+    /\A(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?\z/
+  ].compact
 
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
