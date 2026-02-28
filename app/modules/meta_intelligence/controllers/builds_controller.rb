@@ -123,10 +123,9 @@ module MetaIntelligence
       end
 
       def build_create_params
-        # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
         # :role is the LoL champion role (adc/jungle/mid/etc.), not a user authorization role.
         # SavedBuild has no admin/banned/account_id fields — mass assignment risk does not apply.
-        params.require(:build).permit(
+        params.require(:build).permit( # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
           :champion, :role, :patch_version, :title, :notes, :is_public,
           :primary_rune_tree, :secondary_rune_tree,
           :summoner_spell_1, :summoner_spell_2, :trinket,
