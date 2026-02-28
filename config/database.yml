@@ -17,6 +17,9 @@
 default: &default
   adapter: postgresql
   encoding: unicode
+  # Supabase transaction pooler (port 6543) does not support prepared statements.
+  # Disabling here prevents PG::DuplicatePstatement errors across all envs.
+  prepared_statements: false
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   # DB_POOL lets you set a higher pool for Sidekiq without raising Puma threads.

@@ -16,6 +16,7 @@
   - search
   - mailers
   - low
+  - meta_intelligence
   - low_priority
 
 # Sidekiq Scheduler Configuration

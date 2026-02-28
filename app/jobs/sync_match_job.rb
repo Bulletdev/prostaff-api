@@ -57,6 +57,8 @@ class SyncMatchJob < ApplicationJob
       create_player_match_stats(match, match_data[:participants], organization)
 
       Rails.logger.info("Successfully synced match #{match_id}")
+
+      MetaIntelligence::Jobs::UpdateMetaStatsJob.perform_later(organization_id)
     end
   rescue RiotApiService::NotFoundError => e
     Rails.logger.error("Match not found in Riot API: #{match_id} - #{e.message}")

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_26_084910) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_26_100000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -414,6 +414,41 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_26_084910) do
     t.index ["summoner_name"], name: "index_players_on_summoner_name"
   end
 
+  create_table "saved_builds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "created_by_id"
+    t.string "champion", null: false
+    t.string "role"
+    t.string "patch_version"
+    t.integer "items", default: [], array: true
+    t.integer "item_build_order", default: [], array: true
+    t.integer "trinket"
+    t.integer "runes", default: [], array: true
+    t.string "primary_rune_tree"
+    t.string "secondary_rune_tree"
+    t.string "summoner_spell_1"
+    t.string "summoner_spell_2"
+    t.decimal "win_rate", precision: 5, scale: 2, default: "0.0"
+    t.integer "games_played", default: 0, null: false
+    t.decimal "average_kda", precision: 5, scale: 2, default: "0.0"
+    t.decimal "average_cs_per_min", precision: 5, scale: 2, default: "0.0"
+    t.decimal "average_damage_share", precision: 5, scale: 2, default: "0.0"
+    t.string "title"
+    t.text "notes"
+    t.boolean "is_public", default: false, null: false
+    t.string "data_source", default: "manual", null: false
+    t.string "items_fingerprint"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_saved_builds_on_created_by_id"
+    t.index ["organization_id", "champion", "role", "items_fingerprint"], name: "idx_saved_builds_aggregated_unique", unique: true, where: "((data_source)::text = 'aggregated'::text)"
+    t.index ["organization_id", "champion", "role"], name: "idx_saved_builds_org_champion_role"
+    t.index ["organization_id", "is_public"], name: "idx_saved_builds_org_public"
+    t.index ["organization_id", "patch_version"], name: "idx_saved_builds_org_patch"
+    t.index ["organization_id", "win_rate"], name: "idx_saved_builds_win_rate"
+    t.index ["organization_id"], name: "index_saved_builds_on_organization_id"
+  end
+
   create_table "schedules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "title", null: false
@@ -746,6 +781,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_26_084910) do
   add_foreign_key "player_match_stats", "players"
   add_foreign_key "players", "organizations"
   add_foreign_key "players", "organizations", column: "previous_organization_id", on_delete: :nullify
+  add_foreign_key "saved_builds", "organizations"
+  add_foreign_key "saved_builds", "users", column: "created_by_id"
   add_foreign_key "schedules", "matches"
   add_foreign_key "schedules", "organizations"
   add_foreign_key "schedules", "scrims", on_delete: :cascade
