@@ -36,6 +36,23 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Meilisearch for full-text search
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    volumes:
+      - meilisearch_data:/meili_data
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_ENV: development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
   # Rails API
   api:
     build: .
@@ -49,6 +66,8 @@ services:
       - "${API_PORT:-3333}:3000"
     depends_on:
       redis:
+        condition: service_healthy
+      meilisearch:
         condition: service_healthy
     networks:
       - default
@@ -79,6 +98,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bundle exec sidekiqmon processes | grep -q 'busy' || exit 1"]
       interval: 30s
@@ -92,6 +113,7 @@ volumes:
   postgres_data:
   redis_data:
   bundle_cache:
+  meilisearch_data:
 
 networks:
   security-net:
