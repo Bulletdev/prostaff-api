@@ -37,7 +37,7 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
   # Setting force_ssl = true would cause redirect loops.
   #
   # Security: We trust X-Forwarded-Proto header from Traefik to detect HTTPS
-  config.force_ssl = false
+  config.force_ssl = false # nosemgrep: ruby.lang.security.force-ssl-false.force-ssl-false
   config.ssl_options = { redirect: { exclude: ->(request) { request.path.start_with?('/health') } } }
 
   # Trust all proxies (Traefik, Cloudflare)

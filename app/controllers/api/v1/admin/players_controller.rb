@@ -308,8 +308,10 @@ module Api
         end
 
         def set_player
-          # Admin finds players across ALL orgs — must bypass OrganizationScoped default_scope
-          @player = Player.unscoped.find(params[:id])
+          # Admin finds players across ALL orgs — must bypass OrganizationScoped default_scope.
+          # Access control is enforced by require_admin_access before_action on every action
+          # that calls set_player. Unscoped is intentional and safe in this admin context.
+          @player = Player.unscoped.find(params[:id]) # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
         rescue ActiveRecord::RecordNotFound
           render_error(
             message: 'Player not found',
