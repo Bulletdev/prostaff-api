@@ -267,6 +267,8 @@ Rails.application.routes.draw do
             post :import
             post 'sync-from-scraper',      action: :sync_from_scraper
             post 'sync-from-leaguepedia',  action: :sync_from_leaguepedia
+            get  'diagnose-missing',       action: :diagnose_missing
+            post 'recover-missing',        action: :recover_missing
           end
         end
 
@@ -308,6 +310,26 @@ Rails.application.routes.draw do
       namespace :fantasy do
         post 'waitlist', to: 'waitlist#create'
         get 'waitlist/stats', to: 'waitlist#stats'
+      end
+
+      # Meta Intelligence Module
+      # Item tier lists and build analytics derived from match history.
+      # Controllers live in MetaIntelligence::Controllers:: (app/modules/meta_intelligence/controllers/).
+      scope '/meta', as: 'meta_intelligence' do
+        get 'items',     to: '/meta_intelligence/controllers/items#index', as: 'meta_items'
+        get 'items/:id', to: '/meta_intelligence/controllers/items#show',  as: 'meta_item'
+
+        resources :builds,
+                  controller: '/meta_intelligence/controllers/builds',
+                  only: %i[index show create update destroy] do
+          collection do
+            post :aggregate
+          end
+        end
+
+        get 'champions/:champion',
+            to:  '/meta_intelligence/controllers/champion_meta#show',
+            as:  'meta_champion'
       end
 
       # Team Messaging — DM history + soft-delete

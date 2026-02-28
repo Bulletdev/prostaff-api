@@ -223,6 +223,89 @@ module Competitive
         }, status: :service_unavailable
       end
 
+      # GET /api/v1/competitive/pro-matches/diagnose-missing
+      # Cross-reference Leaguepedia Cargo API with our DB to find missing games.
+      # Bypasses the ProStaff Scraper — queries Leaguepedia directly.
+      #
+      # @param overview_page [String] required — Leaguepedia OverviewPage
+      # @param our_team      [String] required — team name as in Leaguepedia
+      def diagnose_missing
+        overview_page = params.require(:overview_page)
+        our_team      = params[:our_team].presence
+        raise ActionController::ParameterMissing.new(:our_team) if our_team.blank?
+
+        service = ::Competitive::Services::LeaguepediaRecoveryService.new(current_organization)
+        games   = service.diagnose_missing(overview_page: overview_page, our_team: our_team)
+
+        missing = games.reject { |g| g[:present_in_db] }
+        present = games.select { |g| g[:present_in_db] }
+
+        render json: {
+          message: "Diagnosis complete for #{our_team}",
+          data: {
+            overview_page: overview_page,
+            our_team: our_team,
+            total_in_leaguepedia: games.size,
+            present_in_db: present.size,
+            missing_count: missing.size,
+            missing_games: missing,
+            present_games: present
+          }
+        }
+      rescue ActionController::ParameterMissing => e
+        render json: { error: { code: 'MISSING_PARAM', message: e.message } },
+               status: :unprocessable_entity
+      rescue StandardError => e
+        Rails.logger.error "[ProMatches#diagnose_missing] #{e.message}"
+        render json: { error: { code: 'LEAGUEPEDIA_ERROR', message: e.message } },
+               status: :service_unavailable
+      end
+
+      # POST /api/v1/competitive/pro-matches/recover-missing
+      # Recover missing games by querying Leaguepedia Cargo API directly.
+      # Bypasses the ProStaff Scraper — no SCRAPER_API_KEY required.
+      #
+      # Flow:
+      #   1. Fetch all ScoreboardGames for the overview_page from Leaguepedia
+      #   2. Filter to games involving our_team
+      #   3. Skip games already present in the DB (by external_match_id)
+      #   4. For each missing game, fetch ScoreboardPlayers and import
+      #
+      # @param overview_page [String] required — Leaguepedia OverviewPage
+      # @param our_team      [String] required — team name as in Leaguepedia
+      # @param stage         [String] optional — filter to a specific stage
+      def recover_missing
+        overview_page = params.require(:overview_page)
+        our_team      = params[:our_team].presence
+        raise ActionController::ParameterMissing.new(:our_team) if our_team.blank?
+
+        stage = params[:stage].presence
+
+        service = ::Competitive::Services::LeaguepediaRecoveryService.new(current_organization)
+        result  = service.recover_missing(
+          overview_page: overview_page,
+          our_team: our_team,
+          stage: stage
+        )
+
+        render json: {
+          message: "Recovery complete for #{our_team} in #{overview_page}",
+          data: {
+            overview_page: overview_page,
+            our_team: our_team,
+            stage: stage,
+            stats: result
+          }
+        }, status: :ok
+      rescue ActionController::ParameterMissing => e
+        render json: { error: { code: 'MISSING_PARAM', message: e.message } },
+               status: :unprocessable_entity
+      rescue StandardError => e
+        Rails.logger.error "[ProMatches#recover_missing] #{e.message}"
+        render json: { error: { code: 'LEAGUEPEDIA_ERROR', message: e.message } },
+               status: :service_unavailable
+      end
+
       # POST /api/v1/competitive/pro-matches/import
       # Import a match from PandaScore to our database
       def import

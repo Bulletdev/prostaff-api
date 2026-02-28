@@ -102,6 +102,66 @@ class ProStaffScraperService
     parse_json(response)
   end
 
+  # List all main-event tournament OverviewPages for a league from Leaguepedia.
+  #
+  # Queries Leaguepedia Tournaments table live. Useful to preview which
+  # editions exist before triggering the historical backfill.
+  #
+  # @param league   [String]  e.g. 'CBLOL', 'LCS', 'LEC'
+  # @param min_year [Integer] ignore tournaments before this year (default 2013)
+  # @return [Hash] with keys :league, :total_main_events, :tournaments
+  def list_tournaments(league: 'CBLOL', min_year: 2013)
+    response = get(
+      '/api/v1/tournaments',
+      { league: league, min_year: min_year },
+      authenticated: true
+    )
+    parse_json(response)
+  end
+
+  # Trigger the full historical backfill for a league on the scraper.
+  #
+  # Discovers all tournament editions on Leaguepedia and imports every game
+  # into Elasticsearch. The pipeline is resumable — re-calling this method
+  # skips already-completed tournaments.
+  #
+  # A full CBLOL history (~30 tournaments × ~60 games) takes ~6 hours.
+  # The scraper runs this in the background and returns immediately.
+  #
+  # @param league   [String]  e.g. 'CBLOL', 'LCS'
+  # @param min_year [Integer] ignore tournaments before this year (default 2013)
+  # @return [Hash] scraper response with message and progress_file
+  def trigger_historical_backfill(league: 'CBLOL', min_year: 2013)
+    response = post(
+      '/api/v1/historical-backfill',
+      { league: league, min_year: min_year },
+      authenticated: true
+    )
+    parse_json(response)
+  end
+
+  # Fetch current progress of the historical backfill for a league.
+  #
+  # Returns a breakdown of how many tournaments are completed, pending or errored,
+  # plus per-tournament details and total games indexed.
+  #
+  # @param league [String] e.g. 'CBLOL', 'LCS'
+  # @return [Hash] progress state from the scraper's progress JSON file
+  def historical_backfill_status(league: 'CBLOL')
+    cache_key = "scraper:backfill_status:#{league}"
+    cached = Rails.cache.read(cache_key)
+    return cached if cached
+
+    response = get(
+      '/api/v1/historical-backfill/status',
+      { league: league },
+      authenticated: true
+    )
+    result = parse_json(response)
+    Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_STATUS)
+    result
+  end
+
   private
 
   def connection
