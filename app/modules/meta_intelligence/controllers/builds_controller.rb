@@ -20,7 +20,7 @@ module MetaIntelligence
     #   POST /api/v1/meta/builds/aggregate
     class BuildsController < Api::V1::BaseController
       before_action :set_build, only: %i[show update destroy]
-      before_action :require_admin!, only: %i[aggregate]
+      before_action -> { require_role!('owner', 'admin', 'coach') }, only: %i[aggregate]
 
       # GET /api/v1/meta/builds
       #
@@ -93,7 +93,7 @@ module MetaIntelligence
       # POST /api/v1/meta/builds/aggregate
       #
       # Enqueues UpdateMetaStatsJob for the current organization.
-      # Only owners and admins can trigger this.
+      # Accessible by owners, admins, and coaches.
       #
       # @param [String] scope   'org' (default) or 'org+scouting'
       # @param [String] patch   specific patch to aggregate (optional)
