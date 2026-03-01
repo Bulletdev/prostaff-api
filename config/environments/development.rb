@@ -12,9 +12,8 @@ Rails.application.configure do
 
   config.eager_load = false
 
-  # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
-  # We want detailed exceptions in development environment
-  config.consider_all_requests_local = true
+  # Intentional: development needs full error reports for debugging
+  config.consider_all_requests_local = true # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
 
   config.server_timing = true
 
@@ -80,13 +79,15 @@ Rails.application.configure do
   # ActiveJob configuration - use Sidekiq in development
   config.active_job.queue_adapter = :sidekiq
 
-  # Bullet for N+1 query detection
-  # Uncomment if using Bullet gem
-  # config.after_initialize do
-  #   Bullet.enable = true
-  #   Bullet.alert = true
-  #   Bullet.bullet_logger = true
-  #   Bullet.console = true
-  #   Bullet.rails_logger = true
-  # end
+  # Bullet — N+1 query detection
+  config.after_initialize do
+    Bullet.enable        = true
+    Bullet.bullet_logger = true                    # log/bullet.log
+    Bullet.rails_logger  = true                    # log/development.log
+    Bullet.add_footer    = false                   # API-only, sem HTML footer
+    Bullet.raise         = false                   # não levantar exceção em dev
+
+    # Ignore associations que são consultadas via SQL puro (não associação AR)
+    # Bullet.add_safelist type: :n_plus_one_query, class_name: 'Foo', association: :bar
+  end
 end

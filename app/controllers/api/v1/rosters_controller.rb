@@ -93,11 +93,14 @@ module Api
 
         result = paginate(players)
 
+        # Preload organizations in a single query to avoid N+1 on previous_organization_id
+        org_ids = result[:data].map(&:previous_organization_id).compact.uniq
+        orgs_by_id = org_ids.any? ? Organization.where(id: org_ids).index_by(&:id) : {}
+
         free_agents_data = result[:data].map do |player|
           {
             player: PlayerSerializer.render_as_hash(player),
-            previous_organization: player.previous_organization_id ?
-              Organization.find(player.previous_organization_id).name : nil,
+            previous_organization: orgs_by_id[player.previous_organization_id]&.name,
             removed_at: player.deleted_at,
             removed_reason: player.removed_reason
           }
