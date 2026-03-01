@@ -25,9 +25,11 @@ module Api
 
       # Scheduled jobs to monitor. Each entry defines the job class name,
       # expected run interval, and the threshold after which it is considered stale.
+      # Names must match self.class.name inside each job (after Zeitwerk namespace
+      # resolution) because record_job_heartbeat uses "prostaff:job_heartbeat:#{name}".
       SCHEDULED_JOBS = [
-        { name: 'RefreshMetadataViewsJob',  interval_hours: 2,  alert_after_hours: 3  },
-        { name: 'CleanupExpiredTokensJob',  interval_hours: 24, alert_after_hours: 25 }
+        { name: 'Analytics::RefreshMetadataViewsJob',      interval_hours: 2,  alert_after_hours: 3  },
+        { name: 'Authentication::CleanupExpiredTokensJob',  interval_hours: 24, alert_after_hours: 25 }
       ].freeze
 
       # GET /api/v1/monitoring/sidekiq
