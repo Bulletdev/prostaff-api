@@ -9,7 +9,7 @@ module Competitive
       def compare
         validate_draft_params!
 
-        comparison = ::Competitive::Services::DraftComparatorService.compare_draft(
+        comparison = DraftComparatorService.compare_draft(
           our_picks: params[:our_picks],
           opponent_picks: params[:opponent_picks] || [],
           our_bans: params[:our_bans] || [],
@@ -20,7 +20,7 @@ module Competitive
 
         render json: {
           message: 'Draft comparison completed successfully',
-          data: ::Competitive::Serializers::DraftComparisonSerializer.render_as_hash(comparison)
+          data: DraftComparisonSerializer.render_as_hash(comparison)
         }
       rescue ArgumentError => e
         render json: {
@@ -48,7 +48,7 @@ module Competitive
 
         raise ArgumentError, 'Role is required' if role.blank?
 
-        meta_data = ::Competitive::Services::DraftComparatorService.new.meta_analysis(
+        meta_data = DraftComparatorService.new.meta_analysis(
           role: role,
           patch: patch
         )
@@ -74,7 +74,7 @@ module Competitive
 
         raise ArgumentError, 'Champions array is required' if champions.blank?
 
-        winrate = ::Competitive::Services::DraftComparatorService.new.composition_winrate(
+        winrate = DraftComparatorService.new.composition_winrate(
           champions: champions,
           patch: patch
         )
@@ -106,7 +106,7 @@ module Competitive
 
         raise ArgumentError, 'opponent_pick and role are required' if opponent_pick.blank? || role.blank?
 
-        counters = ::Competitive::Services::DraftComparatorService.new.suggest_counters(
+        counters = DraftComparatorService.new.suggest_counters(
           opponent_pick: opponent_pick,
           role: role,
           patch: patch

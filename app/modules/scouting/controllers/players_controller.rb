@@ -1,424 +1,369 @@
 # frozen_string_literal: true
 
-module Api
-  module V1
-    module Scouting
-      # Scouting Players Controller
-      # Manages GLOBAL scouting targets and org-specific watchlists
-      class PlayersController < Api::V1::BaseController
-        before_action :set_scouting_target, only: %i[show update destroy sync]
+module Scouting
+  module Controllers
+    # Scouting Players Controller
+    # Manages GLOBAL scouting targets and org-specific watchlists
+    class PlayersController < Api::V1::BaseController
+      before_action :set_scouting_target, only: %i[show update destroy sync]
 
-        # GET /api/v1/scouting/players
-        # Returns global scouting targets with optional watchlist filtering
-        def index
-          # Start with global scouting targets
-          targets = ScoutingTarget.includes(:scouting_watchlists)
+      # GET /api/v1/scouting/players
+      # Returns global scouting targets with optional watchlist filtering
+      def index
+        # Start with global scouting targets
+        targets = ScoutingTarget.includes(:scouting_watchlists)
 
-          # Filter by watchlist if requested
-          if params[:my_watchlist] == 'true'
-            targets = targets.joins(:scouting_watchlists)
-                            .where(scouting_watchlists: { organization_id: current_organization.id })
-          end
-
-          # Apply global filters
-          targets = apply_filters(targets)
-          targets = apply_sorting(targets)
-
-          result = paginate(targets)
-
-          # Serialize with watchlist context
-          players_data = result[:data].map do |target|
-            watchlist = target.scouting_watchlists.find { |w| w.organization_id == current_organization.id }
-            JSON.parse(ScoutingTargetSerializer.render(target, watchlist: watchlist))
-          end
-
-          render_success({
-                           players: players_data,
-                           total: result[:pagination][:total_count],
-                           page: result[:pagination][:current_page],
-                           per_page: result[:pagination][:per_page],
-                           total_pages: result[:pagination][:total_pages]
-                         })
+        # Filter by watchlist if requested
+        if params[:my_watchlist] == 'true'
+          targets = targets.joins(:scouting_watchlists)
+                           .where(scouting_watchlists: { organization_id: current_organization.id })
         end
 
-        # GET /api/v1/scouting/players/:id
-        def show
-          watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+        # Apply global filters
+        targets = apply_filters(targets)
+        targets = apply_sorting(targets)
 
-          render_success({
-                           scouting_target: JSON.parse(
-                             ScoutingTargetSerializer.render(@target, watchlist: watchlist)
-                           )
-                         })
+        result = paginate(targets)
+
+        # Serialize with watchlist context
+        players_data = result[:data].map do |target|
+          watchlist = target.scouting_watchlists.find { |w| w.organization_id == current_organization.id }
+          JSON.parse(ScoutingTargetSerializer.render(target, watchlist: watchlist))
         end
 
-        # POST /api/v1/scouting/players
-        # Creates/finds global target and adds to org watchlist
-        def create
-          ActiveRecord::Base.transaction do
-            # Find or create global scouting target
-            target = find_or_create_target!
+        render_success({
+                         players: players_data,
+                         total: result[:pagination][:total_count],
+                         page: result[:pagination][:current_page],
+                         per_page: result[:pagination][:per_page],
+                         total_pages: result[:pagination][:total_pages]
+                       })
+      end
 
-            # Create watchlist entry for this organization
-            watchlist = target.scouting_watchlists.create!(
-              organization: current_organization,
-              added_by: current_user,
-              priority: watchlist_params[:priority] || 'medium',
-              status: watchlist_params[:status] || 'watching',
-              notes: watchlist_params[:notes],
-              assigned_to_id: watchlist_params[:assigned_to_id]
-            )
+      # GET /api/v1/scouting/players/:id
+      def show
+        watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
 
-            log_user_action(
-              action: 'create',
-              entity_type: 'ScoutingWatchlist',
-              entity_id: watchlist.id,
-              new_values: watchlist.attributes
-            )
+        render_success({
+                         scouting_target: JSON.parse(
+                           ScoutingTargetSerializer.render(@target, watchlist: watchlist)
+                         )
+                       })
+      end
 
-            render_created({
-                             scouting_target: JSON.parse(
-                               ScoutingTargetSerializer.render(target, watchlist: watchlist)
-                             )
-                           }, message: 'Scouting target added successfully')
-          end
-        rescue ActiveRecord::RecordInvalid => e
-          render_error(
-            message: 'Failed to add scouting target',
-            code: 'VALIDATION_ERROR',
-            status: :unprocessable_entity,
-            details: e.record.errors.as_json
+      # POST /api/v1/scouting/players
+      # Creates/finds global target and adds to org watchlist
+      def create
+        ActiveRecord::Base.transaction do
+          target = find_or_create_target!
+          watchlist = create_watchlist_for(target)
+          log_user_action(action: 'create', entity_type: 'ScoutingWatchlist',
+                          entity_id: watchlist.id, new_values: watchlist.attributes)
+          render_created(
+            { scouting_target: JSON.parse(ScoutingTargetSerializer.render(target, watchlist: watchlist)) },
+            message: 'Scouting target added successfully'
           )
         end
+      rescue ActiveRecord::RecordInvalid => e
+        render_error(
+          message: 'Failed to add scouting target',
+          code: 'VALIDATION_ERROR',
+          status: :unprocessable_entity,
+          details: e.record.errors.as_json
+        )
+      end
 
-        # PATCH /api/v1/scouting/players/:id
-        # Updates global target data OR watchlist data
-        def update
-          ActiveRecord::Base.transaction do
-            # Update global target fields if provided
-            if target_params.any?
-              @target.update!(target_params)
-            end
-
-            # Update watchlist fields if provided
-            if watchlist_params.any?
-              watchlist = @target.scouting_watchlists.find_or_create_by!(organization: current_organization) do |w|
-                w.added_by = current_user
-              end
-
-              old_values = watchlist.attributes.dup
-              watchlist.update!(watchlist_params)
-
-              log_user_action(
-                action: 'update',
-                entity_type: 'ScoutingWatchlist',
-                entity_id: watchlist.id,
-                old_values: old_values,
-                new_values: watchlist.attributes
-              )
-            end
-
-            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
-
-            render_updated({
-                             scouting_target: JSON.parse(
-                               ScoutingTargetSerializer.render(@target, watchlist: watchlist)
-                             )
-                           })
-          end
-        rescue ActiveRecord::RecordInvalid => e
-          render_error(
-            message: 'Failed to update scouting target',
-            code: 'VALIDATION_ERROR',
-            status: :unprocessable_entity,
-            details: e.record.errors.as_json
-          )
+      # PATCH /api/v1/scouting/players/:id
+      # Updates global target data OR watchlist data
+      def update
+        ActiveRecord::Base.transaction do
+          @target.update!(target_params) if target_params.any?
+          update_watchlist_if_params_present
+          render_updated(serialized_target_response)
         end
+      rescue ActiveRecord::RecordInvalid => e
+        render_error(
+          message: 'Failed to update scouting target',
+          code: 'VALIDATION_ERROR',
+          status: :unprocessable_entity,
+          details: e.record.errors.as_json
+        )
+      end
 
-        # DELETE /api/v1/scouting/players/:id
-        # Removes from org's watchlist (doesn't delete global target)
-        def destroy
-          watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+      # DELETE /api/v1/scouting/players/:id
+      # Removes from org's watchlist (doesn't delete global target)
+      def destroy
+        watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
 
-          if watchlist
-            watchlist.destroy
+        return render_error(message: 'Not in your watchlist', code: 'NOT_FOUND', status: :not_found) unless watchlist
 
-            log_user_action(
-              action: 'delete',
-              entity_type: 'ScoutingWatchlist',
-              entity_id: watchlist.id,
-              old_values: watchlist.attributes
-            )
+        watchlist.destroy
+        log_user_action(action: 'delete', entity_type: 'ScoutingWatchlist',
+                        entity_id: watchlist.id, old_values: watchlist.attributes)
+        render_deleted(message: 'Removed from watchlist')
+      end
 
-            render_deleted(message: 'Removed from watchlist')
-          else
-            render_error(
-              message: 'Not in your watchlist',
-              code: 'NOT_FOUND',
-              status: :not_found
-            )
-          end
-        end
-
-        def sync
-          return render_error_no_puuid unless @target.riot_puuid.present?
-
-          # Try to find an existing player (active or soft-deleted) with this PUUID
-          player = find_player_by_puuid(@target.riot_puuid)
-
-          if player
-            # Player exists - sync from their data
-            sync_result = sync_from_existing_player(player)
-          else
-            # Player doesn't exist - sync from Riot API
-            sync_result = sync_from_riot_api
-          end
-
-          if sync_result[:success]
-            watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
-            render_success({
-                             scouting_target: JSON.parse(
-                               ScoutingTargetSerializer.render(@target.reload, watchlist: watchlist)
-                             ),
-                             message: sync_result[:message]
-                           })
-          else
-            render_error(
-              message: sync_result[:error],
-              code: sync_result[:code] || 'SYNC_ERROR',
-              status: :unprocessable_entity
-            )
-          end
-        rescue StandardError => e
-          Rails.logger.error("Scouting sync error: #{e.message}")
-          Rails.logger.error(e.backtrace.join("\n"))
-          render_error(
-            message: "Failed to sync scouting target: #{e.message}",
-            code: 'SYNC_ERROR',
-            status: :internal_server_error
-          )
-        end
-
-        private
-
-        def find_or_create_target!
-          if scouting_target_params[:riot_puuid].present?
-            # Find by PUUID (global uniqueness)
-            target = ScoutingTarget.find_or_initialize_by(riot_puuid: scouting_target_params[:riot_puuid])
-          else
-            # Create new without PUUID
-            target = ScoutingTarget.new
-          end
-
-          target.assign_attributes(scouting_target_params)
-          target.save!
-          target
-        end
-
-        def apply_filters(targets)
-          targets = apply_basic_filters(targets)
-          targets = apply_age_range_filter(targets)
-          targets = apply_rank_range_filter(targets)
-          apply_search_filter(targets)
-        end
-
-        def apply_basic_filters(targets)
-          targets = targets.by_role(params[:role]) if params[:role].present?
-          targets = targets.by_status(params[:status]) if params[:status].present?
-          targets = targets.by_region(params[:region]) if params[:region].present?
-
-          # Filter by watchlist fields if in watchlist mode
-          if params[:my_watchlist] == 'true'
-            targets = targets.where(scouting_watchlists: { priority: params[:priority] }) if params[:priority].present?
-            if params[:assigned_to_id].present?
-              targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] })
-            end
-          end
-
-          targets
-        end
-
-        def apply_age_range_filter(targets)
-          return targets unless params[:age_range].present? && params[:age_range].is_a?(Array)
-
-          min_age, max_age = params[:age_range]
-          min_age && max_age ? targets.where(age: min_age..max_age) : targets
-        end
-
-        def apply_rank_range_filter(targets)
-          return targets unless params[:rank_range].present?
-
-          # Rank range filtering by LP
-          min_lp, max_lp = params[:rank_range]
-          min_lp && max_lp ? targets.where(current_lp: min_lp..max_lp) : targets
-        end
-
-        def apply_search_filter(targets)
-          return targets unless params[:search].present?
-
-          search_term = "%#{params[:search]}%"
-          targets.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
-        end
-
-        def apply_sorting(targets)
-          sort_by, sort_order = validate_sort_params
-
-          case sort_by
-          when 'rank'
-            apply_rank_sorting(targets, sort_order)
-          when 'winrate'
-            apply_winrate_sorting(targets, sort_order)
-          else
-            targets.order(sort_by => sort_order)
-          end
-        end
-
-        def validate_sort_params
-          allowed_sort_fields = %w[created_at updated_at summoner_name current_tier priority status role region age rank
-                                   winrate]
-          allowed_sort_orders = %w[asc desc]
-
-          sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
-          sort_order = if allowed_sort_orders.include?(params[:sort_order]&.downcase)
-                         params[:sort_order].downcase
-                       else
-                         'desc'
-                       end
-
-          [sort_by, sort_order]
-        end
-
-        def apply_rank_sorting(targets, sort_order)
-          column = ScoutingTarget.arel_table[:current_lp]
-          order_clause = sort_order == 'asc' ? column.asc.nulls_last : column.desc.nulls_last
-          targets.order(order_clause)
-        end
-
-        def apply_winrate_sorting(targets, sort_order)
-          column = ScoutingTarget.arel_table[:performance_trend]
-          order_clause = sort_order == 'asc' ? column.asc.nulls_last : column.desc.nulls_last
-          targets.order(order_clause)
-        end
-
-        def set_scouting_target
-          # ScoutingTarget is global, but access is controlled by user role
-          # Using policy_scope ensures only authorized users (coach+) can access
-          authorized_targets = policy_scope(ScoutingTarget)
-          @target = authorized_targets.find_by(id: params[:id])
-
-          # Raise not found if target doesn't exist or user isn't authorized
-          raise ActiveRecord::RecordNotFound, "ScoutingTarget not found" unless @target
-        end
-
-        def scouting_target_params
-          params.require(:scouting_target).permit(
-            :summoner_name, :real_name, :player_role, :region, :nationality,
-            :age, :status, :current_team,
-            :current_tier, :current_rank, :current_lp,
-            :peak_tier, :peak_rank,
-            :riot_puuid, :riot_summoner_id,
-            :email, :phone, :discord_username, :twitter_handle,
-            :notes, :availability, :salary_expectations,
-            :performance_trend,
-            champion_pool: []
-          )
-        end
-
-        def watchlist_params
-          params.fetch(:watchlist, {}).permit(
-            :priority, :status, :notes, :assigned_to_id
-          )
-        end
-
-        def target_params
-          params.fetch(:target, {}).permit(
-            :summoner_name, :real_name, :player_role, :region, :nationality,
-            :age, :status, :current_team,
-            :current_tier, :current_rank, :current_lp,
-            :peak_tier, :peak_rank,
-            :riot_puuid, :riot_summoner_id,
-            :email, :phone, :discord_username, :twitter_handle,
-            :notes,
-            champion_pool: []
-          )
-        end
-
-        # Find player by PUUID (including soft-deleted)
-        def find_player_by_puuid(puuid)
-          Player.with_deleted.find_by(riot_puuid: puuid)
-        end
-
-        # Sync from existing player in database
-        def sync_from_existing_player(player)
-          # Use RosterManagementService to calculate stats
-          service = Players::RosterManagementService.new(
-            player: player,
-            organization: player.organization,
-            current_user: current_user
-          )
-
-          # Check if player has enough matches
-          current_match_count = player.player_match_stats.count
-          if current_match_count < 50
-            # Try to sync more matches from Riot
-            begin
-              sync_service = Players::Services::RiotSyncService.new(player.organization, player.region)
-              imported = service.send(:sync_player_matches_comprehensive, sync_service, 50)
-              Rails.logger.info("Imported #{imported} additional matches during scouting sync")
-            rescue StandardError => e
-              Rails.logger.warn("Failed to import additional matches: #{e.message}")
-            end
-          end
-
-          # Calculate comprehensive stats
-          recent_perf = service.send(:calculate_recent_performance, player, limit: 50)
-          champion_stats = service.send(:calculate_champion_stats, player, limit: 50)
-          trend = service.send(:calculate_performance_trend, player, limit: 50)
-          recent_perf[:champion_pool_stats] = champion_stats
-
-          # Update scouting target
-          @target.update!(
-            summoner_name: player.summoner_name,
-            region: service.send(:normalize_region, player.region),
-            role: player.role,
-            current_tier: player.solo_queue_tier,
-            current_rank: player.solo_queue_rank,
-            current_lp: player.solo_queue_lp,
-            champion_pool: service.send(:calculate_champion_pool_from_stats, player),
-            recent_performance: recent_perf,
-            performance_trend: trend,
-            real_name: player.real_name,
-            avatar_url: player.avatar_url,
-            twitter_handle: player.twitter_handle
-          )
-
-          {
-            success: true,
-            message: "Synced from player database (#{player.player_match_stats.count} matches analyzed)"
-          }
-        rescue StandardError => e
-          Rails.logger.error("Error syncing from player: #{e.message}")
-          { success: false, error: e.message, code: 'PLAYER_SYNC_ERROR' }
-        end
-
-        # Sync from Riot API (when player doesn't exist in database)
-        def sync_from_riot_api
-          # This would require creating a temporary player or using Riot API directly
-          # For now, return not implemented for this case
-          {
-            success: false,
-            error: 'Player not found in database. Add to roster first to enable sync.',
-            code: 'PLAYER_NOT_IN_DATABASE'
-          }
-        end
-
-        # Error response when PUUID is missing
-        def render_error_no_puuid
-          render_error(
-            message: 'Cannot sync: Riot PUUID is required',
-            code: 'PUUID_REQUIRED',
+      def sync
+        unless @target.riot_puuid.present?
+          return render_error(
+            message: 'Cannot sync player without Riot PUUID',
+            code: 'MISSING_PUUID',
             status: :unprocessable_entity
           )
+        end
+
+        perform_sync_from_riot
+      rescue RiotApiService::NotFoundError
+        render_error(message: 'Player not found in Riot API', code: 'PLAYER_NOT_FOUND', status: :not_found)
+      rescue RiotApiService::RiotApiError => e
+        render_error(message: "Failed to sync player data: #{e.message}", code: 'RIOT_API_ERROR',
+                     status: :service_unavailable)
+      end
+
+      private
+
+      def create_watchlist_for(target)
+        target.scouting_watchlists.create!(
+          organization: current_organization,
+          added_by: current_user,
+          priority: watchlist_params[:priority] || 'medium',
+          status: watchlist_params[:status] || 'watching',
+          notes: watchlist_params[:notes],
+          assigned_to_id: watchlist_params[:assigned_to_id]
+        )
+      end
+
+      def update_watchlist_if_params_present
+        return unless watchlist_params.any?
+
+        watchlist = @target.scouting_watchlists.find_or_create_by!(organization: current_organization) do |w|
+          w.added_by = current_user
+        end
+        old_values = watchlist.attributes.dup
+        watchlist.update!(watchlist_params)
+        log_user_action(action: 'update', entity_type: 'ScoutingWatchlist',
+                        entity_id: watchlist.id, old_values: old_values, new_values: watchlist.attributes)
+      end
+
+      def serialized_target_response
+        watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+        { scouting_target: JSON.parse(ScoutingTargetSerializer.render(@target, watchlist: watchlist)) }
+      end
+
+      def perform_sync_from_riot
+        riot_service = RiotApiService.new
+        region = @target.region
+
+        # Get account info for name (Riot API no longer returns name in summoner endpoint)
+        account_data = riot_service.get_account_by_puuid(puuid: @target.riot_puuid, region: region)
+        riot_service.get_summoner_by_puuid(puuid: @target.riot_puuid, region: region)
+        # Use PUUID to get league entries (Riot API no longer returns summoner_id)
+        league_data = riot_service.get_league_entries_by_puuid(puuid: @target.riot_puuid, region: region)
+        mastery_data = riot_service.get_champion_mastery(puuid: @target.riot_puuid, region: region)
+
+        @target.update!(
+          # riot_summoner_id is no longer returned by Riot API
+          summoner_name: "#{account_data[:game_name]}##{account_data[:tag_line]}",
+          current_tier: league_data[:solo_queue]&.dig(:tier),
+          current_rank: league_data[:solo_queue]&.dig(:rank),
+          current_lp: league_data[:solo_queue]&.dig(:lp),
+          champion_pool: extract_champion_pool(mastery_data),
+          performance_trend: calculate_performance_trend(league_data)
+        )
+
+        watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+        render_success(
+          { scouting_target: JSON.parse(ScoutingTargetSerializer.render(@target, watchlist: watchlist)) },
+          message: 'Player data synced successfully'
+        )
+      end
+
+      def find_or_create_target!
+        target = if scouting_target_params[:riot_puuid].present?
+                   # Find by PUUID (global uniqueness)
+                   ScoutingTarget.find_or_initialize_by(riot_puuid: scouting_target_params[:riot_puuid])
+                 else
+                   # Create new without PUUID
+                   ScoutingTarget.new
+                 end
+
+        target.assign_attributes(scouting_target_params)
+        target.save!
+        target
+      end
+
+      def apply_filters(targets)
+        targets = apply_basic_filters(targets)
+        targets = apply_age_range_filter(targets)
+        targets = apply_rank_range_filter(targets)
+        apply_search_filter(targets)
+      end
+
+      def apply_basic_filters(targets)
+        targets = targets.by_role(params[:role]) if params[:role].present?
+        targets = targets.by_status(params[:status]) if params[:status].present?
+        targets = targets.by_region(params[:region]) if params[:region].present?
+
+        # Filter by watchlist fields if in watchlist mode
+        if params[:my_watchlist] == 'true'
+          targets = targets.where(scouting_watchlists: { priority: params[:priority] }) if params[:priority].present?
+          if params[:assigned_to_id].present?
+            targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] })
+          end
+        end
+
+        targets
+      end
+
+      def apply_age_range_filter(targets)
+        return targets unless params[:age_range].present? && params[:age_range].is_a?(Array)
+
+        min_age, max_age = params[:age_range]
+        min_age && max_age ? targets.where(age: min_age..max_age) : targets
+      end
+
+      def apply_rank_range_filter(targets)
+        return targets unless params[:rank_range].present?
+
+        # Rank range filtering by LP
+        min_lp, max_lp = params[:rank_range]
+        min_lp && max_lp ? targets.where(current_lp: min_lp..max_lp) : targets
+      end
+
+      def apply_search_filter(targets)
+        return targets unless params[:search].present?
+
+        meili = SearchService.scope(ScoutingTarget, query: params[:search])
+        return meili if meili
+
+        # Fallback to SQL when Meilisearch is unavailable
+        search_term = "%#{params[:search]}%"
+        targets.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
+      end
+
+      def apply_sorting(targets)
+        sort_by, sort_order = validate_sort_params
+
+        case sort_by
+        when 'rank'
+          apply_rank_sorting(targets, sort_order)
+        when 'winrate'
+          apply_winrate_sorting(targets, sort_order)
+        else
+          targets.order(sort_by => sort_order)
+        end
+      end
+
+      def validate_sort_params
+        allowed_sort_fields = %w[created_at updated_at summoner_name current_tier priority status role region age rank
+                                 winrate]
+        allowed_sort_orders = %w[asc desc]
+
+        sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
+        sort_order = if allowed_sort_orders.include?(params[:sort_order]&.downcase)
+                       params[:sort_order].downcase
+                     else
+                       'desc'
+                     end
+
+        [sort_by, sort_order]
+      end
+
+      def apply_rank_sorting(targets, sort_order)
+        column = ScoutingTarget.arel_table[:current_lp]
+        order_clause = sort_order == 'asc' ? column.asc.nulls_last : column.desc.nulls_last
+        targets.order(order_clause)
+      end
+
+      def apply_winrate_sorting(targets, sort_order)
+        column = ScoutingTarget.arel_table[:performance_trend]
+        order_clause = sort_order == 'asc' ? column.asc.nulls_last : column.desc.nulls_last
+        targets.order(order_clause)
+      end
+
+      def set_scouting_target
+        @target = ScoutingTarget.find_by!(id: params[:id])
+      end
+
+      def scouting_target_params
+        params.require(:scouting_target).permit(
+          :summoner_name, :real_name, :player_role, :region, :nationality,
+          :age, :status, :current_team,
+          :current_tier, :current_rank, :current_lp,
+          :peak_tier, :peak_rank,
+          :riot_puuid, :riot_summoner_id,
+          :email, :phone, :discord_username, :twitter_handle,
+          :notes, :availability, :salary_expectations,
+          :performance_trend,
+          champion_pool: []
+        )
+      end
+
+      def watchlist_params
+        params.fetch(:watchlist, {}).permit(
+          :priority, :status, :notes, :assigned_to_id
+        )
+      end
+
+      def target_params
+        params.fetch(:target, {}).permit(
+          :summoner_name, :real_name, :player_role, :region, :nationality,
+          :age, :status, :current_team,
+          :current_tier, :current_rank, :current_lp,
+          :peak_tier, :peak_rank,
+          :riot_puuid, :riot_summoner_id,
+          :email, :phone, :discord_username, :twitter_handle,
+          :notes,
+          champion_pool: []
+        )
+      end
+
+      # Extract top champions from mastery data
+      def extract_champion_pool(mastery_data)
+        return [] if mastery_data.blank?
+
+        # Get top 10 champions by mastery points
+        mastery_data.first(10).map do |mastery|
+          champion_id_to_name(mastery[:champion_id])
+        end.compact
+      end
+
+      # Simple champion ID to name mapping (top champions)
+      def champion_id_to_name(champion_id)
+        # This is a simplified mapping - in production you'd want a complete mapping
+        # or fetch from Data Dragon API
+        champion_map = {
+          1 => 'Annie', 2 => 'Olaf', 3 => 'Galio', 4 => 'Twisted Fate',
+          5 => 'Xin Zhao', 6 => 'Urgot', 7 => 'LeBlanc', 8 => 'Vladimir',
+          9 => 'Fiddlesticks', 10 => 'Kayle', 11 => 'Master Yi', 12 => 'Alistar',
+          13 => 'Ryze', 14 => 'Sion', 15 => 'Sivir', 16 => 'Soraka',
+          17 => 'Teemo', 18 => 'Tristana', 19 => 'Warwick', 20 => 'Nunu',
+          21 => 'Miss Fortune', 22 => 'Ashe', 23 => 'Tryndamere', 24 => 'Jax',
+          25 => 'Morgana', 26 => 'Zilean', 27 => 'Singed', 28 => 'Evelynn',
+          29 => 'Twitch', 30 => 'Karthus', 31 => 'Cho\'Gath', 32 => 'Amumu',
+          33 => 'Rammus', 34 => 'Anivia', 35 => 'Shaco', 36 => 'Dr. Mundo'
+          # Add more as needed or fetch from Data Dragon
+        }
+        champion_map[champion_id] || "Champion_#{champion_id}"
+      end
+
+      # Calculate performance trend based on win/loss ratio
+      def calculate_performance_trend(league_data)
+        solo_queue = league_data[:solo_queue]
+        return 'stable' unless solo_queue
+
+        wins = solo_queue[:wins] || 0
+        losses = solo_queue[:losses] || 0
+        total_games = wins + losses
+
+        return 'stable' if total_games.zero?
+
+        win_rate = (wins.to_f / total_games * 100).round(2)
+
+        case win_rate
+        when 0..45 then 'declining'
+        when 45..52 then 'stable'
+        else 'improving'
         end
       end
     end

@@ -23,7 +23,7 @@ class JwtAuthentication
   def call(env)
     begin
       authenticate_request(env)
-    rescue Authentication::Services::JwtService::AuthenticationError => e
+    rescue JwtService::AuthenticationError => e
       return unauthorized_response(e.message)
     end
 
@@ -42,7 +42,7 @@ class JwtAuthentication
     return if token.nil? # Let controller handle missing token
 
     # Decode and verify token
-    payload = Authentication::Services::JwtService.decode(token)
+    payload = JwtService.decode(token)
 
     # Store decoded payload for controllers
     env['rack.jwt.payload'] = payload
@@ -50,7 +50,7 @@ class JwtAuthentication
     if payload[:entity_type] == 'player'
       # Player individual access token
       player = Player.find(payload[:player_id])
-      raise Authentication::Services::JwtService::AuthenticationError, 'Player access disabled' unless player.player_access_enabled?
+      raise JwtService::AuthenticationError, 'Player access disabled' unless player.player_access_enabled?
 
       env['current_player'] = player
       env['current_organization'] = player.organization
@@ -61,7 +61,7 @@ class JwtAuthentication
       env['current_organization'] = user.organization
     end
   rescue ActiveRecord::RecordNotFound
-    raise Authentication::Services::JwtService::AuthenticationError, 'Entity not found'
+    raise JwtService::AuthenticationError, 'Entity not found'
   end
 
   def extract_token(request)

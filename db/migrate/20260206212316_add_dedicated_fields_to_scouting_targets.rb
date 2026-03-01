@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddDedicatedFieldsToScoutingTargets < ActiveRecord::Migration[7.2]
   def change
     add_column :scouting_targets, :real_name, :string

@@ -14,7 +14,7 @@ Rails.application.configure do
       user_agent: event.payload[:headers]&.[]('User-Agent'),
       remote_ip: event.payload[:headers]&.[]('REMOTE_ADDR'),
       params: event.payload[:params]
-                      &.except('controller', 'action', 'format', '_method', 'authenticity_token')
+                   &.except('controller', 'action', 'format', '_method', 'authenticity_token')
     }.compact
   end
 end

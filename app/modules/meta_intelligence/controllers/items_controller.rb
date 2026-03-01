@@ -55,7 +55,7 @@ module MetaIntelligence
       private
 
       def run_item_analytics
-        Services::ItemAnalyticsService.new(
+        ItemAnalyticsService.new(
           organization: current_organization,
           scope: validated_scope,
           patch: params[:patch]

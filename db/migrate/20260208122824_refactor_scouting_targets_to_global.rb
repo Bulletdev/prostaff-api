@@ -35,7 +35,7 @@ class RefactorScoutingTargetsToGlobal < ActiveRecord::Migration[7.1]
 
     # Step 5: Make riot_puuid globally unique (was scoped to org before)
     remove_index :scouting_targets, name: 'index_scouting_targets_on_riot_puuid_and_organization_id', if_exists: true
-    add_index :scouting_targets, :riot_puuid, unique: true, where: "riot_puuid IS NOT NULL"
+    add_index :scouting_targets, :riot_puuid, unique: true, where: 'riot_puuid IS NOT NULL'
 
     # Step 6: Add fields for global player data
     add_column :scouting_targets, :real_name, :string unless column_exists?(:scouting_targets, :real_name)
@@ -43,7 +43,9 @@ class RefactorScoutingTargetsToGlobal < ActiveRecord::Migration[7.1]
     add_column :scouting_targets, :profile_icon_id, :integer unless column_exists?(:scouting_targets, :profile_icon_id)
     add_column :scouting_targets, :peak_tier, :string unless column_exists?(:scouting_targets, :peak_tier)
     add_column :scouting_targets, :peak_rank, :string unless column_exists?(:scouting_targets, :peak_rank)
-    add_column :scouting_targets, :last_api_sync_at, :datetime unless column_exists?(:scouting_targets, :last_api_sync_at)
+    unless column_exists?(:scouting_targets, :last_api_sync_at)
+      add_column :scouting_targets, :last_api_sync_at, :datetime
+    end
 
     # Step 7: Add indexes for global queries
     add_index :scouting_targets, :status unless index_exists?(:scouting_targets, :status)
@@ -98,18 +100,18 @@ class RefactorScoutingTargetsToGlobal < ActiveRecord::Migration[7.1]
         USING (organization_id::text = current_setting('app.current_organization_id', true));
     SQL
 
-    # Note: We don't migrate data back, this is destructive
-    say "WARNING: Data migration back is not implemented. Watchlist data will be lost."
+    # NOTE: We don't migrate data back, this is destructive
+    say 'WARNING: Data migration back is not implemented. Watchlist data will be lost.'
   end
 
   private
 
   def migrate_to_watchlists
     # Disable RLS temporarily to read all data
-    execute "SET row_security = off;"
+    execute 'SET row_security = off;'
 
     # Get all scouting targets with their org-specific data
-    say_with_time "Migrating scouting targets to watchlists..." do
+    say_with_time 'Migrating scouting targets to watchlists...' do
       execute <<-SQL
         -- First, deduplicate scouting_targets by riot_puuid
         -- Keep the oldest record for each riot_puuid as canonical
@@ -212,6 +214,6 @@ class RefactorScoutingTargetsToGlobal < ActiveRecord::Migration[7.1]
     end
 
     # Re-enable RLS
-    execute "SET row_security = on;"
+    execute 'SET row_security = on;'
   end
 end

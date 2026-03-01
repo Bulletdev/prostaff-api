@@ -64,6 +64,14 @@ class RiotApiService
     parse_league_entries(response)
   end
 
+  def get_league_entries_by_puuid(puuid:, region:)
+    platform = platform_for_region(region)
+    url = "https://#{platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/#{puuid}"
+
+    response = make_request(url)
+    parse_league_entries(response)
+  end
+
   def get_match_history(puuid:, region:, count: 20, start: 0)
     regional_route = regional_route_for_region(region)
     url = "https://#{regional_route}.api.riotgames.com/lol/match/v5/matches/by-puuid/#{puuid}/ids?start=#{start}&count=#{count}"
@@ -173,7 +181,7 @@ class RiotApiService
       'KR' => 'KR',
       'JP' => 'JP',
       'OC' => 'OCE',
-      'LA' => 'LAN',  # LA1 -> LAN, LA2 -> LAS (handle separately)
+      'LA' => 'LAN', # LA1 -> LAN, LA2 -> LAS (handle separately)
       'RU' => 'RU',
       'TR' => 'TR'
     }

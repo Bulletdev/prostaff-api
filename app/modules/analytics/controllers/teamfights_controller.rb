@@ -2,12 +2,25 @@
 
 module Analytics
   module Controllers
-    # Returns teamfight and combat analytics (damage dealt/taken, kill participation) per player.
+    # Teamfight Analytics Controller
+    #
+    # Analyzes combat performance including damage dealt, damage taken, and kill participation.
+    # Tracks multikill statistics and damage efficiency metrics for teamfight evaluation.
+    #
+    # @example GET /api/v1/analytics/teamfights/:player_id
+    #   {
+    #     damage_performance: { avg_damage_dealt: 18500, avg_damage_per_min: 740 },
+    #     participation: { avg_kills: 5.2, avg_assists: 7.8, multikill_stats: { penta_kills: 2 } }
+    #   }
+    #
+    # Main endpoints:
+    # - GET show: Returns teamfight statistics for the last 20 matches including damage and multikills
     class TeamfightsController < Api::V1::BaseController
       def show
         player = organization_scoped(Player).find(params[:player_id])
 
         stats = PlayerMatchStat.joins(:match)
+                               .includes(:match)
                                .where(player: player, match: { organization: current_organization })
                                .order('matches.game_start DESC')
                                .limit(20)
@@ -15,9 +28,10 @@ module Analytics
         teamfight_data = {
           player: PlayerSerializer.render_as_hash(player),
           damage_performance: {
-            avg_damage_dealt: stats.average(:total_damage_dealt)&.round(0),
-            avg_damage_taken: stats.average(:total_damage_taken)&.round(0),
-            best_damage_game: stats.maximum(:total_damage_dealt),
+            avg_damage_dealt: stats.average(:damage_dealt_total)&.round(0),
+            avg_damage_taken: stats.average(:damage_taken)&.round(0),
+            avg_damage_mitigated: stats.average(:damage_mitigated)&.round(0),
+            best_damage_game: stats.maximum(:damage_dealt_total),
             avg_damage_per_min: calculate_avg_damage_per_min(stats)
           },
           participation: {
@@ -38,8 +52,9 @@ module Analytics
               kills: stat.kills,
               deaths: stat.deaths,
               assists: stat.assists,
-              damage_dealt: stat.total_damage_dealt,
-              damage_taken: stat.total_damage_taken,
+              damage_dealt: stat.damage_dealt_total,
+              damage_taken: stat.damage_taken,
+              damage_mitigated: stat.damage_mitigated,
               multikills: stat.double_kills + stat.triple_kills + stat.quadra_kills + stat.penta_kills,
               champion: stat.champion,
               victory: stat.match.victory
@@ -57,8 +72,8 @@ module Analytics
         total_minutes = 0
 
         stats.each do |stat|
-          if stat.match.game_duration && stat.total_damage_dealt
-            total_damage += stat.total_damage_dealt
+          if stat.match.game_duration && stat.damage_dealt_total
+            total_damage += stat.damage_dealt_total
             total_minutes += stat.match.game_duration / 60.0
           end
         end

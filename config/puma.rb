@@ -39,9 +39,7 @@ if ENV['RAILS_ENV'] == 'production'
   worker_shutdown_timeout ENV.fetch('PUMA_WORKER_SHUTDOWN_TIMEOUT', 30).to_i
 
   # Nakayoshi Fork (Puma 7+)
-  if respond_to?(:nakayoshi_fork) && ENV.fetch('PUMA_NAKAYOSHI_FORK', 'true') == 'true'
-    nakayoshi_fork
-  end
+  nakayoshi_fork if respond_to?(:nakayoshi_fork) && ENV.fetch('PUMA_NAKAYOSHI_FORK', 'true') == 'true'
 
   # ActiveRecord fix para preload
   before_fork do
@@ -80,4 +78,3 @@ on_booted do
   puts "   Threads: #{min_threads}-#{max_threads}"
   puts "   Port: #{ENV.fetch('PORT', 3000)}"
 end
-

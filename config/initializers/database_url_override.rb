@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Prevent Rails from auto-parsing DATABASE_URL when it contains special characters
 # This initializer runs BEFORE database configuration is loaded
 #
@@ -5,7 +7,7 @@
 # to handle passwords with special characters like @ symbols
 
 if ENV['DATABASE_URL'].present? && ENV['DATABASE_URL'].include?('@@')
-  Rails.logger.info "DATABASE_URL contains special characters - will be ignored in favor of manual parsing"
+  Rails.logger.info 'DATABASE_URL contains special characters - will be ignored in favor of manual parsing'
 
   # Store the original and clear it so Rails doesn't try to parse it
   ENV['_ORIGINAL_DATABASE_URL'] = ENV['DATABASE_URL']

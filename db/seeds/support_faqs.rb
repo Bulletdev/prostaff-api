@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-puts "🌱 Seeding Support FAQs..."
+puts '🌱 Seeding Support FAQs...'
 
 faqs = [
   # Getting Started
   {
-    question: "Como começar a usar o ProStaff?",
+    question: 'Como começar a usar o ProStaff?',
     answer: <<~ANSWER,
       Para começar a usar o ProStaff:
 
@@ -16,12 +16,12 @@ faqs = [
 
       Precisa de ajuda? Entre em contato com nosso suporte!
     ANSWER
-    category: "getting_started",
-    keywords: ["começar", "iniciar", "primeiro passo", "setup", "configurar"],
+    category: 'getting_started',
+    keywords: ['começar', 'iniciar', 'primeiro passo', 'setup', 'configurar'],
     position: 1
   },
   {
-    question: "Como adicionar jogadores ao meu time?",
+    question: 'Como adicionar jogadores ao meu time?',
     answer: <<~ANSWER,
       Para adicionar jogadores:
 
@@ -36,14 +36,14 @@ faqs = [
 
       O sistema irá buscar automaticamente os dados do jogador na Riot API!
     ANSWER
-    category: "getting_started",
-    keywords: ["adicionar", "jogador", "player", "time", "roster"],
+    category: 'getting_started',
+    keywords: %w[adicionar jogador player time roster],
     position: 2
   },
 
   # Riot Integration
   {
-    question: "Como importar partidas da Riot API?",
+    question: 'Como importar partidas da Riot API?',
     answer: <<~ANSWER,
       Para importar partidas:
 
@@ -56,12 +56,12 @@ faqs = [
 
       As partidas serão processadas em background e aparecerão em alguns minutos.
     ANSWER
-    category: "riot_integration",
-    keywords: ["importar", "import", "match", "partida", "riot", "api"],
+    category: 'riot_integration',
+    keywords: %w[importar import match partida riot api],
     position: 1
   },
   {
-    question: "Erro 403 ao sincronizar com Riot API",
+    question: 'Erro 403 ao sincronizar com Riot API',
     answer: <<~ANSWER,
       O erro 403 (Forbidden) geralmente indica problema com a API Key. Verifique:
 
@@ -78,12 +78,12 @@ faqs = [
 
       Se o problema persistir, entre em contato com o suporte.
     ANSWER
-    category: "riot_integration",
-    keywords: ["403", "forbidden", "api key", "erro", "sync", "sincronizar"],
+    category: 'riot_integration',
+    keywords: ['403', 'forbidden', 'api key', 'erro', 'sync', 'sincronizar'],
     position: 2
   },
   {
-    question: "Erro 429 - Rate Limit Exceeded",
+    question: 'Erro 429 - Rate Limit Exceeded',
     answer: <<~ANSWER,
       O erro 429 significa que você excedeu o limite de requisições da Riot API.
 
@@ -98,12 +98,12 @@ faqs = [
 
       O ProStaff já tem rate limiting automático, mas em picos de uso pode acontecer.
     ANSWER
-    category: "riot_integration",
-    keywords: ["429", "rate limit", "too many requests", "limite"],
+    category: 'riot_integration',
+    keywords: ['429', 'rate limit', 'too many requests', 'limite'],
     position: 3
   },
   {
-    question: "Match ID não encontrado (404)",
+    question: 'Match ID não encontrado (404)',
     answer: <<~ANSWER,
       Se você está recebendo erro 404 ao importar uma partida:
 
@@ -119,14 +119,14 @@ faqs = [
 
       **Dica**: Use a importação automática em vez de manual - o sistema busca automaticamente as partidas recentes do jogador.
     ANSWER
-    category: "riot_integration",
-    keywords: ["404", "not found", "match id", "partida não encontrada"],
+    category: 'riot_integration',
+    keywords: ['404', 'not found', 'match id', 'partida não encontrada'],
     position: 4
   },
 
   # Billing
   {
-    question: "Como fazer upgrade do meu plano?",
+    question: 'Como fazer upgrade do meu plano?',
     answer: <<~ANSWER,
       Para fazer upgrade do plano:
 
@@ -141,12 +141,12 @@ faqs = [
 
       O upgrade é aplicado imediatamente!
     ANSWER
-    category: "billing",
-    keywords: ["upgrade", "plano", "assinatura", "subscription", "pagar"],
+    category: 'billing',
+    keywords: %w[upgrade plano assinatura subscription pagar],
     position: 1
   },
   {
-    question: "Quais são as formas de pagamento aceitas?",
+    question: 'Quais são as formas de pagamento aceitas?',
     answer: <<~ANSWER,
       Aceitamos as seguintes formas de pagamento:
 
@@ -165,14 +165,14 @@ faqs = [
 
       Para empresas, oferecemos também pagamento via transferência bancária (mínimo 10 licenças).
     ANSWER
-    category: "billing",
-    keywords: ["pagamento", "cartão", "pix", "boleto", "payment"],
+    category: 'billing',
+    keywords: %w[pagamento cartão pix boleto payment],
     position: 2
   },
 
   # Features
   {
-    question: "Como usar o sistema de VOD Review?",
+    question: 'Como usar o sistema de VOD Review?',
     answer: <<~ANSWER,
       O VOD Review permite analisar partidas em vídeo:
 
@@ -188,12 +188,12 @@ faqs = [
 
       Os jogadores receberão notificação e podem comentar!
     ANSWER
-    category: "features",
-    keywords: ["vod", "review", "análise", "partida", "vídeo"],
+    category: 'features',
+    keywords: %w[vod review análise partida vídeo],
     position: 1
   },
   {
-    question: "Como funciona o sistema de Scouting?",
+    question: 'Como funciona o sistema de Scouting?',
     answer: <<~ANSWER,
       O Scouting permite acompanhar jogadores que você quer recrutar:
 
@@ -211,14 +211,14 @@ faqs = [
 
       Você receberá alertas quando o jogador tiver mudanças significativas!
     ANSWER
-    category: "features",
-    keywords: ["scouting", "recrutar", "jogador", "target", "scout"],
+    category: 'features',
+    keywords: %w[scouting recrutar jogador target scout],
     position: 2
   },
 
   # Technical
   {
-    question: "O dashboard não está carregando",
+    question: 'O dashboard não está carregando',
     answer: <<~ANSWER,
       Se o dashboard não carregar:
 
@@ -239,12 +239,12 @@ faqs = [
 
       Nosso suporte responde em menos de 2 horas!
     ANSWER
-    category: "technical",
-    keywords: ["dashboard", "não carrega", "loading", "erro", "bug"],
+    category: 'technical',
+    keywords: ['dashboard', 'não carrega', 'loading', 'erro', 'bug'],
     position: 1
   },
   {
-    question: "Como reportar um bug?",
+    question: 'Como reportar um bug?',
     answer: <<~ANSWER,
       Para reportar um bug:
 
@@ -263,8 +263,8 @@ faqs = [
 
       **Dica**: Se possível, tente reproduzir o erro e anote os passos!
     ANSWER
-    category: "technical",
-    keywords: ["bug", "erro", "reportar", "problema", "issue"],
+    category: 'technical',
+    keywords: %w[bug erro reportar problema issue],
     position: 2
   }
 ]
@@ -289,8 +289,8 @@ faqs.each do |faq_data|
   end
 end
 
-puts ""
-puts "✅ FAQ Seeding Complete!"
+puts ''
+puts '✅ FAQ Seeding Complete!'
 puts "   Created: #{created_count} FAQs"
 puts "   Updated: #{updated_count} FAQs"
 puts "   Total: #{SupportFaq.count} FAQs in database"

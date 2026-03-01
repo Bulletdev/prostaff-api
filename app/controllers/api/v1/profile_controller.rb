@@ -5,7 +5,6 @@ module Api
     # Profile Controller
     # Manages user profile operations (view, update profile, change password, notification preferences)
     class ProfileController < Api::V1::BaseController
-
       # GET /api/v1/profile
       # Returns current user profile
       def show

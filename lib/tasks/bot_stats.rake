@@ -36,7 +36,7 @@ namespace :bot_stats do
 
     # Show top paths for each bot
     puts "\n Top Paths Accessed:"
-    sorted_bots.first(5).each do |bot_type, _count|
+    sorted_bots.first(5).each_key do |bot_type|
       paths = redis.hgetall("bot_paths:#{date}:#{bot_type}")
       next if paths.empty?
 
@@ -47,7 +47,7 @@ namespace :bot_stats do
       end
     end
 
-    puts "\n" + '=' * 60
+    puts "\n#{'=' * 60}"
   end
 
   desc 'Show bot statistics for date range'
@@ -90,7 +90,7 @@ namespace :bot_stats do
 
     total_visits = aggregated_stats.values.sum
     puts "\n   #{'Total Bot Visits'.ljust(30)} #{total_visits.to_s.rjust(6)}"
-    puts "\n" + '=' * 60
+    puts "\n#{'=' * 60}"
   end
 
   desc 'Clear old bot statistics (older than 30 days)'
@@ -106,7 +106,7 @@ namespace :bot_stats do
     puts " Cleaning up bot statistics older than #{cutoff_date}"
 
     deleted_count = 0
-    (cutoff_date - 90.days..cutoff_date).each do |date|
+    ((cutoff_date - 90.days)..cutoff_date).each do |date|
       date_str = date.strftime('%Y-%m-%d')
 
       if redis.exists?("bot_stats:#{date_str}")

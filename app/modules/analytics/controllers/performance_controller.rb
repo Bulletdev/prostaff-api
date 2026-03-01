@@ -2,35 +2,108 @@
 
 module Analytics
   module Controllers
-    # Returns team and individual player performance analytics over a date range.
+    # Performance Analytics Controller
+    #
+    # Provides endpoints for viewing team and player performance metrics.
+    # Delegates complex calculations to PerformanceAnalyticsService.
+    #
+    # This controller handles:
+    # - Team overview statistics (wins, losses, KDA, etc.)
+    # - Win rate trends over time
+    # - Performance breakdown by role
+    # - Top performer identification
+    # - Individual player statistics
+    #
+    # Supports filtering by date range, time period, and individual player stats.
+    # All calculations are scoped to the current organization.
+    #
+    # @example Get team performance for last 30 days
+    #   GET /api/v1/analytics/performance
+    #
+    # @example Get performance with player stats
+    #   GET /api/v1/analytics/performance?player_id=123
+    #
+    # @example Get performance for a specific date range
+    #   GET /api/v1/analytics/performance?start_date=2025-01-01&end_date=2025-01-31
+    #
+    # @example Get performance for a time period
+    #   GET /api/v1/analytics/performance?time_period=week
     class PerformanceController < Api::V1::BaseController
       include ::Analytics::Concerns::AnalyticsCalculations
 
+      # Returns performance analytics for the organization
+      #
+      # Supports filtering by date range and includes individual player stats if requested.
+      #
+      # GET /api/v1/analytics/performance
+      #
+      # @param start_date [Date] Start date for filtering (optional)
+      # @param end_date [Date] End date for filtering (optional)
+      # @param time_period [String] Predefined period: week, month, or season (optional)
+      # @param player_id [Integer] Player ID for individual stats (optional)
+      # @return [JSON] Performance analytics data
       def index
-        # Team performance analytics
-        matches = organization_scoped(Match)
-        players = organization_scoped(Player).active
+        matches = apply_date_filters(organization_scoped(Match))
 
-        # Date range filter
-        matches = if params[:start_date].present? && params[:end_date].present?
-                    matches.in_date_range(params[:start_date], params[:end_date])
-                  else
-                    matches.recent(30) # Default to last 30 days
-                  end
+        # Use active players for team-wide stats (best performers, role breakdown, etc.)
+        # but validate player_id against ALL org players so that bench/trial/inactive
+        # players can still have their individual stats viewed.
+        active_players = organization_scoped(Player).includes(:organization).active
+        all_org_players = organization_scoped(Player).includes(:organization)
 
-        performance_data = {
-          overview: calculate_team_overview(matches),
-          win_rate_trend: calculate_win_rate_trend(matches),
-          performance_by_role: calculate_performance_by_role(matches, damage_field: :total_damage_dealt),
-          best_performers: identify_best_performers(players, matches),
-          match_type_breakdown: calculate_match_type_breakdown(matches)
-        }
+        player_id = params[:player_id].presence
+        if player_id.present? && !all_org_players.exists?(id: player_id)
+          return render_error(
+            message: 'Player not found',
+            code: 'PLAYER_NOT_FOUND',
+            status: :not_found
+          )
+        end
+
+        service = PerformanceAnalyticsService.new(matches, active_players)
+        performance_data = service.calculate_performance_data(player_id: player_id, all_players: all_org_players)
 
         render_success(performance_data)
+      rescue StandardError => e
+        Rails.logger.error("Error in performance#index: #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
+        render_error(
+          message: "Failed to load performance data: #{e.message}",
+          code: 'INTERNAL_ERROR',
+          status: :internal_server_error
+        )
       end
 
       private
 
+      # Applies date range filters to matches based on params
+      #
+      # @param matches [ActiveRecord::Relation] Matches relation to filter
+      # @return [ActiveRecord::Relation] Filtered matches
+      def apply_date_filters(matches)
+        if params[:start_date].present? && params[:end_date].present?
+          matches.in_date_range(params[:start_date], params[:end_date])
+        elsif params[:time_period].present?
+          days = time_period_to_days(params[:time_period])
+          matches.where('game_start >= ?', days.days.ago)
+        else
+          matches.recent(30) # Default to last 30 days
+        end
+      end
+
+      # Converts time period string to number of days
+      #
+      # @param period [String] Time period (week, month, season)
+      # @return [Integer] Number of days
+      def time_period_to_days(period)
+        return 7 if period == 'week'
+        return 90 if period == 'season'
+
+        30
+      end
+
+      # Legacy method - kept for backwards compatibility
+      # TODO: Remove after migrating all callers to PerformanceAnalyticsService
       def calculate_team_overview(matches)
         stats = PlayerMatchStat.where(match: matches)
 
@@ -45,10 +118,14 @@ module Analytics
           avg_deaths_per_game: stats.average(:deaths)&.round(1),
           avg_assists_per_game: stats.average(:assists)&.round(1),
           avg_gold_per_game: stats.average(:gold_earned)&.round(0),
-          avg_damage_per_game: stats.average(:total_damage_dealt)&.round(0),
+          avg_damage_per_game: stats.average(:damage_dealt_total)&.round(0),
           avg_vision_score: stats.average(:vision_score)&.round(1)
         }
       end
+
+      # Legacy methods - moved to PerformanceAnalyticsService and AnalyticsCalculations
+      # These methods now delegate to the concern
+      # TODO: Remove after confirming no external dependencies
 
       def identify_best_performers(players, matches)
         players.map do |player|
@@ -80,6 +157,56 @@ module Analytics
             win_rate: win_rate
           }
         end
+      end
+
+      # Methods moved to Analytics::Concerns::AnalyticsCalculations:
+      # - calculate_win_rate
+      # - calculate_avg_kda
+
+      def calculate_player_stats(player, matches)
+        stats = PlayerMatchStat.where(player: player, match: matches)
+
+        return nil if stats.empty?
+
+        total_kills = stats.sum(:kills)
+        total_deaths = stats.sum(:deaths)
+        total_assists = stats.sum(:assists)
+        games_played = stats.count
+
+        # Calculate win rate as decimal (0-1) for frontend
+        wins = stats.joins(:match).where(matches: { victory: true }).count
+        win_rate = games_played.zero? ? 0.0 : (wins.to_f / games_played)
+
+        # Calculate KDA
+        deaths = total_deaths.zero? ? 1 : total_deaths
+        kda = ((total_kills + total_assists).to_f / deaths).round(2)
+
+        # Calculate CS per min
+        total_cs = stats.sum(:cs)
+        total_duration = matches.where(id: stats.pluck(:match_id)).sum(:game_duration)
+        cs_per_min = calculate_cs_per_min(total_cs, total_duration)
+
+        # Calculate gold per min
+        total_gold = stats.sum(:gold_earned)
+        gold_per_min = calculate_gold_per_min(total_gold, total_duration)
+
+        # Calculate vision score
+        vision_score = stats.average(:vision_score)&.round(1) || 0.0
+
+        {
+          player_id: player.id,
+          summoner_name: player.summoner_name,
+          games_played: games_played,
+          win_rate: win_rate,
+          kda: kda,
+          cs_per_min: cs_per_min,
+          gold_per_min: gold_per_min,
+          vision_score: vision_score,
+          damage_share: 0.0, # Would need total team damage to calculate
+          avg_kills: (total_kills.to_f / games_played).round(1),
+          avg_deaths: (total_deaths.to_f / games_played).round(1),
+          avg_assists: (total_assists.to_f / games_played).round(1)
+        }
       end
     end
   end

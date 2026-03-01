@@ -42,7 +42,7 @@ module Searchable
     # Intended for: rake search:reindex
     def meili_reindex!
       index = meili_index
-      return Rails.logger.warn("[Searchable] Skipping reindex — Meilisearch not configured") unless index
+      return Rails.logger.warn('[Searchable] Skipping reindex — Meilisearch not configured') unless index
 
       index.update_settings(
         searchable_attributes: meili_searchable_attributes,

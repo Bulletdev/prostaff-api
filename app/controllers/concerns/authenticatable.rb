@@ -23,7 +23,7 @@ module Authenticatable
     end
 
     begin
-      @jwt_payload = Authentication::Services::JwtService.decode(token)
+      @jwt_payload = JwtService.decode(token)
 
       if @jwt_payload[:entity_type] == 'player'
         # ── Player token ──────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ module Authenticatable
 
       # Update last login time (uses update_column which skips callbacks/audit logs)
       @current_user.update_last_login! if should_update_last_login?
-    rescue Authentication::Services::JwtService::AuthenticationError => e
+    rescue JwtService::AuthenticationError => e
       Rails.logger.error("JWT Authentication error: #{e.class} - #{e.message}")
       render_unauthorized(e.message)
     rescue ActiveRecord::RecordNotFound => e
