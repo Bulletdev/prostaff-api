@@ -21,3 +21,13 @@ db/schema.rb
 
 # Documentation
 *.md
+
+# Legacy/archival nginx configs (no longer deployed — kept for historical reference)
+# H2C-smuggling pattern in these files is a known inherited limitation of the
+# old config; the active nginx configs (docs-page/, status-page/) do not share this.
+DOCS/legacy/
+
+# Rails development/test environment configs: detailed-exceptions is intentional
+# in non-production environments and does not represent a real security risk.
+config/environments/development.rb
+config/environments/test.rb
