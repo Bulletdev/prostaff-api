@@ -69,7 +69,7 @@ namespace :trial do
     puts "Expiring Soon (3 days):  #{expiring_soon}"
     puts '=' * 50
 
-    if active_trials > 0
+    if active_trials.positive?
       puts "\nActive Trials:"
       Organization.trial_active.find_each do |org|
         puts "  - #{org.name}: #{org.trial_days_remaining} days remaining"

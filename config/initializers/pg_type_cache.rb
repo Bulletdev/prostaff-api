@@ -25,13 +25,13 @@ module PgTypeCache
     def preload!
       return unless enabled?
 
-      Rails.logger.info "Preloading PostgreSQL type information..."
+      Rails.logger.info 'Preloading PostgreSQL type information...'
 
       types_data = fetch_types(COMMON_TYPES)
       store_in_cache(types_data)
 
       Rails.logger.info "✓ Cached #{types_data.size} PostgreSQL types"
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Failed to preload pg_types: #{e.message}"
     end
 
@@ -117,7 +117,7 @@ module PgTypeCache
       # Thread-safe check
       Thread.current[:pgtc_redis_available] ||= begin
         Rails.cache.respond_to?(:redis) && Rails.cache.redis.ping == 'PONG'
-      rescue
+      rescue StandardError
         false
       end
     end
@@ -130,7 +130,7 @@ Rails.application.config.after_initialize do
   if defined?(Concurrent)
     Concurrent::ScheduledTask.execute(2) do
       PgTypeCache.preload!
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "PgTypeCache preload error: #{e.message}"
     end
   else
@@ -138,7 +138,7 @@ Rails.application.config.after_initialize do
     thread = Thread.new do
       sleep 2 # Wait for connections to stabilize
       PgTypeCache.preload!
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "PgTypeCache preload error: #{e.message}"
     end
 

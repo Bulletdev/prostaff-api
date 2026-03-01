@@ -25,13 +25,13 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     # SUPPORT TICKETS - Organization scoped
     # ===========================================================================
     create_policy(:support_tickets, :select, 'support_tickets_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:support_tickets, :insert, 'support_tickets_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:support_tickets, :update, 'support_tickets_update_policy',
-      'organization_id = public.user_organization_id() AND (public.is_admin() OR user_id = public.current_user_id())')
+                  'organization_id = public.user_organization_id() AND (public.is_admin() OR user_id = public.current_user_id())')
     create_policy(:support_tickets, :delete, 'support_tickets_delete_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
 
     # ===========================================================================
     # SUPPORT TICKET MESSAGES - Scoped via support_tickets relationship
@@ -90,25 +90,25 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     # DRAFT PLANS - Organization scoped
     # ===========================================================================
     create_policy(:draft_plans, :select, 'draft_plans_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:draft_plans, :insert, 'draft_plans_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:draft_plans, :update, 'draft_plans_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:draft_plans, :delete, 'draft_plans_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # ===========================================================================
     # TACTICAL BOARDS - Organization scoped
     # ===========================================================================
     create_policy(:tactical_boards, :select, 'tactical_boards_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:tactical_boards, :insert, 'tactical_boards_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:tactical_boards, :update, 'tactical_boards_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:tactical_boards, :delete, 'tactical_boards_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # ===========================================================================
     # PASSWORD RESET TOKENS - Scoped via user relationship
@@ -211,7 +211,7 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     SQL
 
     create_policy(:opponent_teams, :insert, 'opponent_teams_insert_policy',
-      'public.user_organization_id() IS NOT NULL')
+                  'public.user_organization_id() IS NOT NULL')
 
     execute <<-SQL
       CREATE POLICY opponent_teams_update_policy ON opponent_teams

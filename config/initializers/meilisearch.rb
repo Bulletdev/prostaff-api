@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-
 if ENV['MEILISEARCH_URL'].present?
   MEILISEARCH_CLIENT = Meilisearch::Client.new(
     ENV['MEILISEARCH_URL'],

@@ -25,7 +25,8 @@ module Authentication
     #   { "email": "user@example.com", "password": "secret" }
     #
     class AuthController < Api::V1::BaseController
-      skip_before_action :authenticate_request!, only: %i[register login player_login forgot_password reset_password refresh]
+      skip_before_action :authenticate_request!,
+                         only: %i[register login player_login forgot_password reset_password refresh]
 
       # Registers a new user and organization
       #
@@ -59,7 +60,7 @@ module Authentication
         ActiveRecord::Base.transaction do
           organization = create_organization!
           user = create_user!(organization)
-          tokens = Authentication::Services::JwtService.generate_tokens(user)
+          tokens = JwtService.generate_tokens(user)
 
           AuditLog.create!(
             organization: organization,
@@ -99,7 +100,7 @@ module Authentication
         user = authenticate_user!
 
         if user
-          tokens = Authentication::Services::JwtService.generate_tokens(user)
+          tokens = JwtService.generate_tokens(user)
           user.update_last_login!
 
           AuditLog.create!(
@@ -168,42 +169,42 @@ module Authentication
           )
         end
 
-        tokens = Authentication::Services::JwtService.generate_player_tokens(player)
+        tokens = JwtService.generate_player_tokens(player)
         player.update_last_login!
 
         render_success(
           {
             player: {
-              id:                player.id,
-              name:              player.real_name.presence || player.summoner_name,
+              id: player.id,
+              name: player.real_name.presence || player.summoner_name,
               professional_name: player.professional_name,
-              summoner_name:     player.summoner_name,
-              role:              player.role,
-              status:            player.status,
-              country:           player.country,
-              profile_icon_id:   player.profile_icon_id,
-              avatar_url:        player.avatar_url.presence,
-              organization_id:   player.organization_id,
+              summoner_name: player.summoner_name,
+              role: player.role,
+              status: player.status,
+              country: player.country,
+              profile_icon_id: player.profile_icon_id,
+              avatar_url: player.avatar_url.presence,
+              organization_id: player.organization_id,
               organization_name: player.organization&.name,
               # Rank
-              solo_queue_tier:   player.solo_queue_tier,
-              solo_queue_rank:   player.solo_queue_rank,
-              solo_queue_lp:     player.solo_queue_lp,
-              solo_queue_wins:   player.solo_queue_wins,
+              solo_queue_tier: player.solo_queue_tier,
+              solo_queue_rank: player.solo_queue_rank,
+              solo_queue_lp: player.solo_queue_lp,
+              solo_queue_wins: player.solo_queue_wins,
               solo_queue_losses: player.solo_queue_losses,
-              flex_queue_tier:   player.flex_queue_tier,
-              flex_queue_rank:   player.flex_queue_rank,
-              flex_queue_lp:     player.flex_queue_lp,
-              peak_tier:         player.peak_tier,
-              peak_rank:         player.peak_rank,
-              peak_season:       player.peak_season,
+              flex_queue_tier: player.flex_queue_tier,
+              flex_queue_rank: player.flex_queue_rank,
+              flex_queue_lp: player.flex_queue_lp,
+              peak_tier: player.peak_tier,
+              peak_rank: player.peak_rank,
+              peak_season: player.peak_season,
               # Performance
-              win_rate:          player.win_rate,
+              win_rate: player.win_rate,
               # Champions
-              main_champions:    player.main_champions,
+              main_champions: player.main_champions,
               # Social
-              twitter_handle:    player.twitter_handle,
-              twitch_channel:    player.twitch_channel,
+              twitter_handle: player.twitter_handle,
+              twitch_channel: player.twitch_channel
             }
           }.merge(tokens),
           message: 'Login realizado com sucesso'
@@ -233,9 +234,9 @@ module Authentication
         end
 
         begin
-          tokens = Authentication::Services::JwtService.refresh_access_token(refresh_token)
+          tokens = JwtService.refresh_access_token(refresh_token)
           render_success(tokens, message: 'Token refreshed successfully')
-        rescue Authentication::Services::JwtService::AuthenticationError => e
+        rescue JwtService::AuthenticationError => e
           render_error(
             message: e.message,
             code: 'INVALID_REFRESH_TOKEN',
@@ -255,7 +256,7 @@ module Authentication
       def logout
         # Blacklist the current access token
         token = request.headers['Authorization']&.split&.last
-        Authentication::Services::JwtService.blacklist_token(token) if token
+        JwtService.blacklist_token(token) if token
 
         log_user_action(
           action: 'logout',

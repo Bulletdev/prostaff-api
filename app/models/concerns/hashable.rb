@@ -79,8 +79,6 @@ module Hashable
       find_by_hashid(hashid) or raise ActiveRecord::RecordNotFound, "Couldn't find #{name} with hashid=#{hashid}"
     end
 
-    private
-
     # Get Hashids instance with proper configuration (class method)
     # @return [Hashids] Configured Hashids instance
     def hashids_instance

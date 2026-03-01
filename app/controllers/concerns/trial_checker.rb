@@ -24,8 +24,8 @@ module TrialChecker
     return unless current_organization
 
     # Auto-expire trials that have passed their expiration date
-    if current_organization.trial_expired?
-      current_organization.expire_trial! unless current_organization.subscription_status == 'expired'
+    if current_organization.trial_expired? && current_organization.subscription_status != 'expired'
+      current_organization.expire_trial!
     end
 
     # Block access if subscription is expired

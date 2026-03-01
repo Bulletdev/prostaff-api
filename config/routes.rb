@@ -37,27 +37,27 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Global full-text search (Meilisearch)
-      get 'search', to: 'search#index'
+      get 'search', to: '/search/controllers/search#index'
 
-      # Constants (public)
+      # Constants (public) -- stays in api/v1
       get 'constants', to: 'constants#index'
 
-      # Image Proxy (public - for external images)
+      # Image Proxy (public) -- stays in api/v1
       get 'images/proxy', to: 'images#proxy'
 
       # Auth
       scope :auth do
-        post 'register', to: 'auth#register'
-        post 'login', to: 'auth#login'
-        post 'player-login', to: 'auth#player_login'
-        post 'refresh', to: 'auth#refresh'
-        post 'logout', to: 'auth#logout'
-        post 'forgot-password', to: 'auth#forgot_password'
-        post 'reset-password', to: 'auth#reset_password'
-        get 'me', to: 'auth#me'
+        post 'register', to: '/authentication/controllers/auth#register'
+        post 'login', to: '/authentication/controllers/auth#login'
+        post 'player-login', to: '/authentication/controllers/auth#player_login'
+        post 'refresh', to: '/authentication/controllers/auth#refresh'
+        post 'logout', to: '/authentication/controllers/auth#logout'
+        post 'forgot-password', to: '/authentication/controllers/auth#forgot_password'
+        post 'reset-password', to: '/authentication/controllers/auth#reset_password'
+        get 'me', to: '/authentication/controllers/auth#me'
       end
 
-      # Profile
+      # Profile -- stays in api/v1
       scope :profile do
         get '', to: 'profile#show'
         patch '', to: 'profile#update'
@@ -66,18 +66,20 @@ Rails.application.routes.draw do
       end
 
       # Notifications
-      resources :notifications, only: %i[index show destroy] do
+      resources :notifications, only: %i[index show destroy],
+                                controller: '/notifications/controllers/notifications' do
         member do
-          patch :mark_as_read, to: 'notifications#mark_as_read'
+          patch :mark_as_read
         end
         collection do
-          patch :mark_all_as_read, to: 'notifications#mark_all_as_read'
-          get :unread_count, to: 'notifications#unread_count'
+          patch :mark_all_as_read
+          get :unread_count
         end
       end
 
       # Dashboard
-      resources :dashboard, only: [:index] do
+      resources :dashboard, only: [:index],
+                            controller: '/dashboard/controllers/dashboard' do
         collection do
           get :stats
           get :activities
@@ -86,7 +88,7 @@ Rails.application.routes.draw do
       end
 
       # Players
-      resources :players do
+      resources :players, controller: '/players/controllers/players' do
         collection do
           get :stats
           post :import
@@ -101,14 +103,15 @@ Rails.application.routes.draw do
       end
 
       # Roster Management
-      post 'rosters/remove/:player_id', to: 'rosters#remove_from_roster'
-      post 'rosters/hire/:scouting_target_id', to: 'rosters#hire_from_scouting'
-      get 'rosters/free-agents', to: 'rosters#free_agents'
-      get 'rosters/statistics', to: 'rosters#statistics'
+      post 'rosters/remove/:player_id', to: '/players/controllers/rosters#remove_from_roster'
+      post 'rosters/hire/:scouting_target_id', to: '/players/controllers/rosters#hire_from_scouting'
+      get 'rosters/free-agents', to: '/players/controllers/rosters#free_agents'
+      get 'rosters/statistics', to: '/players/controllers/rosters#statistics'
 
-      # Admin - Player Management
-      namespace :admin do
-        resources :players, only: [:index] do
+      # Admin
+      scope '/admin', as: 'admin' do
+        resources :players, only: [:index],
+                            controller: '/admin/controllers/players' do
           member do
             post :soft_delete
             post :restore
@@ -120,100 +123,103 @@ Rails.application.routes.draw do
         end
 
         # Organizations overview
-        resources :organizations, only: [:index]
+        resources :organizations, only: [:index],
+                                  controller: '/admin/controllers/organizations'
 
         # Audit Logs
-        resources :audit_logs, only: [:index], path: 'audit-logs'
+        resources :audit_logs, only: [:index], path: 'audit-logs',
+                               controller: '/admin/controllers/audit_logs'
       end
 
-      # Monitoring (admin-only observability endpoints)
-      # Gap 1 + Gap 4: Sidekiq queue depth and dead queue monitoring
+      # Monitoring (admin-only observability) -- stays in api/v1
       get 'monitoring/sidekiq', to: 'monitoring#sidekiq'
 
       # Support System
-      namespace :support do
+      scope '/support', as: 'support' do
         # User tickets
-        resources :tickets do
+        resources :tickets, controller: '/support/controllers/tickets' do
           member do
             post :close
             post :reopen
-            post 'messages', to: 'tickets#add_message'
+            post 'messages', action: :add_message
           end
         end
 
         # FAQ
-        resources :faq, only: %i[index show], param: :slug, controller: 'faqs' do
+        resources :faq, only: %i[index show], param: :slug,
+                        controller: '/support/controllers/faqs' do
           member do
-            post :helpful, to: 'faqs#mark_helpful'
-            post 'not-helpful', to: 'faqs#mark_not_helpful'
+            post :helpful, action: :mark_helpful
+            post 'not-helpful', action: :mark_not_helpful
           end
         end
 
         # Staff operations
-        namespace :staff do
-          get 'dashboard', to: 'staff#dashboard'
-          get 'analytics', to: 'staff#analytics'
+        scope '/staff', as: 'staff' do
+          get 'dashboard', to: '/support/controllers/staff#dashboard'
+          get 'analytics', to: '/support/controllers/staff#analytics'
 
           resources :tickets, only: [] do
             member do
-              post :assign
-              post :resolve
+              post :assign, to: '/support/controllers/staff#assign'
+              post :resolve, to: '/support/controllers/staff#resolve'
             end
           end
         end
       end
 
       # Riot Integration
-      scope :riot_integration, controller: 'riot_integration' do
-        get :sync_status
+      scope :riot_integration do
+        get :sync_status, to: '/riot_integration/controllers/riot_integration#sync_status'
       end
 
       # Riot Data (Data Dragon)
-      scope 'riot-data', controller: 'riot_data' do
-        get 'champions', to: 'riot_data#champions'
-        get 'champions/:champion_key', to: 'riot_data#champion_details'
-        get 'all-champions', to: 'riot_data#all_champions'
-        get 'items', to: 'riot_data#items'
-        get 'summoner-spells', to: 'riot_data#summoner_spells'
-        get 'version', to: 'riot_data#version'
-        post 'clear-cache', to: 'riot_data#clear_cache'
-        post 'update-cache', to: 'riot_data#update_cache'
+      scope 'riot-data' do
+        get 'champions', to: '/riot_integration/controllers/riot_data#champions'
+        get 'champions/:champion_key', to: '/riot_integration/controllers/riot_data#champion_details'
+        get 'all-champions', to: '/riot_integration/controllers/riot_data#all_champions'
+        get 'items', to: '/riot_integration/controllers/riot_data#items'
+        get 'summoner-spells', to: '/riot_integration/controllers/riot_data#summoner_spells'
+        get 'version', to: '/riot_integration/controllers/riot_data#version'
+        post 'clear-cache', to: '/riot_integration/controllers/riot_data#clear_cache'
+        post 'update-cache', to: '/riot_integration/controllers/riot_data#update_cache'
       end
 
       # Scouting
-      namespace :scouting do
-        resources :players do
+      scope '/scouting', as: 'scouting' do
+        resources :players, controller: '/scouting/controllers/players' do
           member do
             post :sync
           end
         end
-        get 'regions', to: 'regions#index'
-        resources :watchlist, only: %i[index create destroy]
+        get 'regions', to: '/scouting/controllers/regions#index'
+        resources :watchlist, only: %i[index create destroy],
+                              controller: '/scouting/controllers/watchlist'
       end
 
       # Analytics
-      namespace :analytics do
-        get 'performance', to: 'performance#index'
-        get 'champions/:player_id', to: 'champions#show'
-        get 'champions/:player_id/details', to: 'champions#details'
-        get 'kda-trend/:player_id', to: 'kda_trend#show'
-        get 'laning/:player_id', to: 'laning#show'
-        get 'teamfights/:player_id', to: 'teamfights#show'
-        get 'vision/:player_id', to: 'vision#show'
-        get 'team-comparison', to: 'team_comparison#index'
+      scope '/analytics', as: 'analytics' do
+        get 'performance', to: '/analytics/controllers/performance#index'
+        get 'champions/:player_id', to: '/analytics/controllers/champions#show'
+        get 'champions/:player_id/details', to: '/analytics/controllers/champions#details'
+        get 'kda-trend/:player_id', to: '/analytics/controllers/kda_trend#show'
+        get 'laning/:player_id', to: '/analytics/controllers/laning#show'
+        get 'teamfights/:player_id', to: '/analytics/controllers/teamfights#show'
+        get 'vision/:player_id', to: '/analytics/controllers/vision#show'
+        get 'team-comparison', to: '/analytics/controllers/team_comparison#index'
 
         # Objective analytics (dragon, baron, tower, inhibitor control)
-        get 'objectives', to: 'objectives#index'
+        get 'objectives', to: '/analytics/controllers/objectives#index'
 
         # Competitive analytics (draft performance, tournament stats, opponent analysis)
-        get 'competitive/draft-performance', to: 'competitive#draft_performance'
-        get 'competitive/tournament-stats',  to: 'competitive#tournament_stats'
-        get 'competitive/opponents',         to: 'competitive#opponents'
-        get 'competitive/player-stats',      to: 'competitive_player#player_stats'
+        get 'competitive/draft-performance', to: '/analytics/controllers/competitive#draft_performance'
+        get 'competitive/tournament-stats',  to: '/analytics/controllers/competitive#tournament_stats'
+        get 'competitive/opponents',         to: '/analytics/controllers/competitive#opponents'
+        get 'competitive/player-stats',      to: '/analytics/controllers/competitive_player#player_stats'
       end
 
       # Matches
-      resources :matches do
+      resources :matches, controller: '/matches/controllers/matches' do
         collection do
           post :import
         end
@@ -223,20 +229,25 @@ Rails.application.routes.draw do
       end
 
       # Schedules
-      resources :schedules
+      resources :schedules, controller: '/schedules/controllers/schedules'
 
       # VOD Reviews
-      resources :vod_reviews, path: 'vod-reviews' do
-        resources :timestamps, controller: 'vod_timestamps', only: %i[index create]
+      resources :vod_reviews, path: 'vod-reviews',
+                              controller: '/vod_reviews/controllers/vod_reviews' do
+        resources :timestamps, controller: '/vod_reviews/controllers/vod_timestamps',
+                               only: %i[index create]
       end
-      resources :vod_timestamps, path: 'vod-timestamps', only: %i[update destroy]
+      resources :vod_timestamps, path: 'vod-timestamps',
+                                 controller: '/vod_reviews/controllers/vod_timestamps',
+                                 only: %i[update destroy]
 
       # Team Goals
-      resources :team_goals, path: 'team-goals'
+      resources :team_goals, path: 'team-goals',
+                             controller: '/team_goals/controllers/team_goals'
 
       # Scrims Module (Tier 2+)
-      namespace :scrims do
-        resources :scrims do
+      scope '/scrims', as: 'scrims' do
+        resources :scrims, controller: '/scrims/controllers/scrims' do
           member do
             post :add_game
           end
@@ -246,19 +257,16 @@ Rails.application.routes.draw do
           end
         end
 
-        resources :opponent_teams, path: 'opponent-teams' do
+        resources :opponent_teams, path: 'opponent-teams',
+                                   controller: '/scrims/controllers/opponent_teams' do
           member do
             get :scrim_history, path: 'scrim-history'
           end
         end
       end
 
-      # Competitive Matches (Tier 1)
-      resources :competitive_matches, path: 'competitive-matches', only: %i[index show]
-
       # Competitive Module - PandaScore Integration
       # Controllers live in Competitive::Controllers:: (app/modules/competitive/controllers/).
-      # Leading slash in controller paths bypasses namespace module prepending.
       scope '/competitive', as: 'competitive' do
         # Pro Matches from PandaScore / ProStaff Scraper
         resources :pro_matches, path: 'pro-matches',
@@ -288,9 +296,10 @@ Rails.application.routes.draw do
       end
 
       # Strategy Module - Draft & Tactical Planning
-      namespace :strategy do
+      scope '/strategy', as: 'strategy' do
         # Draft Plans
-        resources :draft_plans, path: 'draft-plans' do
+        resources :draft_plans, path: 'draft-plans',
+                                controller: '/strategy/controllers/draft_plans' do
           member do
             post :analyze
             patch :activate
@@ -299,26 +308,26 @@ Rails.application.routes.draw do
         end
 
         # Tactical Boards
-        resources :tactical_boards, path: 'tactical-boards' do
+        resources :tactical_boards, path: 'tactical-boards',
+                                    controller: '/strategy/controllers/tactical_boards' do
           member do
             get :statistics
           end
         end
 
         # Assets endpoints
-        get 'assets/champion/:champion_name', to: 'assets#champion_assets'
-        get 'assets/map', to: 'assets#map_assets'
+        get 'assets/champion/:champion_name', to: '/strategy/controllers/assets#champion_assets'
+        get 'assets/map', to: '/strategy/controllers/assets#map_assets'
       end
 
       # Fantasy Module - Coming Soon Waitlist
-      namespace :fantasy do
-        post 'waitlist', to: 'waitlist#create'
-        get 'waitlist/stats', to: 'waitlist#stats'
+      scope '/fantasy', as: 'fantasy' do
+        post 'waitlist', to: '/core/controllers/waitlist#create'
+        get 'waitlist/stats', to: '/core/controllers/waitlist#stats'
       end
 
       # Meta Intelligence Module
       # Item tier lists and build analytics derived from match history.
-      # Controllers live in MetaIntelligence::Controllers:: (app/modules/meta_intelligence/controllers/).
       scope '/meta', as: 'meta_intelligence' do
         get 'items',     to: '/meta_intelligence/controllers/items#index', as: 'meta_items'
         get 'items/:id', to: '/meta_intelligence/controllers/items#show',  as: 'meta_item'
@@ -332,15 +341,16 @@ Rails.application.routes.draw do
         end
 
         get 'champions/:champion',
-            to:  '/meta_intelligence/controllers/champion_meta#show',
-            as:  'meta_champion'
+            to: '/meta_intelligence/controllers/champion_meta#show',
+            as: 'meta_champion'
       end
 
-      # Team Messaging — DM history + soft-delete
-      resources :messages, only: %i[index destroy]
+      # Team Messaging -- DM history + soft-delete
+      resources :messages, only: %i[index destroy],
+                           controller: '/messaging/controllers/messages'
 
       # Team members list (for chat widget)
-      get 'team-members', to: 'team_members#index'
+      get 'team-members', to: '/core/controllers/team_members#index'
     end
   end
 

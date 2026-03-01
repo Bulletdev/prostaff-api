@@ -17,21 +17,19 @@ module AuthSchemaInitializer
         return if @created
 
         ActiveRecord::Base.connection_pool.with_connection do |conn|
-          begin
-            # Use CREATE SCHEMA IF NOT EXISTS with exception handling
-            # PostgreSQL will handle race conditions internally
-            conn.execute('CREATE SCHEMA IF NOT EXISTS auth;')
-            Rails.logger.info "✓ Auth schema ensured"
+          # Use CREATE SCHEMA IF NOT EXISTS with exception handling
+          # PostgreSQL will handle race conditions internally
+          conn.execute('CREATE SCHEMA IF NOT EXISTS auth;')
+          Rails.logger.info '✓ Auth schema ensured'
+          @created = true
+        rescue ActiveRecord::StatementInvalid => e
+          # Check if error is "schema already exists" (PostgreSQL error 42P06)
+          if e.message.include?('already exists') || e.message.include?('42P06')
+            Rails.logger.debug 'Auth schema already exists'
             @created = true
-          rescue ActiveRecord::StatementInvalid => e
-            # Check if error is "schema already exists" (PostgreSQL error 42P06)
-            if e.message.include?('already exists') || e.message.include?('42P06')
-              Rails.logger.debug "Auth schema already exists"
-              @created = true
-            else
-              Rails.logger.error "Failed to create auth schema: #{e.message}"
-              raise
-            end
+          else
+            Rails.logger.error "Failed to create auth schema: #{e.message}"
+            raise
           end
         end
       end
@@ -54,12 +52,12 @@ Rails.application.config.after_initialize do
       max_retries = 3
 
       begin
-        sleep 0.5 
+        sleep 0.5
         AuthSchemaInitializer.ensure_schema!
-      rescue => e
+      rescue StandardError => e
         retries += 1
         if retries < max_retries
-          sleep 1 * retries 
+          sleep 1 * retries
           retry
         else
           Rails.logger.error "Failed to ensure auth schema after #{max_retries} attempts: #{e.message}"

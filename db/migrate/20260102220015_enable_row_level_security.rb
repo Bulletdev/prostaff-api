@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class EnableRowLevelSecurity < ActiveRecord::Migration[7.2]
   def up
     # Enable RLS on all organization-scoped tables
@@ -59,33 +61,33 @@ class EnableRowLevelSecurity < ActiveRecord::Migration[7.2]
 
     # RLS Policies for USERS table
     create_policy(:users, :select, 'users_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:users, :insert, 'users_insert_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
     create_policy(:users, :update, 'users_update_policy',
-      'organization_id = public.user_organization_id() AND (public.is_admin() OR id = public.current_user_id())')
+                  'organization_id = public.user_organization_id() AND (public.is_admin() OR id = public.current_user_id())')
     create_policy(:users, :delete, 'users_delete_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
 
     # RLS Policies for PLAYERS table
     create_policy(:players, :select, 'players_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:players, :insert, 'players_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:players, :update, 'players_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:players, :delete, 'players_delete_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
 
     # RLS Policies for MATCHES table
     create_policy(:matches, :select, 'matches_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:matches, :insert, 'matches_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:matches, :update, 'matches_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:matches, :delete, 'matches_delete_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
 
     # RLS Policies for PLAYER_MATCH_STATS table (via player relationship)
     execute <<-SQL
@@ -188,33 +190,33 @@ class EnableRowLevelSecurity < ActiveRecord::Migration[7.2]
 
     # RLS Policies for SCOUTING_TARGETS table
     create_policy(:scouting_targets, :select, 'scouting_targets_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:scouting_targets, :insert, 'scouting_targets_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:scouting_targets, :update, 'scouting_targets_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:scouting_targets, :delete, 'scouting_targets_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # RLS Policies for SCHEDULES table
     create_policy(:schedules, :select, 'schedules_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:schedules, :insert, 'schedules_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:schedules, :update, 'schedules_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:schedules, :delete, 'schedules_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # RLS Policies for VOD_REVIEWS table
     create_policy(:vod_reviews, :select, 'vod_reviews_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:vod_reviews, :insert, 'vod_reviews_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:vod_reviews, :update, 'vod_reviews_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:vod_reviews, :delete, 'vod_reviews_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # RLS Policies for VOD_TIMESTAMPS table (via vod_review relationship)
     execute <<-SQL
@@ -267,40 +269,40 @@ class EnableRowLevelSecurity < ActiveRecord::Migration[7.2]
 
     # RLS Policies for TEAM_GOALS table
     create_policy(:team_goals, :select, 'team_goals_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:team_goals, :insert, 'team_goals_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:team_goals, :update, 'team_goals_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:team_goals, :delete, 'team_goals_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # RLS Policies for AUDIT_LOGS table
     create_policy(:audit_logs, :select, 'audit_logs_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:audit_logs, :insert, 'audit_logs_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     # Audit logs should not be updated or deleted
-    
+
     # RLS Policies for SCRIMS table
     create_policy(:scrims, :select, 'scrims_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:scrims, :insert, 'scrims_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:scrims, :update, 'scrims_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:scrims, :delete, 'scrims_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # RLS Policies for COMPETITIVE_MATCHES table
     create_policy(:competitive_matches, :select, 'competitive_matches_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:competitive_matches, :insert, 'competitive_matches_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:competitive_matches, :update, 'competitive_matches_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:competitive_matches, :delete, 'competitive_matches_delete_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
   end
 
   def down
@@ -403,7 +405,7 @@ class EnableRowLevelSecurity < ActiveRecord::Migration[7.2]
   def create_policy(table_name, operation, policy_name, condition)
     operation_sql = operation.to_s.upcase
     using_or_check = [:insert].include?(operation) ? 'WITH CHECK' : 'USING'
-    
+
     execute <<-SQL
       CREATE POLICY #{policy_name} ON #{table_name}
       FOR #{operation_sql}

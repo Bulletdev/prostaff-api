@@ -30,7 +30,7 @@ module ApplicationCable
 
       reject_unauthorized_connection if token.blank?
 
-      payload = Authentication::Services::JwtService.decode(token)
+      payload = JwtService.decode(token)
 
       # Only accept access tokens — reject refresh tokens
       if payload[:type] != 'access'
@@ -52,7 +52,7 @@ module ApplicationCable
 
       logger.info "[ActionCable] Connected: user=#{user.id} org=#{user.organization_id}"
       user
-    rescue Authentication::Services::JwtService::AuthenticationError => e
+    rescue JwtService::AuthenticationError => e
       logger.warn "[ActionCable] JWT rejected: #{e.message}"
       reject_unauthorized_connection
     end

@@ -163,7 +163,7 @@ module Api
 
       def render_internal_error(exception)
         # Log detailed error information
-        Rails.logger.error("=" * 80)
+        Rails.logger.error('=' * 80)
         Rails.logger.error("INTERNAL ERROR: #{exception.class}")
         Rails.logger.error("Message: #{exception.message}")
         Rails.logger.error("Controller: #{controller_name}##{action_name}")
@@ -171,9 +171,9 @@ module Api
         Rails.logger.error("Organization: #{current_organization&.name || 'N/A'}")
         Rails.logger.error("Request: #{request.method} #{request.path}")
         Rails.logger.error("Params: #{params.except(:controller, :action).inspect}")
-        Rails.logger.error("Backtrace:")
+        Rails.logger.error('Backtrace:')
         Rails.logger.error(exception.backtrace&.first(10)&.join("\n"))
-        Rails.logger.error("=" * 80)
+        Rails.logger.error('=' * 80)
 
         # In development, show detailed error; in production, be vague for security
         if Rails.env.development?

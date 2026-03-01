@@ -23,7 +23,7 @@ module Competitive
         render json: {
           message: 'Professional matches retrieved successfully',
           data: {
-            matches: ::Competitive::Serializers::ProMatchSerializer.render_as_hash(matches),
+            matches: ProMatchSerializer.render_as_hash(matches),
             pagination: pagination_meta(matches)
           }
         }
@@ -46,7 +46,7 @@ module Competitive
         render json: {
           message: 'Match details retrieved successfully',
           data: {
-            match: ::Competitive::Serializers::ProMatchSerializer.render_as_hash(match)
+            match: ProMatchSerializer.render_as_hash(match)
           }
         }
       rescue ActiveRecord::RecordNotFound
@@ -77,7 +77,7 @@ module Competitive
             cached: true
           }
         }
-      rescue ::Competitive::Services::PandascoreService::PandascoreError => e
+      rescue PandascoreService::PandascoreError => e
         render json: {
           error: {
             code: 'PANDASCORE_ERROR',
@@ -105,7 +105,7 @@ module Competitive
             cached: true
           }
         }
-      rescue ::Competitive::Services::PandascoreService::PandascoreError => e
+      rescue PandascoreService::PandascoreError => e
         render json: {
           error: {
             code: 'PANDASCORE_ERROR',
@@ -149,9 +149,9 @@ module Competitive
       def sync_from_scraper
         league   = params.require(:league)
         our_team = params[:our_team].presence
-        raise ActionController::ParameterMissing.new(:our_team) if our_team.blank?
+        raise ActionController::ParameterMissing, :our_team if our_team.blank?
 
-        limit    = params.fetch(:limit, 100).to_i.clamp(1, 500)
+        limit = params.fetch(:limit, 100).to_i.clamp(1, 500)
 
         job = SyncScraperMatchesJob.perform_later(
           current_organization.id,
@@ -232,9 +232,9 @@ module Competitive
       def diagnose_missing
         overview_page = params.require(:overview_page)
         our_team      = params[:our_team].presence
-        raise ActionController::ParameterMissing.new(:our_team) if our_team.blank?
+        raise ActionController::ParameterMissing, :our_team if our_team.blank?
 
-        service = ::Competitive::Services::LeaguepediaRecoveryService.new(current_organization)
+        service = LeaguepediaRecoveryService.new(current_organization)
         games   = service.diagnose_missing(overview_page: overview_page, our_team: our_team)
 
         missing = games.reject { |g| g[:present_in_db] }
@@ -277,11 +277,11 @@ module Competitive
       def recover_missing
         overview_page = params.require(:overview_page)
         our_team      = params[:our_team].presence
-        raise ActionController::ParameterMissing.new(:our_team) if our_team.blank?
+        raise ActionController::ParameterMissing, :our_team if our_team.blank?
 
         stage = params[:stage].presence
 
-        service = ::Competitive::Services::LeaguepediaRecoveryService.new(current_organization)
+        service = LeaguepediaRecoveryService.new(current_organization)
         result  = service.recover_missing(
           overview_page: overview_page,
           our_team: our_team,
@@ -321,10 +321,10 @@ module Competitive
         render json: {
           message: 'Match imported successfully',
           data: {
-            match: ::Competitive::Serializers::ProMatchSerializer.render_as_hash(imported_match)
+            match: ProMatchSerializer.render_as_hash(imported_match)
           }
         }, status: :created
-      rescue ::Competitive::Services::PandascoreService::NotFoundError
+      rescue PandascoreService::NotFoundError
         render json: {
           error: {
             code: 'MATCH_NOT_FOUND',
@@ -343,7 +343,7 @@ module Competitive
       private
 
       def set_pandascore_service
-        @pandascore_service = ::Competitive::Services::PandascoreService.instance
+        @pandascore_service = PandascoreService.instance
       end
 
       def apply_filters(matches)

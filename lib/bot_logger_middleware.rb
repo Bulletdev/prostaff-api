@@ -21,9 +21,7 @@ class BotLoggerMiddleware
     # Detectar se é um bot
     bot_type = detect_bot(user_agent)
 
-    if bot_type
-      log_bot_activity(request, bot_type)
-    end
+    log_bot_activity(request, bot_type) if bot_type
 
     @app.call(env)
   end
@@ -68,9 +66,7 @@ class BotLoggerMiddleware
     end
 
     # Enviar para Redis para análise posterior (opcional)
-    if ENV['REDIS_URL'] && ENV['TRACK_BOT_STATS'] == 'true'
-      track_bot_stats(bot_type, request.path)
-    end
+    track_bot_stats(bot_type, request.path) if ENV['REDIS_URL'] && ENV['TRACK_BOT_STATS'] == 'true'
   rescue StandardError => e
     Rails.logger.error "[BotLogger Error] #{e.message}"
   end

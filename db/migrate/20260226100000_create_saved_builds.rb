@@ -15,7 +15,7 @@ class CreateSavedBuilds < ActiveRecord::Migration[7.1]
       t.references :created_by, null: true, foreign_key: { to_table: :users }, type: :uuid
 
       # Build identity
-      t.string :champion,      null: false
+      t.string :champion, null: false
       t.string :role
       t.string :patch_version
 
@@ -43,7 +43,7 @@ class CreateSavedBuilds < ActiveRecord::Migration[7.1]
       # Metadata
       t.string  :title
       t.text    :notes
-      t.boolean :is_public,          null: false, default: false
+      t.boolean :is_public, null: false, default: false
 
       # Source tracking
       # 'manual'     — created directly by a coach

@@ -30,8 +30,26 @@ module ProstaffApi
     # Common ones are `templates`, `generators`, or `middleware`.
     config.autoload_lib(ignore: %w[assets tasks])
 
-    # Add strategy module to autoload paths
-    config.autoload_paths << Rails.root.join('app/modules')
+    # Modules: controllers, services, concerns (namespaced by module)
+    config.autoload_paths += %W[#{config.root}/app/modules]
+    config.eager_load_paths += %W[#{config.root}/app/modules]
+
+    # Models inside modules: added as roots so class names stay flat
+    # e.g. app/modules/players/models/player.rb => Player (not Players::Player)
+    Dir[root.join('app/modules/*/models')].each do |path|
+      config.autoload_paths << path
+      config.eager_load_paths << path
+    end
+
+    # Serializers, policies, channels, and services keep their original flat class names.
+    # Adding their dirs as roots (same pattern as models) avoids renaming every
+    # constant: PlayerSerializer, PlayerPolicy, RiotApiService, etc. stay as-is.
+    %w[serializers policies channels services].each do |layer|
+      Dir[root.join("app/modules/*/#{layer}")].each do |path|
+        config.autoload_paths << path
+        config.eager_load_paths << path
+      end
+    end
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -49,10 +67,6 @@ module ProstaffApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
-
-    # Load modules directory
-    config.autoload_paths += %W[#{config.root}/app/modules]
-    config.eager_load_paths += %W[#{config.root}/app/modules]
 
     # CORS configuration - See config/initializers/cors.rb
     # Removed from here to avoid duplicate middleware registration

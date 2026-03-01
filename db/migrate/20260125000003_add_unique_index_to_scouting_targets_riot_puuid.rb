@@ -10,6 +10,6 @@ class AddUniqueIndexToScoutingTargetsRiotPuuid < ActiveRecord::Migration[7.1]
     add_index :scouting_targets, %i[organization_id riot_puuid],
               unique: true,
               name: 'index_scouting_targets_on_org_and_puuid',
-              where: "riot_puuid IS NOT NULL"
+              where: 'riot_puuid IS NOT NULL'
   end
 end

@@ -14,7 +14,7 @@ module Players
         # Set a reasonable timeout to prevent 504s
         ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '5000'") # 5 seconds
 
-        players = organization_scoped(Player).includes(:champion_pools)
+        players = organization_scoped(Player).includes(:organization)
 
         players = players.by_role(params[:role]) if params[:role].present?
         players = players.by_status(params[:status]) if params[:status].present?
@@ -120,7 +120,7 @@ module Players
 
       # GET /api/v1/players/:id/stats
       def stats
-        stats_service = Players::Services::StatsService.new(@player)
+        stats_service = StatsService.new(@player)
         stats_data = stats_service.calculate_stats
 
         render_success({
@@ -178,7 +178,7 @@ module Players
       # POST /api/v1/players/:id/sync_from_riot
       def sync_from_riot
         region = params[:region] || @player.region || 'br1'
-        service = Players::Services::RiotSyncService.new(current_organization, region)
+        service = RiotSyncService.new(current_organization, region)
         result = service.sync_player(@player, import_matches: true)
 
         if result[:success]
@@ -215,7 +215,7 @@ module Players
           )
         end
 
-        result = Players::Services::RiotSyncService.search_riot_id(summoner_name, region: region)
+        result = RiotSyncService.search_riot_id(summoner_name, region: region)
 
         if result[:success] && result[:found]
           render_success(result.except(:success))
@@ -363,7 +363,7 @@ module Players
 
       # Import player from Riot API
       def import_player_from_riot(summoner_name, role, region)
-        Players::Services::RiotSyncService.import(
+        RiotSyncService.import(
           summoner_name: summoner_name,
           role: role,
           region: region,

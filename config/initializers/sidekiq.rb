@@ -17,11 +17,11 @@ def configure_sidekiq_with_retry
     redis_client.call('PING')
     redis_client.close
 
-    Rails.logger.info "✓ Redis connection successful"
+    Rails.logger.info '✓ Redis connection successful'
     true
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "✗ Redis connection failed: #{e.class} - #{e.message}"
-    Rails.logger.error "  Sidekiq and background jobs will be disabled"
+    Rails.logger.error '  Sidekiq and background jobs will be disabled'
     Rails.logger.error "  Backtrace: #{e.backtrace.first(3).join("\n  ")}"
     false
   end
@@ -56,8 +56,8 @@ if configure_sidekiq_with_retry
     }
   end
 
-  Rails.logger.info "✓ Sidekiq configured successfully"
+  Rails.logger.info '✓ Sidekiq configured successfully'
 else
-  Rails.logger.warn "⚠ Redis not available - Sidekiq disabled. Background jobs will not run."
-  Rails.logger.warn "  Check REDIS_URL environment variable and Redis service status"
+  Rails.logger.warn '⚠ Redis not available - Sidekiq disabled. Background jobs will not run.'
+  Rails.logger.warn '  Check REDIS_URL environment variable and Redis service status'
 end

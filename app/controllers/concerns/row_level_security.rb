@@ -7,11 +7,11 @@ module RowLevelSecurity
     around_action :with_rls_context
   end
 
-  def with_rls_context
+  def with_rls_context(&)
     return yield unless current_user && current_organization
 
     set_thread_locals
-    run_with_rls_transaction { yield }
+    run_with_rls_transaction(&)
   ensure
     clear_thread_locals
   end

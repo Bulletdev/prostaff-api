@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateFantasyWaitlists < ActiveRecord::Migration[7.2]
   def change
     create_table :fantasy_waitlists do |t|

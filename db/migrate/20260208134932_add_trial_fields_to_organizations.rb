@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddTrialFieldsToOrganizations < ActiveRecord::Migration[7.2]
   def change
     add_column :organizations, :trial_expires_at, :datetime
