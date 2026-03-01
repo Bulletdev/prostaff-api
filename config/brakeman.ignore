@@ -1,0 +1,24 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "2df0aabf76fb1d7111cc2955d44606976db16719d3b2350db8c3b09fb5cbe613",
+      "note": "False positive — :role is an in-game position (top/jungle/mid/adc/support), NOT a user authorization/admin role. The Player model has no privileged role attribute. Reviewed 2026-02-28."
+    },
+    {
+      "fingerprint": "4e9eb66fae6365a1347b7ceb5de9c3834f80bfac2416c80526b09fc6a66eb4fa",
+      "note": "False positive — the SQL interpolation only inserts PostgreSQL numbered bind-parameter placeholders ($1, $2, ...). The actual type_names values are passed separately as exec_query bind parameters, never concatenated into the SQL string. No user input reaches this code path. Reviewed 2026-02-28."
+    },
+    {
+      "fingerprint": "7bdf978768b5058d8c79ec541e68cb8643bbf19ab5ab52d60e6bd420a91bc416",
+      "note": "False positive — safe_ids values come from Meilisearch hit IDs (internal database PKs) and are individually escaped via ActiveRecord::Base.connection.quote() before interpolation. User search query is sent only to Meilisearch, never interpolated into SQL. Reviewed 2026-02-28."
+    },
+    {
+      "fingerprint": "a53e36aea1309fb0af3b08b9d5403838087ed98264a2a158a98adde5f6d496d3",
+      "note": "False positive — :role is a League of Legends champion role (adc/jungle/mid/support/top), NOT a user authorization role. SavedBuild model has no admin/banned/account_id or privilege-escalation fields. Reviewed 2026-02-28."
+    },
+    {
+      "fingerprint": "c98c465cbb4e6f99aae70dcf4cef99d859236873e06d64cc46a02a1f51f508a5",
+      "note": "False positive — identical pattern to pg_type_cache. Only PostgreSQL numbered placeholders ($1, $2, ...) are interpolated; actual type name values are bound separately via exec_query params. type_names defaults to a hard-coded whitelist of pg type strings, never accepts raw user input. Reviewed 2026-02-28."
+    }
+  ]
+}
