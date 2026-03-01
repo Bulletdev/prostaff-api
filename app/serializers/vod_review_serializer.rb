@@ -27,7 +27,9 @@ class VodReviewSerializer < Blueprinter::Base
   end
 
   field :timestamps_count do |vod_review, options|
-    options[:include_timestamps_count] ? vod_review.vod_timestamps.count : nil
+    # Use .size (not .count) so that when vod_timestamps is eager-loaded (via includes)
+    # the count comes from the in-memory collection — avoids 1 COUNT query per review.
+    options[:include_timestamps_count] ? vod_review.vod_timestamps.size : nil
   end
 
   association :organization, blueprint: OrganizationSerializer
