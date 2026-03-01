@@ -35,6 +35,16 @@
     class: Analytics::RefreshMetadataViewsJob
     description: 'Refresh materialized views for database metadata (table privileges, extensions, policies)'
 
+  # Historical backfill: triggers scraper backfill (Leaguepedia → ES) then
+  # syncs new matches into Rails DB.  Resumable — only processes pending
+  # tournaments.  First run imports full history (~8-12h), subsequent runs
+  # take minutes.  Runs daily at 4 AM UTC.
+  historical_backfill:
+    cron: '0 4 * * *'
+    class: Competitive::HistoricalBackfillJob
+    queue: low_priority
+    description: 'Trigger historical backfill on scraper and sync matches to Rails DB'
+
   # Additional scheduled jobs can be added here
   # Example:
   # sync_riot_data:
