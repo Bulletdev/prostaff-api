@@ -24,7 +24,7 @@
   # Cleanup expired tokens daily at 2 AM
   cleanup_expired_tokens:
     cron: '0 2 * * *'
-    class: CleanupExpiredTokensJob
+    class: Authentication::CleanupExpiredTokensJob
     description: 'Clean up expired password reset tokens and blacklisted JWT tokens'
 
   # Refresh database metadata materialized views every 2 hours.
@@ -32,7 +32,7 @@
   # rarely. Running every 30m was consuming ~72% of total DB time (879ms avg).
   refresh_metadata_views:
     cron: '0 */2 * * *'
-    class: RefreshMetadataViewsJob
+    class: Analytics::RefreshMetadataViewsJob
     description: 'Refresh materialized views for database metadata (table privileges, extensions, policies)'
 
   # Additional scheduled jobs can be added here

@@ -16,7 +16,8 @@ Rails.application.config.after_initialize do
   Thread.new do
     sleep 2 # small delay to let the process finish booting cleanly
 
-    MetaIntelligence::Services::MetaIndexerService.setup_indexes
+    # services dirs are push_dir'd as Zeitwerk roots → flat constant name
+    MetaIndexerService.setup_indexes
     Rails.logger.info '[MetaIntelligence] Meilisearch indexes configured'
   rescue StandardError => e
     Rails.logger.warn "[MetaIntelligence] Index setup skipped: #{e.message}"
