@@ -167,6 +167,15 @@ module Competitive
 
       # Map participants belonging to a given team into pick hashes.
       # Returns [] if participants are nil or team name is blank.
+      #
+      # Includes all fields forwarded from Leaguepedia ScoreboardPlayers so that
+      # competitive analytics can aggregate individual performance (CS, gold, damage,
+      # vision, wards, items, runes, summoner spells) without querying Elasticsearch.
+      #
+      # Extended stats (damage_taken, vision_score, wards_placed, wards_killed) and
+      # derived per-minute fields (cs_per_min, gold_per_min, damage_per_min) are
+      # included when available from the enriched scraper document; older records
+      # that predate the Fix-4 enrichment will have these as nil and .compact removes them.
       def build_picks(participants, team_name)
         return [] if participants.blank? || team_name.blank?
 
@@ -180,7 +189,26 @@ module Competitive
               'kills' => p['kills'],
               'deaths' => p['deaths'],
               'assists' => p['assists'],
-              'win' => p['win']
+              'cs' => p['cs'],
+              'gold' => p['gold'],
+              'damage' => p['damage'],
+              'win' => p['win'],
+              # Extended stats (present after Fix-4 Leaguepedia enrichment)
+              'damage_taken' => p['damage_taken'],
+              'vision_score' => p['vision_score'],
+              'wards_placed' => p['wards_placed'],
+              'wards_killed' => p['wards_killed'],
+              # Derived per-minute fields (present when game_duration_seconds > 0)
+              'cs_per_min' => p['cs_per_min'],
+              'gold_per_min' => p['gold_per_min'],
+              'damage_per_min' => p['damage_per_min'],
+              # Gear & runes
+              'items' => p['items'],
+              'summoner_spells' => p['summoner_spells'],
+              'keystone' => p['keystone'],
+              'primary_runes' => p['primary_runes'],
+              'secondary_runes' => p['secondary_runes'],
+              'stat_shards' => p['stat_shards']
             }.compact
           end
       end

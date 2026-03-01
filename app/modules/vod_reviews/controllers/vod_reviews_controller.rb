@@ -8,7 +8,7 @@ module VodReviews
 
       def index
         authorize VodReview
-        vod_reviews = organization_scoped(VodReview).includes(:match, :reviewer)
+        vod_reviews = organization_scoped(VodReview).includes(:match, :reviewer, :vod_timestamps)
 
         vod_reviews = vod_reviews.where(status: params[:status]) if params[:status].present?
 

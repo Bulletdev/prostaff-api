@@ -25,9 +25,8 @@ Rails.application.configure do
   }
 
   # Show full error reports and disable caching.
-  # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
-  # We want detailed exceptions in test environment for debugging
-  config.consider_all_requests_local       = true
+  # Intentional: test env needs full error reports for debugging test failures
+  config.consider_all_requests_local       = true # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
   config.action_controller.perform_caching = false
   config.cache_store = :null_store
 

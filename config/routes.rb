@@ -202,10 +202,14 @@ Rails.application.routes.draw do
         get 'vision/:player_id', to: 'vision#show'
         get 'team-comparison', to: 'team_comparison#index'
 
+        # Objective analytics (dragon, baron, tower, inhibitor control)
+        get 'objectives', to: 'objectives#index'
+
         # Competitive analytics (draft performance, tournament stats, opponent analysis)
         get 'competitive/draft-performance', to: 'competitive#draft_performance'
         get 'competitive/tournament-stats',  to: 'competitive#tournament_stats'
         get 'competitive/opponents',         to: 'competitive#opponents'
+        get 'competitive/player-stats',      to: 'competitive_player#player_stats'
       end
 
       # Matches
