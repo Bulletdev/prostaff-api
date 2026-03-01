@@ -53,6 +53,7 @@
 │  [■] Competitive Module       — PandaScore integration + draft analysis     │
 │  [■] Scrims Management        — Opponent tracking + analytics               │
 │  [■] Strategy Module          — Draft planning + tactical boards            │
+│  [■] Meta Intelligence        — Build aggregation, champion/item analytics  │
 │  [■] Support System           — Ticketing + staff dashboard + FAQ           │
 │  [■] Global Search            — Meilisearch full-text search across models  │
 │  [■] Real-time Messaging      — Action Cable WebSocket team chat            │
@@ -190,9 +191,11 @@ This API follows a **modular monolith** architecture:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  MODULE             │  RESPONSIBILITY                                       │
 ├─────────────────────┼───────────────────────────────────────────────────────┤
+│  core               │  Shared base classes, concerns and constants          │
 │  authentication     │  User auth and authorization                          │
+│  admin              │  Organization, audit log and admin player management  │
 │  dashboard          │  Dashboard statistics and metrics                     │
-│  players            │  Player management and statistics                     │
+│  players            │  Player management, rosters and statistics            │
 │  scouting           │  Player scouting and talent discovery                 │
 │  analytics          │  Performance, competitive draft, tournament & opponent│
 │  matches            │  Match data and statistics                            │
@@ -201,6 +204,7 @@ This API follows a **modular monolith** architecture:
 │  team_goals         │  Goal setting and tracking                            │
 │  riot_integration   │  Riot Games API integration                           │
 │  competitive        │  PandaScore integration, pro matches, draft analysis  │
+│  meta_intelligence  │  Build aggregation, champion/item meta analytics      │
 │  scrims             │  Scrim management and opponent team tracking          │
 │  strategy           │  Draft planning and tactical board system             │
 │  support            │  Support ticket system with staff dashboard and FAQ   │
@@ -417,14 +421,15 @@ graph TB
 
 **Key Architecture Principles:**
 
-1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
-2. **API-Only**: Rails configured in API mode for JSON responses
-3. **JWT Authentication**: Stateless authentication using JWT tokens
-4. **Background Processing**: Long-running tasks handled by Sidekiq
-5. **Caching**: Redis used for session management and performance optimization
-6. **External Integration**: Riot Games API integration for real-time data
-7. **Rate Limiting**: Rack::Attack for API rate limiting
-8. **CORS**: Configured for cross-origin requests from frontend
+1. **Modular Monolith**: Each module under `app/modules/<domain>/` is self-contained with its own controllers, models, jobs, serializers, policies and services
+2. **Zeitwerk Autoloading**: Custom `config/initializers/zeitwerk.rb` maps `app/modules/<domain>/<layer>/` to the correct Ruby namespace — no manual `require` needed
+3. **API-Only**: Rails configured in API mode for JSON responses
+4. **JWT Authentication**: Stateless authentication using JWT tokens
+5. **Background Processing**: Long-running tasks handled by Sidekiq
+6. **Caching**: Redis used for session management and performance optimization
+7. **External Integration**: Riot Games API integration for real-time data
+8. **Rate Limiting**: Rack::Attack for API rate limiting
+9. **CORS**: Configured for cross-origin requests from frontend
 
 ### Deployment Architecture
 
@@ -494,7 +499,7 @@ graph TB
 ### Prerequisites
 
 ```
-[✓] Ruby 3.2+
+[✓] Ruby 3.4.5+
 [✓] PostgreSQL 14+
 [✓] Redis 6+
 ```
@@ -798,6 +803,13 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `GET    /strategy/assets/champion/:champion_name` — Get champion assets
 - `GET    /strategy/assets/map` — Get map assets
 
+#### Meta Intelligence
+- `GET  /meta/builds` — List aggregated champion builds
+- `GET  /meta/builds/:champion` — Get build stats for a specific champion
+- `POST /meta/builds/aggregate` — Trigger build aggregation job (admin)
+- `GET  /meta/items` — List item analytics
+- `GET  /meta/items/:item_id` — Get item performance stats
+
 #### Support System
 - `GET    /support/tickets` — List user's tickets
 - `GET    /support/tickets/:id` — Get ticket details
@@ -917,6 +929,7 @@ bundle exec rspec spec/integration/players_spec.rb
 ║  Competitive             ║  14                ║
 ║  Scrims                  ║  14                ║
 ║  Strategy                ║  16                ║
+║  Meta Intelligence       ║  5                 ║
 ║  Support                 ║  16                ║
 ║  Admin                   ║  9                 ║
 ║  Notifications           ║  6                 ║
