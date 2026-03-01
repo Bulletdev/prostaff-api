@@ -306,6 +306,53 @@ module Competitive
                status: :service_unavailable
       end
 
+      # POST /api/v1/competitive/pro-matches/historical-backfill
+      # Trigger a full historical backfill: scraper imports from Leaguepedia → ES,
+      # then syncs into the Rails DB.  The job runs in the background via Sidekiq.
+      #
+      # The scraper's backfill is resumable — calling this endpoint multiple times
+      # is safe and will only process new/failed tournaments.
+      #
+      # @param league    [String]  optional — league slug (default from env BACKFILL_LEAGUE)
+      # @param min_year  [Integer] optional — earliest year (default from env BACKFILL_MIN_YEAR)
+      def historical_backfill
+        job = HistoricalBackfillJob.perform_later
+
+        scraper = ProStaffScraperService.new
+        status = begin
+          scraper.historical_backfill_status(league: params.fetch(:league, ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')))
+        rescue ProStaffScraperService::ScraperError => e
+          { error: e.message }
+        end
+
+        render json: {
+          message: 'Historical backfill job enqueued',
+          data: {
+            job_id: job.job_id,
+            league: params.fetch(:league, ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')),
+            current_status: status
+          }
+        }, status: :accepted
+      end
+
+      # GET /api/v1/competitive/pro-matches/historical-backfill/status
+      # Check the current progress of the historical backfill on the scraper.
+      def historical_backfill_status
+        league = params.fetch(:league, ENV.fetch('BACKFILL_LEAGUE', 'CBLOL'))
+
+        scraper = ProStaffScraperService.new
+        status = scraper.historical_backfill_status(league: league)
+
+        render json: {
+          message: 'Backfill status retrieved',
+          data: status
+        }
+      rescue ProStaffScraperService::ScraperError => e
+        render json: {
+          error: { code: 'SCRAPER_ERROR', message: e.message }
+        }, status: :service_unavailable
+      end
+
       # POST /api/v1/competitive/pro-matches/import
       # Import a match from PandaScore to our database
       def import

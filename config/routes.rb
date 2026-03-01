@@ -281,6 +281,8 @@ Rails.application.routes.draw do
             post 'sync-from-leaguepedia',  action: :sync_from_leaguepedia
             get  'diagnose-missing',       action: :diagnose_missing
             post 'recover-missing',        action: :recover_missing
+            post 'historical-backfill',        action: :historical_backfill
+            get  'historical-backfill/status', action: :historical_backfill_status
           end
         end
 
