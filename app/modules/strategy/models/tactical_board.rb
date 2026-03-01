@@ -220,15 +220,13 @@ class TacticalBoard < ApplicationRecord
       return
     end
 
-    unless annotation['type'] && annotation['x'] && annotation['y']
-      errors.add(:annotations, "annotation at index #{index} must have type, x, and y")
-    end
+    # Only require 'type'. Canvas annotations are heterogeneous:
+    #   - circle / text: have x, y (relative or pixel coords)
+    #   - line / arrow / pen: use a 'points' array, no x/y
+    # Requiring x/y and enforcing a 0-100 range breaks all point-based annotations.
+    return if annotation['type'].present?
 
-    return unless annotation['x'] && annotation['y']
-
-    return if (0..100).cover?(annotation['x'].to_f) && (0..100).cover?(annotation['y'].to_f)
-
-    errors.add(:annotations, "annotation at index #{index} coordinates must be between 0 and 100")
+    errors.add(:annotations, "annotation at index #{index} must have a type")
   end
 
   def validate_coordinates!(x, y)

@@ -139,10 +139,14 @@ module Strategy
       end
 
       def tactical_board_params
-        # Support both nested format (tactical_board: {title:...}) and flat format (name:..., board_state:...)
-        # The frontend may send data at the top level with different field names.
+        # Support both nested format (tactical_board: {map_state:...}) and flat format (name:..., board_state:...)
+        # Always prefer the nested tactical_board hash when present — even partial updates
+        # (e.g. map_state only, no title) must read from tb, not from top-level params.
+        # The previous check `tb[:title].present? || tb[:name].present?` fell back to
+        # top-level params whenever an update omitted the title field, causing update({})
+        # to be called silently and saving nothing despite returning 200 OK.
         tb = params[:tactical_board]
-        source = tb.present? && (tb[:title].present? || tb[:name].present?) ? tb : params
+        source = tb.present? ? tb : params
 
         permitted = {
           title: source[:title] || source[:name],
