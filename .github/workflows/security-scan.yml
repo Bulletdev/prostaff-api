@@ -289,16 +289,16 @@ jobs:
       - name: Setup Database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
         run: |
           bundle exec rails db:create db:migrate RAILS_ENV=test
 
       - name: Start Rails Server
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
           JWT_SECRET_KEY: test_jwt_secret_key_for_ci
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
         run: |
@@ -359,16 +359,16 @@ jobs:
       - name: Setup Database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
         run: |
           bundle exec rails db:create db:migrate RAILS_ENV=test
 
       - name: Start Rails Server
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
           JWT_SECRET_KEY: test_jwt_secret_key_for_ci
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
         run: |
@@ -422,16 +422,16 @@ jobs:
       - name: Setup Database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
         run: |
           bundle exec rails db:create db:migrate RAILS_ENV=test
 
       - name: Start Rails Server
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
+          REDIS_URL: redis://127.0.0.1:6379/0
           JWT_SECRET_KEY: test_jwt_secret_key_for_ci
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
         run: |
