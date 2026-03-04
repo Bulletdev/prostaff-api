@@ -11,7 +11,10 @@ module Scouting
     retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
     retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
 
-    def perform(scouting_target_id)
+    def perform(scouting_target_id, organization_id)
+      # Set organization context for multi-tenant scoping
+      Current.organization_id = organization_id
+
       target = ScoutingTarget.find(scouting_target_id)
       riot_service = RiotApiService.new
 
@@ -27,6 +30,9 @@ module Scouting
     rescue StandardError => e
       Rails.logger.error("Failed to sync scouting target #{target.id}: #{e.message}")
       raise
+    ensure
+      # Clean up context
+      Current.organization_id = nil
     end
 
     private

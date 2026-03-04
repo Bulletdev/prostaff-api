@@ -10,6 +10,9 @@ module Matches
     # retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
 
     def perform(match_id, organization_id, region = 'BR', force_update = false)
+      # Set organization context for multi-tenant scoping
+      Current.organization_id = organization_id
+
       puts "SyncMatchJob: Starting sync for #{match_id} (force_update: #{force_update})"
       $stdout.flush
       organization = Organization.find(organization_id)
@@ -53,6 +56,9 @@ module Matches
     rescue StandardError => e
       Rails.logger.error("Failed to sync match #{match_id}: #{e.message}")
       raise
+    ensure
+      # Clean up context
+      Current.organization_id = nil
     end
 
     private

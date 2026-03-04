@@ -266,7 +266,7 @@ module Players
 
         begin
           players.each do |player|
-            SyncPlayerFromRiotJob.perform_later(player.id)
+            SyncPlayerFromRiotJob.perform_later(player.id, current_organization.id)
           end
 
           render_success({

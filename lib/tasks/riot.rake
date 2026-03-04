@@ -98,23 +98,23 @@ namespace :riot do
   task sync_all_players: :environment do
     puts '🔄 Syncing all active players from Riot API...'
 
-    Player.active.find_each do |player|
-      puts "  Syncing #{player.summoner_name} (#{player.id})..."
-      SyncPlayerFromRiotJob.perform_later(player.id)
+    Player.unscoped_by_organization.active.find_each do |player|
+      puts "  Syncing #{player.summoner_name} (#{player.id}) from org #{player.organization_id}..."
+      SyncPlayerFromRiotJob.perform_later(player.id, player.organization_id)
     end
 
-    puts "✅ Queued #{Player.active.count} players for sync!"
+    puts "✅ Queued #{Player.unscoped_by_organization.active.count} players for sync!"
   end
 
   desc 'Sync all scouting targets from Riot API'
   task sync_all_scouting_targets: :environment do
     puts '🔄 Syncing all scouting targets from Riot API...'
 
-    ScoutingTarget.find_each do |target|
-      puts "  Syncing #{target.summoner_name} (#{target.id})..."
-      SyncScoutingTargetJob.perform_later(target.id)
+    ScoutingTarget.unscoped_by_organization.find_each do |target|
+      puts "  Syncing #{target.summoner_name} (#{target.id}) from org #{target.organization_id}..."
+      SyncScoutingTargetJob.perform_later(target.id, target.organization_id)
     end
 
-    puts "✅ Queued #{ScoutingTarget.count} scouting targets for sync!"
+    puts "✅ Queued #{ScoutingTarget.unscoped_by_organization.count} scouting targets for sync!"
   end
 end
