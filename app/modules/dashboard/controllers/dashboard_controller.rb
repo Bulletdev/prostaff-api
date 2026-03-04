@@ -163,9 +163,9 @@ module Dashboard
       def fetch_recent_activities
         # Fetch recent audit logs and format them.
         # includes(:user) preloads the user in one query — avoids N+1 on log.user&.email
-        activities = AuditLog
+        # SECURITY: Use organization_scoped helper for consistent scoping
+        activities = organization_scoped(AuditLog)
                      .includes(:user)
-                     .where(organization: current_organization)
                      .order(created_at: :desc)
                      .limit(20)
 

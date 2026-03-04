@@ -13,8 +13,9 @@ module OrganizationScoped
       if org_id.present?
         where(organization_id: org_id)
       else
-        Rails.logger.warn("[SCOPE] OrganizationScoped: Current.organization_id is nil for #{name}")
-        all
+        # SECURITY: Fail-safe - retorna scope vazio em vez de expor dados de todas as orgs
+        Rails.logger.error("[SECURITY] OrganizationScoped: organization_id is nil for #{name} - BLOCKING ACCESS")
+        where('1=0')
       end
     }
   end
