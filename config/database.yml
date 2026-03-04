@@ -82,12 +82,13 @@ test:
   # SAFETY: NEVER use DATABASE_URL in test - ALWAYS localhost only
   # This is hardcoded to prevent accidental production database access
   database: prostaff_api_test
-  host: localhost
+  host: 127.0.0.1
   port: 5432
   username: postgres
-  password: password
+  password: postgres
   # Explicitly ignore DATABASE_URL for test environment
-  url: postgresql://postgres:password@localhost:5432/prostaff_api_test
+  # Using 127.0.0.1 instead of localhost to avoid IPv6 issues in CI
+  url: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_api_test
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
