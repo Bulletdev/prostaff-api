@@ -250,10 +250,217 @@ jobs:
           path: ./
           extra_args: --only-verified
 
+  # Dynamic Application Security Testing (DAST)
+  ssrf-protection:
+    name: SSRF Protection Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prostaff_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Setup Database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+        run: |
+          bundle exec rails db:create db:migrate RAILS_ENV=test
+
+      - name: Start Rails Server
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET_KEY: test_jwt_secret_key_for_ci
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
+        run: |
+          bundle exec rails server -p 3333 -d
+          sleep 10
+
+      - name: Wait for API
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
+
+      - name: Run SSRF Protection Tests
+        run: |
+          chmod +x .pentest/test-ssrf-quick.sh
+          .pentest/test-ssrf-quick.sh
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ssrf-test-results
+          path: security_tests/reports/ssrf/
+
+  authentication-test:
+    name: Authentication Security Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prostaff_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Setup Database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+        run: |
+          bundle exec rails db:create db:migrate RAILS_ENV=test
+
+      - name: Start Rails Server
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET_KEY: test_jwt_secret_key_for_ci
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
+        run: |
+          bundle exec rails server -p 3333 -d
+          sleep 10
+
+      - name: Wait for API
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
+
+      - name: Run Authentication Tests
+        run: |
+          chmod +x .pentest/test-authentication-quick.sh
+          .pentest/test-authentication-quick.sh
+
+  sql-injection-test:
+    name: SQL Injection Protection Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prostaff_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
+        with:
+          ruby-version: 3.4.5
+          bundler-cache: true
+
+      - name: Setup Database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+        run: |
+          bundle exec rails db:create db:migrate RAILS_ENV=test
+
+      - name: Start Rails Server
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET_KEY: test_jwt_secret_key_for_ci
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
+        run: |
+          bundle exec rails server -p 3333 -d
+          sleep 10
+
+      - name: Wait for API
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
+
+      - name: Run SQL Injection Tests
+        run: |
+          chmod +x .pentest/test-sql-injection-quick.sh
+          .pentest/test-sql-injection-quick.sh
+
+  secrets-scan-enhanced:
+    name: Secrets Scan (Enhanced)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Secrets Check
+        run: |
+          chmod +x .pentest/test-secrets-quick.sh
+          .pentest/test-secrets-quick.sh
+
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [brakeman, dependency-check, semgrep]
+    needs: [brakeman, dependency-check, semgrep, ssrf-protection, authentication-test, sql-injection-test, secrets-scan-enhanced]
     if: always()
     steps:
       - name: Check Results
@@ -261,6 +468,10 @@ jobs:
           echo "Brakeman: ${{ needs.brakeman.result }}"
           echo "Dependency Check: ${{ needs.dependency-check.result }}"
           echo "Semgrep: ${{ needs.semgrep.result }}"
+          echo "SSRF Protection: ${{ needs.ssrf-protection.result }}"
+          echo "Authentication: ${{ needs.authentication-test.result }}"
+          echo "SQL Injection: ${{ needs.sql-injection-test.result }}"
+          echo "Secrets Scan: ${{ needs.secrets-scan-enhanced.result }}"
 
       - name: Post Summary
         if: github.event_name == 'pull_request'
@@ -270,6 +481,10 @@ jobs:
             const brakeman = '${{ needs.brakeman.result }}';
             const deps = '${{ needs.dependency-check.result }}';
             const semgrep = '${{ needs.semgrep.result }}';
+            const ssrf = '${{ needs.ssrf-protection.result }}';
+            const auth = '${{ needs.authentication-test.result }}';
+            const sqli = '${{ needs.sql-injection-test.result }}';
+            const secrets = '${{ needs.secrets-scan-enhanced.result }}';
 
             const status = (result) => {
               switch(result) {
@@ -281,13 +496,23 @@ jobs:
 
             const body = `## 🔐 Security Scan Summary
 
+            ### Static Analysis (SAST)
             | Check | Status |
             |-------|--------|
             | Brakeman | ${status(brakeman)} ${brakeman} |
             | Dependencies | ${status(deps)} ${deps} |
             | Semgrep | ${status(semgrep)} ${semgrep} |
+            | Secrets | ${status(secrets)} ${secrets} |
 
-            ${brakeman === 'success' && deps === 'success' && semgrep === 'success'
+            ### Dynamic Analysis (DAST)
+            | Check | Status |
+            |-------|--------|
+            | SSRF Protection | ${status(ssrf)} ${ssrf} |
+            | Authentication | ${status(auth)} ${auth} |
+            | SQL Injection | ${status(sqli)} ${sqli} |
+
+            ${brakeman === 'success' && deps === 'success' && semgrep === 'success' &&
+              ssrf === 'success' && auth === 'success' && sqli === 'success' && secrets === 'success'
               ? '✅ All security checks passed!'
               : '⚠️ Some security checks failed. Please review the details above.'}
             `;
