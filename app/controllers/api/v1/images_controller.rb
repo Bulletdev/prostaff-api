@@ -9,10 +9,13 @@ module Api
     # - CORS issues
     # - Performance issues (caches images for 7 days)
     #
+    # SECURITY: Requires authentication to prevent abuse as open proxy
+    #
     # @example Usage from frontend
-    #   <img src="https://api.prostaff.gg/api/v1/images/proxy?url=https://upload.wikimedia.org/..." />
+    #   GET /api/v1/images/proxy?url=https://upload.wikimedia.org/...
+    #   Headers: { Authorization: "Bearer <token>" }
     class ImagesController < BaseController
-      skip_before_action :authenticate_request!, only: [:proxy]
+      # SECURITY: Removed skip_before_action - authentication now required
 
       ALLOWED_DOMAINS = [
         'upload.wikimedia.org',
@@ -48,8 +51,34 @@ module Api
         return false if url.blank?
 
         uri = URI.parse(url)
-        ALLOWED_DOMAINS.any? { |domain| uri.host&.include?(domain) }
+
+        # SECURITY: Exact host matching, not substring
+        return false unless ALLOWED_DOMAINS.include?(uri.host)
+
+        # SECURITY: Only HTTPS allowed
+        return false unless uri.scheme == 'https'
+
+        # SECURITY: Block private IPs
+        return false if private_ip?(uri.host)
+
+        true
       rescue URI::InvalidURIError
+        false
+      end
+
+      # Checks if host is a private IP address
+      def private_ip?(host)
+        return false unless host =~ /^\d+\.\d+\.\d+\.\d+$/
+
+        ip = IPAddr.new(host)
+        [
+          IPAddr.new('10.0.0.0/8'),
+          IPAddr.new('172.16.0.0/12'),
+          IPAddr.new('192.168.0.0/16'),
+          IPAddr.new('127.0.0.0/8'),
+          IPAddr.new('169.254.0.0/16')
+        ].any? { |range| range.include?(ip) }
+      rescue IPAddr::InvalidAddressError
         false
       end
 
