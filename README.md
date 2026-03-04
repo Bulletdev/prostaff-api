@@ -982,7 +982,9 @@ open coverage/index.html
 
 ---
 
-## 09 · Security Testing (OWASP)
+## 09 · Security
+
+### Security Testing (OWASP)
 
 ```bash
 # Complete security audit
@@ -1002,7 +1004,26 @@ open coverage/index.html
 [✓] CI/CD integration
 ```
 
-> See [security_tests/README.md](security_tests/README.md)
+### Security Status
+
+**Last Audit**: 2026-03-04
+**Overall Grade**: A (26/27 tests passed - 96%)
+**Status**: Production-ready
+
+### Reporting Vulnerabilities
+
+We take security seriously. If you discover a security vulnerability, please follow our [Security Policy](SECURITY.md).
+
+**DO NOT** create public GitHub issues for security vulnerabilities.
+
+**Email**: security@prostaff.gg
+
+### Security Resources
+
+- [Security Policy](SECURITY.md) - Vulnerability disclosure process
+- [Security Test Results](.pentest/SECURITY-TEST-RESULTS.md) - Latest audit results
+- [Security Testing Guide](security_tests/README.md) - Running security tests
+- [CI/CD Security Workflow](.github/workflows/README.md) - Automated security scanning
 
 ---
 
@@ -1167,14 +1188,46 @@ See `.github/workflows/` for details.
 
 ## 13 · Contributing
 
-1. Create a feature branch
-2. Make your changes
-3. Add tests
-4. Run security scan: `./security_tests/scripts/brakeman-scan.sh`
-5. Ensure all tests pass
-6. Submit a pull request
+We welcome contributions from the community! Before contributing, please read our guidelines.
 
-> The architecture diagram will be automatically updated when you add new modules, models, or controllers.
+### Quick Start for Contributors
+
+1. Read the [Contributing Guidelines](CONTRIBUTING.md)
+2. Review the [Code of Conduct](CODE_OF_CONDUCT.md)
+3. Fork the repository
+4. Create a feature branch
+5. Make your changes following our code style
+6. Add tests for new functionality
+7. Run security scans: `./security_tests/scripts/brakeman-scan.sh`
+8. Ensure all tests pass: `bundle exec rspec`
+9. Submit a pull request
+
+### Branch Naming
+
+- `feature/` - New features
+- `fix/` - Bug fixes
+- `refactor/` - Code refactoring
+- `docs/` - Documentation changes
+- `security/` - Security fixes
+
+### Code Style
+
+We follow [Ruby Style Guide](https://rubystyle.guide/) and enforce code quality standards:
+
+- Cyclomatic complexity ≤ 7
+- Method length ≤ 50 lines
+- All queries must be scoped by organization (multi-tenant!)
+- Run Brakeman before committing (no HIGH/CRITICAL issues)
+
+### Resources for Contributors
+
+- [Contributing Guidelines](CONTRIBUTING.md) - Detailed contribution process
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Community standards
+- [Security Policy](SECURITY.md) - Reporting security vulnerabilities
+- [Testing Guide](DOCS/tests/TESTING_GUIDE.md) - How to run tests
+- [Quick Start](DOCS/setup/QUICK_START.md) - Development environment setup
+
+> **Note**: The architecture diagram will be automatically updated when you add new modules, models, or controllers.
 
 ---
 
