@@ -260,16 +260,13 @@ DOCS/ELASTICSEARCH_SETUP.md
 DOCS/deployment/QUICK_DEPLOY_VPS.md
 
 
-#Ignore cursor AI rules
-.cursor/rules/codacy.mdc
+# aditional rules
 /DOCS/claude
-/.pentest
 codacyissues.md
 /scripts
 /DEVDOCS
 .github/webhookgitcoolify.md
 zgo.txt
 oldsemgrep-report.json
-MODULAR_MIGRATION_GUIDE.md
-metaintelligence.md
-CRITICAL_DATA_LOSS_INCIDENT.md
+.pentest/raw-headers-frontend.txt
+.pentest/raw-headers-api.txt

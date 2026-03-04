@@ -290,6 +290,7 @@ jobs:
         env:
           RAILS_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
         run: |
           bundle exec rails db:create db:migrate RAILS_ENV=test
 
@@ -359,6 +360,7 @@ jobs:
         env:
           RAILS_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
         run: |
           bundle exec rails db:create db:migrate RAILS_ENV=test
 
@@ -421,6 +423,7 @@ jobs:
         env:
           RAILS_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
         run: |
           bundle exec rails db:create db:migrate RAILS_ENV=test
 
