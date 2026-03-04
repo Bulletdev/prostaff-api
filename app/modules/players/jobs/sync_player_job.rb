@@ -10,7 +10,10 @@ module Players
     retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
     retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
 
-    def perform(player_id, region = 'BR')
+    def perform(player_id, organization_id, region = 'BR')
+      # Set organization context for multi-tenant scoping
+      Current.organization_id = organization_id
+
       player = Player.find(player_id)
       riot_service = RiotApiService.new
 
@@ -32,6 +35,9 @@ module Players
     rescue StandardError => e
       Rails.logger.error("Failed to sync player #{player.id}: #{e.message}")
       raise
+    ensure
+      # Clean up context
+      Current.organization_id = nil
     end
 
     private

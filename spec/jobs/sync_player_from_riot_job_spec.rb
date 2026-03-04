@@ -20,7 +20,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
         expect(Rails.logger).to receive(:error).with("Player #{player_no_info.id} missing Riot info")
 
-        described_class.new.perform(player_no_info.id)
+        described_class.new.perform(player_no_info.id, organization.id)
 
         player_no_info.reload
         expect(player_no_info.sync_status).to eq('error')
@@ -34,7 +34,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
         expect(Rails.logger).to receive(:error).with('Riot API key not configured')
 
-        described_class.new.perform(player.id)
+        described_class.new.perform(player.id, organization.id)
 
         player.reload
         expect(player.sync_status).to eq('error')
@@ -82,7 +82,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
         expect(Rails.logger).to receive(:info).with("Successfully synced player #{player.id} from Riot API")
 
-        job.perform(player.id)
+        job.perform(player.id, organization.id)
 
         player.reload
         expect(player.riot_puuid).to eq('test-puuid-123')
@@ -113,7 +113,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
         allow(job).to receive(:fetch_ranked_stats).and_return(ranked_data)
 
-        job.perform(player.id)
+        job.perform(player.id, organization.id)
       end
 
       it 'defaults to BR1 when region is not set' do
@@ -128,7 +128,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
         allow(job).to receive(:fetch_ranked_stats).and_return(ranked_data)
 
-        job.perform(player.id)
+        job.perform(player.id, organization.id)
       end
     end
 
@@ -144,7 +144,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
         expect(Rails.logger).to receive(:error).with("Failed to sync player #{player.id}: API Error")
         expect(Rails.logger).to receive(:error).with(anything) # backtrace
 
-        job.perform(player.id)
+        job.perform(player.id, organization.id)
 
         player.reload
         expect(player.sync_status).to eq('error')
@@ -181,7 +181,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
         allow(job).to receive(:fetch_ranked_stats).and_return([])
 
-        job.perform(player_with_puuid.id)
+        job.perform(player_with_puuid.id, organization.id)
       end
     end
   end

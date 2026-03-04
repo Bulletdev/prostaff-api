@@ -6,7 +6,10 @@ module Players
   class SyncPlayerFromRiotJob < ApplicationJob
     queue_as :default
 
-    def perform(player_id)
+    def perform(player_id, organization_id)
+      # Set organization context for multi-tenant scoping
+      Current.organization_id = organization_id
+
       player = Player.find(player_id)
       riot_api_key = ENV['RIOT_API_KEY']
 
@@ -14,6 +17,9 @@ module Players
       return mark_error!(player, 'Riot API key not configured') unless riot_api_key.present?
 
       sync_player_from_riot!(player, riot_api_key)
+    ensure
+      # Clean up context
+      Current.organization_id = nil
     end
 
     private
