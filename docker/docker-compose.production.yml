@@ -42,7 +42,7 @@ services:
 
   api:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile.production
     restart: unless-stopped
     networks:
@@ -123,7 +123,7 @@ services:
 
   sidekiq:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile.production
     command: 'bundle exec sidekiq -C config/sidekiq.yml'
     restart: unless-stopped
@@ -157,7 +157,7 @@ services:
   # ── status.prostaff.gg ────────────────────────────────────────────────────
   status:
     build:
-      context: ../status-page
+      context: ./status-page
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
@@ -200,7 +200,7 @@ services:
   # ── docs.prostaff.gg ──────────────────────────────────────────────────────
   docs:
     build:
-      context: ../docs-page
+      context: ./docs-page
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
