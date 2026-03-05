@@ -214,6 +214,25 @@ This API follows a **modular monolith** architecture:
 └─────────────────────┴───────────────────────────────────────────────────────┘
 ```
 
+### Architecture
+
+This API follows a modular monolith architecture with the following modules:
+
+- `authentication` - User authentication and authorization
+- `dashboard` - Dashboard statistics and metrics
+- `players` - Player management and statistics
+- `scouting` - Player scouting and talent discovery
+- `analytics` - Performance analytics and reporting
+- `matches` - Match data and statistics
+- `schedules` - Event and schedule management
+- `vod_reviews` - Video review and timestamp management
+- `team_goals` - Goal setting and tracking
+- `riot_integration` - Riot Games API integration
+- `competitive` - PandaScore integration, pro matches, draft analysis
+- `scrims` - Scrim management and opponent team tracking
+- `strategy` - Draft planning and tactical board system
+- `support` - Support ticket system with staff and FAQ management
+
 ### Architecture Diagram
 
 ```mermaid
@@ -241,44 +260,10 @@ graph TB
             DashStats[Statistics Service]
         end
 
-        subgraph "Players Module"
-            PlayersController[Players Controller]
-            PlayerModel[Player Model]
-            ChampionPoolModel[Champion Pool Model]
-        end
-
-        subgraph "Scouting Module"
-            ScoutingController[Scouting Controller]
-            ScoutingTargetModel[Scouting Target Model]
-            Watchlist[Watchlist Service]
-        end
-
         subgraph "Analytics Module"
             AnalyticsController[Analytics Controller]
             PerformanceService[Performance Service]
             KDAService[KDA Trend Service]
-        end
-
-        subgraph "Matches Module"
-            MatchesController[Matches Controller]
-            MatchModel[Match Model]
-            PlayerMatchStatModel[Player Match Stat Model]
-        end
-
-        subgraph "Schedules Module"
-            SchedulesController[Schedules Controller]
-            ScheduleModel[Schedule Model]
-        end
-
-        subgraph "VOD Reviews Module"
-            VODController[VOD Reviews Controller]
-            VodReviewModel[VOD Review Model]
-            VodTimestampModel[VOD Timestamp Model]
-        end
-
-        subgraph "Team Goals Module"
-            GoalsController[Team Goals Controller]
-            TeamGoalModel[Team Goal Model]
         end
 
         subgraph "Riot Integration Module"
@@ -297,20 +282,6 @@ graph TB
             ScrimsController[Scrims Controller]
             OpponentTeamsController[Opponent Teams Controller]
             ScrimAnalytics[Scrim Analytics Service]
-        end
-
-        subgraph "Strategy Module"
-            DraftPlansController[Draft Plans Controller]
-            TacticalBoardsController[Tactical Boards Controller]
-            DraftAnalysisService[Draft Analysis Service]
-        end
-
-        subgraph "Support Module"
-            SupportTicketsController[Support Tickets Controller]
-            SupportFaqsController[Support FAQs Controller]
-            SupportStaffController[Support Staff Controller]
-            SupportTicketModel[Support Ticket Model]
-            SupportFaqModel[Support FAQ Model]
         end
     end
 
@@ -333,71 +304,26 @@ graph TB
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
-
-    Router --> AuthController
-    Router --> DashboardController
-    Router --> PlayersController
-    Router --> ScoutingController
+    
     Router --> AnalyticsController
-    Router --> MatchesController
-    Router --> SchedulesController
-    Router --> VODController
-    Router --> GoalsController
     Router --> CompetitiveController
     Router --> ProMatchesController
     Router --> ScrimsController
     Router --> OpponentTeamsController
-    Router --> DraftPlansController
-    Router --> TacticalBoardsController
-    Router --> SupportTicketsController
-    Router --> SupportFaqsController
-    Router --> SupportStaffController
     AuthController --> JWTService
     AuthController --> UserModel
-    PlayersController --> PlayerModel
-    PlayerModel --> ChampionPoolModel
-    ScoutingController --> ScoutingTargetModel
-    ScoutingController --> Watchlist
-    Watchlist --> PostgreSQL
-    MatchesController --> MatchModel
-    MatchModel --> PlayerMatchStatModel
-    SchedulesController --> ScheduleModel
-    VODController --> VodReviewModel
-    VodReviewModel --> VodTimestampModel
-    GoalsController --> TeamGoalModel
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
     CompetitiveController --> PandaScoreService
     CompetitiveController --> DraftAnalyzer
     ScrimsController --> ScrimAnalytics
     ScrimAnalytics --> PostgreSQL
-    DraftPlansController --> DraftAnalysisService
-    SupportTicketsController --> SupportTicketModel
-    SupportFaqsController --> SupportFaqModel
-    SupportStaffController --> UserModel
     AuditLogModel[AuditLog Model] --> PostgreSQL
-    ChampionPoolModel[ChampionPool Model] --> PostgreSQL
-    CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
-    DraftPlanModel[DraftPlan Model] --> PostgreSQL
-    MatchModel[Match Model] --> PostgreSQL
-    NotificationModel[Notification Model] --> PostgreSQL
-    OpponentTeamModel[OpponentTeam Model] --> PostgreSQL
+    CurrentModel[Current Model] --> PostgreSQL
     OrganizationModel[Organization Model] --> PostgreSQL
     PasswordResetTokenModel[PasswordResetToken Model] --> PostgreSQL
-    PlayerModel[Player Model] --> PostgreSQL
-    PlayerMatchStatModel[PlayerMatchStat Model] --> PostgreSQL
-    ScheduleModel[Schedule Model] --> PostgreSQL
-    ScoutingTargetModel[ScoutingTarget Model] --> PostgreSQL
-    ScrimModel[Scrim Model] --> PostgreSQL
-    SupportFaqModel[SupportFaq Model] --> PostgreSQL
-    SupportTicketModel[Support Ticket Model] --> PostgreSQL
-    SupportTicketMessageModel[SupportTicketMessage Model] --> PostgreSQL
-    TacticalBoardModel[TacticalBoard Model] --> PostgreSQL
-    TeamGoalModel[Team Goal Model] --> PostgreSQL
     TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
     UserModel[User Model] --> PostgreSQL
-    VodReviewModel[VodReview Model] --> PostgreSQL
-    VodTimestampModel[VodTimestamp Model] --> PostgreSQL
     JWTService --> Redis
     DashStats --> Redis
     PerformanceService --> Redis
@@ -408,9 +334,9 @@ graph TB
     RiotService --> RiotAPI
 
     RiotService --> Sidekiq
-    PandaScoreService --> PandaScoreAPI
+    PandaScoreService --> PandaScoreAPI[PandaScore API]
     Sidekiq -- Uses --> Redis
-
+    
     style Client fill:#e1f5ff
     style PostgreSQL fill:#336791
     style Redis fill:#d82c20
@@ -419,80 +345,26 @@ graph TB
     style Sidekiq fill:#b1003e
 ```
 
+
+> ** Better Visualization Options:**
+>
+> The diagram above may be difficult to read in GitHub's preview. For better visualization:
+> - **[View in Mermaid Live Editor](https://mermaid.live/)** - Open `diagram.mmd` file in the live editor
+> - **[View in VS Code](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid)** - Install Mermaid extension
+> - **Export diagram**: Use the standalone `diagram.mmd` file for import into diagramming tools
+>
+> The complete Mermaid source is available in [`diagram.mmd`](./diagram.mmd).
+
 **Key Architecture Principles:**
 
-1. **Modular Monolith**: Each module under `app/modules/<domain>/` is self-contained with its own controllers, models, jobs, serializers, policies and services
-2. **Zeitwerk Autoloading**: Custom `config/initializers/zeitwerk.rb` maps `app/modules/<domain>/<layer>/` to the correct Ruby namespace — no manual `require` needed
-3. **API-Only**: Rails configured in API mode for JSON responses
-4. **JWT Authentication**: Stateless authentication using JWT tokens
-5. **Background Processing**: Long-running tasks handled by Sidekiq
-6. **Caching**: Redis used for session management and performance optimization
-7. **External Integration**: Riot Games API integration for real-time data
-8. **Rate Limiting**: Rack::Attack for API rate limiting
-9. **CORS**: Configured for cross-origin requests from frontend
-
-### Deployment Architecture
-
-```mermaid
-graph TB
-    subgraph "Clients"
-        FrontendApp["ProStaff.gg<br/>Front + TypeScript SPA"]
-        PlayerPortal["Player Portal<br/>JWT player token"]
-    end
-
-    subgraph "Production — Coolify"
-        Traefik["Traefik<br/>TLS + Let's Encrypt<br/>WebSocket proxy"]
-    end
-
-    subgraph "Rails — Puma"
-        Cable["Action Cable<br/>WebSocket /cable<br/>(team chat)"]
-        Router["Rails Router<br/>REST API v1<br/>200+ endpoints"]
-        Sidekiq["Sidekiq<br/>Background Workers<br/>(Riot sync · reindex)"]
-    end
-
-    subgraph "Data"
-        PG[("PostgreSQL")]
-        RD[("Redis")]
-        Meili[("Meilisearch")]
-    end
-
-    subgraph "External APIs"
-        RiotAPI["Riot Games API"]
-        PandaScore["PandaScore API"]
-    end
-
-    FrontendApp -- "HTTPS REST" --> Traefik
-    FrontendApp -- "WSS /cable" --> Traefik
-    PlayerPortal -- "HTTPS REST" --> Traefik
-
-    Traefik -- "HTTP" --> Router
-    Traefik -- "WS upgrade" --> Cable
-
-    Router -- "reads / writes" --> PG
-    Router -- "cache · JWT blacklist" --> RD
-    Router -- "full-text search" --> Meili
-    Cable -- "pub/sub" --> RD
-    Sidekiq -- "async jobs" --> PG
-    Sidekiq -- "queue · cache" --> RD
-    Sidekiq -- "reindex docs" --> Meili
-
-    Router -- "player data" --> RiotAPI
-    Sidekiq -- "match sync" --> RiotAPI
-    Router -- "pro matches" --> PandaScore
-
-    style FrontendApp fill:#1e88e5
-    style PlayerPortal fill:#5c6bc0
-    style Traefik fill:#1565c0
-    style Cable fill:#b1003e
-    style Sidekiq fill:#b1003e
-    style PG fill:#336791
-    style RD fill:#d82c20
-    style Meili fill:#ff5722
-    style RiotAPI fill:#eb0029
-    style PandaScore fill:#ff6b35
-```
-
----
+1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
+2. **API-Only**: Rails configured in API mode for JSON responses
+3. **JWT Authentication**: Stateless authentication using JWT tokens
+4. **Background Processing**: Long-running tasks handled by Sidekiq
+5. **Caching**: Redis used for session management and performance optimization
+6. **External Integration**: Riot Games API integration for real-time data
+7. **Rate Limiting**: Rack::Attack for API rate limiting
+8. **CORS**: Configured for cross-origin requests from frontend
 
 ## 04 · Setup
 
