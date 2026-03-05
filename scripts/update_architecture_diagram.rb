@@ -39,12 +39,25 @@ class ArchitectureDiagramGenerator
   end
 
   def discover_models
-    models_path = RAILS_ROOT.join('app', 'models')
-    return [] unless models_path.exist?
+    models = []
 
-    Dir.glob(models_path.join('*.rb')).map do |file|
-      File.basename(file, '.rb')
-    end.reject { |m| m == 'application_record' }.sort
+    # Discover models in app/models
+    models_path = RAILS_ROOT.join('app', 'models')
+    if models_path.exist?
+      models += Dir.glob(models_path.join('*.rb')).map do |file|
+        File.basename(file, '.rb')
+      end
+    end
+
+    # Discover models in app/modules/*/models
+    modules_path = RAILS_ROOT.join('app', 'modules')
+    if modules_path.exist?
+      models += Dir.glob(modules_path.join('*', 'models', '*.rb')).map do |file|
+        File.basename(file, '.rb')
+      end
+    end
+
+    models.reject { |m| m == 'application_record' }.uniq.sort
   end
 
   def discover_controllers
@@ -449,7 +462,14 @@ class ArchitectureDiagramGenerator
   end
 
   def database_model_connections
-    @models.map do |model|
+    # Models already defined in subgraphs should not be redefined
+    models_in_modules = %w[
+      user player champion_pool scouting_target match player_match_stat
+      schedule vod_review vod_timestamp team_goal support_ticket support_faq
+      draft_plan tactical_board scrim opponent_team support_ticket_message
+    ]
+
+    @models.reject { |model| models_in_modules.include?(model) }.map do |model|
       model_name = model.split('_').map(&:capitalize).join
       "    #{model_name}Model[#{model_name} Model] --> PostgreSQL"
     end

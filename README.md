@@ -260,10 +260,44 @@ graph TB
             DashStats[Statistics Service]
         end
 
+        subgraph "Players Module"
+            PlayersController[Players Controller]
+            PlayerModel[Player Model]
+            ChampionPoolModel[Champion Pool Model]
+        end
+
+        subgraph "Scouting Module"
+            ScoutingController[Scouting Controller]
+            ScoutingTargetModel[Scouting Target Model]
+            Watchlist[Watchlist Service]
+        end
+
         subgraph "Analytics Module"
             AnalyticsController[Analytics Controller]
             PerformanceService[Performance Service]
             KDAService[KDA Trend Service]
+        end
+
+        subgraph "Matches Module"
+            MatchesController[Matches Controller]
+            MatchModel[Match Model]
+            PlayerMatchStatModel[Player Match Stat Model]
+        end
+
+        subgraph "Schedules Module"
+            SchedulesController[Schedules Controller]
+            ScheduleModel[Schedule Model]
+        end
+
+        subgraph "VOD Reviews Module"
+            VODController[VOD Reviews Controller]
+            VodReviewModel[VOD Review Model]
+            VodTimestampModel[VOD Timestamp Model]
+        end
+
+        subgraph "Team Goals Module"
+            GoalsController[Team Goals Controller]
+            TeamGoalModel[Team Goal Model]
         end
 
         subgraph "Riot Integration Module"
@@ -282,6 +316,20 @@ graph TB
             ScrimsController[Scrims Controller]
             OpponentTeamsController[Opponent Teams Controller]
             ScrimAnalytics[Scrim Analytics Service]
+        end
+
+        subgraph "Strategy Module"
+            DraftPlansController[Draft Plans Controller]
+            TacticalBoardsController[Tactical Boards Controller]
+            DraftAnalysisService[Draft Analysis Service]
+        end
+
+        subgraph "Support Module"
+            SupportTicketsController[Support Tickets Controller]
+            SupportFaqsController[Support FAQs Controller]
+            SupportStaffController[Support Staff Controller]
+            SupportTicketModel[Support Ticket Model]
+            SupportFaqModel[Support FAQ Model]
         end
     end
 
@@ -305,25 +353,50 @@ graph TB
     RateLimit --> Auth
     Auth --> Router
     
-    Router --> AnalyticsController
+    Router --> GoalsController
     Router --> CompetitiveController
     Router --> ProMatchesController
     Router --> ScrimsController
     Router --> OpponentTeamsController
+    Router --> DraftPlansController
+    Router --> TacticalBoardsController
+    Router --> SupportTicketsController
+    Router --> SupportFaqsController
+    Router --> SupportStaffController
     AuthController --> JWTService
     AuthController --> UserModel
+    PlayersController --> PlayerModel
+    PlayerModel --> ChampionPoolModel
+    ScoutingController --> ScoutingTargetModel
+    ScoutingController --> Watchlist
+    Watchlist --> PostgreSQL
+    MatchesController --> MatchModel
+    MatchModel --> PlayerMatchStatModel
+    SchedulesController --> ScheduleModel
+    VODController --> VodReviewModel
+    VodReviewModel --> VodTimestampModel
+    GoalsController --> TeamGoalModel
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
     CompetitiveController --> PandaScoreService
     CompetitiveController --> DraftAnalyzer
     ScrimsController --> ScrimAnalytics
     ScrimAnalytics --> PostgreSQL
+    DraftPlansController --> DraftAnalysisService
+    SupportTicketsController --> SupportTicketModel
+    SupportFaqsController --> SupportFaqModel
+    SupportStaffController --> UserModel
     AuditLogModel[AuditLog Model] --> PostgreSQL
+    CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
     CurrentModel[Current Model] --> PostgreSQL
+    FantasyWaitlistModel[FantasyWaitlist Model] --> PostgreSQL
+    MessageModel[Message Model] --> PostgreSQL
+    NotificationModel[Notification Model] --> PostgreSQL
     OrganizationModel[Organization Model] --> PostgreSQL
     PasswordResetTokenModel[PasswordResetToken Model] --> PostgreSQL
+    SavedBuildModel[SavedBuild Model] --> PostgreSQL
+    ScoutingWatchlistModel[ScoutingWatchlist Model] --> PostgreSQL
     TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
-    UserModel[User Model] --> PostgreSQL
     JWTService --> Redis
     DashStats --> Redis
     PerformanceService --> Redis
