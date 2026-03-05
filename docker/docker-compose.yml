@@ -58,7 +58,7 @@ services:
     build: .
     container_name: prostaff-api
     env_file:
-      - .env
+      - ../.env
     volumes:
       - .:/app
       - bundle_cache:/usr/local/bundle
@@ -91,7 +91,7 @@ services:
   sidekiq:
     build: .
     env_file:
-      - .env
+      - ../.env
     volumes:
       - .:/app
       - bundle_cache:/usr/local/bundle

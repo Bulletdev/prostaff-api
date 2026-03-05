@@ -146,19 +146,19 @@ ssh deploy@api.prostaff.gg
 ### Verificar variáveis no container
 
 ```bash
-docker-compose -f docker-compose.production.yml exec api env | sort
+docker-compose -f docker/docker-compose.production.yml exec api env | sort
 ```
 
 ### Testar conexão com banco
 
 ```bash
-docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts ActiveRecord::Base.connection.execute('SELECT 1').to_a"
+docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails runner "puts ActiveRecord::Base.connection.execute('SELECT 1').to_a"
 ```
 
 ### Testar Redis
 
 ```bash
-docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts Redis.new(url: ENV['REDIS_URL']).ping"
+docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails runner "puts Redis.new(url: ENV['REDIS_URL']).ping"
 ```
 
 ### Testar Meilisearch
@@ -191,7 +191,7 @@ git push origin master
 # Renomear JWT_SECRET_KEY_NEW para JWT_SECRET_KEY
 
 # 6. Restart dos serviços
-docker-compose -f docker-compose.production.yml restart api sidekiq
+docker-compose -f docker/docker-compose.production.yml restart api sidekiq
 ```
 
 ### Rotacionar DATABASE_PASSWORD
@@ -200,7 +200,7 @@ docker-compose -f docker-compose.production.yml restart api sidekiq
 # 1. No provider (Supabase/Neon/RDS): alterar senha
 # 2. Atualizar DATABASE_URL no .env
 # 3. Restart dos serviços
-docker-compose -f docker-compose.production.yml restart api sidekiq
+docker-compose -f docker/docker-compose.production.yml restart api sidekiq
 # 4. Validar funcionamento
 curl https://api.prostaff.gg/up
 ```
@@ -209,16 +209,16 @@ curl https://api.prostaff.gg/up
 
 ```bash
 # 1. Atualizar senha no Redis
-docker-compose -f docker-compose.production.yml exec redis redis-cli CONFIG SET requirepass <nova_senha>
+docker-compose -f docker/docker-compose.production.yml exec redis redis-cli CONFIG SET requirepass <nova_senha>
 
 # 2. Atualizar REDIS_URL no .env
 nano .env
 
 # 3. Restart dos serviços
-docker-compose -f docker-compose.production.yml restart api sidekiq
+docker-compose -f docker/docker-compose.production.yml restart api sidekiq
 
 # 4. Validar
-docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts Redis.new(url: ENV['REDIS_URL']).ping"
+docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails runner "puts Redis.new(url: ENV['REDIS_URL']).ping"
 ```
 
 ## Backup de Secrets
@@ -237,7 +237,7 @@ NUNCA commitar secrets no repositório. Use um gerenciador de senhas seguro:
 
 ```bash
 # Verificar se JWT_SECRET_KEY está configurado
-docker-compose -f docker-compose.production.yml exec api env | grep JWT_SECRET_KEY
+docker-compose -f docker/docker-compose.production.yml exec api env | grep JWT_SECRET_KEY
 
 # Verificar se o secret não contém espaços ou quebras de linha
 ```
@@ -246,23 +246,23 @@ docker-compose -f docker-compose.production.yml exec api env | grep JWT_SECRET_K
 
 ```bash
 # Verificar DATABASE_URL
-docker-compose -f docker-compose.production.yml exec api env | grep DATABASE_URL
+docker-compose -f docker/docker-compose.production.yml exec api env | grep DATABASE_URL
 
 # Testar conexão manual
-docker-compose -f docker-compose.production.yml exec api bundle exec rails dbconsole
+docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails dbconsole
 ```
 
 ### Erro: "Redis connection refused"
 
 ```bash
 # Verificar se Redis está rodando
-docker-compose -f docker-compose.production.yml ps redis
+docker-compose -f docker/docker-compose.production.yml ps redis
 
 # Verificar REDIS_URL
-docker-compose -f docker-compose.production.yml exec api env | grep REDIS_URL
+docker-compose -f docker/docker-compose.production.yml exec api env | grep REDIS_URL
 
 # Testar conexão
-docker-compose -f docker-compose.production.yml exec redis redis-cli ping
+docker-compose -f docker/docker-compose.production.yml exec redis redis-cli ping
 ```
 
 ## Suporte

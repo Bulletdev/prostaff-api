@@ -46,7 +46,7 @@ Traefik (reverse proxy via Coolify)
 - `../DOCS/deployment/QUICK_DEPLOY.md` - Quick start guide
 - `../.env.production.example` - Exemplo de variáveis production
 - `../.env.staging.example` - Exemplo de variáveis staging
-- `../docker-compose.production.yml` - Docker Compose para produção
+- `../docker/docker-compose.production.yml` - Docker Compose para produção
 
 ## Quick Start
 
@@ -73,10 +73,10 @@ cp .env.production.example .env
 nano .env
 
 # Build e iniciar com Docker Compose
-docker-compose -f docker-compose.production.yml up -d
+docker-compose -f docker/docker-compose.production.yml up -d
 
 # Ver logs
-docker-compose -f docker-compose.production.yml logs -f api
+docker-compose -f docker/docker-compose.production.yml logs -f api
 
 # Verificar saúde
 curl https://api.prostaff.gg/up
@@ -88,7 +88,7 @@ curl https://api.prostaff.gg/up
 
 ```bash
 # Backup manual
-docker-compose -f docker-compose.production.yml exec api bash /app/deploy/scripts/backup.sh
+docker-compose -f docker/docker-compose.production.yml exec api bash /app/deploy/scripts/backup.sh
 
 # Backup automático (via cron)
 # Ver scripts/backup_database.sh no diretório raiz
@@ -98,24 +98,24 @@ docker-compose -f docker-compose.production.yml exec api bash /app/deploy/script
 
 ```bash
 # Logs da API
-docker-compose -f docker-compose.production.yml logs -f api
+docker-compose -f docker/docker-compose.production.yml logs -f api
 
 # Logs do Sidekiq
-docker-compose -f docker-compose.production.yml logs -f sidekiq
+docker-compose -f docker/docker-compose.production.yml logs -f sidekiq
 
 # Logs do Redis
-docker-compose -f docker-compose.production.yml logs -f redis
+docker-compose -f docker/docker-compose.production.yml logs -f redis
 ```
 
 ### Restart
 
 ```bash
 # Restart de serviços específicos
-docker-compose -f docker-compose.production.yml restart api
-docker-compose -f docker-compose.production.yml restart sidekiq
+docker-compose -f docker/docker-compose.production.yml restart api
+docker-compose -f docker/docker-compose.production.yml restart sidekiq
 
 # Restart completo
-docker-compose -f docker-compose.production.yml restart
+docker-compose -f docker/docker-compose.production.yml restart
 ```
 
 ### Atualizar
@@ -123,7 +123,7 @@ docker-compose -f docker-compose.production.yml restart
 ```bash
 # Pull + rebuild + restart
 git pull origin master
-docker-compose -f docker-compose.production.yml up -d --build
+docker-compose -f docker/docker-compose.production.yml up -d --build
 
 # Com zero downtime (via Coolify)
 # Push para main -> GitHub Actions -> Coolify deploy automatico
@@ -165,36 +165,36 @@ A aplicação usa Lograge para logs estruturados em JSON:
 
 ```bash
 # Ver logs em formato JSON
-docker-compose -f docker-compose.production.yml logs api | grep "method="
+docker-compose -f docker/docker-compose.production.yml logs api | grep "method="
 
 # Filtrar por erro
-docker-compose -f docker-compose.production.yml logs api | grep "status=500"
+docker-compose -f docker/docker-compose.production.yml logs api | grep "status=500"
 
 # Filtrar por endpoint
-docker-compose -f docker-compose.production.yml logs api | grep "path=/api/v1"
+docker-compose -f docker/docker-compose.production.yml logs api | grep "path=/api/v1"
 ```
 
 ### Redis não conecta
 
 ```bash
 # Verificar se Redis está rodando
-docker-compose -f docker-compose.production.yml ps redis
+docker-compose -f docker/docker-compose.production.yml ps redis
 
 # Verificar conectividade
-docker-compose -f docker-compose.production.yml exec api bash -c "echo > /dev/tcp/redis/6379 && echo 'Redis OK'"
+docker-compose -f docker/docker-compose.production.yml exec api bash -c "echo > /dev/tcp/redis/6379 && echo 'Redis OK'"
 
 # Logs do Redis
-docker-compose -f docker-compose.production.yml logs redis
+docker-compose -f docker/docker-compose.production.yml logs redis
 ```
 
 ### Banco não conecta
 
 ```bash
 # Testar conexão PostgreSQL
-docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts ActiveRecord::Base.connection.execute('SELECT 1').to_a"
+docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails runner "puts ActiveRecord::Base.connection.execute('SELECT 1').to_a"
 
 # Ver status de migrations
-docker-compose -f docker-compose.production.yml exec api bundle exec rails db:migrate:status
+docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails db:migrate:status
 ```
 
 ## Suporte

@@ -40,7 +40,7 @@ Rede interna (coolify):
   - Stage `build`: instala dependencias, compila bootsnap
   - Stage final: copia gems e app, cria usuario `rails` (uid 1000), healthcheck no `/up`
 - `docker-compose.production.yml` - Servicos de producao na rede `coolify`
-- `docker-compose.yml` - Ambiente de desenvolvimento (PostgreSQL opcional via `--profile local-db`)
+- `docker/docker-compose.yml` - Ambiente de desenvolvimento (PostgreSQL opcional via `--profile local-db`)
 
 ### GitHub Actions
 

@@ -270,3 +270,4 @@ zgo.txt
 oldsemgrep-report.json
 .pentest/raw-headers-frontend.txt
 .pentest/raw-headers-api.txt
+/.reports

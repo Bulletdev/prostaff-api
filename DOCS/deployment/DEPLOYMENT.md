@@ -46,7 +46,7 @@ A aplicacao roda via **Coolify** (self-hosted PaaS) com **Traefik** como reverse
 
 ### Servicos Docker (producao)
 
-O `docker-compose.production.yml` sobe os seguintes servicos na rede `coolify`:
+O `docker/docker-compose.production.yml` sobe os seguintes servicos na rede `coolify`:
 
 - `redis` - Redis 7.2 com autenticacao por senha
 - `meilisearch` - Meilisearch v1.11 (busca full-text)
@@ -252,13 +252,13 @@ cd /var/www/prostaff-api
 git pull origin master
 
 # Build e subir servicos
-docker compose -f docker-compose.production.yml up -d --build
+docker compose -f docker/docker-compose.production.yml up -d --build
 
 # Executar migrations
-docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:migrate
 
 # Verificar logs
-docker compose -f docker-compose.production.yml logs -f api
+docker compose -f docker/docker-compose.production.yml logs -f api
 
 # Health check
 curl https://api.prostaff.gg/up
@@ -269,10 +269,10 @@ curl https://api.prostaff.gg/up
 ```bash
 # Reverter para commit anterior
 git checkout <commit-hash>
-docker compose -f docker-compose.production.yml up -d --force-recreate
+docker compose -f docker/docker-compose.production.yml up -d --force-recreate
 
 # Reverter ultima migration
-docker compose -f docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
 ```
 
 ---
@@ -324,7 +324,7 @@ curl https://api.prostaff.gg/health
 # -> {"status":"ok","service":"ProStaff API"}
 
 # Verificar Redis
-docker compose -f docker-compose.production.yml exec redis redis-cli -a $REDIS_PASSWORD ping
+docker compose -f docker/docker-compose.production.yml exec redis redis-cli -a $REDIS_PASSWORD ping
 # -> PONG
 
 # Verificar Meilisearch
@@ -349,7 +349,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3
 ./scripts/backup_database.sh
 
 # Backup via Docker Compose
-docker compose -f docker-compose.production.yml run --rm backup
+docker compose -f docker/docker-compose.production.yml run --rm backup
 
 # Backup direto com pg_dump (substituir variaveis)
 pg_dump $DATABASE_URL | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
@@ -383,10 +383,10 @@ find backups/ -name "*.sql.gz" -mtime +30 -delete
 
 ```bash
 # Dentro do container
-docker compose -f docker-compose.production.yml exec api bundle update
+docker compose -f docker/docker-compose.production.yml exec api bundle update
 
 # Rebuild apos atualizacao
-docker compose -f docker-compose.production.yml up -d --build api
+docker compose -f docker/docker-compose.production.yml up -d --build api
 ```
 
 ### Limpar recursos Docker
@@ -405,30 +405,30 @@ docker volume prune -f
 ### Console Rails
 
 ```bash
-docker compose -f docker-compose.production.yml exec api bundle exec rails console
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails console
 ```
 
 ### Ver logs
 
 ```bash
 # Todos os servicos
-docker compose -f docker-compose.production.yml logs -f
+docker compose -f docker/docker-compose.production.yml logs -f
 
 # Servico especifico
-docker compose -f docker-compose.production.yml logs -f api
-docker compose -f docker-compose.production.yml logs -f sidekiq
-docker compose -f docker-compose.production.yml logs -f meilisearch
+docker compose -f docker/docker-compose.production.yml logs -f api
+docker compose -f docker/docker-compose.production.yml logs -f sidekiq
+docker compose -f docker/docker-compose.production.yml logs -f meilisearch
 ```
 
 ### Reiniciar servicos
 
 ```bash
 # Reiniciar tudo
-docker compose -f docker-compose.production.yml restart
+docker compose -f docker/docker-compose.production.yml restart
 
 # Reiniciar servico especifico
-docker compose -f docker-compose.production.yml restart api
-docker compose -f docker-compose.production.yml restart sidekiq
+docker compose -f docker/docker-compose.production.yml restart api
+docker compose -f docker/docker-compose.production.yml restart sidekiq
 ```
 
 ---
@@ -439,26 +439,26 @@ docker compose -f docker-compose.production.yml restart sidekiq
 
 ```bash
 # Ver logs detalhados
-docker compose -f docker-compose.production.yml logs api
+docker compose -f docker/docker-compose.production.yml logs api
 
 # Verificar variaveis de ambiente
-docker compose -f docker-compose.production.yml exec api env | grep RAILS
+docker compose -f docker/docker-compose.production.yml exec api env | grep RAILS
 
 # Testar conexao com banco
-docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate:status
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:migrate:status
 ```
 
 ### Redis nao conecta
 
 ```bash
 # Verificar status do container
-docker compose -f docker-compose.production.yml ps redis
+docker compose -f docker/docker-compose.production.yml ps redis
 
 # Testar ping
-docker compose -f docker-compose.production.yml exec redis redis-cli -a $REDIS_PASSWORD ping
+docker compose -f docker/docker-compose.production.yml exec redis redis-cli -a $REDIS_PASSWORD ping
 
 # Ver logs
-docker compose -f docker-compose.production.yml logs redis
+docker compose -f docker/docker-compose.production.yml logs redis
 ```
 
 Para problemas especificos de Redis no Coolify, consultar [COOLIFY_REDIS_FIX.md](../../COOLIFY_REDIS_FIX.md).
@@ -467,13 +467,13 @@ Para problemas especificos de Redis no Coolify, consultar [COOLIFY_REDIS_FIX.md]
 
 ```bash
 # Verificar saude do Meilisearch
-docker compose -f docker-compose.production.yml exec api curl http://meilisearch:7700/health
+docker compose -f docker/docker-compose.production.yml exec api curl http://meilisearch:7700/health
 
 # Ver logs
-docker compose -f docker-compose.production.yml logs meilisearch
+docker compose -f docker/docker-compose.production.yml logs meilisearch
 
 # Reiniciar indexacao (via Rails console)
-docker compose -f docker-compose.production.yml exec api bundle exec rails console
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails console
 # > Meilisearch::IndexingJob.perform_now
 ```
 
@@ -481,13 +481,13 @@ docker compose -f docker-compose.production.yml exec api bundle exec rails conso
 
 ```bash
 # Ver status das migrations
-docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate:status
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:migrate:status
 
 # Executar migrations pendentes
-docker compose -f docker-compose.production.yml exec api bundle exec rails db:migrate
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:migrate
 
 # Reverter ultima migration
-docker compose -f docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
+docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
 ```
 
 ### Performance lenta
@@ -497,7 +497,7 @@ docker compose -f docker-compose.production.yml exec api bundle exec rails db:ro
 docker stats
 
 # Ver processos dentro do container
-docker compose -f docker-compose.production.yml exec api ps aux
+docker compose -f docker/docker-compose.production.yml exec api ps aux
 
 # Queries lentas no banco (dentro do console Rails)
 # ActiveRecord::Base.connection.execute("SELECT query, total_exec_time FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;")

@@ -179,15 +179,15 @@ jobs:
 
             # Pull latest images
             echo "📦 Pulling latest images..."
-            docker-compose -f docker-compose.production.yml pull
+            docker-compose -f docker/docker-compose.production.yml pull
 
             # Backup database
             echo "💾 Creating database backup..."
-            docker-compose -f docker-compose.production.yml run --rm backup || echo "⚠️ Backup failed, continuing..."
+            docker-compose -f docker/docker-compose.production.yml run --rm backup || echo "⚠️ Backup failed, continuing..."
 
             # Deploy with zero downtime
             echo "🔄 Deploying new version..."
-            docker-compose -f docker-compose.production.yml up -d --remove-orphans
+            docker-compose -f docker/docker-compose.production.yml up -d --remove-orphans
 
             # Wait for services to be healthy
             echo "⏳ Waiting for services to be healthy..."
@@ -195,7 +195,7 @@ jobs:
 
             # Run migrations
             echo "📊 Running database migrations..."
-            docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+            docker-compose -f docker/docker-compose.production.yml exec -T api bundle exec rails db:migrate
 
             # Health check
             echo "🏥 Running health check..."

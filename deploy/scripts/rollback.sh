@@ -54,7 +54,7 @@ fi
 # Backup current database before rollback
 echo ""
 echo "[BACKUP] Creating backup before rollback..."
-docker-compose -f docker-compose.production.yml run --rm backup || {
+docker-compose -f docker/docker-compose.production.yml run --rm backup || {
     echo -e "${YELLOW}[WARNING] Backup failed${NC}"
     read -p "Continue anyway? (yes/no): " CONTINUE
     if [[ "$CONTINUE" != "yes" ]]; then
@@ -71,12 +71,12 @@ git checkout "$VERSION"
 # Rebuild and restart services
 echo ""
 echo "[BUILD] Rebuilding images..."
-docker-compose -f docker-compose.production.yml build
+docker-compose -f docker/docker-compose.production.yml build
 
 echo ""
 echo "[RESTART] Restarting services..."
-docker-compose -f docker-compose.production.yml down
-docker-compose -f docker-compose.production.yml up -d
+docker-compose -f docker/docker-compose.production.yml down
+docker-compose -f docker/docker-compose.production.yml up -d
 
 # Wait for services
 echo ""
@@ -90,7 +90,7 @@ MAX_ATTEMPTS=20
 ATTEMPT=0
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if docker-compose -f docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
+    if docker-compose -f docker/docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
         echo -e "${GREEN}[SUCCESS] Services are healthy${NC}"
         break
     fi
@@ -102,7 +102,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
         echo -e "${RED}[ERROR] Health check failed${NC}"
         echo "Showing logs..."
-        docker-compose -f docker-compose.production.yml logs --tail=50 api
+        docker-compose -f docker/docker-compose.production.yml logs --tail=50 api
         exit 1
     fi
 done
@@ -119,11 +119,11 @@ if [[ "$ROLLBACK_DB" == "yes" ]]; then
     if [ -f "backups/$BACKUP_FILE" ]; then
         echo "Restoring database from: $BACKUP_FILE"
         gunzip < "backups/$BACKUP_FILE" | \
-        docker-compose -f docker-compose.production.yml exec -T postgres \
+        docker-compose -f docker/docker-compose.production.yml exec -T postgres \
         psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
         echo "Running migrations..."
-        docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+        docker-compose -f docker/docker-compose.production.yml exec -T api bundle exec rails db:migrate
     else
         echo -e "${RED}[ERROR] Backup file not found${NC}"
     fi
@@ -132,7 +132,7 @@ fi
 # Final verification
 echo ""
 echo "[INFO] Service status:"
-docker-compose -f docker-compose.production.yml ps
+docker-compose -f docker/docker-compose.production.yml ps
 
 echo ""
 echo -e "${GREEN}=================================${NC}"
