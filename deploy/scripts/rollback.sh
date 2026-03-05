@@ -22,12 +22,12 @@ echo ""
 
 # Validate environment
 if [[ "$ENVIRONMENT" != "staging" ]] && [[ "$ENVIRONMENT" != "production" ]]; then
-    echo -e "${RED}❌ Invalid environment: $ENVIRONMENT${NC}"
+    echo -e "${RED}[ERROR] Invalid environment: $ENVIRONMENT${NC}"
     exit 1
 fi
 
 # Confirmation
-echo -e "${RED}⚠️  WARNING: This will rollback to the previous version${NC}"
+echo -e "${RED}[WARNING] This will rollback to the previous version${NC}"
 read -p "Are you sure you want to continue? (yes/no): " CONFIRM
 if [[ "$CONFIRM" != "yes" ]]; then
     echo "Rollback cancelled."
@@ -38,7 +38,7 @@ cd "$PROJECT_ROOT"
 
 # Check for rollback version file
 if [ ! -f .rollback_version ]; then
-    echo -e "${YELLOW}⚠️  No rollback version found${NC}"
+    echo -e "${YELLOW}[WARNING] No rollback version found${NC}"
     echo "Showing recent git tags..."
     git tag --sort=-version:refname | head -10
     read -p "Enter version to rollback to (e.g., v1.0.0): " VERSION
@@ -53,9 +53,9 @@ fi
 
 # Backup current database before rollback
 echo ""
-echo "💾 Creating backup before rollback..."
+echo "[BACKUP] Creating backup before rollback..."
 docker-compose -f docker-compose.production.yml run --rm backup || {
-    echo -e "${YELLOW}⚠️  Backup failed${NC}"
+    echo -e "${YELLOW}[WARNING] Backup failed${NC}"
     read -p "Continue anyway? (yes/no): " CONTINUE
     if [[ "$CONTINUE" != "yes" ]]; then
         exit 1
@@ -64,34 +64,34 @@ docker-compose -f docker-compose.production.yml run --rm backup || {
 
 # Checkout previous version
 echo ""
-echo "📥 Checking out version: $VERSION"
+echo "[GIT] Checking out version: $VERSION"
 git fetch --all --tags
 git checkout "$VERSION"
 
 # Rebuild and restart services
 echo ""
-echo "🔨 Rebuilding images..."
+echo "[BUILD] Rebuilding images..."
 docker-compose -f docker-compose.production.yml build
 
 echo ""
-echo "🔄 Restarting services..."
+echo "[RESTART] Restarting services..."
 docker-compose -f docker-compose.production.yml down
 docker-compose -f docker-compose.production.yml up -d
 
 # Wait for services
 echo ""
-echo "⏳ Waiting for services..."
+echo "[WAIT] Waiting for services..."
 sleep 15
 
 # Health check
 echo ""
-echo "🏥 Running health check..."
+echo "[HEALTH] Running health check..."
 MAX_ATTEMPTS=20
 ATTEMPT=0
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     if docker-compose -f docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ Services are healthy${NC}"
+        echo -e "${GREEN}[SUCCESS] Services are healthy${NC}"
         break
     fi
 
@@ -100,7 +100,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     sleep 3
 
     if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-        echo -e "${RED}❌ Health check failed${NC}"
+        echo -e "${RED}[ERROR] Health check failed${NC}"
         echo "Showing logs..."
         docker-compose -f docker-compose.production.yml logs --tail=50 api
         exit 1
@@ -125,18 +125,18 @@ if [[ "$ROLLBACK_DB" == "yes" ]]; then
         echo "Running migrations..."
         docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
     else
-        echo -e "${RED}❌ Backup file not found${NC}"
+        echo -e "${RED}[ERROR] Backup file not found${NC}"
     fi
 fi
 
 # Final verification
 echo ""
-echo " Service status:"
+echo "[INFO] Service status:"
 docker-compose -f docker-compose.production.yml ps
 
 echo ""
 echo -e "${GREEN}=================================${NC}"
-echo -e "${GREEN}✅ Rollback completed${NC}"
+echo -e "${GREEN}[SUCCESS] Rollback completed${NC}"
 echo -e "${GREEN}=================================${NC}"
 echo "Version: $VERSION"
 echo "Time: $(date)"
