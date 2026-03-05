@@ -386,17 +386,6 @@ graph TB
     SupportTicketsController --> SupportTicketModel
     SupportFaqsController --> SupportFaqModel
     SupportStaffController --> UserModel
-    AuditLogModel[AuditLog Model] --> PostgreSQL
-    CompetitiveMatchModel[CompetitiveMatch Model] --> PostgreSQL
-    CurrentModel[Current Model] --> PostgreSQL
-    FantasyWaitlistModel[FantasyWaitlist Model] --> PostgreSQL
-    MessageModel[Message Model] --> PostgreSQL
-    NotificationModel[Notification Model] --> PostgreSQL
-    OrganizationModel[Organization Model] --> PostgreSQL
-    PasswordResetTokenModel[PasswordResetToken Model] --> PostgreSQL
-    SavedBuildModel[SavedBuild Model] --> PostgreSQL
-    ScoutingWatchlistModel[ScoutingWatchlist Model] --> PostgreSQL
-    TokenBlacklistModel[TokenBlacklist Model] --> PostgreSQL
     JWTService --> Redis
     DashStats --> Redis
     PerformanceService --> Redis
