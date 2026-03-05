@@ -20,7 +20,7 @@ echo -e "${GREEN}✓ Security tools started${NC}"
 echo ""
 
 echo -e "${YELLOW} Starting ProStaff API application...${NC}"
-docker-compose up -d api postgres redis
+docker compose -f docker/docker-compose.yml up -d api postgres redis
 echo -e "${GREEN}✓ Application started${NC}"
 echo ""
 

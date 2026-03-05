@@ -44,7 +44,7 @@ if ! docker ps | grep -q "$API_CONTAINER"; then
     if [[ "$ENVIRONMENT" == "staging" ]]; then
         echo "Start it with: ./scripts/deploy-staging.sh"
     else
-        echo "Start it with: docker-compose up -d api"
+        echo "Start it with: docker compose -f docker/docker-compose.yml up -d api"
     fi
     exit 1
 fi

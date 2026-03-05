@@ -17,7 +17,7 @@ echo ""
 # Check if API is running
 if ! docker ps | grep -q "prostaff-api"; then
     echo -e "${RED} ProStaff API is not running${NC}"
-    echo "Start it with: docker compose up -d"
+    echo "Start it with: docker compose -f docker/docker-compose.yml up -d"
     exit 1
 fi
 
