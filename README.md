@@ -1056,6 +1056,84 @@ SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue size that triggers degraded
 
 ## 11 · Deployment
 
+### Deployment Architecture
+
+```mermaid
+graph TB
+    subgraph "Clients"
+        FrontendApp["ProStaff.gg<br/>Front + TypeScript SPA"]
+        PlayerPortal["Player Portal<br/>JWT player token"]
+    end
+
+    subgraph "Production — Coolify"
+        Traefik["Traefik<br/>TLS + Let's Encrypt<br/>WebSocket proxy"]
+    end
+
+    subgraph "Rails — Puma"
+        Cable["Action Cable<br/>WebSocket /cable<br/>(team chat)"]
+        Router["Rails Router<br/>REST API v1<br/>200+ endpoints"]
+        Sidekiq["Sidekiq<br/>Background Workers<br/>(Riot sync · reindex)"]
+    end
+
+    subgraph "Data"
+        PG[("PostgreSQL")]
+        RD[("Redis")]
+        Meili[("Meilisearch")]
+    end
+
+    subgraph "External APIs"
+        RiotAPI["Riot Games API"]
+        PandaScore["PandaScore API"]
+    end
+
+    FrontendApp -- "HTTPS REST" --> Traefik
+    FrontendApp -- "WSS /cable" --> Traefik
+    PlayerPortal -- "HTTPS REST" --> Traefik
+
+    Traefik -- "HTTP" --> Router
+    Traefik -- "WS upgrade" --> Cable
+
+    Router -- "reads / writes" --> PG
+    Router -- "cache · JWT blacklist" --> RD
+    Router -- "full-text search" --> Meili
+    Cable -- "pub/sub" --> RD
+    Sidekiq -- "async jobs" --> PG
+    Sidekiq -- "queue · cache" --> RD
+    Sidekiq -- "reindex docs" --> Meili
+
+    Router -- "player data" --> RiotAPI
+    Sidekiq -- "match sync" --> RiotAPI
+    Router -- "pro matches" --> PandaScore
+
+    style FrontendApp fill:#1e88e5
+    style PlayerPortal fill:#5c6bc0
+    style Traefik fill:#1565c0
+    style Cable fill:#b1003e
+    style Sidekiq fill:#b1003e
+    style PG fill:#336791
+    style RD fill:#d82c20
+    style Meili fill:#ff5722
+    style RiotAPI fill:#eb0029
+    style PandaScore fill:#ff6b35
+```
+
+**Production Stack (Coolify):**
+- **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt)
+- **WebSocket Support**: Native WebSocket proxy for Action Cable
+- **Application**: Rails 7.2 API (Puma) + Action Cable + Sidekiq
+- **Database**: PostgreSQL 14+ (Supabase)
+- **Cache/Queue**: Redis 7
+- **Search**: Meilisearch (self-hosted)
+
+**Data Flow:**
+1. Clients connect via HTTPS/WSS through Traefik
+2. REST requests → Rails Router → PostgreSQL/Redis/Meilisearch
+3. WebSocket connections → Action Cable → Redis (pub/sub)
+4. Background jobs → Sidekiq → PostgreSQL/Redis/Meilisearch
+5. External API calls → Riot Games API / PandaScore API
+
+---
+
 ### Environment Variables
 
 ```bash
