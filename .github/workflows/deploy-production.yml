@@ -302,7 +302,7 @@ jobs:
 
             # Create comprehensive backup
             echo "💾 Creating full database backup..."
-            docker-compose -f docker-compose.production.yml run --rm backup
+            docker-compose -f docker/docker-compose.production.yml run --rm backup
 
             # Verify backup
             LATEST_BACKUP=$(ls -t backups/*.sql.gz | head -1)
@@ -319,7 +319,7 @@ jobs:
 
             # Pull new images
             echo "📦 Pulling production images..."
-            docker-compose -f docker-compose.production.yml pull
+            docker-compose -f docker/docker-compose.production.yml pull
 
             # Pre-migration health check
             echo "🏥 Pre-deployment health check..."
@@ -327,13 +327,13 @@ jobs:
 
             # Run migrations in a separate container first (test run)
             echo "🧪 Testing migrations..."
-            docker-compose -f docker-compose.production.yml run --rm api bundle exec rails db:migrate:status
+            docker-compose -f docker/docker-compose.production.yml run --rm api bundle exec rails db:migrate:status
 
             # Deploy with rolling update
             echo "🔄 Deploying new version with zero downtime..."
-            docker-compose -f docker-compose.production.yml up -d --no-deps --scale api=4 api
+            docker-compose -f docker/docker-compose.production.yml up -d --no-deps --scale api=4 api
             sleep 5
-            docker-compose -f docker-compose.production.yml up -d --no-deps --scale api=2 --remove-orphans api
+            docker-compose -f docker/docker-compose.production.yml up -d --no-deps --scale api=2 --remove-orphans api
 
             # Wait for new containers to be healthy
             echo "⏳ Waiting for new instances to be healthy..."
@@ -341,11 +341,11 @@ jobs:
 
             # Run migrations on production
             echo "📊 Running database migrations..."
-            docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+            docker-compose -f docker/docker-compose.production.yml exec -T api bundle exec rails db:migrate
 
             # Restart all services
             echo "🔄 Restarting all services..."
-            docker-compose -f docker-compose.production.yml restart sidekiq
+            docker-compose -f docker/docker-compose.production.yml restart sidekiq
 
             # Extended health check
             echo "🏥 Running comprehensive health checks..."
@@ -367,9 +367,9 @@ jobs:
               # Rollback
               ROLLBACK_VERSION=$(cat .rollback_version)
               echo "🔄 Rolling back to: $ROLLBACK_VERSION"
-              docker-compose -f docker-compose.production.yml down
+              docker-compose -f docker/docker-compose.production.yml down
               # Restore previous version
-              docker-compose -f docker-compose.production.yml up -d
+              docker-compose -f docker/docker-compose.production.yml up -d
 
               exit 1
             fi
@@ -490,7 +490,7 @@ jobs:
           echo "1. SSH to production server"
           echo "2. cd /var/www/prostaff-api"
           echo "3. git checkout <previous-tag>"
-          echo "4. docker-compose -f docker-compose.production.yml up -d --force-recreate"
+          echo "4. docker-compose -f docker/docker-compose.production.yml up -d --force-recreate"
           echo "5. Restore database backup if needed"
 
   notify:

@@ -94,24 +94,24 @@ fi
 # Backup database
 echo ""
 echo "[BACKUP] Creating database backup..."
-docker-compose -f docker-compose.production.yml run --rm backup || {
+docker-compose -f docker/docker-compose.production.yml run --rm backup || {
     echo -e "${YELLOW}[WARNING] Backup failed, continuing...${NC}"
 }
 
 # Build new images
 echo ""
 echo "[BUILD] Building Docker images..."
-docker-compose -f docker-compose.production.yml build --no-cache
+docker-compose -f docker/docker-compose.production.yml build --no-cache
 
 # Stop old containers gracefully
 echo ""
 echo "[DEPLOY] Stopping old containers..."
-docker-compose -f docker-compose.production.yml down --remove-orphans
+docker-compose -f docker/docker-compose.production.yml down --remove-orphans
 
 # Start new containers
 echo ""
 echo "[DEPLOY] Starting new containers..."
-docker-compose -f docker-compose.production.yml up -d
+docker-compose -f docker/docker-compose.production.yml up -d
 
 # Wait for services to be ready
 echo ""
@@ -125,7 +125,7 @@ MAX_ATTEMPTS=30
 ATTEMPT=0
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if docker-compose -f docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
+    if docker-compose -f docker/docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
         echo -e "${GREEN}[SUCCESS] API is healthy${NC}"
         break
     fi
@@ -137,7 +137,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
         echo -e "${RED}[ERROR] Health check failed after $MAX_ATTEMPTS attempts${NC}"
         echo "Checking logs..."
-        docker-compose -f docker-compose.production.yml logs --tail=50 api
+        docker-compose -f docker/docker-compose.production.yml logs --tail=50 api
         exit 1
     fi
 done
@@ -145,19 +145,19 @@ done
 # Run database migrations
 echo ""
 echo "[MIGRATE] Running database migrations..."
-docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+docker-compose -f docker/docker-compose.production.yml exec -T api bundle exec rails db:migrate
 
 # Restart services to pick up changes
 echo ""
 echo "[RESTART] Restarting services..."
-docker-compose -f docker-compose.production.yml restart
+docker-compose -f docker/docker-compose.production.yml restart
 
 # Final health check
 echo ""
 echo "[HEALTH] Final health check..."
 sleep 5
 
-if docker-compose -f docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
+if docker-compose -f docker/docker-compose.production.yml exec -T api curl -f http://localhost:3000/up > /dev/null 2>&1; then
     echo -e "${GREEN}[SUCCESS] Deployment successful!${NC}"
 else
     echo -e "${RED}[ERROR] Final health check failed${NC}"
@@ -167,12 +167,12 @@ fi
 # Show running containers
 echo ""
 echo "[INFO] Running containers:"
-docker-compose -f docker-compose.production.yml ps
+docker-compose -f docker/docker-compose.production.yml ps
 
 # Show logs
 echo ""
 echo "[INFO] Recent logs:"
-docker-compose -f docker-compose.production.yml logs --tail=20
+docker-compose -f docker/docker-compose.production.yml logs --tail=20
 
 # Cleanup
 echo ""
@@ -188,8 +188,8 @@ echo "Branch: $BRANCH"
 echo "Time: $(date)"
 echo ""
 echo "Useful commands:"
-echo "  View logs:    docker-compose -f docker-compose.production.yml logs -f"
-echo "  Console:      docker-compose -f docker-compose.production.yml exec api bundle exec rails console"
-echo "  Restart:      docker-compose -f docker-compose.production.yml restart"
-echo "  Stop:         docker-compose -f docker-compose.production.yml down"
+echo "  View logs:    docker-compose -f docker/docker-compose.production.yml logs -f"
+echo "  Console:      docker-compose -f docker/docker-compose.production.yml exec api bundle exec rails console"
+echo "  Restart:      docker-compose -f docker/docker-compose.production.yml restart"
+echo "  Stop:         docker-compose -f docker/docker-compose.production.yml down"
 echo ""
