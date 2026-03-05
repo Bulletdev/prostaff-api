@@ -24,7 +24,7 @@ services:
   # API - Staging
   api-staging:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.production
     container_name: prostaff-api-staging
     restart: unless-stopped
@@ -102,7 +102,7 @@ services:
   # Sidekiq - Staging
   sidekiq-staging:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.production
     container_name: prostaff-sidekiq-staging
     command: 'bundle exec sidekiq -C config/sidekiq.yml'
