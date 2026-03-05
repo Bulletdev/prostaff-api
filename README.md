@@ -353,6 +353,14 @@ graph TB
     RateLimit --> Auth
     Auth --> Router
     
+    Router --> AuthController
+    Router --> DashboardController
+    Router --> PlayersController
+    Router --> ScoutingController
+    Router --> AnalyticsController
+    Router --> MatchesController
+    Router --> SchedulesController
+    Router --> VODController
     Router --> GoalsController
     Router --> CompetitiveController
     Router --> ProMatchesController

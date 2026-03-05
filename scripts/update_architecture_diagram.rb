@@ -345,17 +345,17 @@ class ArchitectureDiagramGenerator
   end
 
   def basic_router_connections
-    {
-      @modules.include?('authentication') => '    Router --> AuthController',
-      has_dashboard_routes? => '    Router --> DashboardController',
-      @models.include?('player') => '    Router --> PlayersController',
-      @models.include?('scouting_target') => '    Router --> ScoutingController',
-      has_analytics_routes? => '    Router --> AnalyticsController',
-      @models.include?('match') => '    Router --> MatchesController',
-      @models.include?('schedule') => '    Router --> SchedulesController',
-      @models.include?('vod_review') => '    Router --> VODController',
-      @models.include?('team_goal') => '    Router --> GoalsController'
-    }.filter_map { |condition, connection| connection if condition }
+    connections = []
+    connections << '    Router --> AuthController' if @modules.include?('authentication')
+    connections << '    Router --> DashboardController' if has_dashboard_routes?
+    connections << '    Router --> PlayersController' if @models.include?('player')
+    connections << '    Router --> ScoutingController' if @models.include?('scouting_target')
+    connections << '    Router --> AnalyticsController' if has_analytics_routes?
+    connections << '    Router --> MatchesController' if @models.include?('match')
+    connections << '    Router --> SchedulesController' if @models.include?('schedule')
+    connections << '    Router --> VODController' if @models.include?('vod_review')
+    connections << '    Router --> GoalsController' if @models.include?('team_goal')
+    connections
   end
 
   def module_router_connections
