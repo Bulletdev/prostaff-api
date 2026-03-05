@@ -1,6 +1,12 @@
 # Configuração de Secrets e Variáveis
 
-Guia para configurar todos os secrets necessários para deploy em produção.
+Guia para configurar secrets necessários para deploy em produção.
+
+## IMPORTANTE - Documentação Atualizada
+
+Este arquivo contém informações legadas. A documentação oficial está em:
+
+**[DOCS/deployment/SECRETS_SETUP.md](../DOCS/deployment/SECRETS_SETUP.md)** - Guia completo de secrets
 
 ## GitHub Secrets
 
@@ -60,68 +66,209 @@ cat ~/.ssh/id_ed25519  # Copiar conteúdo completo
 ## Variáveis de Ambiente Obrigatórias
 
 ### Application
-- `RAILS_ENV` - Ambiente (staging/production)
-- `SECRET_KEY_BASE` - Secret para sessions
-- `JWT_SECRET_KEY` - Secret para JWT tokens
 
-### Database
-- `DATABASE_URL` - URL completa de conexão PostgreSQL
-- `POSTGRES_USER` - Usuário do banco
-- `POSTGRES_PASSWORD` - Senha forte do banco
-- `POSTGRES_DB` - Nome do banco
+```bash
+RAILS_ENV=production
+RAILS_MASTER_KEY=<master_key_do_credentials.yml.enc>
+SECRET_KEY_BASE=<64_hex_chars>
+JWT_SECRET_KEY=<64_hex_chars>
+RAILS_LOG_TO_STDOUT=true
+PORT=3000
+```
+
+### Database (Supabase ou outro provider)
+
+```bash
+DATABASE_URL=postgresql://user:pass@host:port/dbname
+```
 
 ### Redis
-- `REDIS_URL` - URL de conexão Redis
-- `REDIS_PASSWORD` - Senha do Redis
+
+```bash
+REDIS_URL=redis://redis:6379/0
+REDIS_PASSWORD=<senha_forte>
+```
 
 ### External APIs
-- `RIOT_API_KEY` - API key da Riot Games
 
-### Email
-- `SMTP_ADDRESS` - Servidor SMTP
-- `SMTP_USERNAME` - Usuário SMTP
-- `SMTP_PASSWORD` - Senha SMTP
+```bash
+RIOT_API_KEY=<riot_games_api_key>
+PANDASCORE_API_KEY=<pandascore_api_key>
+OPENAI_API_KEY=<openai_api_key>
+```
 
-### Storage (AWS S3)
-- `AWS_ACCESS_KEY_ID` - Access key da AWS
-- `AWS_SECRET_ACCESS_KEY` - Secret key da AWS
-- `AWS_REGION` - Região (ex: us-east-1)
-- `AWS_S3_BUCKET` - Nome do bucket
+### Search
+
+```bash
+MEILISEARCH_HOST=http://meilisearch:7700
+MEILISEARCH_API_KEY=<meilisearch_master_key>
+```
+
+### CORS
+
+```bash
+CORS_ORIGINS=https://prostaff.gg,https://app.prostaff.gg
+```
+
+### Email (Opcional)
+
+```bash
+SMTP_ADDRESS=smtp.example.com
+SMTP_USERNAME=user@example.com
+SMTP_PASSWORD=<senha_smtp>
+SMTP_PORT=587
+SMTP_DOMAIN=example.com
+```
+
+### Storage - AWS S3 (Opcional)
+
+```bash
+AWS_ACCESS_KEY_ID=<access_key>
+AWS_SECRET_ACCESS_KEY=<secret_key>
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=prostaff-uploads
+```
 
 ### Monitoring (Opcional)
-- `SENTRY_DSN` - DSN do Sentry para error tracking
+
+```bash
+SENTRY_DSN=<sentry_dsn_url>
+```
 
 ## Verificar Configuração
 
+### Testar conexão SSH
+
 ```bash
-# Testar conexão SSH
 ssh deploy@api.prostaff.gg
+```
 
-# Verificar variáveis de ambiente no servidor
+### Verificar variáveis no container
+
+```bash
 docker-compose -f docker-compose.production.yml exec api env | sort
+```
 
-# Testar conexão com banco
-docker-compose -f docker-compose.production.yml exec api bundle exec rails db:migrate:status
+### Testar conexão com banco
 
-# Testar Redis
-docker-compose -f docker-compose.production.yml exec redis redis-cli ping
+```bash
+docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts ActiveRecord::Base.connection.execute('SELECT 1').to_a"
+```
+
+### Testar Redis
+
+```bash
+docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts Redis.new(url: ENV['REDIS_URL']).ping"
+```
+
+### Testar Meilisearch
+
+```bash
+curl http://meilisearch:7700/health
 ```
 
 ## Rotação de Secrets
 
-Recomendação: Rotacionar secrets a cada 90 dias.
+Recomendação: Rotacionar secrets críticos a cada 90 dias.
+
+### Rotacionar JWT_SECRET_KEY
 
 ```bash
-# 1. Gerar novos secrets
-NEW_SECRET=$(openssl rand -hex 64)
+# 1. Gerar novo secret
+NEW_JWT_SECRET=$(openssl rand -hex 64)
 
-# 2. Atualizar .env no servidor
-nano .env  # Adicionar novo secret
+# 2. Adicionar ao .env no servidor
+echo "JWT_SECRET_KEY_NEW=$NEW_JWT_SECRET" >> .env
 
-# 3. Restart gradual dos serviços
-docker-compose -f docker-compose.production.yml restart api
+# 3. Atualizar aplicação para aceitar ambos (OLD + NEW)
+# Ver app/modules/authentication/services/jwt_service.rb
 
-# 4. Validar funcionamento
+# 4. Deploy da mudança
+git push origin master
 
-# 5. Remover secret antigo do .env
+# 5. Após validação, remover secret antigo
+# Editar .env e remover JWT_SECRET_KEY antigo
+# Renomear JWT_SECRET_KEY_NEW para JWT_SECRET_KEY
+
+# 6. Restart dos serviços
+docker-compose -f docker-compose.production.yml restart api sidekiq
 ```
+
+### Rotacionar DATABASE_PASSWORD
+
+```bash
+# 1. No provider (Supabase/Neon/RDS): alterar senha
+# 2. Atualizar DATABASE_URL no .env
+# 3. Restart dos serviços
+docker-compose -f docker-compose.production.yml restart api sidekiq
+# 4. Validar funcionamento
+curl https://api.prostaff.gg/up
+```
+
+### Rotacionar REDIS_PASSWORD
+
+```bash
+# 1. Atualizar senha no Redis
+docker-compose -f docker-compose.production.yml exec redis redis-cli CONFIG SET requirepass <nova_senha>
+
+# 2. Atualizar REDIS_URL no .env
+nano .env
+
+# 3. Restart dos serviços
+docker-compose -f docker-compose.production.yml restart api sidekiq
+
+# 4. Validar
+docker-compose -f docker-compose.production.yml exec api bundle exec rails runner "puts Redis.new(url: ENV['REDIS_URL']).ping"
+```
+
+## Backup de Secrets
+
+NUNCA commitar secrets no repositório. Use um gerenciador de senhas seguro:
+
+- 1Password
+- Bitwarden
+- HashiCorp Vault
+- AWS Secrets Manager
+- Azure Key Vault
+
+## Troubleshooting
+
+### Erro: "JWT token invalid"
+
+```bash
+# Verificar se JWT_SECRET_KEY está configurado
+docker-compose -f docker-compose.production.yml exec api env | grep JWT_SECRET_KEY
+
+# Verificar se o secret não contém espaços ou quebras de linha
+```
+
+### Erro: "Database connection failed"
+
+```bash
+# Verificar DATABASE_URL
+docker-compose -f docker-compose.production.yml exec api env | grep DATABASE_URL
+
+# Testar conexão manual
+docker-compose -f docker-compose.production.yml exec api bundle exec rails dbconsole
+```
+
+### Erro: "Redis connection refused"
+
+```bash
+# Verificar se Redis está rodando
+docker-compose -f docker-compose.production.yml ps redis
+
+# Verificar REDIS_URL
+docker-compose -f docker-compose.production.yml exec api env | grep REDIS_URL
+
+# Testar conexão
+docker-compose -f docker-compose.production.yml exec redis redis-cli ping
+```
+
+## Suporte
+
+Para documentação completa:
+
+- [DOCS/deployment/SECRETS_SETUP.md](../DOCS/deployment/SECRETS_SETUP.md) - Guia completo atualizado
+- [DOCS/deployment/DEPLOYMENT.md](../DOCS/deployment/DEPLOYMENT.md) - Deploy guide
+- [.env.production.example](../.env.production.example) - Template de variáveis
