@@ -352,7 +352,7 @@ graph TB
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
-    
+        
     Router --> AuthController
     Router --> DashboardController
     Router --> PlayersController
@@ -371,6 +371,7 @@ graph TB
     Router --> SupportTicketsController
     Router --> SupportFaqsController
     Router --> SupportStaffController
+
     AuthController --> JWTService
     AuthController --> UserModel
     PlayersController --> PlayerModel
@@ -394,9 +395,11 @@ graph TB
     SupportTicketsController --> SupportTicketModel
     SupportFaqsController --> SupportFaqModel
     SupportStaffController --> UserModel
+
     JWTService --> Redis
     DashStats --> Redis
     PerformanceService --> Redis
+
     PlayersController --> RiotService
     MatchesController --> RiotService
     ScoutingController --> RiotService
@@ -404,9 +407,10 @@ graph TB
     RiotService --> RiotAPI
 
     RiotService --> Sidekiq
-    PandaScoreService --> PandaScoreAPI[PandaScore API]
+
+    PandaScoreService --> PandaScoreAPI
     Sidekiq -- Uses --> Redis
-    
+
     style Client fill:#e1f5ff
     style PostgreSQL fill:#336791
     style Redis fill:#d82c20

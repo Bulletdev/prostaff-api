@@ -137,11 +137,17 @@ class ArchitectureDiagramGenerator
           CORS --> RateLimit
           RateLimit --> Auth
           Auth --> Router
-      #{'    '}
+          #{'    '}
       #{generate_router_connections}
+
       #{generate_data_connections}
-      #{generate_external_connections}
-      #{'    '}
+
+      #{generate_redis_connections}
+
+      #{generate_riot_connections}
+
+      #{generate_background_connections}
+
           style Client fill:#e1f5ff
           style PostgreSQL fill:#336791
           style Redis fill:#d82c20
@@ -399,8 +405,38 @@ class ArchitectureDiagramGenerator
   def generate_data_connections
     connections = auth_and_player_data_connections +
                   scouting_and_match_data_connections +
-                  module_data_connections +
-                  redis_data_connections
+                  module_data_connections
+    connections.join("\n")
+  end
+
+  def generate_redis_connections
+    connections = []
+    connections << '    JWTService --> Redis' if @modules.include?('authentication')
+    connections << '    DashStats --> Redis' if has_dashboard_routes?
+    connections << '    PerformanceService --> Redis' if has_analytics_routes?
+    connections.join("\n")
+  end
+
+  def generate_riot_connections
+    return '' unless has_riot_integration?
+
+    connections = []
+    connections << '    PlayersController --> RiotService'
+    connections << '    MatchesController --> RiotService'
+    connections << '    ScoutingController --> RiotService'
+    connections << '    RiotService --> RiotSync'
+    connections << '    RiotService --> RiotAPI'
+    connections.join("\n")
+  end
+
+  def generate_background_connections
+    connections = []
+    if has_riot_integration?
+      connections << '    RiotService --> Sidekiq'
+      connections << ''
+    end
+    connections << '    PandaScoreService --> PandaScoreAPI' if @modules.include?('competitive')
+    connections << '    Sidekiq -- Uses --> Redis' if has_riot_integration?
     connections.join("\n")
   end
 
@@ -472,37 +508,6 @@ class ArchitectureDiagramGenerator
       model_name = model.split('_').map(&:capitalize).join
       "    #{model_name}Model[#{model_name} Model] --> PostgreSQL"
     end
-  end
-
-  def redis_data_connections
-    connections = []
-    connections << '    JWTService --> Redis' if @modules.include?('authentication')
-    connections << '    DashStats --> Redis' if has_dashboard_routes?
-    connections << '    PerformanceService --> Redis' if has_analytics_routes?
-    connections
-  end
-
-  def generate_external_connections
-    connections = []
-
-    # Riot API connections
-    if has_riot_integration?
-      connections << '    PlayersController --> RiotService'
-      connections << '    MatchesController --> RiotService'
-      connections << '    ScoutingController --> RiotService'
-      connections << '    RiotService --> RiotSync'
-      connections << '    RiotService --> RiotAPI'
-      connections << ''
-      connections << '    RiotService --> Sidekiq'
-    end
-
-    # PandaScore connections
-    connections << '    PandaScoreService --> PandaScoreAPI[PandaScore API]' if @modules.include?('competitive')
-
-    # Sidekiq connections (simplified)
-    connections << '    Sidekiq -- Uses --> Redis' if has_riot_integration?
-
-    connections.compact.join("\n")
   end
 
   def has_dashboard_routes?
