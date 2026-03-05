@@ -400,7 +400,6 @@ class ArchitectureDiagramGenerator
     connections = auth_and_player_data_connections +
                   scouting_and_match_data_connections +
                   module_data_connections +
-                  database_model_connections +
                   redis_data_connections
     connections.join("\n")
   end
