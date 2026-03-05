@@ -5,10 +5,10 @@ export const config = {
   // Base URL - change based on environment
   baseUrl: __ENV.BASE_URL || 'http://localhost:3333',
 
-  // Test credentials
+  // Test credentials (from environment variables)
   testUser: {
-    email: 'test@prostaff.gg',
-    password: 'TestPassword123'
+    email: __ENV.TEST_EMAIL || 'test@prostaff.gg',
+    password: __ENV.TEST_PASSWORD || 'Test123!@#'
   },
 
   // Load test profiles
