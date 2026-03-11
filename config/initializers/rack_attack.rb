@@ -88,6 +88,21 @@ module Rack
       req.env['rack.jwt.payload']['user_id'] if req.env['rack.jwt.payload']
     end
 
+    # Add Retry-After header to throttled responses so clients can self-throttle
+    Rack::Attack.throttled_responder = lambda do |req|
+      match_data  = req.env['rack.attack.match_data']
+      period      = match_data[:period].to_i
+      epoch_time  = match_data[:epoch_time].to_i
+      retry_after = period - (epoch_time % period)
+
+      headers = {
+        'Content-Type' => 'application/json',
+        'Retry-After'  => retry_after.to_s
+      }
+      body = { error: { code: 'RATE_LIMITED', message: 'Too many requests. Please retry later.' } }.to_json
+      [429, headers, [body]]
+    end
+
     # Log blocked and throttled requests
     ActiveSupport::Notifications.subscribe('rack.attack') do |_name, _start, _finish, _request_id, payload|
       req = payload[:request]
