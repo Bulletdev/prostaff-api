@@ -18,8 +18,8 @@ module Search
       MAX_PER_PAGE  = 100
 
       def index
-        query = params[:q].to_s.strip
-        return render_error('Missing required parameter: q', :bad_request) if query.blank?
+        query = params[:q].to_s.gsub("\x00", '').strip
+        return render_error(message: 'Missing required parameter: q', code: 'PARAMETER_MISSING', status: :bad_request) if query.blank?
 
         types    = parse_types
         per_page = [[params[:per_page].to_i, 1].max, MAX_PER_PAGE].min
