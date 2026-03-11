@@ -1,0 +1,143 @@
+name: CodeQL Analysis
+
+# Complementa o security-scan.yml (Brakeman + Semgrep + TruffleHog).
+# CodeQL traz engine diferente: detecta SQL injection, path traversal,
+# SSRF e code injection no Ruby que as outras ferramentas podem perder.
+# Resultados publicados no GitHub Security tab (SARIF).
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'config/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.github/workflows/codeql.yml'
+      - '.github/codeql/**'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'config/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+  schedule:
+    # Sábado 3am UTC — nao conflita com nightly-security (weekdays) nem security-scan (push/PR)
+    - cron: '0 3 * * 6'
+
+permissions:
+  security-events: write  # upload SARIF para o Security tab
+  packages: read
+  actions: read
+  contents: read
+
+jobs:
+  analyze-ruby:
+    name: Analyze Ruby
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ruby
+          build-mode: none
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:ruby
+          output: codeql-results/ruby
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: codeql-results/ruby
+          category: /language:ruby
+
+  analyze-actions:
+    name: Analyze GitHub Actions Workflows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: actions
+          build-mode: none
+          # Sem security-extended aqui — actions usa config padrao
+          # (security-extended nao tem queries extras para Actions)
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:actions
+          output: codeql-results/actions
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: codeql-results/actions
+          category: /language:actions
+
+  codeql-summary:
+    name: CodeQL Summary
+    runs-on: ubuntu-latest
+    needs: [ analyze-ruby, analyze-actions ]
+    if: always()
+
+    steps:
+      - name: Job Summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## CodeQL Analysis
+
+          | Language | Result |
+          |----------|--------|
+          | Ruby     | ${{ needs.analyze-ruby.result }} |
+          | Actions  | ${{ needs.analyze-actions.result }} |
+
+          Resultados completos disponiveis no [Security tab](../../security/code-scanning).
+
+          **Query suite**: `security-extended` + `security-and-quality`
+          **Escopo**: `app/`, `lib/`, `config/` (exclui vendor, tests, scripts)
+          EOF
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const ruby   = '${{ needs.analyze-ruby.result }}';
+            const actions = '${{ needs.analyze-actions.result }}';
+            const status  = (r) => r === 'success' ? 'OK' : r === 'failure' ? 'FAIL' : r;
+
+            const body = [
+              '## CodeQL Analysis',
+              '',
+              '| Language | Status |',
+              '|----------|--------|',
+              `| Ruby (security-extended) | ${status(ruby)} |`,
+              `| GitHub Actions workflows | ${status(actions)} |`,
+              '',
+              'Ver alertas completos no [Security tab](../../security/code-scanning).',
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
