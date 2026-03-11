@@ -42,11 +42,12 @@ module Api
       # Add trial warning headers to all responses
       after_action :add_trial_warning_headers, if: -> { current_organization.present? }
 
+      rescue_from StandardError, with: :render_internal_error
       rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+      rescue_from ActiveRecord::StatementInvalid, with: :render_not_found
       rescue_from ActiveRecord::RecordInvalid, with: :render_validation_errors
       rescue_from ActionController::ParameterMissing, with: :render_parameter_missing
       rescue_from Pundit::NotAuthorizedError, with: :render_forbidden_policy
-      rescue_from StandardError, with: :render_internal_error
 
       protected
 
