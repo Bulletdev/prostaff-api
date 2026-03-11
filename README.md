@@ -12,6 +12,7 @@
 <div align="center">
 
 [![Security Scan](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml/badge.svg)](https://github.com/Bulletdev/prostaff-api/actions/workflows/security-scan.yml)
+[![CodeQL](https://github.com/Bulletdev/prostaff-api/actions/workflows/codeql.yml/badge.svg)](https://github.com/Bulletdev/prostaff-api/actions/workflows/codeql.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/30bf4e093ece4ceb8ea46dbe7aecdee1)](https://app.codacy.com/gh/Bulletdev/prostaff-api/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FBulletdev%2Fprostaff-api.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2FBulletdev%2Fprostaff-api?ref=badge_shield&issueType=license)
 
@@ -59,7 +60,8 @@
 │  [■] Global Search            — Meilisearch full-text search across models  │
 │  [■] Real-time Messaging      — Action Cable WebSocket team chat            │
 │  [■] Background Jobs          — Sidekiq for async background processing     │
-│  [■] Security Hardened        — OWASP Top 10, Brakeman, ZAP tested          │
+│  [■] Security Hardened        — OWASP Top 10, Brakeman, Semgrep, CodeQL, ZAP│
+│  [■] Rate Limiting            — Rack::Attack: 5 rules + Retry-After headers │
 │  [■] High Performance         — p95: ~500ms · cached: ~50ms                 │
 │  [■] Modular Monolith         — Scalable modular architecture               │
 │  [■] Observability            — /health/live + /health/ready + Sidekiq mon. │
@@ -87,7 +89,7 @@
 │  09 · Security                                       │
 │  10 · Observability & Monitoring                     │
 │  11 · Deployment                                     │
-│  12 · CI/CD                                          │
+│  12 · CI/CD & CodeQL                                 │
 │  13 · Contributing                                   │
 │  14 · License                                        │
 └──────────────────────────────────────────────────────┘
@@ -931,31 +933,58 @@ open coverage/index.html
 
 ## 09 · Security
 
-### Security Testing (OWASP)
+### Security Testing
 
 ```bash
 # Complete security audit
 ./security_tests/scripts/full-security-audit.sh
 
-# Individual scans
-./security_tests/scripts/brakeman-scan.sh          # Code analysis
-./security_tests/scripts/dependency-scan.sh        # Vulnerable gems
-./security_tests/scripts/zap-baseline-scan.sh      # Web app scan
+# SAST — code + dependency analysis
+./security_tests/scripts/brakeman-scan.sh          # Rails-specific SAST
+./security_tests/scripts/dependency-scan.sh        # Vulnerable gems (bundle-audit)
+
+# DAST — runtime scanning
+./security_tests/scripts/zap-baseline-scan.sh      # OWASP ZAP baseline
+./security_tests/scripts/zap-api-scan.sh           # ZAP API scan (OpenAPI)
+
+# Application-specific tests
+./security_tests/scripts/test-multi-tenancy-isolation.sh  # cross-org data leakage
+./security_tests/scripts/test-ssrf-protection.sh          # SSRF in Riot API URLs
+./security_tests/scripts/test-rate-limiting.sh            # Rack::Attack throttle rules
+./security_tests/scripts/test-timing-oracle.sh            # user enumeration via timing
+./security_tests/scripts/test-body-fuzzing.sh             # mass assignment + type confusion
 ```
 
 ```
 [✓] OWASP Top 10
-[✓] Code security (Brakeman)
-[✓] Dependency vulnerabilities
-[✓] Runtime security (ZAP)
-[✓] CI/CD integration
+[✓] SAST: Brakeman (Rails) + Semgrep + CodeQL (security-extended)
+[✓] Dependency audit: bundle-audit + FOSSA
+[✓] Secrets: TruffleHog (verified secrets, full git history)
+[✓] DAST: OWASP ZAP baseline + API scan
+[✓] Multi-tenancy isolation (cross-org IDOR)
+[✓] Rate limiting: Rack::Attack rules validated (5 throttle rules)
+[✓] Timing oracle: login/register user enumeration
+[✓] Mass assignment: StrongParameters coverage
+[✓] CI/CD: security gates on every push + weekly CodeQL
 ```
 
 ### Security Status
 
-**Last Audit**: 2026-03-04
-**Overall Grade**: A (26/27 tests passed - 96%)
+**Last Audit**: 2026-03-11
+**Overall Grade**: A (all application security tests passing)
 **Status**: Production-ready
+
+### Rate Limiting (Rack::Attack)
+
+| Rule | Limit | Window |
+|------|-------|--------|
+| `logins/ip` | 5 requests | 20 seconds |
+| `register/ip` | 3 requests | 1 hour |
+| `password_reset/ip` | 5 requests | 1 hour |
+| `req/ip` | 300 requests (configurable) | per period |
+| `req/authenticated_user` | 1000 requests | 1 hour |
+
+All 429 responses include a `Retry-After` header with the exact seconds until the window resets.
 
 ### Reporting Vulnerabilities
 
@@ -968,9 +997,7 @@ We take security seriously. If you discover a security vulnerability, please fol
 ### Security Resources
 
 - [Security Policy](SECURITY.md) - Vulnerability disclosure process
-- [Security Test Results](.pentest/SECURITY-TEST-RESULTS.md) - Latest audit results
 - [Security Testing Guide](security_tests/README.md) - Running security tests
-- [CI/CD Security Workflow](.github/workflows/README.md) - Automated security scanning
 
 ---
 
@@ -1176,6 +1203,32 @@ docker run -p 3333:3000 prostaff-api
 
 ## 12 · CI/CD
 
+### CI/CD Workflows
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `security-scan.yml` | Push / PR to master | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
+| `codeql.yml` | Push / PR to master + Saturdays 3am | CodeQL `security-extended` on Ruby + Actions workflows; SARIF to GitHub Security tab |
+| `nightly-security.yml` | Manual dispatch | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan |
+| `load-test.yml` | Nightly + manual | k6 smoke/load/stress tests |
+| `deploy-production.yml` | Push to master | Build, test, deploy to Coolify + CORS smoke test post-deploy |
+| `deploy-staging.yml` | Push to develop | Same pipeline targeting staging |
+| `update-architecture-diagram.yml` | Changes in `app/`, `config/routes.rb`, `Gemfile` | Auto-regenerates Mermaid diagram and commits |
+
+### CodeQL Analysis
+
+CodeQL runs as a complementary SAST engine alongside Brakeman and Semgrep, covering different vulnerability classes:
+
+- SQL injection patterns outside standard ActiveRecord usage
+- Path traversal in file operations
+- SSRF in custom HTTP clients
+- Code injection via `eval` / `send` with unsanitized input
+- ReDoS (regex denial of service)
+
+Results are published to the **GitHub Security tab** in SARIF format.
+
+Config: `.github/codeql/codeql-config.yml` — analysis scoped to `app/`, `lib/`, `config/` (excludes vendor, tests, scripts).
+
 ### Architecture Diagram Auto-Update
 
 ```
@@ -1199,15 +1252,7 @@ docker run -p 3333:3000 prostaff-api
 ruby scripts/update_architecture_diagram.rb
 ```
 
-### CI/CD Workflows
-
-Automated testing on every push:
-- **Security Scan**: Brakeman + dependency check
-- **Load Test**: Nightly smoke tests
-- **Nightly Audit**: Complete security scan
-- **CORS Smoke Test**: Runs after every production deploy — sends a preflight request from each allowed origin and fails the pipeline if CORS is misconfigured
-
-See `.github/workflows/` for details.
+See `.github/workflows/` for full workflow sources.
 
 ---
 

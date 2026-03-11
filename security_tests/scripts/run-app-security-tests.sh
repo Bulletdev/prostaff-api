@@ -63,6 +63,9 @@ fi
 run_test "Multi-Tenancy Isolation" "$SCRIPT_DIR/test-multi-tenancy-isolation.sh"
 run_test "SSRF Protection" "$SCRIPT_DIR/test-ssrf-protection.sh"
 run_test "Secrets Scanning" "$SCRIPT_DIR/scan-secrets.sh"
+run_test "Rate Limiting (Rack::Attack)" "$SCRIPT_DIR/test-rate-limiting.sh"
+run_test "Timing Oracle (User Enumeration)" "$SCRIPT_DIR/test-timing-oracle.sh"
+run_test "Body Field Fuzzing (Mass Assignment)" "$SCRIPT_DIR/test-body-fuzzing.sh"
 
 # Summary
 echo ""
@@ -76,16 +79,19 @@ echo -e "${RED}Failed: $TOTAL_FAILED${NC}"
 echo ""
 
 if [ $TOTAL_FAILED -eq 0 ]; then
-  echo -e "${GREEN}✓ All application security tests passed!${NC}"
+  echo -e "${GREEN}All application security tests passed!${NC}"
   echo ""
   echo "Reports available at:"
   echo "  - $REPORT_DIR/multi-tenancy/multi-tenancy-report.json"
   echo "  - $REPORT_DIR/ssrf/ssrf-report.json"
   echo "  - $REPORT_DIR/secrets/secrets-summary.json"
+  echo "  - $REPORT_DIR/rate-limiting/"
+  echo "  - $REPORT_DIR/timing-oracle/"
+  echo "  - $REPORT_DIR/body-fuzzing/"
   echo ""
   exit 0
 else
-  echo -e "${RED}✗ Some tests failed. Review reports in $REPORT_DIR/${NC}"
+  echo -e "${RED}Some tests failed. Review reports in $REPORT_DIR/${NC}"
   echo ""
   echo "Critical issues found. Please fix before deploying to production."
   echo ""
