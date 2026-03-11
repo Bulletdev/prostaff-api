@@ -155,6 +155,7 @@ module Matches
         damage_dealt_total: participant_data[:total_damage_dealt],
         damage_taken: participant_data[:total_damage_taken],
         cs: cs_total,
+        neutral_minions_killed: participant_data[:neutral_minions_killed],
         vision_score: participant_data[:vision_score],
         wards_placed: participant_data[:wards_placed],
         wards_destroyed: participant_data[:wards_killed],
@@ -169,7 +170,22 @@ module Matches
         summoner_spell_1: participant_data[:summoner_spell_1],
         summoner_spell_2: participant_data[:summoner_spell_2],
         damage_share: damage_share,
-        gold_share: gold_share
+        gold_share: gold_share,
+        objectives_stolen: participant_data[:objectives_stolen],
+        crowd_control_score: participant_data[:crowd_control_score],
+        total_time_dead: participant_data[:total_time_dead],
+        damage_to_turrets: participant_data[:damage_to_turrets],
+        damage_shielded_teammates: participant_data[:damage_shielded_teammates],
+        healing_to_teammates: participant_data[:healing_to_teammates],
+        spell_q_casts: participant_data[:spell_q_casts],
+        spell_w_casts: participant_data[:spell_w_casts],
+        spell_e_casts: participant_data[:spell_e_casts],
+        spell_r_casts: participant_data[:spell_r_casts],
+        summoner_spell_1_casts: participant_data[:summoner_spell_1_casts],
+        summoner_spell_2_casts: participant_data[:summoner_spell_2_casts],
+        cs_at_10: participant_data[:cs_at_10],
+        turret_plates_destroyed: participant_data[:turret_plates_destroyed],
+        pings: participant_data[:pings] || {}
       )
     end
 

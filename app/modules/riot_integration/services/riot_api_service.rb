@@ -255,6 +255,8 @@ class RiotApiService
   end
 
   def parse_participant(participant)
+    challenges = participant['challenges'] || {}
+
     {
       puuid: participant['puuid'],
       summoner_name: participant['summonerName'],
@@ -289,7 +291,22 @@ class RiotApiService
       trinket: participant['item6'],
       summoner_spell_1: participant['summoner1Id'],
       summoner_spell_2: participant['summoner2Id'],
-      runes: extract_runes(participant)
+      runes: extract_runes(participant),
+      objectives_stolen: participant['objectivesStolen'],
+      crowd_control_score: participant['timeCCingOthers'],
+      total_time_dead: participant['totalTimeSpentDead'],
+      damage_to_turrets: participant['totalDamageDealtToTurrets'],
+      damage_shielded_teammates: participant['totalDamageShieldedOnTeammates'],
+      healing_to_teammates: participant['totalHealsOnTeammates'],
+      spell_q_casts: participant['spell1Casts'],
+      spell_w_casts: participant['spell2Casts'],
+      spell_e_casts: participant['spell3Casts'],
+      spell_r_casts: participant['spell4Casts'],
+      summoner_spell_1_casts: participant['summoner1Casts'],
+      summoner_spell_2_casts: participant['summoner2Casts'],
+      cs_at_10: challenges['laneMinionsFirst10Minutes'],
+      turret_plates_destroyed: challenges['turretPlatesTaken'],
+      pings: extract_pings(participant)
     }
   end
 
@@ -299,6 +316,26 @@ class RiotApiService
 
     # Extract primary and sub-style selections
     perks.flat_map { |style| style['selections'].map { |s| s['perk'] } }
+  end
+
+  def extract_pings(participant)
+    {
+      all_in: participant['allInPings'].to_i,
+      assist_me: participant['assistMePings'].to_i,
+      bait: participant['baitPings'].to_i,
+      basic: participant['basicPings'].to_i,
+      command: participant['commandPings'].to_i,
+      danger: participant['dangerPings'].to_i,
+      enemy_missing: participant['enemyMissingPings'].to_i,
+      enemy_vision: participant['enemyVisionPings'].to_i,
+      get_back: participant['getBackPings'].to_i,
+      hold: participant['holdPings'].to_i,
+      need_vision: participant['needVisionPings'].to_i,
+      on_my_way: participant['onMyWayPings'].to_i,
+      push: participant['pushPings'].to_i,
+      retreat: participant['retreatPings'].to_i,
+      vision_cleared: participant['visionClearedPings'].to_i
+    }
   end
 
   def extract_item_build_order(participant)
