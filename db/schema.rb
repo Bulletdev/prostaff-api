@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_26_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_06_120000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -331,9 +331,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_26_100000) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "neutral_minions_killed"
+    t.integer "objectives_stolen", default: 0
+    t.integer "turret_plates_destroyed"
+    t.integer "crowd_control_score"
+    t.integer "total_time_dead"
+    t.integer "damage_to_turrets"
+    t.integer "damage_shielded_teammates"
+    t.integer "healing_to_teammates"
+    t.integer "cs_at_10"
+    t.integer "spell_q_casts"
+    t.integer "spell_w_casts"
+    t.integer "spell_e_casts"
+    t.integer "spell_r_casts"
+    t.integer "summoner_spell_1_casts"
+    t.integer "summoner_spell_2_casts"
+    t.jsonb "pings", default: {}
     t.index ["champion"], name: "index_player_match_stats_on_champion"
+    t.index ["crowd_control_score"], name: "idx_pms_cc_score"
     t.index ["match_id", "player_id"], name: "idx_player_stats_match_player_agg", comment: "Otimiza agregações de estatísticas (SUM kills/deaths/assists)"
     t.index ["match_id"], name: "idx_player_stats_match"
+    t.index ["objectives_stolen"], name: "idx_pms_objectives_stolen", where: "(objectives_stolen > 0)"
     t.index ["player_id", "champion"], name: "idx_pms_player_champion"
     t.index ["player_id", "cs_per_min"], name: "idx_pms_player_cs_per_min"
     t.index ["player_id", "match_id"], name: "index_player_match_stats_on_player_id_and_match_id", unique: true
