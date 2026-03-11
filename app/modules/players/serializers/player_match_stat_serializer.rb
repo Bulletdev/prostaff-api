@@ -12,7 +12,16 @@ class PlayerMatchStatSerializer < Blueprinter::Base
          :vision_score, :wards_placed, :wards_destroyed,
          :first_blood, :double_kills,
          :triple_kills, :quadra_kills, :penta_kills,
-         :performance_score, :created_at, :updated_at
+         :performance_score, :created_at, :updated_at,
+         # Extended stats
+         :neutral_minions_killed, :objectives_stolen,
+         :crowd_control_score, :total_time_dead,
+         :damage_to_turrets, :turret_plates_destroyed,
+         :damage_shielded_teammates, :healing_to_teammates,
+         :cs_at_10,
+         :spell_q_casts, :spell_w_casts, :spell_e_casts, :spell_r_casts,
+         :summoner_spell_1_casts, :summoner_spell_2_casts,
+         :pings
 
   field :kda do |stat|
     deaths = stat.deaths.zero? ? 1 : stat.deaths

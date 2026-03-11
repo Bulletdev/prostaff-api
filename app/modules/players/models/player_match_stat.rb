@@ -141,26 +141,31 @@ class PlayerMatchStat < ApplicationRecord
 
     score = 0
 
-    # KDA component (40 points max)
-    kda = kda_ratio
-    score += [kda * 10, 40].min
+    # KDA component (35 points max)
+    score += [kda_ratio * 8.75, 35].min
 
     # CS component (20 points max)
-    cs_score = (cs_per_min || 0) * 2.5
-    score += [cs_score, 20].min
+    score += [(cs_per_min || 0) * 2.5, 20].min
 
-    # Damage component (20 points max)
-    damage_score = (damage_share || 0) * 100 * 0.8
-    score += [damage_score, 20].min
+    # Damage component (15 points max)
+    score += [(damage_share || 0) * 100 * 0.6, 15].min
 
     # Vision component (10 points max)
-    vision_score_normalized = vision_score.to_f / 100
-    score += [vision_score_normalized * 10, 10].min
+    score += [vision_score.to_f / 100 * 10, 10].min
+
+    # CC + objectives bonus (10 points max)
+    score += cc_and_objectives_bonus
 
     # Victory bonus (10 points max)
     score += 10 if match.victory?
 
     [score, 100].min.round(2)
+  end
+
+  def cc_and_objectives_bonus
+    cc_bonus = crowd_control_score.present? ? [crowd_control_score.to_f / 100, 5].min : 0
+    obj_bonus = objectives_stolen.to_i > 0 ? 5 : 0
+    cc_bonus + obj_bonus
   end
 
   def update_champion_pool

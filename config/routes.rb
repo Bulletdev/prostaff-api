@@ -99,6 +99,7 @@ Rails.application.routes.draw do
           get :stats
           get :matches
           post :sync_from_riot
+          get 'stats/export', to: '/players/controllers/stats_export#show', as: :stats_export
         end
       end
 
@@ -211,6 +212,10 @@ Rails.application.routes.draw do
         # Objective analytics (dragon, baron, tower, inhibitor control)
         get 'objectives', to: '/analytics/controllers/objectives#index'
 
+        # Ping Profile analytics
+        get 'players/:player_id/ping-profile', to: '/analytics/controllers/ping_profile#show',
+                                               as: 'ping_profile'
+
         # Competitive analytics (draft performance, tournament stats, opponent analysis)
         get 'competitive/draft-performance', to: '/analytics/controllers/competitive#draft_performance'
         get 'competitive/tournament-stats',  to: '/analytics/controllers/competitive#tournament_stats'
@@ -225,6 +230,7 @@ Rails.application.routes.draw do
         end
         member do
           get :stats
+          get :export, to: '/matches/controllers/export#show'
         end
       end
 
