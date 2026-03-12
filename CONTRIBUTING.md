@@ -33,14 +33,14 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 2. Clone your fork locally:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/prostaff-api.git
+git clone https://github.com/bulletdev/prostaff-api.git
 cd prostaff-api
 ```
 
 3. Add upstream remote:
 
 ```bash
-git remote add upstream https://github.com/prostaff/prostaff-api.git
+git remote add upstream https://github.com/bulletdev/prostaff-api.git
 ```
 
 ## Development Environment
