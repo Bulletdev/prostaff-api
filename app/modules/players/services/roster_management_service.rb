@@ -252,7 +252,7 @@ class RosterManagementService
     # Fallback: get from player_match_stats
     champions_from_stats = player.player_match_stats
                                  .group(:champion)
-                                 .order('COUNT(*) DESC')
+                                 .order(Arel.sql('COUNT(*) DESC'))
                                  .limit(10)
                                  .pluck(:champion)
 

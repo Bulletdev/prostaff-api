@@ -48,6 +48,8 @@ module Players
 
       # POST /api/v1/players
       def create
+        authorize Player, :create?
+
         player = organization_scoped(Player).new(player_params)
         player.organization = current_organization
 
@@ -74,6 +76,8 @@ module Players
 
       # PATCH/PUT /api/v1/players/:id
       def update
+        authorize @player
+
         old_values = @player.attributes.dup
 
         if @player.update(player_params)
@@ -100,6 +104,8 @@ module Players
 
       # DELETE /api/v1/players/:id
       def destroy
+        authorize @player
+
         if @player.destroy
           log_user_action(
             action: 'delete',
@@ -160,6 +166,8 @@ module Players
 
       # POST /api/v1/players/import
       def import
+        authorize Player, :import?
+
         summoner_name = params[:summoner_name]&.strip
         role = params[:role]
         region = params[:region] || 'br1'
@@ -177,6 +185,8 @@ module Players
 
       # POST /api/v1/players/:id/sync_from_riot
       def sync_from_riot
+        authorize @player, :sync_from_riot?
+
         region = params[:region] || @player.region || 'br1'
         service = RiotSyncService.new(current_organization, region)
         result = service.sync_player(@player, import_matches: true)
@@ -241,6 +251,8 @@ module Players
 
       # POST /api/v1/players/bulk_sync
       def bulk_sync
+        authorize Player, :bulk_sync?
+
         status = params[:status] || 'active'
 
         players = organization_scoped(Player).where(status: status)

@@ -31,7 +31,15 @@ class PlayerPolicy < ApplicationPolicy
   end
 
   def import?
-    admin? && same_organization?
+    admin?
+  end
+
+  def sync_from_riot?
+    coach? && same_organization?
+  end
+
+  def bulk_sync?
+    admin?
   end
 
   # Scope class for filtering resources based on authorization rules
