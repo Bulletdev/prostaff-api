@@ -39,7 +39,7 @@ class PlayerPolicy < ApplicationPolicy
   end
 
   def bulk_sync?
-    admin?
+    coach?
   end
 
   # Scope class for filtering resources based on authorization rules
