@@ -7,6 +7,7 @@ module Players
     class RostersController < Api::V1::BaseController
       before_action :set_player, only: [:remove_from_roster]
       before_action :set_scouting_target, only: [:hire_from_scouting]
+      before_action :require_coach!, only: %i[remove_from_roster hire_from_scouting]
 
       # POST /api/v1/roster/remove/:player_id
       # Remove a player from the current roster
@@ -160,6 +161,16 @@ module Players
           message: 'Scouting target not found',
           code: 'SCOUTING_TARGET_NOT_FOUND',
           status: :not_found
+        )
+      end
+
+      def require_coach!
+        return if %w[coach admin owner].include?(current_user.role)
+
+        render_error(
+          message: 'You are not authorized to perform this action',
+          code: 'FORBIDDEN',
+          status: :forbidden
         )
       end
 
