@@ -286,6 +286,9 @@ module Scouting
       end
 
       def scouting_target_params
+        # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
+        # :role here is the player's in-game position (top/jungle/mid/adc/support),
+        # not an authorization role. ScoutingTarget has no privilege implications.
         params.require(:scouting_target).permit(
           :summoner_name, :real_name, :role, :region, :nationality,
           :age, :status, :current_team,
@@ -306,6 +309,9 @@ module Scouting
       end
 
       def target_params
+        # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
+        # :role here is the player's in-game position (top/jungle/mid/adc/support),
+        # not an authorization role. ScoutingTarget has no privilege implications.
         params.fetch(:target, {}).permit(
           :summoner_name, :real_name, :role, :region, :nationality,
           :age, :status, :current_team,
