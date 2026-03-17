@@ -1100,7 +1100,7 @@ graph TB
     subgraph "Rails — Puma"
         Cable["Action Cable<br/>WebSocket /cable<br/>(team chat)"]
         Router["Rails Router<br/>REST API v1<br/>200+ endpoints"]
-        Sidekiq["Sidekiq<br/>Background Workers<br/>(Riot sync · reindex)"]
+        Sidekiq["Sidekiq<br/>Background Workers<br/>(Riot sync + reindex)"]
     end
 
     subgraph "Data"
@@ -1119,7 +1119,7 @@ graph TB
     PlayerPortal -- "HTTPS REST" --> Traefik
 
     Traefik -- "HTTP" --> Router
-    Traefik -- "WS upgrade" --> Cable
+    Traefik -- "WS upgrade /cable" --> Cable
 
     Router -- "reads / writes" --> PG
     Router -- "cache · JWT blacklist" --> RD
@@ -1130,7 +1130,7 @@ graph TB
     Sidekiq -- "reindex docs" --> Meili
 
     Router -- "player data" --> RiotAPI
-    Sidekiq -- "match sync" --> RiotAPI
+    Sidekiq -- "match + profile sync" --> RiotAPI
     Router -- "pro matches" --> PandaScore
 
     style FrontendApp fill:#1e88e5
