@@ -62,6 +62,7 @@ module ProstaffApi
     # Load custom middleware
     require Rails.root.join('lib', 'bot_logger_middleware')
     require Rails.root.join('lib', 'middleware', 'auth_failure_tracker')
+    require Rails.root.join('lib', 'middleware', 'security_headers')
 
     # Only loads a smaller set of middleware suitable for API only apps.
     # Middleware like session, flash, cookies can be added back manually.
@@ -70,6 +71,11 @@ module ProstaffApi
 
     # CORS configuration - See config/initializers/cors.rb
     # Removed from here to avoid duplicate middleware registration
+
+    # Security headers — injected at Rack level to guarantee delivery through
+    # Traefik/Cloudflare proxy chain (config.action_dispatch.default_headers
+    # proved unreliable in API mode with reverse proxies in front)
+    config.middleware.use Middleware::SecurityHeaders
 
     # Rack Attack for rate limiting
     config.middleware.use Rack::Attack
