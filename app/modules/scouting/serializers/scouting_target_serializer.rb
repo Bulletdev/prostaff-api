@@ -14,7 +14,14 @@ class ScoutingTargetSerializer < Blueprinter::Base
   fields :email, :phone, :discord_username, :twitter_handle
   fields :notes # Player-specific notes (public)
   fields :metadata
-  fields :created_at, :updated_at
+
+  field :created_at do |target|
+    target.created_at&.iso8601
+  end
+
+  field :updated_at do |target|
+    target.updated_at&.iso8601
+  end
   fields :real_name, :avatar_url, :profile_icon_id
   fields :peak_tier, :peak_rank, :last_api_sync_at
 

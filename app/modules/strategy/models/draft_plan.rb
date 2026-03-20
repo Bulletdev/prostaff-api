@@ -82,14 +82,17 @@ class DraftPlan < ApplicationRecord
   def opponent_comfort_picks
     return [] unless opponent_team.present?
 
-    # Find scouting targets matching the opponent team
+    # Find scouting targets in this organization's watchlist matching the opponent team
+    # ScoutingTarget is global (no organization_id); use the watchlist relationship.
     sanitized_team = ActiveRecord::Base.sanitize_sql_like(opponent_team)
-    ScoutingTarget
-      .where(organization: organization)
-      .where('current_team ILIKE ?', "%#{sanitized_team}%")
+    organization
+      .scouting_targets
+      .where('summoner_name ILIKE ?', "%#{sanitized_team}%")
       .pluck(:champion_pool)
       .flatten
       .uniq
+  rescue StandardError
+    []
   end
 
   # Analyze draft plan and suggest improvements

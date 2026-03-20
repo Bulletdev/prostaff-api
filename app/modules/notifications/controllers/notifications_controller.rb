@@ -65,7 +65,7 @@ module Notifications
 
         render_deleted(message: 'Notification deleted successfully')
       rescue ActiveRecord::RecordNotFound
-        render_not_found('Notification not found')
+        render_not_found
       end
 
       private
@@ -73,7 +73,7 @@ module Notifications
       def set_notification
         @notification = current_user.notifications.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render_not_found('Notification not found')
+        render_not_found
       end
     end
   end

@@ -120,7 +120,7 @@ module Matches
           end,
           comparison: {
             total_gold: stats.sum(:gold_earned),
-            total_damage: stats.sum(:total_damage_dealt),
+            total_damage: stats.sum(:damage_dealt_total),
             total_vision_score: stats.sum(:vision_score),
             avg_kda: calculate_avg_kda(stats)
           }
@@ -138,63 +138,22 @@ module Matches
         unless player.riot_puuid.present?
           return render_error(
             message: 'Player does not have a Riot PUUID. Please sync player from Riot first.',
-            code: 'VALIDATION_ERROR',
-            status: :unprocessable_entity
+            code: 'MISSING_PUUID',
+            status: :bad_request
           )
         end
 
-        begin
-          riot_service = RiotApiService.new
-          region = player.region || 'BR'
+        job_id = ImportPlayerMatchesJob.perform_later(
+          player.id,
+          current_organization.id,
+          count
+        ).job_id
 
-          match_ids = riot_service.get_match_history(
-            puuid: player.riot_puuid,
-            region: region,
-            count: count
-          )
-
-          imported_count = 0
-          match_ids.each do |match_id|
-            next if Match.exists?(riot_match_id: match_id)
-
-            SyncMatchJob.perform_later(match_id, current_organization.id, region)
-            imported_count += 1
-          end
-
-          render_success({
-                           message: "Queued #{imported_count} matches for import",
-                           total_matches_found: match_ids.count,
-                           already_imported: match_ids.count - imported_count,
-                           player: PlayerSerializer.render_as_hash(player)
-                         })
-        rescue RedisClient::CannotConnectError, Redis::CannotConnectError => e
-          Rails.logger.error "Redis connection failed during match import: #{e.message}"
-
-          render_error(
-            message: 'Background job service is temporarily unavailable. Please try again later.',
-            code: 'BACKGROUND_SERVICE_UNAVAILABLE',
-            status: :service_unavailable,
-            details: {
-              hint: 'The import service is currently down. Contact your administrator if this persists.',
-              player_id: player.id
-            }
-          )
-        rescue RiotApiService::RiotApiError => e
-          render_error(
-            message: "Failed to fetch matches from Riot API: #{e.message}",
-            code: 'RIOT_API_ERROR',
-            status: :bad_gateway
-          )
-        rescue StandardError => e
-          Rails.logger.error "Unexpected error during match import: #{e.class} - #{e.message}"
-          Rails.logger.error e.backtrace.first(5).join("\n")
-
-          render_error(
-            message: "Failed to import matches: #{e.message}",
-            code: 'IMPORT_ERROR',
-            status: :internal_server_error
-          )
-        end
+        render_success({
+                         job_id: job_id,
+                         player_id: player.id.to_s,
+                         count: count
+                       }, message: 'Match import queued successfully')
       end
 
       private
@@ -265,7 +224,7 @@ module Matches
           victories: matches.victories.count,
           defeats: matches.defeats.count,
           win_rate: calculate_win_rate(matches),
-          by_type: matches.group(:match_type).count,
+          by_type: matches.unscope(:order).group(:match_type).count,
           avg_duration: matches.average(:game_duration)&.round(0)
         }
       end
@@ -276,8 +235,8 @@ module Matches
           total_deaths: stats.sum(:deaths),
           total_assists: stats.sum(:assists),
           total_gold: stats.sum(:gold_earned),
-          total_damage: stats.sum(:total_damage_dealt),
-          total_cs: stats.sum(:minions_killed),
+          total_damage: stats.sum(:damage_dealt_total),
+          total_cs: stats.sum(:cs),
           total_vision_score: stats.sum(:vision_score)
         }
       end
