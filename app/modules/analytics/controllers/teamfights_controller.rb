@@ -20,9 +20,10 @@ module Analytics
         player = organization_scoped(Player).find(params[:player_id])
 
         stats = PlayerMatchStat.joins(:match)
-                               .includes(:match)
-                               .where(player: player, match: { organization: current_organization })
+                               .where(player: player)
+                               .where('matches.organization_id = ?', current_organization.id)
                                .order('matches.game_start DESC')
+                               .preload(:match)
                                .limit(20)
 
         teamfight_data = {

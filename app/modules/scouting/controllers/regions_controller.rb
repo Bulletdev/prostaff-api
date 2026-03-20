@@ -33,7 +33,7 @@ module Scouting
           { code: 'TR', name: 'Turkey', platform: 'TR1' }
         ]
 
-        render_success(regions)
+        render_success({ regions: regions })
       end
     end
   end

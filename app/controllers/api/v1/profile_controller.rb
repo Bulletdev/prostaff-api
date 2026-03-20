@@ -21,47 +21,83 @@ module Api
             user: UserSerializer.render(@current_user)
           }, status: :ok
         else
-          render json: { errors: @current_user.errors.full_messages }, status: :unprocessable_entity
+          render_error(
+            message: 'Validation failed',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: @current_user.errors.as_json
+          )
         end
       end
 
       # PATCH /api/v1/profile/password
       # Changes user password
       def update_password
-        unless @current_user.authenticate(password_params[:current_password])
-          return render json: { error: 'Current password is incorrect' }, status: :unauthorized
+        unless @current_user.authenticate(params[:current_password])
+          return render_error(
+            message: 'Current password is incorrect',
+            code: 'INVALID_PASSWORD',
+            status: :unprocessable_entity
+          )
         end
 
-        if @current_user.update(password: password_params[:new_password])
+        new_password = params[:password]
+        new_password_confirmation = params[:password_confirmation]
+
+        if new_password != new_password_confirmation
+          return render_error(
+            message: 'Password confirmation does not match',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity
+          )
+        end
+
+        if @current_user.update(password: new_password)
           log_password_change
           render json: { message: 'Password updated successfully' }, status: :ok
         else
-          render json: { errors: @current_user.errors.full_messages }, status: :unprocessable_entity
+          render_error(
+            message: 'Validation failed',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: @current_user.errors.as_json
+          )
         end
       end
 
       # PATCH /api/v1/profile/notifications
       # Updates notification preferences
       def update_notifications
-        if @current_user.update(notification_params)
-          render json: {
-            message: 'Notification preferences updated successfully',
-            notifications_enabled: @current_user.notifications_enabled,
-            notification_preferences: @current_user.notification_preferences
-          }, status: :ok
+        prefs = params[:notification_preferences]
+
+        if prefs.nil?
+          return render_error(
+            message: 'Validation failed',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity
+          )
+        end
+
+        notification_prefs = @current_user.notification_preferences.merge(prefs.to_unsafe_h.stringify_keys)
+
+        if @current_user.update(notification_preferences: notification_prefs)
+          render_success({
+                           notification_preferences: @current_user.notification_preferences
+                         }, message: 'Notification preferences updated successfully')
         else
-          render json: { errors: @current_user.errors.full_messages }, status: :unprocessable_entity
+          render_error(
+            message: 'Validation failed',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: @current_user.errors.as_json
+          )
         end
       end
 
       private
 
       def profile_params
-        params.require(:user).permit(:full_name, :avatar_url, :timezone, :language)
-      end
-
-      def password_params
-        params.require(:user).permit(:current_password, :new_password)
+        params.require(:user).permit(:full_name, :email, :avatar_url, :timezone, :language)
       end
 
       def notification_params

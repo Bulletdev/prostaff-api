@@ -141,8 +141,7 @@ module Analytics
       end
 
       def build_objective_trend(matches)
-        matches.includes(:match)
-               .order('game_start ASC')
+        matches.order('game_start ASC')
                .last(30)
                .map do |m|
           next unless m.game_start

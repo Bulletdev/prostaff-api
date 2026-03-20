@@ -135,7 +135,7 @@ class TacticalBoard < ApplicationRecord
     {
       total_players: players.size,
       total_annotations: annotations&.size || 0,
-      created_by_name: created_by&.name,
+      created_by_name: created_by&.full_name,
       last_updated: updated_at,
       game_time: game_time,
       linked_to: linked_entity

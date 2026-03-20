@@ -77,7 +77,8 @@ module Scouting
       # Updates global target data OR watchlist data
       def update
         ActiveRecord::Base.transaction do
-          @target.update!(target_params) if target_params.any?
+          tp = target_params.to_h
+          @target.update!(tp) if tp.any?
           update_watchlist_if_params_present
           render_updated(serialized_target_response)
         end
@@ -134,13 +135,15 @@ module Scouting
       end
 
       def update_watchlist_if_params_present
-        return unless watchlist_params.any?
+        wp = watchlist_params.to_h
+        wp = scouting_target_watchlist_params.to_h if wp.empty?
+        return if wp.empty?
 
         watchlist = @target.scouting_watchlists.find_or_create_by!(organization: current_organization) do |w|
           w.added_by = current_user
         end
         old_values = watchlist.attributes.dup
-        watchlist.update!(watchlist_params)
+        watchlist.update!(wp)
         log_user_action(action: 'update', entity_type: 'ScoutingWatchlist',
                         entity_id: watchlist.id, old_values: old_values, new_values: watchlist.attributes)
       end
@@ -302,6 +305,12 @@ module Scouting
 
       def watchlist_params
         params.fetch(:watchlist, {}).permit(
+          :priority, :status, :notes, :assigned_to_id
+        )
+      end
+
+      def scouting_target_watchlist_params
+        params.fetch(:scouting_target, {}).permit(
           :priority, :status, :notes, :assigned_to_id
         )
       end

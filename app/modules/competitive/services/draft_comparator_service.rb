@@ -34,7 +34,7 @@ class DraftComparatorService
       our_picks: our_picks,
       opponent_picks: opponent_picks,
       our_bans: our_bans,
-      opponent_bans: opponent_bans,
+      _opponent_bans: opponent_bans,
       patch: patch,
       organization: organization
     )
@@ -60,7 +60,7 @@ class DraftComparatorService
 
     # Generate insights
     insights = analyzer.generate_insights(
-      our_picks: our_picks,
+      _our_picks: our_picks,
       opponent_picks: opponent_picks,
       our_bans: our_bans,
       similar_matches: similar_matches,

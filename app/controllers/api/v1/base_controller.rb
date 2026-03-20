@@ -32,6 +32,7 @@ module Api
     #     end
     #   end
     class BaseController < ApplicationController
+      include ActionController::MimeResponds
       include Authenticatable
       include Pundit::Authorization
       include TrialChecker
@@ -94,7 +95,8 @@ module Api
       end
 
       def render_not_found(exception = nil)
-        resource_name = exception&.model&.humanize || 'Resource'
+        resource_name = exception.respond_to?(:model) ? exception.model&.humanize : nil
+        resource_name ||= 'Resource'
         render_error(
           message: "#{resource_name} not found",
           code: 'NOT_FOUND',
