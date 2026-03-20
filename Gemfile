@@ -84,6 +84,9 @@ gem 'meilisearch', '~> 0.33'
 # LLM Integration for Support Chatbot
 gem 'ruby-openai', '~> 7.0'
 
+# Linear algebra for AI draft analysis
+gem 'numo-narray', '~> 0.9'
+
 # Structured JSON logging (12-Factor XI)
 gem 'lograge'
 
@@ -114,6 +117,7 @@ end
 
 group :test do
   gem 'database_cleaner-active_record'
+  gem 'pundit-matchers'
   gem 'shoulda-matchers'
   gem 'simplecov', require: false
   gem 'vcr'

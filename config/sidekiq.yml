@@ -45,6 +45,13 @@
     queue: low_priority
     description: 'Trigger historical backfill on scraper and sync matches to Rails DB'
 
+  # Rebuild AI champion matrices and vectors nightly at 3 AM UTC
+  rebuild_ai_matrices:
+    cron: '0 3 * * *'
+    class: AiIntelligence::RebuildChampionMatrixJob
+    queue: low_priority
+    description: 'Rebuild AI champion matrices and vectors nightly'
+
   # Additional scheduled jobs can be added here
   # Example:
   # sync_riot_data:
