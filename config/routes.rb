@@ -359,6 +359,12 @@ Rails.application.routes.draw do
 
       # Team members list (for chat widget)
       get 'team-members', to: '/core/controllers/team_members#index'
+
+      # AI Intelligence Module — draft analysis and win probability
+      # Requires Tier 1 (Professional) subscription.
+      namespace :ai do
+        post 'draft/analyze', to: '/ai_intelligence/controllers/draft#analyze'
+      end
     end
   end
 
