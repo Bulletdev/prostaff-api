@@ -41,18 +41,19 @@ RSpec.describe Match, type: :model do
     let(:organization) { create(:organization) }
     let!(:victory) { create(:match, victory: true, organization: organization) }
     let!(:defeat) { create(:match, victory: false, organization: organization) }
+    let(:matches) { Match.unscoped.where(organization: organization) }
 
     describe '.victories' do
       it 'returns only victories' do
-        expect(Match.victories).to include(victory)
-        expect(Match.victories).not_to include(defeat)
+        expect(matches.victories).to include(victory)
+        expect(matches.victories).not_to include(defeat)
       end
     end
 
     describe '.defeats' do
       it 'returns only defeats' do
-        expect(Match.defeats).to include(defeat)
-        expect(Match.defeats).not_to include(victory)
+        expect(matches.defeats).to include(defeat)
+        expect(matches.defeats).not_to include(victory)
       end
     end
   end

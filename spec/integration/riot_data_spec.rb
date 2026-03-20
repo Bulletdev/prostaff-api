@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Riot Data API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/riot-data/champions' do
     get 'Get champions ID map' do
@@ -50,6 +50,11 @@ RSpec.describe 'Riot Data API', type: :request do
       response '200', 'champion found' do
         let(:champion_key) { '266' }
 
+        before do
+          allow_any_instance_of(DataDragonService).to receive(:champion_by_key)
+            .with('266').and_return({ 'id' => 'Aatrox', 'name' => 'Aatrox', 'key' => '266' })
+        end
+
         schema type: :object,
                properties: {
                  data: {
@@ -83,10 +88,7 @@ RSpec.describe 'Riot Data API', type: :request do
                  data: {
                    type: :object,
                    properties: {
-                     champions: {
-                       type: :array,
-                       items: { type: :object }
-                     },
+                     champions: { type: :object },
                      count: { type: :integer }
                    }
                  }
@@ -206,6 +208,10 @@ RSpec.describe 'Riot Data API', type: :request do
       response '200', 'cache cleared' do
         let(:user) { create(:user, :owner, organization: organization) }
 
+        before do
+          allow_any_instance_of(DataDragonService).to receive(:clear_cache!).and_return(true)
+        end
+
         schema type: :object,
                properties: {
                  data: {
@@ -220,7 +226,7 @@ RSpec.describe 'Riot Data API', type: :request do
       end
 
       response '403', 'forbidden' do
-        let(:user) { create(:user, :member, organization: organization) }
+        let(:user) { create(:user, :viewer, organization: organization) }
         schema '$ref' => '#/components/schemas/Error'
         run_test!
       end
@@ -235,6 +241,14 @@ RSpec.describe 'Riot Data API', type: :request do
 
       response '200', 'cache updated' do
         let(:user) { create(:user, :owner, organization: organization) }
+
+        before do
+          allow_any_instance_of(DataDragonService).to receive(:clear_cache!).and_return(true)
+          allow_any_instance_of(DataDragonService).to receive(:latest_version).and_return('14.1.1')
+          allow_any_instance_of(DataDragonService).to receive(:champion_id_map).and_return({ '266' => 'Aatrox' })
+          allow_any_instance_of(DataDragonService).to receive(:items).and_return({ '1001' => 'Boots' })
+          allow_any_instance_of(DataDragonService).to receive(:summoner_spells).and_return({ 'SummonerFlash' => {} })
+        end
 
         schema type: :object,
                properties: {
@@ -259,7 +273,7 @@ RSpec.describe 'Riot Data API', type: :request do
       end
 
       response '403', 'forbidden' do
-        let(:user) { create(:user, :member, organization: organization) }
+        let(:user) { create(:user, :viewer, organization: organization) }
         schema '$ref' => '#/components/schemas/Error'
         run_test!
       end

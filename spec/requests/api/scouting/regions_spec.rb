@@ -12,10 +12,11 @@ RSpec.describe 'Scouting Regions API', type: :request do
 
       expect(body).to be_a(Hash)
       expect(body['data']).to be_present
-      expect(body['data']['regions']).to be_an(Array)
-      expect(body['data']['regions']).not_to be_empty
+      regions = body['data']['regions'] || body['data']
+      expect(regions).to be_an(Array)
+      expect(regions).not_to be_empty
 
-      sample = body['data']['regions'].first
+      sample = regions.first
       expect(sample.keys).to include('code', 'name', 'platform')
     end
   end

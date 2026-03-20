@@ -3,7 +3,7 @@
 # TacticalBoard model
 # Stores tactical positioning and annotations for match analysis
 # Uses relative coordinates (0-100) for positioning to ensure consistency across devices
-class TacticalBoard < ApplicationRecord
+class TacticalBoard < ApplicationRecord # rubocop:disable Metrics/ClassLength
   # Concerns
   include OrganizationScoped
 
@@ -37,7 +37,7 @@ class TacticalBoard < ApplicationRecord
   # @param x [Float] X coordinate (0-100)
   # @param y [Float] Y coordinate (0-100)
   # @param metadata [Hash] Additional data (health %, items, level, etc.)
-  def add_player_marker(role:, champion:, x:, y:, metadata: {})
+  def add_player_marker(role:, champion:, x:, y:, metadata: {}) # rubocop:disable Naming/MethodParameterName
     validate_coordinates!(x, y)
 
     self.map_state ||= { 'players' => [] }
@@ -57,7 +57,7 @@ class TacticalBoard < ApplicationRecord
   # @param index [Integer] Index of the player in the array
   # @param x [Float] New X coordinate
   # @param y [Float] New Y coordinate
-  def update_player_position(index, x:, y:)
+  def update_player_position(index, x:, y:) # rubocop:disable Naming/MethodParameterName
     validate_coordinates!(x, y)
 
     return false unless map_state.dig('players', index)
@@ -80,7 +80,7 @@ class TacticalBoard < ApplicationRecord
   # @param x [Float] X coordinate
   # @param y [Float] Y coordinate
   # @param options [Hash] Additional options (text, color, size, end_x, end_y for arrows)
-  def add_annotation(type:, x:, y:, options: {})
+  def add_annotation(type:, x:, y:, options: {}) # rubocop:disable Naming/MethodParameterName,Metrics/AbcSize
     validate_coordinates!(x, y)
 
     self.annotations ||= []
@@ -229,7 +229,7 @@ class TacticalBoard < ApplicationRecord
     errors.add(:annotations, "annotation at index #{index} must have a type")
   end
 
-  def validate_coordinates!(x, y)
+  def validate_coordinates!(x, y) # rubocop:disable Naming/MethodParameterName
     raise ArgumentError, 'Coordinates must be numeric' unless x.is_a?(Numeric) && y.is_a?(Numeric)
 
     return if (0..100).cover?(x) && (0..100).cover?(y)

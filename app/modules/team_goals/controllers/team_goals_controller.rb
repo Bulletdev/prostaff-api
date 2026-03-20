@@ -149,8 +149,8 @@ module TeamGoals
       def calculate_goals_summary(goals)
         {
           total: goals.count,
-          by_status: goals.group(:status).count,
-          by_category: goals.group(:category).count,
+          by_status: goals.unscope(:order).group(:status).count,
+          by_category: goals.unscope(:order).group(:category).count,
           active_count: goals.active.count,
           completed_count: goals.where(status: 'completed').count,
           overdue_count: goals.overdue.count,

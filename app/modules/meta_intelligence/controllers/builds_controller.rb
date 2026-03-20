@@ -99,7 +99,7 @@ module MetaIntelligence
       # @param [String] patch   specific patch to aggregate (optional)
       # @return [JSON] { message: 'Aggregation enqueued' }
       def aggregate
-        Jobs::UpdateMetaStatsJob.perform_later(
+        MetaIntelligence::UpdateMetaStatsJob.perform_later(
           current_organization.id,
           scope: params[:scope] || 'org',
           patch: params[:patch]

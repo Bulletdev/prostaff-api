@@ -23,7 +23,7 @@ module Analytics
     class CompetitivePlayerController < Api::V1::BaseController
       def player_stats
         summoner_name = params[:summoner_name].to_s.strip
-        return render_error('summoner_name is required', :bad_request) if summoner_name.blank?
+        return render_error(message: 'summoner_name is required', status: :bad_request) if summoner_name.blank?
 
         matches = scoped_matches(summoner_name)
         return render_success(empty_response(summoner_name)) if matches.empty?

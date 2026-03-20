@@ -66,7 +66,7 @@ module Support
       def set_faq
         @faq = SupportFaq.find_by!(slug: params[:slug] || params[:id])
       rescue ActiveRecord::RecordNotFound
-        render_error('FAQ not found', :not_found)
+        render_error(message: 'FAQ not found', status: :not_found)
       end
 
       def serialize_faq(faq)

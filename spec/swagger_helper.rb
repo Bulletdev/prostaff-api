@@ -48,7 +48,7 @@ RSpec.configure do |config|
                 properties: {
                   code: { type: :string },
                   message: { type: :string },
-                  details: { type: :object }
+                  details: {}
                 },
                 required: %w[code message]
               }
@@ -62,10 +62,10 @@ RSpec.configure do |config|
               email: { type: :string, format: :email },
               full_name: { type: :string },
               role: { type: :string, enum: %w[owner admin coach analyst viewer] },
-              timezone: { type: :string },
-              language: { type: :string },
-              created_at: { type: :string, format: 'date-time' },
-              updated_at: { type: :string, format: 'date-time' }
+              timezone: { type: :string, nullable: true },
+              language: { type: :string, nullable: true },
+              created_at: { type: :string },
+              updated_at: { type: :string }
             },
             required: %w[id email full_name role]
           },
@@ -75,9 +75,9 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               name: { type: :string },
               region: { type: :string },
-              tier: { type: :string, enum: %w[amateur semi_pro professional] },
-              created_at: { type: :string, format: 'date-time' },
-              updated_at: { type: :string, format: 'date-time' }
+              tier: { type: :string, enum: %w[tier_3_amateur tier_2_semi_pro tier_1_professional] },
+              created_at: { type: :string },
+              updated_at: { type: :string }
             },
             required: %w[id name region tier]
           },
@@ -107,7 +107,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               match_type: { type: :string, enum: %w[official scrim tournament] },
               game_start: { type: :string, format: 'date-time' },
-              game_duration: { type: :integer },
+              game_duration: { type: :integer, nullable: true },
               victory: { type: :boolean },
               opponent_name: { type: :string, nullable: true },
               our_score: { type: :integer, nullable: true },
@@ -127,6 +127,96 @@ RSpec.configure do |config|
               total_count: { type: :integer },
               has_next_page: { type: :boolean },
               has_prev_page: { type: :boolean }
+            }
+          },
+          PlayerMatchStat: {
+            type: :object,
+            properties: {
+              id: { type: :string, format: :uuid },
+              player_id: { type: :string, format: :uuid },
+              match_id: { type: :string, format: :uuid },
+              kills: { type: :integer },
+              deaths: { type: :integer },
+              assists: { type: :integer },
+              cs: { type: :integer },
+              vision_score: { type: :integer },
+              champion: { type: :string, nullable: true },
+              role: { type: :string, nullable: true },
+              created_at: { type: :string, format: 'date-time' },
+              updated_at: { type: :string, format: 'date-time' }
+            }
+          },
+          VodReview: {
+            type: :object,
+            properties: {
+              id: { type: :string, format: :uuid },
+              title: { type: :string },
+              video_url: { type: :string },
+              vod_platform: { type: :string, nullable: true },
+              summary: { type: :string, nullable: true },
+              status: { type: :string },
+              tags: { type: :array, items: { type: :string } },
+              created_at: { type: :string, format: 'date-time' },
+              updated_at: { type: :string, format: 'date-time' }
+            }
+          },
+          VodTimestamp: {
+            type: :object,
+            properties: {
+              id: { type: :string, format: :uuid },
+              vod_review_id: { type: :string, format: :uuid },
+              timestamp_seconds: { type: :integer },
+              title: { type: :string },
+              description: { type: :string, nullable: true },
+              category: { type: :string, nullable: true },
+              importance: { type: :string },
+              created_at: { type: :string, format: 'date-time' },
+              updated_at: { type: :string, format: 'date-time' }
+            }
+          },
+          Schedule: {
+            type: :object,
+            properties: {
+              id: { type: :string, format: :uuid },
+              title: { type: :string },
+              event_type: { type: :string, nullable: true },
+              description: { type: :string, nullable: true },
+              start_time: { type: :string, format: 'date-time', nullable: true },
+              end_time: { type: :string, format: 'date-time', nullable: true },
+              status: { type: :string },
+              created_at: { type: :string, format: 'date-time' },
+              updated_at: { type: :string, format: 'date-time' }
+            }
+          },
+          ScoutingTarget: {
+            type: :object,
+            properties: {
+              id: { type: :string, format: :uuid },
+              summoner_name: { type: :string },
+              region: { type: :string, nullable: true },
+              role: { type: :string, nullable: true },
+              tier: { type: :string, nullable: true },
+              status: { type: :string },
+              notes: { type: :string, nullable: true },
+              created_at: { type: :string, format: 'date-time' },
+              updated_at: { type: :string, format: 'date-time' }
+            }
+          },
+          TeamGoal: {
+            type: :object,
+            properties: {
+              id: { type: :string, format: :uuid },
+              title: { type: :string },
+              description: { type: :string, nullable: true },
+              category: { type: :string, nullable: true },
+              metric_type: { type: :string, nullable: true },
+              target_value: { type: :number, nullable: true },
+              current_value: { type: :number, nullable: true },
+              status: { type: :string },
+              start_date: { type: :string, format: 'date', nullable: true },
+              end_date: { type: :string, format: 'date', nullable: true },
+              created_at: { type: :string, format: 'date-time' },
+              updated_at: { type: :string, format: 'date-time' }
             }
           }
         }

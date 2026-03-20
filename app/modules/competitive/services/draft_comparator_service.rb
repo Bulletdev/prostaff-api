@@ -145,37 +145,9 @@ class DraftComparatorService
   # @param patch [String] Patch version
   # @return [Array<Hash>] Suggested counters with winrate
   def suggest_counters(opponent_pick:, role:, patch:)
-    # Find matches where opponent_pick was played
-    matches = CompetitiveMatch.recent(30)
-    matches = matches.by_patch(patch) if patch.present?
-
-    counters = Hash.new { |h, k| h[k] = { wins: 0, total: 0 } }
-
-    matches.each do |match|
-      # Check if opponent picked this champion in this role
-      opponent_champion = match.opponent_picks.find do |p|
-        p['champion'] == opponent_pick && p['role']&.downcase == role.downcase
-      end
-
-      next unless opponent_champion
-
-      # Find what was picked against it in same role
-      our_champion = match.our_picks.find { |p| p['role']&.downcase == role.downcase }
-      next unless our_champion && our_champion['champion']
-
-      counter_name = our_champion['champion']
-      counters[counter_name][:total] += 1
-      counters[counter_name][:wins] += 1 if match.victory?
-    end
-
-    # Calculate winrates and sort
-    counters.map do |champion, stats|
-      {
-        champion: champion,
-        games: stats[:total],
-        winrate: ((stats[:wins].to_f / stats[:total]) * 100).round(2)
-      }
-    end.sort_by { |c| -c[:winrate] }.first(5)
+    matches = fetch_matches_for_patch(patch)
+    counters = build_counters_hash(matches, opponent_pick: opponent_pick, role: role)
+    format_counters(counters)
   end
 
   private
@@ -202,5 +174,44 @@ class DraftComparatorService
     end
 
     [picks, bans]
+  end
+
+  def fetch_matches_for_patch(patch)
+    matches = CompetitiveMatch.recent(30)
+    patch.present? ? matches.by_patch(patch) : matches
+  end
+
+  def build_counters_hash(matches, opponent_pick:, role:)
+    counters = Hash.new { |h, k| h[k] = { wins: 0, total: 0 } }
+    matches.each { |match| accumulate_counter(counters, match, opponent_pick: opponent_pick, role: role) }
+    counters
+  end
+
+  def accumulate_counter(counters, match, opponent_pick:, role:)
+    opponent_champion = find_opponent_pick(match, opponent_pick: opponent_pick, role: role)
+    return unless opponent_champion
+
+    our_champion = match.our_picks.find { |p| p['role']&.downcase == role.downcase }
+    return unless our_champion && our_champion['champion']
+
+    counter_name = our_champion['champion']
+    counters[counter_name][:total] += 1
+    counters[counter_name][:wins] += 1 if match.victory?
+  end
+
+  def find_opponent_pick(match, opponent_pick:, role:)
+    match.opponent_picks.find do |p|
+      p['champion'] == opponent_pick && p['role']&.downcase == role.downcase
+    end
+  end
+
+  def format_counters(counters)
+    counters.map do |champion, stats|
+      {
+        champion: champion,
+        games: stats[:total],
+        winrate: ((stats[:wins].to_f / stats[:total]) * 100).round(2)
+      }
+    end.sort_by { |c| -c[:winrate] }.first(5)
   end
 end

@@ -49,7 +49,7 @@ module Competitive
 
       # Step 1: Trigger the backfill on the scraper (returns immediately).
       Rails.logger.info(
-        "[HistoricalBackfillJob] Triggering backfill on scraper: " \
+        '[HistoricalBackfillJob] Triggering backfill on scraper: ' \
         "league=#{league} min_year=#{min_year}"
       )
 
@@ -64,7 +64,7 @@ module Competitive
       rescue ProStaffScraperService::ScraperError => e
         Rails.logger.warn(
           "[HistoricalBackfillJob] Scraper trigger failed: #{e.message}. " \
-          "Proceeding to sync step (scraper may already be running)."
+          'Proceeding to sync step (scraper may already be running).'
         )
       end
 
@@ -98,7 +98,7 @@ module Competitive
           )
 
           # If nothing is pending/in-progress, the backfill is done.
-          break if remaining == 0
+          break if remaining.zero?
         rescue ProStaffScraperService::ScraperError => e
           Rails.logger.warn(
             "[HistoricalBackfillJob] Status poll failed: #{e.message}"
@@ -110,7 +110,7 @@ module Competitive
 
       # Step 3: Sync matches from ES into Rails DB for all organizations.
       Rails.logger.info(
-        "[HistoricalBackfillJob] Starting sync step: " \
+        '[HistoricalBackfillJob] Starting sync step: ' \
         "league=#{league} our_team=#{our_team} limit=#{sync_limit}"
       )
 
@@ -128,7 +128,7 @@ module Competitive
 
       record_job_heartbeat
 
-      Rails.logger.info("[HistoricalBackfillJob] Done.")
+      Rails.logger.info('[HistoricalBackfillJob] Done.')
     end
   end
 end

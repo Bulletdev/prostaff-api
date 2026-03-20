@@ -31,10 +31,10 @@ module Messaging
 
         result = paginate(messages, per_page: 50)
 
-        render_success(
-          messages: serialize_messages(result[:data].reverse),
-          pagination: result[:pagination]
-        )
+        render_success({
+                         messages: serialize_messages(result[:data].reverse),
+                         pagination: result[:pagination]
+                       })
       rescue ActionController::ParameterMissing
         render_error(
           message: 'recipient_id is required',

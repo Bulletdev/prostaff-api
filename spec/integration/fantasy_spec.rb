@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Fantasy API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Fantasy Waitlist
@@ -58,12 +58,7 @@ RSpec.describe 'Fantasy API', type: :request do
         run_test!
       end
 
-      response '401', 'unauthorized' do
-        let(:Authorization) { nil }
-        schema '$ref' => '#/components/schemas/Error'
-        let(:body) { { email: 'test@test.com' } }
-        run_test!
-      end
+      # Public endpoint — no authentication required
     end
   end
 
@@ -71,7 +66,6 @@ RSpec.describe 'Fantasy API', type: :request do
     get 'Get fantasy waitlist statistics' do
       tags 'Fantasy'
       produces 'application/json'
-      security [bearerAuth: []]
 
       response '200', 'waitlist stats returned' do
         schema type: :object,
@@ -79,18 +73,11 @@ RSpec.describe 'Fantasy API', type: :request do
                  data: {
                    type: :object,
                    properties: {
-                     total_signups: { type: :integer },
-                     signups_this_week: { type: :integer },
-                     launch_target: { type: :integer, nullable: true }
+                     total: { type: :integer },
+                     last_7_days: { type: :integer }
                    }
                  }
                }
-        run_test!
-      end
-
-      response '401', 'unauthorized' do
-        let(:Authorization) { nil }
-        schema '$ref' => '#/components/schemas/Error'
         run_test!
       end
     end

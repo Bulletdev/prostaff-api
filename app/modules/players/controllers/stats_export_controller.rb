@@ -13,6 +13,8 @@ module Players
     #   GET /api/v1/players/:id/stats/export
     #   GET /api/v1/players/:id/stats/export?format=csv&from=2026-01-01&to=2026-03-06
     class StatsExportController < Api::V1::BaseController
+      skip_before_action :set_default_response_format
+
       EXPORT_FIELDS = %w[
         match_date patch_version opponent champion role
         kills deaths assists kda_display cs cs_at_10 cs_per_min
@@ -27,7 +29,7 @@ module Players
       ].freeze
 
       def show
-        player = organization_scoped(Player).find(params[:player_id])
+        player = organization_scoped(Player).find(params[:id])
         stats  = filtered_stats(player)
 
         respond_to do |format|
@@ -85,8 +87,8 @@ module Players
 
       def export_field_value(stat, field)
         case field
-        when 'match_date'   then stat.match&.game_start&.strftime('%Y-%m-%d')
-        when 'patch_version' then stat.match&.patch_version
+        when 'match_date' then stat.match&.game_start&.strftime('%Y-%m-%d')
+        when 'patch_version' then stat.match&.game_version
         when 'opponent'     then stat.match&.opponent_name
         when 'result'       then stat.match&.victory? ? 'W' : 'L'
         when 'kda_display'  then stat.kda_display

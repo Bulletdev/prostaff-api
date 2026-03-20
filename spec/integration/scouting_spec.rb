@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Scouting API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/scouting/players' do
     get 'List all scouting targets' do
@@ -143,7 +143,7 @@ RSpec.describe 'Scouting API', type: :request do
       security [bearerAuth: []]
 
       response '200', 'scouting target found' do
-        let(:id) { create(:scouting_target, organization: organization).id }
+        let(:id) { create(:scouting_target).id }
 
         schema type: :object,
                properties: {
@@ -187,7 +187,7 @@ RSpec.describe 'Scouting API', type: :request do
       }
 
       response '200', 'scouting target updated' do
-        let(:id) { create(:scouting_target, organization: organization).id }
+        let(:id) { create(:scouting_target).id }
         let(:scouting_target) { { scouting_target: { status: 'contacted', priority: 'critical' } } }
 
         schema type: :object,
@@ -212,7 +212,9 @@ RSpec.describe 'Scouting API', type: :request do
 
       response '200', 'scouting target deleted' do
         let(:user) { create(:user, :owner, organization: organization) }
-        let(:id) { create(:scouting_target, organization: organization).id }
+        let(:target) { create(:scouting_target) }
+        let!(:watchlist) { create(:scouting_watchlist, organization: organization, scouting_target: target, added_by: user) }
+        let(:id) { target.id }
 
         schema type: :object,
                properties: {

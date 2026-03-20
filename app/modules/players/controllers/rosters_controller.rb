@@ -155,7 +155,7 @@ module Players
       end
 
       def set_scouting_target
-        @scouting_target = organization_scoped(ScoutingTarget).find(params[:scouting_target_id])
+        @scouting_target = ScoutingTarget.find(params[:scouting_target_id])
       rescue ActiveRecord::RecordNotFound
         render_error(
           message: 'Scouting target not found',

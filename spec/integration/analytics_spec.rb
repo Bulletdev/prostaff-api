@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Analytics API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/analytics/performance' do
     get 'Get team performance analytics' do
@@ -300,18 +300,18 @@ RSpec.describe 'Analytics API', type: :request do
                      damage_performance: {
                        type: :object,
                        properties: {
-                         avg_damage_dealt: { type: :integer },
-                         avg_damage_taken: { type: :integer },
-                         best_damage_game: { type: :integer },
-                         avg_damage_per_min: { type: :integer }
+                         avg_damage_dealt: { type: :integer, nullable: true },
+                         avg_damage_taken: { type: :integer, nullable: true },
+                         best_damage_game: { type: :integer, nullable: true },
+                         avg_damage_per_min: { type: :integer, nullable: true }
                        }
                      },
                      participation: {
                        type: :object,
                        properties: {
-                         avg_kills: { type: :number, format: :float },
-                         avg_assists: { type: :number, format: :float },
-                         avg_deaths: { type: :number, format: :float },
+                         avg_kills: { type: :number, format: :float, nullable: true },
+                         avg_assists: { type: :number, format: :float, nullable: true },
+                         avg_deaths: { type: :number, format: :float, nullable: true },
                          multikill_stats: {
                            type: :object,
                            properties: {

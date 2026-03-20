@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
+require 'webmock/rspec'
 
 RSpec.describe RiotApiService do
   let(:api_key) { 'test-api-key' }
   let(:service) { described_class.new(api_key: api_key) }
 
   describe '#initialize' do
-    it 'requires an API key' do
-      expect { described_class.new }.not_to raise_error
+    it 'raises when no API key is configured' do
+      stub_const('ENV', ENV.to_h.reject { |k, _| k == 'RIOT_API_KEY' })
+      expect { described_class.new }.to raise_error(RiotApiService::RiotApiError, /not configured/)
     end
 
     it 'accepts custom API key' do

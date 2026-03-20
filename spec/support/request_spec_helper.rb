@@ -3,7 +3,7 @@
 module RequestSpecHelper
   # Helper method to generate JWT token for testing
   def auth_token(user)
-    Authentication::Services::JwtService.encode(user_id: user.id)
+    JwtService.encode({ user_id: user.id })
   end
 
   # Helper method to set authentication headers
