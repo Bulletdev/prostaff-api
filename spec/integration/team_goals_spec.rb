@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Team Goals API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/team-goals' do
     get 'List all team goals' do
@@ -113,7 +113,7 @@ RSpec.describe 'Team Goals API', type: :request do
               current_value: 2.5,
               start_date: Date.current.iso8601,
               end_date: 1.month.from_now.to_date.iso8601,
-              status: 'in_progress',
+              status: 'active',
               progress: 50
             }
           }
@@ -197,7 +197,7 @@ RSpec.describe 'Team Goals API', type: :request do
 
       response '200', 'team goal updated' do
         let(:id) { create(:team_goal, organization: organization).id }
-        let(:team_goal) { { team_goal: { progress: 75, status: 'in_progress' } } }
+        let(:team_goal) { { team_goal: { progress: 75, status: 'active' } } }
 
         schema type: :object,
                properties: {

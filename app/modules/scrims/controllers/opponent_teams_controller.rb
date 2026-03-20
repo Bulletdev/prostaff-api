@@ -41,7 +41,7 @@ module Scrims
                                      .includes(:match)
                                      .order(scheduled_at: :desc)
 
-        service = Scrims::ScrimAnalyticsService.new(current_organization)
+        service = ScrimAnalyticsService.new(current_organization)
         opponent_stats = service.opponent_performance(@opponent_team.id)
 
         render json: {
@@ -118,10 +118,7 @@ module Scrims
       # Read operations (index/show) are allowed for all teams to enable discovery.
       #
       def set_opponent_team
-        id = Integer(params[:id], exception: false)
-        return render json: { error: 'Opponent team not found' }, status: :not_found unless id
-
-        @opponent_team = OpponentTeam.find_by(id: id)
+        @opponent_team = OpponentTeam.find_by(id: params[:id])
         render json: { error: 'Opponent team not found' }, status: :not_found unless @opponent_team
       end
 

@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Players API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/players' do
     get 'List all players' do

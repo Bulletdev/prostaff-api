@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Profile API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Profile
@@ -108,9 +108,9 @@ RSpec.describe 'Profile API', type: :request do
                properties: { message: { type: :string } }
         let(:body) do
           {
-            current_password: 'CurrentPass!',
-            password: 'NewSecurePass!',
-            password_confirmation: 'NewSecurePass!'
+            current_password: 'password123',
+            password: 'NewSecurePass123!',
+            password_confirmation: 'NewSecurePass123!'
           }
         end
         run_test!

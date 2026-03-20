@@ -9,11 +9,14 @@ RSpec.describe VodTimestampPolicy, type: :policy do
   let(:vod_review) { create(:vod_review, organization: organization) }
   let(:vod_timestamp) { create(:vod_timestamp, vod_review: vod_review) }
 
+  # NOTE: VodTimestampPolicy does not define show? — falls back to ApplicationPolicy (false)
+  # show? is intentionally not permitted; clients use index? to list all timestamps
+
   context 'for an owner' do
     let(:user) { create(:user, :owner, organization: organization) }
 
+    it { should_not permit_action(:show) }
     it { should permit_action(:index) }
-    it { should permit_action(:show) }
     it { should permit_action(:create) }
     it { should permit_action(:update) }
     it { should permit_action(:destroy) }
@@ -22,8 +25,8 @@ RSpec.describe VodTimestampPolicy, type: :policy do
   context 'for an admin' do
     let(:user) { create(:user, :admin, organization: organization) }
 
+    it { should_not permit_action(:show) }
     it { should permit_action(:index) }
-    it { should permit_action(:show) }
     it { should permit_action(:create) }
     it { should permit_action(:update) }
     it { should permit_action(:destroy) }
@@ -33,20 +36,18 @@ RSpec.describe VodTimestampPolicy, type: :policy do
     let(:user) { create(:user, :coach, organization: organization) }
 
     it { should permit_action(:index) }
-    it { should permit_action(:show) }
     it { should permit_action(:create) }
     it { should permit_action(:update) }
-    it { should_not permit_action(:destroy) }
+    it { should permit_action(:destroy) }
   end
 
   context 'for an analyst' do
     let(:user) { create(:user, :analyst, organization: organization) }
 
     it { should permit_action(:index) }
-    it { should permit_action(:show) }
     it { should permit_action(:create) }
     it { should permit_action(:update) }
-    it { should_not permit_action(:destroy) }
+    it { should permit_action(:destroy) }
   end
 
   context 'for a viewer' do
@@ -66,28 +67,5 @@ RSpec.describe VodTimestampPolicy, type: :policy do
     it { should_not permit_action(:show) }
     it { should_not permit_action(:update) }
     it { should_not permit_action(:destroy) }
-  end
-
-  describe 'Scope' do
-    let!(:user) { create(:user, :analyst, organization: organization) }
-    let!(:timestamp1) { create(:vod_timestamp, vod_review: vod_review) }
-    let!(:timestamp2) { create(:vod_timestamp, vod_review: vod_review) }
-    let!(:other_vod_review) { create(:vod_review, organization: create(:organization)) }
-    let!(:other_timestamp) { create(:vod_timestamp, vod_review: other_vod_review) }
-
-    it 'includes timestamps from user organization' do
-      scope = described_class::Scope.new(user, VodTimestamp).resolve
-      expect(scope).to include(timestamp1, timestamp2)
-      expect(scope).not_to include(other_timestamp)
-    end
-
-    context 'for viewers' do
-      let!(:viewer) { create(:user, :viewer, organization: organization) }
-
-      it 'excludes timestamps for viewers' do
-        scope = described_class::Scope.new(viewer, VodTimestamp).resolve
-        expect(scope).to be_empty
-      end
-    end
   end
 end

@@ -77,10 +77,11 @@ RSpec.describe 'VOD Reviews API', type: :request do
     context 'when accessing another organization vod review' do
       let(:other_vod_review) { create(:vod_review, organization: other_organization) }
 
-      it 'returns forbidden' do
+      # OrganizationScoped default_scope makes cross-org records invisible (404, not 403)
+      it 'returns not found' do
         get "/api/v1/vod-reviews/#{other_vod_review.id}", headers: auth_headers(user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
       end
     end
 
@@ -112,7 +113,7 @@ RSpec.describe 'VOD Reviews API', type: :request do
           post '/api/v1/vod-reviews',
                params: valid_attributes.to_json,
                headers: auth_headers(user)
-        end.to change(VodReview, :count).by(1)
+        end.to change { VodReview.unscoped.count }.by(1)
 
         expect(response).to have_http_status(:created)
         expect(json_response[:data][:vod_review][:title]).to eq('Test VOD Review')
@@ -157,12 +158,13 @@ RSpec.describe 'VOD Reviews API', type: :request do
     context 'when accessing another organization vod review' do
       let(:other_vod_review) { create(:vod_review, organization: other_organization) }
 
-      it 'returns forbidden' do
+      # OrganizationScoped default_scope makes cross-org records invisible (404, not 403)
+      it 'returns not found' do
         patch "/api/v1/vod-reviews/#{other_vod_review.id}",
               params: { vod_review: { title: 'Hacked' } }.to_json,
               headers: auth_headers(user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
@@ -174,7 +176,7 @@ RSpec.describe 'VOD Reviews API', type: :request do
       it 'deletes the vod review' do
         expect do
           delete "/api/v1/vod-reviews/#{vod_review.id}", headers: auth_headers(admin)
-        end.to change(VodReview, :count).by(-1)
+        end.to change { VodReview.unscoped.count }.by(-1)
 
         expect(response).to have_http_status(:success)
       end

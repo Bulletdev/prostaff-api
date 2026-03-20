@@ -9,7 +9,7 @@ RSpec.describe 'Players API', type: :request do
   let(:other_user) { create(:user, organization: other_organization) }
 
   describe 'GET /api/v1/players' do
-    let!(:players) { create_list(:player, 5, organization: organization) }
+    let!(:players) { create_list(:player, 5, organization: organization, role: 'mid') }
 
     context 'when authenticated' do
       it 'returns all players for the organization' do
@@ -69,7 +69,7 @@ RSpec.describe 'Players API', type: :request do
           post '/api/v1/players',
                params: valid_attributes.to_json,
                headers: auth_headers(user)
-        end.to change(Player, :count).by(1)
+        end.to change { Player.unscoped.count }.by(1)
 
         expect(response).to have_http_status(:created)
         expect(json_response[:data][:player][:summoner_name]).to eq('TestPlayer')
@@ -136,12 +136,9 @@ RSpec.describe 'Players API', type: :request do
 
     it 'deletes the player' do
       player_id = player.id
-
-      expect do
-        delete "/api/v1/players/#{player_id}", headers: auth_headers(owner)
-      end.to change(Player, :count).by(-1)
-
+      delete "/api/v1/players/#{player_id}", headers: auth_headers(owner)
       expect(response).to have_http_status(:success)
+      expect(Player.unscoped.find(player_id).deleted_at).to be_present
     end
   end
 

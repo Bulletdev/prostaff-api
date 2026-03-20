@@ -36,9 +36,9 @@ module Rack
       ['/sitemap.xml', '/robots.txt'].include?(req.path)
     end
 
-    # Allow localhost in development
+    # Allow localhost in development and test environments
     safelist('allow from localhost') do |req|
-      Rails.env.development? && ['127.0.0.1', '::1'].include?(req.ip)
+      (Rails.env.development? || Rails.env.test?) && ['127.0.0.1', '::1'].include?(req.ip)
     end
 
     # Block known malicious bots and scrapers
@@ -97,7 +97,7 @@ module Rack
 
       headers = {
         'Content-Type' => 'application/json',
-        'Retry-After'  => retry_after.to_s
+        'Retry-After' => retry_after.to_s
       }
       body = { error: { code: 'RATE_LIMITED', message: 'Too many requests. Please retry later.' } }.to_json
       [429, headers, [body]]

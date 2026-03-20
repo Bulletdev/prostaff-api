@@ -17,11 +17,11 @@ module Middleware
   class SecurityHeaders
     HEADERS = {
       'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
-      'X-Frame-Options'           => 'DENY',
-      'X-Content-Type-Options'    => 'nosniff',
-      'Content-Security-Policy'   => "default-src 'none'; frame-ancestors 'none'",
-      'Referrer-Policy'           => 'strict-origin-when-cross-origin',
-      'Permissions-Policy'        => 'geolocation=(), camera=(), microphone=(), payment=()'
+      'X-Frame-Options' => 'DENY',
+      'X-Content-Type-Options' => 'nosniff',
+      'Content-Security-Policy' => "default-src 'none'; frame-ancestors 'none'",
+      'Referrer-Policy' => 'strict-origin-when-cross-origin',
+      'Permissions-Policy' => 'geolocation=(), camera=(), microphone=(), payment=()'
     }.freeze
 
     def initialize(app)

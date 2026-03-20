@@ -7,7 +7,7 @@ FactoryBot.define do
     real_name { Faker::Name.name }
     role { %w[top jungle mid adc support].sample }
     status { 'active' }
-    jersey_number { rand(1..99) }
+    sequence(:jersey_number) { |n| (n - 1) % 99 + 1 }
     birth_date { Faker::Date.birthday(min_age: 18, max_age: 30) }
     country { 'BR' }
     solo_queue_tier { %w[DIAMOND MASTER GRANDMASTER CHALLENGER].sample }

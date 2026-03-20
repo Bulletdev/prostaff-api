@@ -16,13 +16,13 @@ class CreateAiChampionMatrices < ActiveRecord::Migration[7.2]
     end
 
     add_index :ai_champion_matrices,
-              [:champion_a, :champion_b, :patch, :league],
+              %i[champion_a champion_b patch league],
               unique: true,
               name: 'index_ai_champion_matrices_unique',
-              where: "patch IS NOT NULL AND league IS NOT NULL"
+              where: 'patch IS NOT NULL AND league IS NOT NULL'
 
     add_index :ai_champion_matrices,
-              [:champion_a, :champion_b],
+              %i[champion_a champion_b],
               name: 'index_ai_champion_matrices_on_pair'
   end
 end

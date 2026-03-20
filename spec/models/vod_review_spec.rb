@@ -59,25 +59,26 @@ RSpec.describe VodReview, type: :model do
     let!(:published_review) { create(:vod_review, :published, organization: organization) }
     let!(:archived_review) { create(:vod_review, :archived, organization: organization) }
     let!(:public_review) { create(:vod_review, :public, organization: organization) }
+    let(:reviews) { VodReview.unscoped.where(organization: organization) }
 
     describe '.by_status' do
       it 'filters by status' do
-        expect(VodReview.by_status('draft')).to include(draft_review)
-        expect(VodReview.by_status('draft')).not_to include(published_review)
+        expect(reviews.by_status('draft')).to include(draft_review)
+        expect(reviews.by_status('draft')).not_to include(published_review)
       end
     end
 
     describe '.published' do
       it 'returns only published reviews' do
-        expect(VodReview.published).to include(published_review)
-        expect(VodReview.published).not_to include(draft_review)
+        expect(reviews.published).to include(published_review)
+        expect(reviews.published).not_to include(draft_review)
       end
     end
 
     describe '.public_reviews' do
       it 'returns only public reviews' do
-        expect(VodReview.public_reviews).to include(public_review)
-        expect(VodReview.public_reviews).not_to include(draft_review)
+        expect(reviews.public_reviews).to include(public_review)
+        expect(reviews.public_reviews).not_to include(draft_review)
       end
     end
 
@@ -85,7 +86,7 @@ RSpec.describe VodReview, type: :model do
       let!(:team_review) { create(:vod_review, review_type: 'team', organization: organization) }
 
       it 'filters by review type' do
-        expect(VodReview.by_type('team')).to include(team_review)
+        expect(reviews.by_type('team')).to include(team_review)
       end
     end
   end
@@ -204,7 +205,10 @@ RSpec.describe VodReview, type: :model do
         it 'shares with all organization players' do
           player1
           player2
+          # Set Current.organization_id so OrganizationScoped allows the players query
+          Current.organization_id = vod_review.organization_id
           vod_review.share_with_all_players!
+          Current.reset
           expect(vod_review.shared_with_players).to include(player1.id, player2.id)
         end
       end

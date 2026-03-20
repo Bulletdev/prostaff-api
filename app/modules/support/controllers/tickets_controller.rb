@@ -58,12 +58,9 @@ module Support
           # Send notification
           Support::TicketNotificationJob.perform_later(ticket.id, 'created')
 
-          render_success(
-            { ticket: serialize_ticket_detail(ticket) },
-            :created
-          )
+          render_created({ ticket: serialize_ticket_detail(ticket) })
         else
-          render_error(ticket.errors.full_messages.join(', '), :unprocessable_entity)
+          render_error(message: ticket.errors.full_messages.join(', '), status: :unprocessable_entity)
         end
       end
 
@@ -74,7 +71,7 @@ module Support
         if @ticket.update(update_ticket_params)
           render_success({ ticket: serialize_ticket_detail(@ticket) })
         else
-          render_error(@ticket.errors.full_messages.join(', '), :unprocessable_entity)
+          render_error(message: @ticket.errors.full_messages.join(', '), status: :unprocessable_entity)
         end
       end
 
@@ -87,9 +84,9 @@ module Support
         message.message_type = current_user.support_staff? ? 'staff' : 'user'
 
         if message.save
-          render_success({ message: serialize_message(message) }, :created)
+          render_created({ message: serialize_message(message) })
         else
-          render_error(message.errors.full_messages.join(', '), :unprocessable_entity)
+          render_error(message: message.errors.full_messages.join(', '), status: :unprocessable_entity)
         end
       end
 
@@ -114,13 +111,13 @@ module Support
       def set_ticket
         @ticket = SupportTicket.find_by!(id: params[:id])
       rescue ActiveRecord::RecordNotFound
-        render_error('Ticket not found', :not_found)
+        render_error(message: 'Ticket not found', status: :not_found)
       end
 
       def authorize_ticket_access!
         return if can_access_ticket?(@ticket)
 
-        render_error('Unauthorized', :unauthorized)
+        render_error(message: 'Unauthorized', status: :unauthorized)
       end
 
       def can_access_ticket?(ticket)

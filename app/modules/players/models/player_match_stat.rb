@@ -164,7 +164,7 @@ class PlayerMatchStat < ApplicationRecord
 
   def cc_and_objectives_bonus
     cc_bonus = crowd_control_score.present? ? [crowd_control_score.to_f / 100, 5].min : 0
-    obj_bonus = objectives_stolen.to_i > 0 ? 5 : 0
+    obj_bonus = objectives_stolen.to_i.positive? ? 5 : 0
     cc_bonus + obj_bonus
   end
 

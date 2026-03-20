@@ -87,7 +87,11 @@ class StatsService
     {
       role: stat.role,
       games: stat.games,
-      avg_kda: format_avg_kda(stat),
+      avg_kda: {
+        kills: stat.avg_kills&.round(1) || 0,
+        deaths: stat.avg_deaths&.round(1) || 0,
+        assists: stat.avg_assists&.round(1) || 0
+      },
       avg_performance: stat.avg_performance&.round(1) || 0
     }
   end

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe SyncPlayerFromRiotJob, type: :job do
+RSpec.describe Players::SyncPlayerFromRiotJob, type: :job do
   let(:organization) { create(:organization) }
   let(:player) { create(:player, organization: organization, summoner_name: 'TestPlayer#BR1', riot_puuid: nil) }
 
@@ -14,13 +14,13 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
   describe '#perform' do
     context 'when player has no Riot info' do
       it 'sets error status and logs error' do
-        player_no_info = build(:player, organization: organization, riot_puuid: nil)
-        player_no_info.summoner_name = nil
-        player_no_info.save(validate: false)
+        player_no_info = create(:player, organization: organization, summoner_name: 'TempName#BR1', riot_puuid: nil)
+        job = described_class.new
+        allow(job).to receive(:riot_info_present?).and_return(false)
 
         expect(Rails.logger).to receive(:error).with("Player #{player_no_info.id} missing Riot info")
 
-        described_class.new.perform(player_no_info.id, organization.id)
+        job.perform(player_no_info.id, organization.id)
 
         player_no_info.reload
         expect(player_no_info.sync_status).to eq('error')
@@ -31,6 +31,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
     context 'when Riot API key is not configured' do
       it 'sets error status and logs error' do
         allow(ENV).to receive(:[]).with('RIOT_API_KEY').and_return(nil)
+        allow(Rails.logger).to receive(:error)
 
         expect(Rails.logger).to receive(:error).with('Riot API key not configured')
 
@@ -77,9 +78,11 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
       it 'syncs player data from Riot API' do
         job = described_class.new
-        allow(job).to receive(:fetch_summoner_by_name).and_return(summoner_data)
-        allow(job).to receive(:fetch_ranked_stats).and_return(ranked_data)
+        allow(job).to receive(:fetch_summoner_data).and_return(summoner_data)
+        allow(job).to receive(:fetch_account_by_puuid).and_return({ 'gameName' => 'TestPlayer', 'tagLine' => 'BR1' })
+        allow(job).to receive(:fetch_ranked_stats_by_puuid).and_return(ranked_data)
 
+        allow(Rails.logger).to receive(:info)
         expect(Rails.logger).to receive(:info).with("Successfully synced player #{player.id} from Riot API")
 
         job.perform(player.id, organization.id)
@@ -105,13 +108,9 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
         player.update(region: 'NA1')
         job = described_class.new
 
-        expect(job).to receive(:fetch_summoner_by_name).with(
-          player.summoner_name,
-          'na1',
-          'test-api-key'
-        ).and_return(summoner_data)
-
-        allow(job).to receive(:fetch_ranked_stats).and_return(ranked_data)
+        expect(job).to receive(:fetch_summoner_data).and_return(summoner_data)
+        allow(job).to receive(:fetch_account_by_puuid).and_return({ 'gameName' => 'TestPlayer', 'tagLine' => 'BR1' })
+        allow(job).to receive(:fetch_ranked_stats_by_puuid).and_return(ranked_data)
 
         job.perform(player.id, organization.id)
       end
@@ -120,13 +119,9 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
         player.update(region: nil)
         job = described_class.new
 
-        expect(job).to receive(:fetch_summoner_by_name).with(
-          player.summoner_name,
-          'br1',
-          'test-api-key'
-        ).and_return(summoner_data)
-
-        allow(job).to receive(:fetch_ranked_stats).and_return(ranked_data)
+        expect(job).to receive(:fetch_summoner_data).and_return(summoner_data)
+        allow(job).to receive(:fetch_account_by_puuid).and_return({ 'gameName' => 'TestPlayer', 'tagLine' => 'BR1' })
+        allow(job).to receive(:fetch_ranked_stats_by_puuid).and_return(ranked_data)
 
         job.perform(player.id, organization.id)
       end
@@ -139,7 +134,7 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
 
       it 'sets error status and logs error' do
         job = described_class.new
-        allow(job).to receive(:fetch_summoner_by_name).and_raise(StandardError.new('API Error'))
+        allow(job).to receive(:fetch_summoner_data).and_raise(StandardError.new('API Error'))
 
         expect(Rails.logger).to receive(:error).with("Failed to sync player #{player.id}: API Error")
         expect(Rails.logger).to receive(:error).with(anything) # backtrace
@@ -173,13 +168,9 @@ RSpec.describe SyncPlayerFromRiotJob, type: :job do
       it 'fetches summoner by PUUID instead of name' do
         job = described_class.new
 
-        expect(job).to receive(:fetch_summoner_by_puuid).with(
-          'existing-puuid',
-          'br1',
-          'test-api-key'
-        ).and_return(summoner_data)
-
-        allow(job).to receive(:fetch_ranked_stats).and_return([])
+        allow(job).to receive(:fetch_summoner_data).and_return(summoner_data)
+        allow(job).to receive(:fetch_account_by_puuid).and_return({ 'gameName' => 'TestPlayer', 'tagLine' => 'BR1' })
+        allow(job).to receive(:fetch_ranked_stats_by_puuid).and_return([])
 
         job.perform(player_with_puuid.id, organization.id)
       end

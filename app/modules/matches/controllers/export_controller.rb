@@ -13,6 +13,8 @@ module Matches
     #   GET /api/v1/matches/:id/export          -> JSON
     #   GET /api/v1/matches/:id/export?format=csv -> CSV
     class ExportController < Api::V1::BaseController
+      skip_before_action :set_default_response_format
+
       EXPORT_FIELDS = %w[
         player_name champion role kills deaths assists
         cs neutral_minions_killed cs_at_10
@@ -44,7 +46,7 @@ module Matches
                          match_id: match.id,
                          riot_match_id: match.riot_match_id,
                          game_start: match.game_start,
-                         patch_version: match.patch_version,
+                         patch_version: match.game_version,
                          players: stats.map { |s| build_row_hash(s) }
                        })
       end

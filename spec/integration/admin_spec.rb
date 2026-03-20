@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Admin API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :owner, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Admin — Players
@@ -117,7 +117,7 @@ RSpec.describe 'Admin API', type: :request do
       response '200', 'player restored' do
         schema type: :object,
                properties: { player: { '$ref' => '#/components/schemas/Player' } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:player, organization: organization, status: 'removed', deleted_at: 1.day.ago).id }
         let(:body) { { status: 'active' } }
         run_test!
       end
@@ -151,8 +151,8 @@ RSpec.describe 'Admin API', type: :request do
 
       response '422', 'validation error' do
         schema '$ref' => '#/components/schemas/Error'
-        let(:id) { 'nonexistent' }
-        let(:body) { { email: 'invalid', password: '123' } }
+        let(:id) { create(:player, organization: organization).id }
+        let(:body) { { email: '', password: '' } }
         run_test!
       end
     end
@@ -208,7 +208,7 @@ RSpec.describe 'Admin API', type: :request do
 
       response '422', 'invalid status or player is archived' do
         schema '$ref' => '#/components/schemas/Error'
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:player, organization: organization).id }
         let(:body) { { status: 'removed' } }
         run_test!
       end

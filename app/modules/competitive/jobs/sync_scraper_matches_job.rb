@@ -68,6 +68,8 @@ module Competitive
         "totals=#{totals.inspect}"
       )
 
+      AiIntelligence::RebuildChampionMatrixJob.perform_later if totals[:imported].positive?
+
       totals
     rescue ActiveRecord::RecordNotFound => e
       Rails.logger.error "[SyncScraperMatchesJob] Organization #{organization_id} not found: #{e.message}"

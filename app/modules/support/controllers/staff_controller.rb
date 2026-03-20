@@ -19,7 +19,7 @@ module Support
         staff_member = User.find_by!(id: params[:assigned_to_id])
 
         unless staff_member.support_staff? || staff_member.admin?
-          return render_error('User is not support staff', :unprocessable_entity)
+          return render_error(message: 'User is not support staff', status: :unprocessable_entity)
         end
 
         @ticket.assign_to!(staff_member)
@@ -75,13 +75,13 @@ module Support
       def require_support_staff
         return if current_user.support_staff? || current_user.admin?
 
-        render_error('Unauthorized - Support staff only', :unauthorized)
+        render_error(message: 'Unauthorized - Support staff only', status: :unauthorized)
       end
 
       def set_ticket
         @ticket = SupportTicket.find_by!(id: params[:id])
       rescue ActiveRecord::RecordNotFound
-        render_error('Ticket not found', :not_found)
+        render_error(message: 'Ticket not found', status: :not_found)
       end
 
       def calculate_dashboard_stats

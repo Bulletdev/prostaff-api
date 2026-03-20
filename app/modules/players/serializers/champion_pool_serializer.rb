@@ -5,14 +5,18 @@
 class ChampionPoolSerializer < Blueprinter::Base
   identifier :id
 
-  fields :champion, :games_played, :wins, :losses,
-         :average_kda, :average_cs, :mastery_level, :mastery_points,
-         :last_played_at, :created_at, :updated_at
+  fields :champion, :games_played, :games_won,
+         :average_kda, :average_cs_per_min, :mastery_level,
+         :last_played, :created_at, :updated_at
+
+  field :losses do |pool|
+    pool.games_played.to_i - pool.games_won.to_i
+  end
 
   field :win_rate do |pool|
     return 0 if pool.games_played.to_i.zero?
 
-    ((pool.wins.to_f / pool.games_played) * 100).round(1)
+    ((pool.games_won.to_f / pool.games_played) * 100).round(1)
   end
 
   association :player, blueprint: PlayerSerializer

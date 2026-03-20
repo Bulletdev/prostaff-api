@@ -3,6 +3,8 @@
 require 'swagger_helper'
 
 RSpec.describe 'Authentication API', type: :request do
+  let(:Authorization) { nil }
+
   path '/api/v1/auth/register' do
     post 'Register new organization and admin user' do
       tags 'Authentication'
@@ -57,7 +59,7 @@ RSpec.describe 'Authentication API', type: :request do
             organization: {
               name: 'Team Alpha',
               region: 'BR',
-              tier: 'semi_pro'
+              tier: 'tier_2_semi_pro'
             },
             user: {
               email: 'admin@teamalpha.gg',
@@ -165,7 +167,7 @@ RSpec.describe 'Authentication API', type: :request do
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
-        let(:tokens) { Authentication::Services::JwtService.generate_tokens(user) }
+        let(:tokens) { JwtService.generate_tokens(user) }
         let(:refresh) { { refresh_token: tokens[:refresh_token] } }
 
         run_test!
@@ -201,7 +203,7 @@ RSpec.describe 'Authentication API', type: :request do
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
-        let(:Authorization) { "Bearer #{Authentication::Services::JwtService.generate_tokens(user)[:access_token]}" }
+        let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
         run_test!
       end
@@ -231,7 +233,7 @@ RSpec.describe 'Authentication API', type: :request do
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
-        let(:Authorization) { "Bearer #{Authentication::Services::JwtService.generate_tokens(user)[:access_token]}" }
+        let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
         run_test!
       end
@@ -293,18 +295,10 @@ RSpec.describe 'Authentication API', type: :request do
 
         let(:organization) { create(:organization) }
         let(:user) { create(:user, organization: organization) }
-        let(:reset_token) do
-          payload = {
-            user_id: user.id,
-            type: 'password_reset',
-            exp: 1.hour.from_now.to_i,
-            iat: Time.current.to_i
-          }
-          JWT.encode(payload, Authentication::Services::JwtService::SECRET_KEY, 'HS256')
-        end
+        let(:password_reset_token) { user.password_reset_tokens.create!(expires_at: 1.hour.from_now) }
         let(:reset_params) do
           {
-            token: reset_token,
+            token: password_reset_token.token,
             password: 'newpassword123',
             password_confirmation: 'newpassword123'
           }
