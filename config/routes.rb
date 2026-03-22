@@ -353,6 +353,9 @@ Rails.application.routes.draw do
             as: 'meta_champion'
       end
 
+      # Contact form (public, no auth)
+      post 'contact', to: 'contact#create'
+
       # Team Messaging -- DM history + soft-delete
       resources :messages, only: %i[index destroy],
                            controller: '/messaging/controllers/messages'

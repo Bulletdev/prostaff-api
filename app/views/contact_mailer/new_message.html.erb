@@ -1,0 +1,15 @@
+<h2>New Contact Form Submission</h2>
+
+<p><strong>From:</strong> <%= @name %> &lt;<%= @email %>&gt;</p>
+<p><strong>Subject:</strong> <%= @subject %></p>
+
+<hr>
+
+<p><%= simple_format(@message) %></p>
+
+<hr>
+
+<p style="color: #888; font-size: 12px;">
+  This message was sent via the contact form at prostaff.gg/contact.<br>
+  Reply directly to this email to respond to <%= @name %>.
+</p>
