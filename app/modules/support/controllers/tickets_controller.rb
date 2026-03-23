@@ -48,6 +48,7 @@ module Support
         ticket.organization = current_organization
 
         # Run chatbot if description provided
+        chatbot_result = nil
         if ticket.description.present?
           chatbot_result = ChatbotService.new(ticket).generate_suggestions
           ticket.chatbot_attempted = true
@@ -58,7 +59,10 @@ module Support
           # Send notification
           Support::TicketNotificationJob.perform_later(ticket.id, 'created')
 
-          render_created({ ticket: serialize_ticket_detail(ticket) })
+          render_created({
+                           ticket: serialize_ticket_detail(ticket),
+                           chatbot_response: chatbot_result
+                         })
         else
           render_error(message: ticket.errors.full_messages.join(', '), status: :unprocessable_entity)
         end
