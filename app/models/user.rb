@@ -30,7 +30,7 @@ class User < ApplicationRecord
   validates :password,
             length: { minimum: 8, message: 'must be at least 8 characters' },
             format: {
-              with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+              with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*\z/,
               message: 'must contain at least one uppercase letter, one lowercase letter, and one number'
             },
             if: -> { password.present? }
