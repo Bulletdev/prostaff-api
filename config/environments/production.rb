@@ -75,14 +75,15 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
   config.action_mailer.perform_caching = false
 
   # Action Mailer configuration
-  config.action_mailer.delivery_method = ENV.fetch('MAILER_DELIVERY_METHOD', 'smtp').to_sym
   config.action_mailer.default_url_options = {
     host: ENV.fetch('APP_HOST', 'api.prostaff.gg'),
     protocol: 'https'
   }
 
-  # Only configure SMTP if credentials are provided
+  # Only configure SMTP if credentials are provided; fall back to :test to avoid
+  # "SMTP-AUTH requested but missing user name" errors when vars are absent.
   if ENV['SMTP_USERNAME'].present? && ENV['SMTP_PASSWORD'].present?
+    config.action_mailer.delivery_method = ENV.fetch('MAILER_DELIVERY_METHOD', 'smtp').to_sym
     config.action_mailer.smtp_settings = {
       address: ENV.fetch('SMTP_ADDRESS', 'smtp.gmail.com'),
       port: ENV.fetch('SMTP_PORT', 587).to_i,
@@ -92,6 +93,9 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
       enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
       domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
     }
+  else
+    config.action_mailer.delivery_method = :test
+    Rails.logger.warn '[Mailer] SMTP_USERNAME/SMTP_PASSWORD not set — mail delivery disabled (using :test adapter)'
   end
 
   config.i18n.fallbacks = true
