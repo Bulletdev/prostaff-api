@@ -65,6 +65,11 @@ Rails.application.routes.draw do
         patch 'notifications', to: 'profile#update_notifications'
       end
 
+      # Feedback
+      resources :feedbacks, only: %i[index create] do
+        member { post :vote }
+      end
+
       # Notifications
       resources :notifications, only: %i[index show destroy],
                                 controller: '/notifications/controllers/notifications' do
