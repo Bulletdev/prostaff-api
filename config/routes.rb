@@ -67,7 +67,9 @@ Rails.application.routes.draw do
 
       # Feedback
       resources :feedbacks, only: %i[index create] do
-        member { post :vote }
+        member do
+          post :vote
+        end
       end
 
       # Notifications

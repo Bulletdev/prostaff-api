@@ -30,9 +30,9 @@ class RestoreMessagesRecipientId < ActiveRecord::Migration[7.2]
     end
 
     # Add recipient_id index for FK lookups
-    unless index_exists?(:messages, :recipient_id)
-      add_index :messages, :recipient_id
-    end
+    return if index_exists?(:messages, :recipient_id)
+
+    add_index :messages, :recipient_id
   end
 
   def down

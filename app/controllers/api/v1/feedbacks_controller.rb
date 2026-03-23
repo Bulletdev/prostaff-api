@@ -16,7 +16,7 @@ module Api
 
         feedbacks = Feedback.recent.includes(:feedback_votes)
         feedbacks = feedbacks.by_category(params[:category]) if params[:category].present?
-        feedbacks = feedbacks.where(status: params[:status])  if params[:status].present?
+        feedbacks = feedbacks.where(status: params[:status]) if params[:status].present?
 
         result = paginate(feedbacks)
         items  = result[:data].map { |f| feedback_data(f, user: current_user) }
@@ -31,9 +31,11 @@ module Api
         feedback.organization = current_organization
 
         if feedback.save
-          render_created({ feedback: feedback_data(feedback, user: current_user) }, message: 'Feedback submitted successfully')
+          render_created({ feedback: feedback_data(feedback, user: current_user) },
+                         message: 'Feedback submitted successfully')
         else
-          render_error(message: 'Invalid feedback', code: 'VALIDATION_ERROR', status: :unprocessable_entity, details: feedback.errors.as_json)
+          render_error(message: 'Invalid feedback', code: 'VALIDATION_ERROR', status: :unprocessable_entity,
+                       details: feedback.errors.as_json)
         end
       end
 
@@ -65,15 +67,15 @@ module Api
       def feedback_data(feedback, user: nil)
         voted = user ? feedback.feedback_votes.any? { |v| v.user_id == user.id } : false
         {
-          id:          feedback.id,
-          category:    feedback.category,
-          title:       feedback.title,
+          id: feedback.id,
+          category: feedback.category,
+          title: feedback.title,
           description: feedback.description,
-          rating:      feedback.rating,
-          status:      feedback.status,
+          rating: feedback.rating,
+          status: feedback.status,
           votes_count: feedback.votes_count,
-          user_voted:  voted,
-          created_at:  feedback.created_at
+          user_voted: voted,
+          created_at: feedback.created_at
         }
       end
     end

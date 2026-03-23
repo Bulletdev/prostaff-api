@@ -9,7 +9,7 @@ class CreateFeedbackVotes < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :feedback_votes, [:feedback_id, :user_id], unique: true
+    add_index :feedback_votes, %i[feedback_id user_id], unique: true
 
     add_column :feedbacks, :votes_count, :integer, null: false, default: 0
   end
