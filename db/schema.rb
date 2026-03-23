@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_22_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -163,6 +163,33 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_22_120000) do
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_fantasy_waitlists_on_email", unique: true
     t.index ["organization_id"], name: "index_fantasy_waitlists_on_organization_id"
+  end
+
+  create_table "feedback_votes", force: :cascade do |t|
+    t.bigint "feedback_id", null: false
+    t.uuid "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feedback_id", "user_id"], name: "index_feedback_votes_on_feedback_id_and_user_id", unique: true
+    t.index ["feedback_id"], name: "index_feedback_votes_on_feedback_id"
+    t.index ["user_id"], name: "index_feedback_votes_on_user_id"
+  end
+
+  create_table "feedbacks", force: :cascade do |t|
+    t.uuid "user_id"
+    t.uuid "organization_id"
+    t.string "category", null: false
+    t.string "title", null: false
+    t.text "description", null: false
+    t.integer "rating"
+    t.string "status", default: "open", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "votes_count", default: 0, null: false
+    t.index ["category"], name: "index_feedbacks_on_category"
+    t.index ["organization_id"], name: "index_feedbacks_on_organization_id"
+    t.index ["status"], name: "index_feedbacks_on_status"
+    t.index ["user_id"], name: "index_feedbacks_on_user_id"
   end
 
   create_table "matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -817,6 +844,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_22_120000) do
   add_foreign_key "draft_plans", "organizations"
   add_foreign_key "draft_plans", "users", column: "created_by_id"
   add_foreign_key "draft_plans", "users", column: "updated_by_id"
+  add_foreign_key "feedback_votes", "feedbacks"
+  add_foreign_key "feedback_votes", "users"
+  add_foreign_key "feedbacks", "organizations"
+  add_foreign_key "feedbacks", "users"
   add_foreign_key "matches", "organizations"
   add_foreign_key "messages", "organizations"
   add_foreign_key "messages", "users"
