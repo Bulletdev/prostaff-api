@@ -89,7 +89,7 @@ module Support
           total_tickets: SupportTicket.count,
           open: SupportTicket.where(status: 'open').count,
           in_progress: SupportTicket.where(status: 'in_progress').count,
-          waiting_client: SupportTicket.where(status: 'waiting_client').count,
+          waiting_user: SupportTicket.where(status: 'waiting_user').count,
           resolved_today: SupportTicket.where('resolved_at >= ?', Time.current.beginning_of_day).count,
           unassigned: SupportTicket.unassigned.open_tickets.count,
           my_tickets: SupportTicket.where(assigned_to: current_user).open_tickets.count,

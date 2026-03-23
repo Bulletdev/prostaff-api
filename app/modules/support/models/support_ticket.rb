@@ -35,17 +35,17 @@ class SupportTicket < ApplicationRecord
   validates :subject, presence: true, length: { minimum: 5, maximum: 200 }
   validates :description, presence: true, length: { minimum: 10 }
   validates :category, presence: true, inclusion: {
-    in: %w[technical feature_request billing riot_integration other]
+    in: %w[technical feature_request billing riot_integration getting_started other]
   }
   validates :priority, presence: true, inclusion: {
     in: %w[low medium high urgent]
   }
   validates :status, presence: true, inclusion: {
-    in: %w[open in_progress waiting_client resolved closed]
+    in: %w[open in_progress waiting_user resolved closed]
   }
 
   # Scopes
-  scope :open_tickets, -> { where(status: %w[open in_progress waiting_client]) }
+  scope :open_tickets, -> { where(status: %w[open in_progress waiting_user]) }
   scope :closed_tickets, -> { where(status: %w[resolved closed]) }
   scope :unassigned, -> { where(assigned_to_id: nil) }
   scope :assigned, -> { where.not(assigned_to_id: nil) }
@@ -60,7 +60,8 @@ class SupportTicket < ApplicationRecord
 
   # Instance methods
   def ticket_number
-    "TICKET-#{id&.split('-')&.first&.upcase || 'DRAFT'}"
+    prefix = id ? id.split('-').first.upcase : 'DRAFT'
+    "TICKET-#{prefix}"
   end
 
   def assign_to!(user)
@@ -131,8 +132,9 @@ class SupportTicket < ApplicationRecord
   end
 
   def create_system_message(content)
+    system_actor = assigned_to || user
     messages.create!(
-      user: User.system_user, # You'll need to create a system user
+      user: system_actor,
       content: content,
       message_type: 'system'
     )
