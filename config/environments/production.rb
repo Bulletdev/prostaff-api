@@ -95,7 +95,7 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
     }
   else
     config.action_mailer.delivery_method = :test
-    Rails.logger.warn '[Mailer] SMTP_USERNAME/SMTP_PASSWORD not set — mail delivery disabled (using :test adapter)'
+    warn '[Mailer] SMTP_USERNAME/SMTP_PASSWORD not set — mail delivery disabled (using :test adapter)'
   end
 
   config.i18n.fallbacks = true
