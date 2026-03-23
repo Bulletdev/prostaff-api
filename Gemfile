@@ -84,6 +84,9 @@ gem 'meilisearch', '~> 0.33'
 # LLM Integration for Support Chatbot
 gem 'ruby-openai', '~> 7.0'
 
+# S3-compatible storage for file uploads (Supabase Storage)
+gem 'aws-sdk-s3', '~> 1.0'
+
 # Linear algebra for AI draft analysis
 gem 'numo-narray', '~> 0.9'
 

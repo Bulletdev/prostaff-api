@@ -155,7 +155,7 @@ module Support
       end
 
       def message_params
-        params.require(:message).permit(:content, :is_internal, attachments: [])
+        params.require(:message).permit(:content, :is_internal, attachments: %i[key filename content_type size])
       end
 
       def serialize_ticket(ticket)
@@ -209,8 +209,33 @@ module Support
             id: message.user.id,
             name: message.user.full_name
           },
+          attachments: signed_attachments(message.attachments),
           created_at: message.created_at.iso8601
         }
+      end
+
+      def signed_attachments(attachments)
+        return [] if attachments.blank?
+
+        s3 = s3_service
+        return [] unless s3
+
+        attachments.filter_map do |att|
+          url = s3.signed_url(att['key'])
+          next unless url
+
+          att.merge('url' => url)
+        end
+      rescue StandardError => e
+        Rails.logger.error("[Uploads] Failed to sign attachments: #{e.message}")
+        []
+      end
+
+      def s3_service
+        @s3_service ||= S3UploadService.new
+      rescue StandardError => e
+        Rails.logger.error("[Uploads] Failed to initialize S3 service: #{e.message}")
+        nil
       end
     end
   end
