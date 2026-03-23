@@ -162,6 +162,9 @@ Rails.application.routes.draw do
           end
         end
 
+        # File uploads for attachments
+        post 'uploads', to: '/support/controllers/uploads#create'
+
         # Staff operations
         scope '/staff', as: 'staff' do
           get 'dashboard', to: '/support/controllers/staff#dashboard'
