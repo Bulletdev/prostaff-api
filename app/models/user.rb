@@ -23,10 +23,17 @@ class User < ApplicationRecord
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :full_name, length: { maximum: 255 }
+  validates :full_name, presence: true, length: { maximum: 255 }
   validates :role, presence: true, inclusion: { in: Constants::User::ROLES }
   validates :timezone, length: { maximum: 100 }
   validates :language, length: { maximum: 10 }
+  validates :password,
+            length: { minimum: 8, message: 'must be at least 8 characters' },
+            format: {
+              with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+              message: 'must contain at least one uppercase letter, one lowercase letter, and one number'
+            },
+            if: -> { password.present? }
 
   # Callbacks
   before_save :downcase_email

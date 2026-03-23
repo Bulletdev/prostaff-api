@@ -84,8 +84,6 @@ module Authentication
         end
       rescue ActiveRecord::RecordInvalid => e
         render_validation_errors(e)
-      rescue StandardError => _e
-        render_error(message: 'Registration failed', code: 'REGISTRATION_ERROR')
       end
 
       # Authenticates a user and returns JWT tokens
