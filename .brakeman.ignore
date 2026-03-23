@@ -39,8 +39,48 @@
       "file": "Gemfile.lock",
       "line": 224,
       "note": "Rails 7.1.x is still secure, will upgrade to 7.2/8.0 in next sprint"
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "82553a8da70acefb77b22bab7fb95616b808a9604a23dff455508e0ad77e3107",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/modules/analytics/services/database_metadata_cache_service.rb",
+      "line": 213,
+      "note": "False positive — uses parameterized query with $1/$2 placeholders and a separate bindings array"
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "8bf697cde545723f2f3d339a8fc87f1cbb80dccb7cc50ea42243ebde2c0d7883",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/modules/search/services/search_service.rb",
+      "line": 53,
+      "note": "False positive — IDs from Meilisearch are individually escaped with connection.quote() before interpolation"
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "8273a221da2916071e72130e8e4a184b37aa96df641daff5c11d7069740e2c81",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/modules/scouting/controllers/players_controller.rb",
+      "line": 295,
+      "note": "':role' is a player in-game position (Top/Mid/ADC/etc), not a user access role"
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "88173572797556fd8d8d2da622fdb463673c0793a9ec10126b1803fc39f04f06",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/modules/scouting/controllers/players_controller.rb",
+      "line": 322,
+      "note": "':role' is a player in-game position (Top/Mid/ADC/etc), not a user access role"
     }
   ],
-  "updated": "2025-10-08 00:00:00 +0000",
-  "brakeman_version": "7.1.0"
+  "updated": "2026-03-23 00:00:00 +0000",
+  "brakeman_version": "8.0.4"
 }
