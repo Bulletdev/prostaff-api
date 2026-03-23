@@ -23,5 +23,5 @@ class Feedback < ApplicationRecord
 
   scope :open,      -> { where(status: 'open') }
   scope :recent,    -> { order(created_at: :desc) }
-  scope :by_category, lambda { |cat| where(category: cat) }
+  scope :by_category, ->(cat) { where(category: cat) }
 end

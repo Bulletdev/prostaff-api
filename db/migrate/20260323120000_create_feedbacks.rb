@@ -9,7 +9,7 @@ class CreateFeedbacks < ActiveRecord::Migration[7.1]
       t.string     :title,        null: false
       t.text       :description,  null: false
       t.integer    :rating
-      t.string     :status,       null: false, default: 'open'
+      t.string     :status, null: false, default: 'open'
 
       t.timestamps
     end
