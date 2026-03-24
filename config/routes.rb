@@ -201,6 +201,7 @@ Rails.application.routes.draw do
         resources :players, controller: '/scouting/controllers/players' do
           member do
             post :sync
+            post :import_to_roster
           end
         end
         get 'regions', to: '/scouting/controllers/regions#index'
