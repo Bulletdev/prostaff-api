@@ -80,9 +80,12 @@ class RosterManagementService
         previous_organization_id: nil
       )
 
-      # Update watchlist status to signed
+      # Remove from org's watchlist — player is now on the roster
       watchlist = scouting_target.scouting_watchlists.find_by(organization: organization)
-      watchlist&.update!(status: 'signed')
+      watchlist&.destroy
+
+      # Clean up the global target if no other org is watching it
+      scouting_target.destroy if scouting_target.scouting_watchlists.none?
 
       # Log the action
       log_roster_addition(player, scouting_target, current_user)

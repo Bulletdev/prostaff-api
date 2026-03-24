@@ -5,7 +5,8 @@ module Scouting
     # Scouting Players Controller
     # Manages GLOBAL scouting targets and org-specific watchlists
     class PlayersController < Api::V1::BaseController
-      before_action :set_scouting_target, only: %i[show update destroy sync]
+      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster]
+      before_action :require_management!, only: %i[import_to_roster]
 
       # GET /api/v1/scouting/players
       # Returns global scouting targets with optional watchlist filtering
@@ -104,6 +105,32 @@ module Scouting
         render_deleted(message: 'Removed from watchlist')
       end
 
+      # POST /api/v1/scouting/players/:id/import_to_roster
+      # Hires the scouting target directly to the roster and removes them from scouting
+      def import_to_roster
+        result = RosterManagementService.hire_from_scouting(
+          scouting_target: @target,
+          organization: current_organization,
+          contract_start: params[:contract_start].present? ? Date.parse(params[:contract_start]) : nil,
+          contract_end: params[:contract_end].present? ? Date.parse(params[:contract_end]) : nil,
+          salary: params[:salary]&.to_d,
+          jersey_number: params[:jersey_number]&.to_i,
+          current_user: current_user
+        )
+
+        if result[:success]
+          render_created(
+            { player: PlayerSerializer.render_as_hash(result[:player]) },
+            message: result[:message]
+          )
+        else
+          render_error(message: result[:error], code: result[:code], status: :unprocessable_entity)
+        end
+      rescue ArgumentError
+        render_error(message: 'Invalid date format. Use YYYY-MM-DD', code: 'INVALID_DATE_FORMAT',
+                     status: :unprocessable_entity)
+      end
+
       def sync
         unless @target.riot_puuid.present?
           return render_error(
@@ -122,6 +149,16 @@ module Scouting
       end
 
       private
+
+      def require_management!
+        return if %w[admin owner].include?(current_user.role)
+
+        render_error(
+          message: 'Only owners and admins can import players to the roster',
+          code: 'FORBIDDEN',
+          status: :forbidden
+        )
+      end
 
       def create_watchlist_for(target)
         target.scouting_watchlists.create!(
