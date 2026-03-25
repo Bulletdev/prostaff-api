@@ -55,12 +55,12 @@ services:
 
   # Rails API
   api:
-    build: .
+    build: ..
     container_name: prostaff-api
     env_file:
       - ../.env
     volumes:
-      - .:/app
+      - ..:/app
       - bundle_cache:/usr/local/bundle
     ports:
       - "${API_PORT:-3333}:3000"
@@ -89,11 +89,11 @@ services:
 
   # Sidekiq for background jobs
   sidekiq:
-    build: .
+    build: ..
     env_file:
       - ../.env
     volumes:
-      - .:/app
+      - ..:/app
       - bundle_cache:/usr/local/bundle
     depends_on:
       redis:
