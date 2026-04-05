@@ -14,7 +14,8 @@ REPORT_DIR="$PROJECT_ROOT/security_tests/reports/zap"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m' # shellcheck disable=SC2034
+# shellcheck disable=SC2034
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${GREEN}🔍 Starting ZAP Baseline Scan${NC}"

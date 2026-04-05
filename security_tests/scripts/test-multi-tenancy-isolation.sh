@@ -17,7 +17,8 @@ mkdir -p "$REPORT_DIR"
 # Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-YELLOW='\033[1;33m' # shellcheck disable=SC2034
+# shellcheck disable=SC2034
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 PASSED=0
@@ -61,7 +62,8 @@ ORG1_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/register" \
   }')
 
 ORG1_TOKEN=$(echo "$ORG1_RESPONSE" | jq -r '.data.access_token')
-ORG1_USER_ID=$(echo "$ORG1_RESPONSE" | jq -r '.data.user.id') # shellcheck disable=SC2034
+# shellcheck disable=SC2034
+ORG1_USER_ID=$(echo "$ORG1_RESPONSE" | jq -r '.data.user.id')
 ORG1_ORG_ID=$(echo "$ORG1_RESPONSE" | jq -r '.data.organization.id')
 
 # Create Org 2
@@ -80,7 +82,8 @@ ORG2_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/register" \
   }')
 
 ORG2_TOKEN=$(echo "$ORG2_RESPONSE" | jq -r '.data.access_token')
-ORG2_USER_ID=$(echo "$ORG2_RESPONSE" | jq -r '.data.user.id') # shellcheck disable=SC2034
+# shellcheck disable=SC2034
+ORG2_USER_ID=$(echo "$ORG2_RESPONSE" | jq -r '.data.user.id')
 ORG2_ORG_ID=$(echo "$ORG2_RESPONSE" | jq -r '.data.organization.id')
 
 if [ "$ORG1_TOKEN" = "null" ] || [ "$ORG2_TOKEN" = "null" ]; then
@@ -148,7 +151,8 @@ ORG1_ACCESS_ORG2=$(curl -s -w "\n%{http_code}" -X GET "$API_URL/api/v1/players/$
   -H "Authorization: Bearer $ORG1_TOKEN")
 
 HTTP_CODE=$(echo "$ORG1_ACCESS_ORG2" | tail -n1)
-RESPONSE_BODY=$(echo "$ORG1_ACCESS_ORG2" | head -n-1) # shellcheck disable=SC2034
+# shellcheck disable=SC2034
+RESPONSE_BODY=$(echo "$ORG1_ACCESS_ORG2" | head -n-1)
 
 if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "403" ]; then
   test_result "Org1 cannot access Org2 player by ID" "PASS" ""
