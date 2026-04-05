@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :bot_stats do
   desc 'Show bot activity statistics'
   task show: :environment do
@@ -123,3 +124,4 @@ namespace :bot_stats do
     puts " Cleaned up #{deleted_count} old stat entries"
   end
 end
+# rubocop:enable Metrics/BlockLength

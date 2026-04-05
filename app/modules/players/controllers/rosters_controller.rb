@@ -155,6 +155,8 @@ module Players
       end
 
       def set_scouting_target
+        # ScoutingTarget is a global model (no org scope by design — free-agent pool shared across orgs).
+        # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
         @scouting_target = ScoutingTarget.find(params[:scouting_target_id])
       rescue ActiveRecord::RecordNotFound
         render_error(

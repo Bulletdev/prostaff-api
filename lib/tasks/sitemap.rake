@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :sitemap do
   desc 'Generate sitemap.xml file'
   task generate: :environment do
@@ -122,3 +123,4 @@ namespace :sitemap do
   desc 'Generate and ping sitemap'
   task update: %i[generate ping]
 end
+# rubocop:enable Metrics/BlockLength

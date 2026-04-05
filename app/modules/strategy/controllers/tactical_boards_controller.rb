@@ -138,7 +138,7 @@ module Strategy
         boards.order(sort_by => sort_order)
       end
 
-      def tactical_board_params
+      def tactical_board_params # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         # Support both nested format (tactical_board: {map_state:...}) and flat format (name:..., board_state:...)
         # Always prefer the nested tactical_board hash when present — even partial updates
         # (e.g. map_state only, no title) must read from tb, not from top-level params.

@@ -26,7 +26,7 @@ class UserSerializer < Blueprinter::Base
     user.last_login_at ? time_ago_in_words(user.last_login_at) : 'Never'
   end
 
-  def self.time_ago_in_words(time)
+  def self.time_ago_in_words(time) # rubocop:disable Metrics/MethodLength
     if time.nil?
       'Never'
     else

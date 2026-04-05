@@ -40,8 +40,8 @@ module Inhouses
 
         player_ids = rows.map(&:player_id)
         players_by_id = current_organization.players
-                          .where(id: player_ids)
-                          .index_by(&:id)
+                                            .where(id: player_ids)
+                                            .index_by(&:id)
 
         entries = rows.map do |row|
           player = players_by_id[row.player_id]
@@ -73,7 +73,7 @@ module Inhouses
         authorize Inhouse
 
         inhouses = current_organization.inhouses.history.recent
-                     .includes(:inhouse_participations)
+                                       .includes(:inhouse_participations)
 
         page     = (params[:page] || 1).to_i
         per_page = [(params[:per_page] || 10).to_i, 50].min
@@ -93,13 +93,13 @@ module Inhouses
         end
 
         render_success({
-          sessions: sessions,
-          meta: {
-            current_page: inhouses.current_page,
-            total_pages: inhouses.total_pages,
-            total_count: inhouses.total_count
-          }
-        })
+                         sessions: sessions,
+                         meta: {
+                           current_page: inhouses.current_page,
+                           total_pages: inhouses.total_pages,
+                           total_count: inhouses.total_count
+                         }
+                       })
       end
 
       # GET /api/v1/inhouse/inhouses

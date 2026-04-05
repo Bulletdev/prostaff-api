@@ -57,6 +57,8 @@ module Api
       private
 
       def set_feedback
+        # Feedback is a public board — all authenticated users can vote on any item.
+        # Intentionally unscoped. nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
         @feedback = Feedback.find(params[:id])
       end
 

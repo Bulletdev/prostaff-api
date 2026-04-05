@@ -8,7 +8,7 @@ module Analytics
     # without unpacking nested keys.
     #
     class VisionController < Api::V1::BaseController
-      def show
+      def show # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         player = organization_scoped(Player).find(params[:player_id])
 
         stats = PlayerMatchStat.joins(:match)

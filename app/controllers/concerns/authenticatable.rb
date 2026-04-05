@@ -14,7 +14,7 @@ module Authenticatable
 
   private
 
-  def authenticate_request!
+  def authenticate_request! # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     token = extract_token_from_header
 
     if token.nil?

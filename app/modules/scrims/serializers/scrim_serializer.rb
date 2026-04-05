@@ -15,6 +15,18 @@ class ScrimSerializer
     end
   end
 
+  TIER_SCORE = {
+    'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
+    'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
+    'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
+  }.freeze
+
+  TIER_LABEL = {
+    9 => 'Challenger', 8 => 'Grandmaster', 7 => 'Master',
+    6 => 'Diamond',    5 => 'Emerald',     4 => 'Platinum',
+    3 => 'Gold',       2 => 'Silver',      1 => 'Bronze', 0 => 'Iron'
+  }.freeze
+
   private
 
   def base_attributes
@@ -54,29 +66,17 @@ class ScrimSerializer
 
   def detailed_attributes
     {
-      match_id:       @scrim.match_id,
+      match_id: @scrim.match_id,
       pre_game_notes: @scrim.pre_game_notes,
       post_game_notes: @scrim.post_game_notes,
-      game_results:   @scrim.game_results,
-      objectives:     @scrim.objectives,
-      outcomes:       @scrim.outcomes,
+      game_results: @scrim.game_results,
+      objectives: @scrim.objectives,
+      outcomes: @scrim.outcomes,
       objectives_met: @scrim.objectives_met?,
       opponent_detail: opponent_detail,
-      head_to_head:   head_to_head
+      head_to_head: head_to_head
     }
   end
-
-  TIER_SCORE = {
-    'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER'   => 7,
-    'DIAMOND'    => 6, 'EMERALD'     => 5, 'PLATINUM' => 4,
-    'GOLD'       => 3, 'SILVER'      => 2, 'BRONZE'   => 1
-  }.freeze
-
-  TIER_LABEL = {
-    9 => 'Challenger', 8 => 'Grandmaster', 7 => 'Master',
-    6 => 'Diamond',    5 => 'Emerald',     4 => 'Platinum',
-    3 => 'Gold',       2 => 'Silver',      1 => 'Bronze', 0 => 'Iron'
-  }.freeze
 
   def opponent_detail
     return nil unless @scrim.opponent_team
@@ -88,18 +88,18 @@ class ScrimSerializer
     roster, avg_tier = org_roster_and_avg(org)
 
     {
-      league:          t.league,
-      discord_server:  t.discord_server || org&.discord_invite_url,
-      known_players:   Array(t.known_players),
+      league: t.league,
+      discord_server: t.discord_server || org&.discord_invite_url,
+      known_players: Array(t.known_players),
       playstyle_notes: t.playstyle_notes,
-      strengths:       Array(t.strengths),
-      weaknesses:      Array(t.weaknesses),
-      roster:          roster,
-      avg_tier:        avg_tier
+      strengths: Array(t.strengths),
+      weaknesses: Array(t.weaknesses),
+      roster: roster,
+      avg_tier: avg_tier
     }
   end
 
-  def org_roster_and_avg(org)
+  def org_roster_and_avg(org) # rubocop:disable Metrics/AbcSize
     return [[], nil] unless org
 
     players = org.players.active.select(:summoner_name, :role, :solo_queue_tier)
@@ -110,7 +110,7 @@ class ScrimSerializer
     [roster, avg]
   end
 
-  def head_to_head
+  def head_to_head # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     return nil unless @scrim.opponent_team_id
 
     past = Scrim.unscoped
@@ -127,9 +127,9 @@ class ScrimSerializer
     losses = past.count - wins
 
     {
-      wins:   wins,
+      wins: wins,
       losses: losses,
-      total:  past.count
+      total: past.count
     }
   end
 
@@ -147,14 +147,14 @@ class ScrimSerializer
 
     t = @scrim.opponent_team
     {
-      id:          t.id,
-      name:        t.name,
-      tag:         t.tag,
-      tier:        t.tier,
-      region:      t.region,
-      scrims_won:  t.scrims_won  || 0,
+      id: t.id,
+      name: t.name,
+      tag: t.tag,
+      tier: t.tier,
+      region: t.region,
+      scrims_won: t.scrims_won || 0,
       scrims_lost: t.scrims_lost || 0,
-      logo_url:    t.logo_url
+      logo_url: t.logo_url
     }
   end
 

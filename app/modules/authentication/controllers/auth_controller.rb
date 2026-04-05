@@ -145,7 +145,7 @@ module Authentication
       # @param player_email [String] The player's individual access email
       # @param password [String] The player's individual access password
       # @return [JSON] Player info and JWT tokens
-      def player_login
+      def player_login # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         player_email = params[:player_email]&.downcase&.strip
         password     = params[:password]
 

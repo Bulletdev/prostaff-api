@@ -384,7 +384,7 @@ class PerformanceAnalyticsService
   #
   # @param stats [ActiveRecord::Relation] Player match stats
   # @return [Float] Kill participation percentage (0-100)
-  def calculate_kill_participation(stats)
+  def calculate_kill_participation(stats) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     return 0.0 if stats.empty?
 
     player = stats.first&.player
@@ -464,7 +464,7 @@ class PerformanceAnalyticsService
     early_gold_diff = (gpm_diff * 15 * 0.4).round(0)
 
     # Cap at reasonable values (-600 to +600)
-    [[early_gold_diff, 600].min, -600].max
+    early_gold_diff.clamp(-600, 600)
   rescue StandardError => e
     Rails.logger.error("Error calculating early gold advantage: #{e.message}")
     0

@@ -38,6 +38,7 @@
 # @example Track progress
 #   goal.update_progress!(8.0)
 #   goal.mark_as_completed! if goal.progress >= 100
+# rubocop:disable Metrics/ClassLength
 class TeamGoal < ApplicationRecord
   include OrganizationScoped
   include Constants
@@ -115,7 +116,6 @@ class TeamGoal < ApplicationRecord
     when 'active' then is_overdue? ? 'red' : 'blue'
     when 'completed' then 'green'
     when 'failed' then 'red'
-    when 'cancelled' then 'gray'
     else 'gray'
     end
   end
@@ -136,7 +136,6 @@ class TeamGoal < ApplicationRecord
 
     case metric_type
     when 'win_rate' then "#{target_value}%"
-    when 'kda' then target_value.to_s
     when 'cs_per_min' then "#{target_value} CS/min"
     when 'vision_score' then "#{target_value} Vision Score"
     when 'damage_share' then "#{target_value}% Damage Share"
@@ -150,7 +149,6 @@ class TeamGoal < ApplicationRecord
 
     case metric_type
     when 'win_rate' then "#{current_value}%"
-    when 'kda' then current_value.to_s
     when 'cs_per_min' then "#{current_value} CS/min"
     when 'vision_score' then "#{current_value} Vision Score"
     when 'damage_share' then "#{current_value}% Damage Share"
@@ -242,3 +240,4 @@ class TeamGoal < ApplicationRecord
     )
   end
 end
+# rubocop:enable Metrics/ClassLength

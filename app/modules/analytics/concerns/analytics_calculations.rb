@@ -118,7 +118,7 @@ module Analytics
       # @param matches [Array] Collection of matches
       # @param group_by [Symbol] Grouping period (:day, :week, :month)
       # @return [Array<Hash>] Trend data by period
-      def calculate_win_rate_trend(matches, group_by: :week)
+      def calculate_win_rate_trend(matches, group_by: :week) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         return [] if matches.empty?
 
         # Filter out matches without game_start

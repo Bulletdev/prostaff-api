@@ -4,7 +4,7 @@ require 'sidekiq'
 require 'sidekiq-scheduler'
 
 # Gracefully handle Redis unavailability
-def configure_sidekiq_with_retry
+def configure_sidekiq_with_retry # rubocop:disable Metrics/AbcSize
   return false unless ENV['REDIS_URL'].present?
 
   # Test Redis connection before configuring Sidekiq

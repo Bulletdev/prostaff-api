@@ -25,7 +25,7 @@ module Search
         end
 
         types    = parse_types
-        per_page = [[params[:per_page].to_i, 1].max, MAX_PER_PAGE].min
+        per_page = params[:per_page].to_i.clamp(1, MAX_PER_PAGE)
         per_page = 20 if params[:per_page].blank?
 
         results = SearchService.global(query: query, types: types, per_page: per_page)

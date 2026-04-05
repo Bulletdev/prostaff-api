@@ -1,5 +1,8 @@
+# frozen_string_literal: true
+
 module Matchmaking
   module Controllers
+    # Controller for managing organization availability windows for matchmaking.
     class AvailabilityWindowsController < Api::V1::BaseController
       before_action :set_window, only: %i[show update destroy]
 

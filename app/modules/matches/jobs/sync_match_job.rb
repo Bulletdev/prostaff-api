@@ -9,7 +9,7 @@ module Matches
     # retry_on RiotApiService::RateLimitError, wait: :polynomially_longer, attempts: 5
     # retry_on RiotApiService::RiotApiError, wait: 1.minute, attempts: 3
 
-    def perform(match_id, organization_id, region = 'BR', force_update = false)
+    def perform(match_id, organization_id, region = 'BR', force_update: false)
       # Set organization context for multi-tenant scoping
       Current.organization_id = organization_id
 
@@ -23,7 +23,7 @@ module Matches
           match_id: match_id,
           region: region
         )
-      rescue Exception => e
+      rescue StandardError => e
         puts "SyncMatchJob: FATAL ERROR in get_match_details: #{e.class} - #{e.message}"
         puts e.backtrace.join("\n")
         $stdout.flush

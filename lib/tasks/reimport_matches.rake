@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :matches do
   desc 'Reimport all existing matches to update missing data (CS, damage_share, etc)'
   task reimport_all: :environment do
@@ -116,3 +117,4 @@ namespace :matches do
     puts "  Errors: #{errors}"
   end
 end
+# rubocop:enable Metrics/BlockLength

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ModuleLength
 module TierFeatures
   extend ActiveSupport::Concern
 
@@ -185,7 +186,7 @@ module TierFeatures
   end
 
   # Upgrade suggestions
-  def suggested_upgrade
+  def suggested_upgrade # rubocop:disable Metrics/MethodLength
     case tier
     when 'tier_3_amateur'
       {
@@ -269,3 +270,4 @@ module TierFeatures
     tier&.to_sym || :tier_3_amateur
   end
 end
+# rubocop:enable Metrics/ModuleLength

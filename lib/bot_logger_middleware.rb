@@ -41,7 +41,7 @@ class BotLoggerMiddleware
     nil
   end
 
-  def log_bot_activity(request, bot_type)
+  def log_bot_activity(request, bot_type) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     log_data = {
       timestamp: Time.current.iso8601,
       bot_type: bot_type,

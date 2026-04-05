@@ -113,7 +113,7 @@ class SupportTicket < ApplicationRecord
     true
   end
 
-  def track_status_changes
+  def track_status_changes # rubocop:disable Metrics/AbcSize
     return unless saved_change_to_status?
 
     saved_changes['status'][0]

@@ -64,7 +64,7 @@ module QueryPerformanceMonitoring
       report_to_monitoring_service(payload, duration) if monitoring_configured?
     end
 
-    def track_query_stats(payload, duration)
+    def track_query_stats(payload, duration) # rubocop:disable Metrics/AbcSize
       return unless redis_available?
 
       # Normalize query for grouping (remove values)
