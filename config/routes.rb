@@ -264,6 +264,9 @@ Rails.application.routes.draw do
 
       # Scrims Module (Tier 2+)
       scope '/scrims', as: 'scrims' do
+        # Public lobby — no auth required (scrims.lol feed)
+        get 'lobby', to: '/scrims/controllers/lobby#index'
+
         resources :scrims, controller: '/scrims/controllers/scrims' do
           member do
             post :add_game
@@ -278,6 +281,39 @@ Rails.application.routes.draw do
                                    controller: '/scrims/controllers/opponent_teams' do
           member do
             get :scrim_history, path: 'scrim-history'
+          end
+        end
+      end
+
+      # Inhouse Module — internal practice sessions between org's own players
+      scope '/inhouse', as: 'inhouse' do
+        resources :inhouses, controller: '/inhouses/controllers/inhouses', only: %i[index create] do
+          collection do
+            get :active
+          end
+          member do
+            post :join
+            post :balance_teams
+            post :record_game
+            patch :close
+          end
+        end
+      end
+
+      # Matchmaking Module — scrims.lol cross-org scheduling
+      scope '/matchmaking', as: 'matchmaking' do
+        get 'suggestions', to: '/matchmaking/controllers/scrim_requests#suggestions'
+
+        resources :availability_windows, path: 'availability-windows',
+                                         controller: '/matchmaking/controllers/availability_windows'
+
+        resources :scrim_requests, path: 'scrim-requests',
+                                   controller: '/matchmaking/controllers/scrim_requests',
+                                   only: %i[index show create] do
+          member do
+            patch :accept
+            patch :decline
+            patch :cancel
           end
         end
       end

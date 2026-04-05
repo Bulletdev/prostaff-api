@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_05_000004) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -70,6 +70,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
     t.index ["organization_id", "created_at"], name: "index_audit_logs_on_org_and_created"
     t.index ["organization_id"], name: "index_audit_logs_on_organization_id"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "availability_windows", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.integer "day_of_week", null: false
+    t.integer "start_hour", null: false
+    t.integer "end_hour", null: false
+    t.string "timezone", default: "UTC", null: false
+    t.string "game", default: "league_of_legends", null: false
+    t.string "region"
+    t.string "tier_preference", default: "any"
+    t.boolean "active", default: true, null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "focus_area"
+    t.string "draft_type"
+    t.index ["day_of_week"], name: "index_availability_windows_on_day_of_week"
+    t.index ["game", "region", "active"], name: "index_availability_windows_on_game_and_region_and_active"
+    t.index ["organization_id", "active"], name: "index_availability_windows_on_organization_id_and_active"
+    t.index ["organization_id"], name: "index_availability_windows_on_organization_id"
   end
 
   create_table "champion_pools", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -190,6 +211,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
     t.index ["organization_id"], name: "index_feedbacks_on_organization_id"
     t.index ["status"], name: "index_feedbacks_on_status"
     t.index ["user_id"], name: "index_feedbacks_on_user_id"
+  end
+
+  create_table "inhouse_participations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "inhouse_id", null: false
+    t.uuid "player_id", null: false
+    t.string "team", default: "none", null: false
+    t.string "tier_snapshot"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "wins", default: 0, null: false
+    t.integer "losses", default: 0, null: false
+    t.index ["inhouse_id", "player_id"], name: "index_inhouse_participations_on_inhouse_id_and_player_id", unique: true
+    t.index ["inhouse_id"], name: "index_inhouse_participations_on_inhouse_id"
+    t.index ["player_id"], name: "index_inhouse_participations_on_player_id"
+  end
+
+  create_table "inhouses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "status", default: "waiting", null: false
+    t.uuid "created_by_user_id", null: false
+    t.integer "games_played", default: 0, null: false
+    t.integer "blue_wins", default: 0, null: false
+    t.integer "red_wins", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_inhouses_on_organization_id"
   end
 
   create_table "matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -317,6 +364,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
     t.datetime "updated_at", null: false
     t.datetime "trial_expires_at"
     t.datetime "trial_started_at"
+    t.boolean "is_public", default: false, null: false
+    t.string "public_tagline", limit: 200
+    t.string "discord_invite_url"
+    t.index ["is_public"], name: "index_organizations_on_is_public", where: "(is_public = true)"
     t.index ["region"], name: "index_organizations_on_region"
     t.index ["slug"], name: "index_organizations_on_slug", unique: true
     t.index ["subscription_plan"], name: "index_organizations_on_subscription_plan"
@@ -620,6 +671,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
     t.index ["status"], name: "index_scouting_watchlists_on_status"
   end
 
+  create_table "scrim_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "requesting_organization_id", null: false
+    t.uuid "target_organization_id", null: false
+    t.uuid "requesting_scrim_id"
+    t.uuid "target_scrim_id"
+    t.uuid "availability_window_id"
+    t.string "status", default: "pending", null: false
+    t.string "game", default: "league_of_legends", null: false
+    t.text "message"
+    t.datetime "proposed_at"
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "games_planned", default: 3
+    t.string "draft_type"
+    t.index ["expires_at"], name: "index_scrim_requests_on_expires_at"
+    t.index ["requesting_organization_id", "status"], name: "index_scrim_requests_on_requesting_organization_id_and_status"
+    t.index ["requesting_organization_id"], name: "index_scrim_requests_on_requesting_organization_id"
+    t.index ["status"], name: "index_scrim_requests_on_status"
+    t.index ["target_organization_id", "status"], name: "index_scrim_requests_on_target_organization_id_and_status"
+    t.index ["target_organization_id"], name: "index_scrim_requests_on_target_organization_id"
+  end
+
   create_table "scrims", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "match_id"
@@ -638,12 +712,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
     t.jsonb "outcomes", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source", default: "internal"
+    t.uuid "scrim_request_id"
+    t.string "draft_type"
     t.index ["match_id"], name: "index_scrims_on_match_id"
     t.index ["opponent_team_id"], name: "index_scrims_on_opponent_team_id"
     t.index ["organization_id", "scheduled_at"], name: "idx_scrims_org_scheduled"
     t.index ["organization_id"], name: "index_scrims_on_organization_id"
     t.index ["scheduled_at"], name: "index_scrims_on_scheduled_at"
+    t.index ["scrim_request_id"], name: "index_scrims_on_scrim_request_id"
     t.index ["scrim_type"], name: "index_scrims_on_scrim_type"
+    t.index ["source"], name: "index_scrims_on_source"
   end
 
   create_table "support_faqs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -837,6 +916,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
 
   add_foreign_key "audit_logs", "organizations"
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "availability_windows", "organizations"
   add_foreign_key "champion_pools", "players"
   add_foreign_key "competitive_matches", "matches"
   add_foreign_key "competitive_matches", "opponent_teams"
@@ -848,6 +928,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
   add_foreign_key "feedback_votes", "users"
   add_foreign_key "feedbacks", "organizations"
   add_foreign_key "feedbacks", "users"
+  add_foreign_key "inhouse_participations", "inhouses"
+  add_foreign_key "inhouse_participations", "players"
+  add_foreign_key "inhouses", "organizations"
+  add_foreign_key "inhouses", "users", column: "created_by_user_id"
   add_foreign_key "matches", "organizations"
   add_foreign_key "messages", "organizations"
   add_foreign_key "messages", "users"
@@ -868,6 +952,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_23_130000) do
   add_foreign_key "scouting_watchlists", "scouting_targets"
   add_foreign_key "scouting_watchlists", "users", column: "added_by_id"
   add_foreign_key "scouting_watchlists", "users", column: "assigned_to_id"
+  add_foreign_key "scrim_requests", "organizations", column: "requesting_organization_id"
+  add_foreign_key "scrim_requests", "organizations", column: "target_organization_id"
   add_foreign_key "scrims", "matches"
   add_foreign_key "scrims", "opponent_teams"
   add_foreign_key "scrims", "organizations"
