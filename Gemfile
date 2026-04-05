@@ -7,6 +7,7 @@ ruby '3.4.5'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem 'rails', '~> 7.2.3', '>= 7.2.3.1'
+gem 'connection_pool', '< 3.0'
 
 # Use postgresql as the database for Active Record
 gem 'pg', '~> 1.1'
