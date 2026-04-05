@@ -17,7 +17,7 @@ module Scrims
       def index
         scrims = Scrim.unscoped
                       .eager_load(:organization)
-                      .includes(:opponent_team)
+                      .includes(:opponent_team, organization: :players)
                       .where(scrims: { visibility: 'public' })
                       .where(organizations: { is_public: true })
                       .where('scrims.scheduled_at >= ?', Time.current)
@@ -69,9 +69,27 @@ module Scrims
             region: org.region,
             tier: org.try(:tier),
             public_tagline: org.try(:public_tagline),
-            discord_invite_url: org.try(:discord_invite_url)
+            discord_invite_url: org.try(:discord_invite_url),
+            roster: serialize_org_roster(org)
           }
         }
+      end
+
+      # Returns the org's active players sorted by role, already preloaded via includes.
+      # Capped at 10 to keep the response lean.
+      def serialize_org_roster(org)
+        role_sort = %w[top jungle mid adc support]
+        players = org.players.select(&:active?)
+        players.sort_by { |p| [role_sort.index(p.role) || 99, p.summoner_name] }
+               .first(10)
+               .map do |p|
+          {
+            summoner_name: p.summoner_name,
+            role: p.role,
+            tier: p.solo_queue_tier,
+            tier_rank: p.solo_queue_rank
+          }
+        end
       end
     end
   end

@@ -237,9 +237,10 @@ class RiotSyncService
     Rails.logger.info("Regional endpoint: #{regional_endpoint}")
 
     # Use whitelisted host to prevent SSRF
-    # Use ERB::Util.url_encode instead of CGI.escape to properly encode spaces as %20 (not +)
-    encoded_game_name = ERB::Util.url_encode(game_name)
-    encoded_tag_line = ERB::Util.url_encode(tag_line)
+    # CGI.escape encodes spaces as '+', which is only valid in query strings, not path segments.
+    # Riot API path params require '%20' for spaces, so we replace '+' after escaping.
+    encoded_game_name = CGI.escape(game_name).gsub('+', '%20')
+    encoded_tag_line = CGI.escape(tag_line).gsub('+', '%20')
 
     Rails.logger.info("Encoded game_name: '#{game_name}' -> '#{encoded_game_name}'")
     Rails.logger.info("Encoded tag_line: '#{tag_line}' -> '#{encoded_tag_line}'")
