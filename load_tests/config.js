@@ -1,5 +1,6 @@
 // k6 Load Test Configuration
 // Centralized configuration for all load tests
+/* global __ENV */
 
 export const config = {
   // Base URL - change based on environment
