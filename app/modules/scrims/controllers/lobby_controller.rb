@@ -16,12 +16,12 @@ module Scrims
       # Public feed of open scrims — no auth required
       def index
         scrims = Scrim.unscoped
-                      .joins(:organization)
-                      .where(visibility: 'public')
-                      .where('organizations.is_public = ?', true)
+                      .eager_load(:organization)
+                      .includes(:opponent_team)
+                      .where(scrims: { visibility: 'public' })
+                      .where(organizations: { is_public: true })
                       .where('scrims.scheduled_at >= ?', Time.current)
-                      .includes(:organization, :opponent_team)
-                      .order(scheduled_at: :asc)
+                      .order('scrims.scheduled_at ASC')
 
         scrims = scrims.where(game: params[:game]) if params[:game].present? && ALLOWED_GAMES.include?(params[:game])
 
@@ -49,7 +49,7 @@ module Scrims
                      when 'semi_pro'     then %w[semi_pro]
                      else                     %w[free amateur]
                      end
-        scrims.joins(:organization).where(organizations: { subscription_plan: tier_plans })
+        scrims.where(organizations: { subscription_plan: tier_plans })
       end
 
       def serialize_lobby_scrim(scrim)
