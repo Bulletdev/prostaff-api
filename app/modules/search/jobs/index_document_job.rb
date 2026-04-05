@@ -12,7 +12,10 @@ module Search
       return unless MEILISEARCH_CLIENT
 
       model_class = model_class_name.constantize
-      record      = model_class.find_by(id: record_id)
+      # Use unscoped to bypass OrganizationScoped default_scope — Sidekiq jobs
+      # run without a request context so Current.organization_id is nil.
+      # Safe here because we index by explicit ID, not a user-supplied query.
+      record = model_class.unscoped.find_by(id: record_id)
       return unless record
 
       index = MEILISEARCH_CLIENT.index(model_class.meili_index_name)

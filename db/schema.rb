@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_05_000004) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_05_120000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -222,6 +222,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_000004) do
     t.datetime "updated_at", null: false
     t.integer "wins", default: 0, null: false
     t.integer "losses", default: 0, null: false
+    t.boolean "is_captain", default: false, null: false
     t.index ["inhouse_id", "player_id"], name: "index_inhouse_participations_on_inhouse_id_and_player_id", unique: true
     t.index ["inhouse_id"], name: "index_inhouse_participations_on_inhouse_id"
     t.index ["player_id"], name: "index_inhouse_participations_on_player_id"
@@ -236,6 +237,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_000004) do
     t.integer "red_wins", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "blue_captain_id"
+    t.uuid "red_captain_id"
+    t.integer "draft_pick_number"
+    t.string "formation_mode"
     t.index ["organization_id"], name: "index_inhouses_on_organization_id"
   end
 
@@ -931,6 +936,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_000004) do
   add_foreign_key "inhouse_participations", "inhouses"
   add_foreign_key "inhouse_participations", "players"
   add_foreign_key "inhouses", "organizations"
+  add_foreign_key "inhouses", "players", column: "blue_captain_id"
+  add_foreign_key "inhouses", "players", column: "red_captain_id"
   add_foreign_key "inhouses", "users", column: "created_by_user_id"
   add_foreign_key "matches", "organizations"
   add_foreign_key "messages", "organizations"

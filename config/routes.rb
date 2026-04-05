@@ -290,6 +290,18 @@ Rails.application.routes.draw do
         get 'ladder',   to: '/inhouses/controllers/inhouses#ladder'
         get 'sessions', to: '/inhouses/controllers/inhouses#sessions'
 
+        # Role-based queue (server-side, used by web dashboard + Discord bot)
+        scope '/queue', as: 'queue' do
+          get  'status',        to: '/inhouses/controllers/inhouse_queues#status'
+          post 'open',          to: '/inhouses/controllers/inhouse_queues#open'
+          post 'join',          to: '/inhouses/controllers/inhouse_queues#join'
+          post 'leave',         to: '/inhouses/controllers/inhouse_queues#leave'
+          post 'start_checkin', to: '/inhouses/controllers/inhouse_queues#start_checkin'
+          post 'checkin',       to: '/inhouses/controllers/inhouse_queues#checkin'
+          post 'start_session', to: '/inhouses/controllers/inhouse_queues#start_session'
+          post 'close',         to: '/inhouses/controllers/inhouse_queues#close'
+        end
+
         resources :inhouses, controller: '/inhouses/controllers/inhouses', only: %i[index create] do
           collection do
             get :active
@@ -297,6 +309,9 @@ Rails.application.routes.draw do
           member do
             post :join
             post :balance_teams
+            post :start_draft
+            post :captain_pick
+            post :start_game
             post :record_game
             patch :close
           end
