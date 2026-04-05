@@ -157,6 +157,7 @@ fi
 echo ""
 echo "--- Test 3: Throttle response format (429 + Retry-After) ---"
 
+# shellcheck disable=SC2034
 LOGIN_HEADERS=$(curl -s -o /dev/null -D - \
   -X POST "$API_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \

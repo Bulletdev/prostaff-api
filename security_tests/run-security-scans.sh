@@ -8,7 +8,7 @@ set -e
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-BLUE='\033[0;34m'
+BLUE='\033[0;34m' # shellcheck disable=SC2034
 NC='\033[0m'
 
 # Determine environment
