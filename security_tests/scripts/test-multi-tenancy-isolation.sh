@@ -53,11 +53,11 @@ ORG1_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/register" \
     "user": {
       "email": "org1-'$(date +%s)'@test.com",
       "password": "Test123!@#",
-      "name": "Org1 User"
+      "full_name": "Org1 User"
     },
     "organization": {
       "name": "Test Org 1",
-      "slug": "test-org-1-'$(date +%s)'"
+      "region": "BR"
     }
   }')
 
@@ -73,11 +73,11 @@ ORG2_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/register" \
     "user": {
       "email": "org2-'$(date +%s)'@test.com",
       "password": "Test123!@#",
-      "name": "Org2 User"
+      "full_name": "Org2 User"
     },
     "organization": {
       "name": "Test Org 2",
-      "slug": "test-org-2-'$(date +%s)'"
+      "region": "BR"
     }
   }')
 
