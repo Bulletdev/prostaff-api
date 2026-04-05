@@ -3,6 +3,7 @@ FROM ruby:3.4.5-slim
 
 # Install system dependencies without version pinning for compatibility
 # Note: Using latest available versions from Debian repositories
+# hadolint ignore=DL3008
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
