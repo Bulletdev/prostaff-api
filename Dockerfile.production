@@ -6,6 +6,7 @@
 FROM ruby:3.4.5-slim AS base
 
 # Instala dependências essenciais (incluindo curl para healthcheck)
+# hadolint ignore=DL3008
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
       curl \
@@ -28,6 +29,7 @@ WORKDIR /app
 ############################
 FROM base AS build
 
+# hadolint ignore=DL3008
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
       build-essential \

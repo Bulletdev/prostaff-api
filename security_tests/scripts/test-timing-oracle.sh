@@ -98,7 +98,7 @@ mean_ms() {
   local n="$4"
 
   local sum=0
-  local i
+  local _
   for _ in $(seq 1 "$n"); do
     local t
     t=$(measure_ms "$method" "$url" "$body")
@@ -164,7 +164,8 @@ echo "    Collecting ${SAMPLES} samples each..."
 
 REGISTER_URL="$API_URL/api/v1/auth/register"
 NEW_EMAIL_1="timing-oracle-new-${TIMESTAMP}a@prostaff-test.invalid"
-NEW_EMAIL_2="timing-oracle-new-${TIMESTAMP}b@prostaff-test.invalid" # shellcheck disable=SC2034
+# shellcheck disable=SC2034
+NEW_EMAIL_2="timing-oracle-new-${TIMESTAMP}b@prostaff-test.invalid"
 
 REG_EXISTING_PAYLOAD="{\"organization_name\":\"TimingTest\",\"email\":\"$KNOWN_EMAIL\",\"password\":\"$WRONG_PASS\",\"name\":\"Timing Test\"}"
 REG_NEW_PAYLOAD="{\"organization_name\":\"TimingTest\",\"email\":\"$NEW_EMAIL_1\",\"password\":\"$WRONG_PASS\",\"name\":\"Timing Test\"}"
