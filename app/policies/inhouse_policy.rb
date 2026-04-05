@@ -34,6 +34,18 @@ class InhousePolicy < ApplicationPolicy
     coach?
   end
 
+  def start_draft?
+    coach?
+  end
+
+  def captain_pick?
+    coach?
+  end
+
+  def start_game?
+    coach?
+  end
+
   def record_game?
     coach?
   end

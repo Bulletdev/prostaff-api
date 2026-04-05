@@ -47,7 +47,8 @@ class Organization < ApplicationRecord
 
   # New tier-based associations
   has_many :scrims, dependent: :destroy
-  has_many :inhouses, dependent: :destroy
+  has_many :inhouses,       dependent: :destroy
+  has_many :inhouse_queues, dependent: :destroy
   has_many :competitive_matches, dependent: :destroy
   has_many :messages,     dependent: :destroy
   has_many :saved_builds, dependent: :destroy
