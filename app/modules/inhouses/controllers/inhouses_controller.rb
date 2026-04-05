@@ -22,49 +22,70 @@ module Inhouses
       before_action :set_inhouse, only: %i[join balance_teams start_draft captain_pick start_game record_game close]
 
       # GET /api/v1/inhouse/ladder
-      # Returns per-player win/loss/win-rate aggregated across all done sessions.
+      # Returns per-player TrueSkill ratings sorted by MMR descending.
+      # Optional query param: ?role=mid  (filter by role)
       def ladder
         authorize Inhouse
 
-        rows = InhouseParticipation
-               .joins(:inhouse, :player)
-               .where(inhouses: { organization_id: current_organization.id, status: 'done' })
-               .where.not(team: 'none')
-               .group(:player_id)
-               .select(
-                 'player_id',
-                 'SUM(wins) AS total_wins',
-                 'SUM(losses) AS total_losses'
-               )
-               .to_a
+        scope = PlayerInhouseRating
+                .joins(:player)
+                .where(organization_id: current_organization.id)
 
-        player_ids = rows.map(&:player_id)
-        players_by_id = current_organization.players
-                                            .where(id: player_ids)
-                                            .index_by(&:id)
+        scope = scope.where(role: params[:role].downcase) if params[:role].present?
 
-        entries = rows.map do |row|
-          player = players_by_id[row.player_id]
-          next unless player
+        ratings = scope.includes(:player).to_a
 
-          total = row.total_wins.to_i + row.total_losses.to_i
-          win_rate = total.zero? ? 0.0 : (row.total_wins.to_f / total * 100).round(1)
-
+        entries = ratings.map do |r|
           {
-            player_id: row.player_id,
-            player_name: player.summoner_name,
-            role: player.role,
-            wins: row.total_wins.to_i,
-            losses: row.total_losses.to_i,
-            total_games: total,
-            win_rate: win_rate
+            player_id: r.player_id,
+            player_name: r.player&.summoner_name,
+            role: r.role,
+            mu: r.mu.round(3),
+            sigma: r.sigma.round(3),
+            mmr: r.mmr,
+            games_played: r.games_played,
+            wins: r.wins,
+            losses: r.losses,
+            win_rate: r.win_rate
           }
-        end.compact
+        end
 
-        entries.sort_by! { |e| [-e[:wins], e[:losses]] }
+        entries.sort_by! { |e| -e[:mmr] }
         entries.each_with_index { |e, i| e[:rank] = i + 1 }
 
         render_success({ entries: entries, total: entries.size })
+      end
+
+      # GET /api/v1/inhouse/ladder/:player_id
+      # Returns all role ratings for a single player.
+      def player_ratings
+        authorize Inhouse
+
+        player = current_organization.players.find_by(id: params[:player_id])
+        return render_not_found unless player
+
+        ratings = PlayerInhouseRating
+                  .where(player: player, organization: current_organization)
+                  .order(:role)
+
+        entries = ratings.map do |r|
+          {
+            role: r.role,
+            mu: r.mu.round(3),
+            sigma: r.sigma.round(3),
+            mmr: r.mmr,
+            games_played: r.games_played,
+            wins: r.wins,
+            losses: r.losses,
+            win_rate: r.win_rate
+          }
+        end
+
+        render_success({
+                         player_id: player.id,
+                         player_name: player.summoner_name,
+                         ratings: entries
+                       })
       end
 
       # GET /api/v1/inhouse/sessions
@@ -208,10 +229,15 @@ module Inhouses
           )
         end
 
+        role = params[:role].to_s.downcase.presence
+        role = nil unless InhouseParticipation::ROLES.include?(role)
+        role ||= player.role.presence
+
         participation = @inhouse.inhouse_participations.new(
           player: player,
           team: 'none',
-          tier_snapshot: player.solo_queue_tier.presence
+          tier_snapshot: player.solo_queue_tier.presence,
+          role: role
         )
 
         if participation.save
@@ -455,7 +481,7 @@ module Inhouses
           @inhouse.increment!(:red_wins)
         end
 
-        # Update per-player wins/losses
+        # Update per-player wins/losses and TrueSkill ratings
         @inhouse.inhouse_participations.each do |p|
           next if p.team == 'none'
 
@@ -465,6 +491,8 @@ module Inhouses
             p.increment!(:losses)
           end
         end
+
+        TrueSkillService.update_ratings(@inhouse, winner)
 
         render_success(
           { inhouse: serialize_inhouse(@inhouse.reload) },
@@ -574,7 +602,11 @@ module Inhouses
               player_id: p.player_id,
               player_name: p.player&.summoner_name,
               team: p.team,
+              role: p.role,
               tier_snapshot: p.tier_snapshot,
+              mu_snapshot: p.mu_snapshot,
+              sigma_snapshot: p.sigma_snapshot,
+              mmr_delta: p.mmr_delta,
               is_captain: p.is_captain,
               wins: p.wins,
               losses: p.losses

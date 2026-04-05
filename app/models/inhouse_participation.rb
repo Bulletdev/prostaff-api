@@ -14,6 +14,8 @@ class InhouseParticipation < ApplicationRecord
   validates :player_id, uniqueness: { scope: :inhouse_id, message: 'is already in this inhouse' }
   validates :team, inclusion: { in: %w[none blue red] }
 
+  ROLES = %w[top jungle mid adc support fill].freeze
+
   # Scopes
   scope :blue_team, -> { where(team: 'blue') }
   scope :red_team,  -> { where(team: 'red') }

@@ -289,8 +289,9 @@ Rails.application.routes.draw do
 
       # Inhouse Module — internal practice sessions between org's own players
       scope '/inhouse', as: 'inhouse' do
-        get 'ladder',   to: '/inhouses/controllers/inhouses#ladder'
-        get 'sessions', to: '/inhouses/controllers/inhouses#sessions'
+        get 'ladder',                    to: '/inhouses/controllers/inhouses#ladder'
+        get 'ladder/:player_id/ratings', to: '/inhouses/controllers/inhouses#player_ratings', as: 'player_ratings'
+        get 'sessions',                  to: '/inhouses/controllers/inhouses#sessions'
 
         # Role-based queue (server-side, used by web dashboard + Discord bot)
         scope '/queue', as: 'queue' do
