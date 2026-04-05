@@ -21,6 +21,87 @@ module Inhouses
     class InhousesController < Api::V1::BaseController
       before_action :set_inhouse, only: %i[join balance_teams record_game close]
 
+      # GET /api/v1/inhouse/ladder
+      # Returns per-player win/loss/win-rate aggregated across all done sessions.
+      def ladder
+        authorize Inhouse
+
+        rows = InhouseParticipation
+               .joins(:inhouse, :player)
+               .where(inhouses: { organization_id: current_organization.id, status: 'done' })
+               .where.not(team: 'none')
+               .group(:player_id)
+               .select(
+                 'player_id',
+                 'SUM(wins) AS total_wins',
+                 'SUM(losses) AS total_losses'
+               )
+               .to_a
+
+        player_ids = rows.map(&:player_id)
+        players_by_id = current_organization.players
+                          .where(id: player_ids)
+                          .index_by(&:id)
+
+        entries = rows.map do |row|
+          player = players_by_id[row.player_id]
+          next unless player
+
+          total = row.total_wins.to_i + row.total_losses.to_i
+          win_rate = total.zero? ? 0.0 : (row.total_wins.to_f / total * 100).round(1)
+
+          {
+            player_id: row.player_id,
+            player_name: player.summoner_name,
+            role: player.role,
+            wins: row.total_wins.to_i,
+            losses: row.total_losses.to_i,
+            total_games: total,
+            win_rate: win_rate
+          }
+        end.compact
+
+        entries.sort_by! { |e| [-e[:wins], e[:losses]] }
+        entries.each_with_index { |e, i| e[:rank] = i + 1 }
+
+        render_success({ entries: entries, total: entries.size })
+      end
+
+      # GET /api/v1/inhouse/sessions
+      # Returns paginated history of completed inhouse sessions with summary.
+      def sessions
+        authorize Inhouse
+
+        inhouses = current_organization.inhouses.history.recent
+                     .includes(:inhouse_participations)
+
+        page     = (params[:page] || 1).to_i
+        per_page = [(params[:per_page] || 10).to_i, 50].min
+        inhouses = inhouses.page(page).per(per_page)
+
+        sessions = inhouses.map do |ih|
+          {
+            id: ih.id,
+            games_played: ih.games_played,
+            blue_wins: ih.blue_wins,
+            red_wins: ih.red_wins,
+            player_count: ih.inhouse_participations.size,
+            formation_mode: nil,
+            created_at: ih.created_at,
+            closed_at: ih.updated_at
+          }
+        end
+
+        render_success({
+          sessions: sessions,
+          meta: {
+            current_page: inhouses.current_page,
+            total_pages: inhouses.total_pages,
+            total_count: inhouses.total_count
+          }
+        })
+      end
+
       # GET /api/v1/inhouse/inhouses
       # Returns paginated history of completed inhouse sessions.
       # Pass ?all=true to include active ones too.
