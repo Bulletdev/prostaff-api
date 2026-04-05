@@ -142,7 +142,7 @@ if [ $K6_EXIT_CODE -ne 0 ]; then
   echo -e "\n${RED}[FAILED] Test execution failed!${NC}"
   echo "Results saved to: $RESULTS_DIR"
   exit 1
-elif [ $THRESHOLDS_FAILED -gt 0 ]; then
+elif [ "$THRESHOLDS_FAILED" -gt 0 ]; then
   echo -e "\n${RED}[FAILED] $THRESHOLDS_FAILED threshold(s) failed!${NC}"
   echo "Results saved to: $RESULTS_DIR"
   exit 1
