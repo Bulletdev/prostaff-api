@@ -47,6 +47,7 @@ class Organization < ApplicationRecord
 
   # New tier-based associations
   has_many :scrims, dependent: :destroy
+  has_many :inhouses, dependent: :destroy
   has_many :competitive_matches, dependent: :destroy
   has_many :messages,     dependent: :destroy
   has_many :saved_builds, dependent: :destroy
@@ -58,6 +59,9 @@ class Organization < ApplicationRecord
   validates :tier, inclusion: { in: Constants::Organization::TIERS }, allow_blank: true
   validates :subscription_plan, inclusion: { in: Constants::Organization::SUBSCRIPTION_PLANS }, allow_blank: true
   validates :subscription_status, inclusion: { in: Constants::Organization::SUBSCRIPTION_STATUSES }, allow_blank: true
+  validates :discord_invite_url,
+            format: { with: %r{\Ahttps://discord\.(gg|com/invite)/\w+\z} },
+            allow_blank: true
 
   # Callbacks
   before_validation :generate_slug, on: :create

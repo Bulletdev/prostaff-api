@@ -18,6 +18,10 @@ class ScrimSerializer
   private
 
   def base_attributes
+    scrim_fields.merge(stats_fields).merge(timestamps_fields)
+  end
+
+  def scrim_fields
     {
       id: @scrim.id,
       organization_id: @scrim.organization_id,
@@ -25,13 +29,24 @@ class ScrimSerializer
       scheduled_at: @scrim.scheduled_at,
       scrim_type: @scrim.scrim_type,
       focus_area: @scrim.focus_area,
+      draft_type: @scrim.draft_type
+    }
+  end
+
+  def stats_fields
+    {
       games_planned: @scrim.games_planned,
       games_completed: @scrim.games_completed,
       completion_percentage: @scrim.completion_percentage,
       status: @scrim.status,
       win_rate: @scrim.win_rate,
       is_confidential: @scrim.is_confidential,
-      visibility: @scrim.visibility,
+      visibility: @scrim.visibility
+    }
+  end
+
+  def timestamps_fields
+    {
       created_at: @scrim.created_at,
       updated_at: @scrim.updated_at
     }
