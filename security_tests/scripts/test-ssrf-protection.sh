@@ -39,25 +39,36 @@ test_result() {
   fi
 }
 
-# Create test user and get token
+# Authenticate — try login with fixed test user first, register only if needed
+FIXED_EMAIL="${TEST_EMAIL:-sectest@prostaff-security.invalid}"
+FIXED_PASSWORD="${TEST_PASSWORD:-Test123!@#}"
+
 echo "Setting up test user..."
-AUTH_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/register" \
+AUTH_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{
-    "user": {
-      "email": "ssrf-test-'$(date +%s)'@test.com",
-      "password": "Test123!@#",
-      "name": "SSRF Test User"
-    },
-    "organization": {
-      "name": "SSRF Test Org",
-      "slug": "ssrf-test-'$(date +%s)'"
-    }
-  }')
+  -d "{\"email\":\"$FIXED_EMAIL\",\"password\":\"$FIXED_PASSWORD\"}")
 
-TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.data.access_token')
+TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.data.access_token // empty')
 
-if [ "$TOKEN" = "null" ]; then
+if [ -z "$TOKEN" ]; then
+  # User does not exist yet — register once
+  AUTH_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"user\": {
+        \"email\": \"$FIXED_EMAIL\",
+        \"password\": \"$FIXED_PASSWORD\",
+        \"full_name\": \"SSRF Test User\"
+      },
+      \"organization\": {
+        \"name\": \"SSRF Test Org\",
+        \"region\": \"BR\"
+      }
+    }")
+  TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.data.access_token // empty')
+fi
+
+if [ -z "$TOKEN" ]; then
   echo "FATAL: Failed to authenticate"
   echo "Response: $AUTH_RESPONSE"
   exit 1
