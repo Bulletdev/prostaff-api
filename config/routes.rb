@@ -287,6 +287,9 @@ Rails.application.routes.draw do
 
       # Inhouse Module — internal practice sessions between org's own players
       scope '/inhouse', as: 'inhouse' do
+        get 'ladder',   to: '/inhouses/controllers/inhouses#ladder'
+        get 'sessions', to: '/inhouses/controllers/inhouses#sessions'
+
         resources :inhouses, controller: '/inhouses/controllers/inhouses', only: %i[index create] do
           collection do
             get :active

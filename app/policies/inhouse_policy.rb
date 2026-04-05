@@ -14,6 +14,14 @@ class InhousePolicy < ApplicationPolicy
     user.present?
   end
 
+  def ladder?
+    user.present?
+  end
+
+  def sessions?
+    user.present?
+  end
+
   def create?
     coach?
   end

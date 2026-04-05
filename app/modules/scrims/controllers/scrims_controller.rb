@@ -83,7 +83,6 @@ module Scrims
 
       # POST /api/v1/scrims
       def create
-        # Check scrim creation limit
         unless current_organization.can_create_scrim?
           return render json: {
             error: 'Scrim Limit Reached',
@@ -92,6 +91,16 @@ module Scrims
         end
 
         scrim = current_organization.scrims.new(scrim_params)
+
+        opponent_name = params.dig(:scrim, :opponent_team_name).to_s.strip
+        if opponent_name.present?
+          tag = opponent_name.split.map(&:first).join.upcase.first(5)
+          opponent = OpponentTeam.find_or_initialize_by(name: opponent_name)
+          opponent.tag ||= tag
+          opponent.region ||= current_organization.region
+          opponent.save
+          scrim.opponent_team = opponent
+        end
 
         if scrim.save
           render json: { data: ScrimSerializer.new(scrim).as_json }, status: :created
