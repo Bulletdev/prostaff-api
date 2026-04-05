@@ -10,10 +10,15 @@ class ScrimAnalyticsService
   # Overall scrim statistics
   def overall_stats(date_range: 30.days)
     scrims = @organization.scrims.where('created_at > ?', date_range.ago)
+    all_results = scrims.flat_map(&:game_results)
+    scrim_wins   = all_results.count { |r| r['victory'] == true }
+    scrim_losses = all_results.size - scrim_wins
 
     {
       total_scrims: scrims.count,
       total_games: scrims.sum(:games_completed),
+      wins: scrim_wins,
+      losses: scrim_losses,
       win_rate: calculator.calculate_win_rate(scrims),
       most_practiced_opponent: calculator.most_frequent_opponent(scrims),
       focus_areas: focus_area_breakdown(scrims),

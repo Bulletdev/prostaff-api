@@ -29,27 +29,10 @@ module Scrims
                                      .includes(:opponent_team)
                                      .order(scheduled_at: :desc)
 
-        # Filters
-        scrims = scrims.by_type(params[:scrim_type]) if params[:scrim_type].present?
-        scrims = scrims.by_focus_area(params[:focus_area]) if params[:focus_area].present?
-        scrims = scrims.where(opponent_team_id: params[:opponent_team_id]) if params[:opponent_team_id].present?
+        scrims = apply_scrim_filters(scrims)
 
-        # Status filter
-        case params[:status]
-        when 'upcoming'
-          scrims = scrims.upcoming
-        when 'past'
-          scrims = scrims.past
-        when 'completed'
-          scrims = scrims.completed
-        when 'in_progress'
-          scrims = scrims.in_progress
-        end
-
-        # Pagination
         page = params[:page] || 1
         per_page = params[:per_page] || 20
-
         scrims = scrims.page(page).per(per_page)
 
         render json: {
@@ -150,6 +133,23 @@ module Scrims
 
       private
 
+      def apply_scrim_filters(scrims)
+        scrims = scrims.by_type(params[:scrim_type]) if params[:scrim_type].present?
+        scrims = scrims.by_focus_area(params[:focus_area]) if params[:focus_area].present?
+        scrims = scrims.where(opponent_team_id: params[:opponent_team_id]) if params[:opponent_team_id].present?
+        apply_status_filter(scrims)
+      end
+
+      def apply_status_filter(scrims)
+        case params[:status]
+        when 'upcoming'    then scrims.upcoming
+        when 'past'        then scrims.past
+        when 'completed'   then scrims.completed
+        when 'in_progress' then scrims.in_progress
+        else scrims
+        end
+      end
+
       def set_scrim
         @scrim = current_organization.scrims.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -163,6 +163,7 @@ module Scrims
           :scheduled_at,
           :scrim_type,
           :focus_area,
+          :draft_type,
           :pre_game_notes,
           :post_game_notes,
           :is_confidential,

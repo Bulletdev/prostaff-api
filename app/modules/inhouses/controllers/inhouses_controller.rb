@@ -1,0 +1,329 @@
+# frozen_string_literal: true
+
+module Inhouses
+  module Controllers
+    # InhousesController
+    #
+    # Manages internal practice sessions (inhouses) where an organization's
+    # own players compete against each other in balanced teams.
+    #
+    # Lifecycle: waiting → in_progress (after balance_teams) → done (after close)
+    #
+    # Endpoints:
+    #   GET    /api/v1/inhouse/inhouses            — paginated history (done sessions)
+    #   GET    /api/v1/inhouse/inhouses/active      — current active session
+    #   POST   /api/v1/inhouse/inhouses             — create new session
+    #   POST   /api/v1/inhouse/inhouses/:id/join    — add a player to the lobby
+    #   POST   /api/v1/inhouse/inhouses/:id/balance_teams — auto-assign teams
+    #   POST   /api/v1/inhouse/inhouses/:id/record_game   — record game result
+    #   PATCH  /api/v1/inhouse/inhouses/:id/close   — close the session
+    #
+    class InhousesController < Api::V1::BaseController
+      before_action :set_inhouse, only: %i[join balance_teams record_game close]
+
+      # GET /api/v1/inhouse/inhouses
+      # Returns paginated history of completed inhouse sessions.
+      # Pass ?all=true to include active ones too.
+      def index
+        authorize Inhouse
+
+        inhouses = if params[:all].present?
+                     current_organization.inhouses
+                   else
+                     current_organization.inhouses.history
+                   end
+
+        inhouses = inhouses.recent.includes(:inhouse_participations)
+
+        page     = (params[:page] || 1).to_i
+        per_page = [(params[:per_page] || 20).to_i, 100].min
+        inhouses = inhouses.page(page).per(per_page)
+
+        render_success(
+          inhouses: inhouses.map { |i| serialize_inhouse(i) },
+          meta: {
+            current_page: inhouses.current_page,
+            total_pages: inhouses.total_pages,
+            total_count: inhouses.total_count
+          }
+        )
+      end
+
+      # GET /api/v1/inhouse/inhouses/active
+      # Returns the current active inhouse (waiting or in_progress), if any.
+      def active
+        authorize Inhouse
+
+        inhouse = current_organization.inhouses
+                                      .active
+                                      .includes(inhouse_participations: :player)
+                                      .order(created_at: :desc)
+                                      .first
+
+        return render_success({ inhouse: nil }) if inhouse.nil?
+
+        render_success({ inhouse: serialize_inhouse(inhouse, detailed: true) })
+      end
+
+      # POST /api/v1/inhouse/inhouses
+      # Creates a new inhouse session. Fails if an active one already exists.
+      def create
+        authorize Inhouse
+
+        if current_organization.inhouses.active.exists?
+          return render_error(
+            message: 'There is already an active inhouse session for this organization',
+            code: 'ACTIVE_INHOUSE_EXISTS',
+            status: :unprocessable_entity
+          )
+        end
+
+        inhouse = current_organization.inhouses.new(
+          status: 'waiting',
+          created_by: current_user
+        )
+
+        if inhouse.save
+          render_created({ inhouse: serialize_inhouse(inhouse, detailed: true) },
+                         message: 'Inhouse session created')
+        else
+          render_error(
+            message: 'Failed to create inhouse session',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: inhouse.errors.as_json
+          )
+        end
+      end
+
+      # POST /api/v1/inhouse/inhouses/:id/join
+      # Adds a player to the inhouse lobby.
+      # Body: { player_id: <uuid> }
+      def join
+        authorize @inhouse
+
+        unless @inhouse.waiting?
+          return render_error(
+            message: 'Can only join a session that is waiting for players',
+            code: 'INVALID_STATE',
+            status: :unprocessable_entity
+          )
+        end
+
+        player = current_organization.players.find_by(id: params[:player_id])
+        unless player
+          return render_error(
+            message: 'Player not found in this organization',
+            code: 'PLAYER_NOT_FOUND',
+            status: :not_found
+          )
+        end
+
+        if @inhouse.inhouse_participations.exists?(player_id: player.id)
+          return render_error(
+            message: 'Player is already in this inhouse session',
+            code: 'ALREADY_JOINED',
+            status: :unprocessable_entity
+          )
+        end
+
+        participation = @inhouse.inhouse_participations.new(
+          player: player,
+          team: 'none',
+          tier_snapshot: player.solo_queue_tier.presence
+        )
+
+        if participation.save
+          render_success(
+            { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
+            message: "#{player.summoner_name} joined the inhouse"
+          )
+        else
+          render_error(
+            message: 'Failed to add player to inhouse',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: participation.errors.as_json
+          )
+        end
+      end
+
+      # POST /api/v1/inhouse/inhouses/:id/balance_teams
+      # Auto-assigns teams using a snake draft sorted by LoL tier score.
+      # Works from both waiting and in_progress (allows reshuffling mid-session).
+      def balance_teams
+        authorize @inhouse
+
+        if @inhouse.done?
+          return render_error(
+            message: 'Cannot rebalance a closed session',
+            code: 'INVALID_STATE',
+            status: :unprocessable_entity
+          )
+        end
+
+        participations = @inhouse.inhouse_participations.includes(:player).to_a
+
+        if participations.size < 2
+          return render_error(
+            message: 'Need at least 2 players to balance teams',
+            code: 'NOT_ENOUGH_PLAYERS',
+            status: :unprocessable_entity
+          )
+        end
+
+        # Sort by LoL tier score descending for snake draft
+        sorted = participations.sort_by { |p| -tier_score(p.tier_snapshot) }
+
+        # Snake draft: pair 0 → [B,R], pair 1 → [R,B], pair 2 → [B,R], ...
+        sorted.each_with_index do |participation, index|
+          pair = index / 2
+          position_in_pair = index % 2
+          team = if pair.even?
+                   position_in_pair.zero? ? 'blue' : 'red'
+                 else
+                   position_in_pair.zero? ? 'red' : 'blue'
+                 end
+          participation.update_columns(team: team)
+        end
+
+        @inhouse.update!(status: 'in_progress') if @inhouse.waiting?
+
+        render_success(
+          { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
+          message: 'Teams balanced'
+        )
+      end
+
+      # POST /api/v1/inhouse/inhouses/:id/record_game
+      # Records a game result. Body: { winner: 'blue'|'red' }
+      def record_game
+        authorize @inhouse
+
+        unless @inhouse.in_progress?
+          return render_error(
+            message: 'Can only record games for a session that is in progress',
+            code: 'INVALID_STATE',
+            status: :unprocessable_entity
+          )
+        end
+
+        winner = params[:winner].to_s
+        unless %w[blue red].include?(winner)
+          return render_error(
+            message: "winner must be 'blue' or 'red'",
+            code: 'INVALID_WINNER',
+            status: :unprocessable_entity
+          )
+        end
+
+        @inhouse.increment!(:games_played)
+        if winner == 'blue'
+          @inhouse.increment!(:blue_wins)
+        else
+          @inhouse.increment!(:red_wins)
+        end
+
+        # Update per-player wins/losses
+        @inhouse.inhouse_participations.each do |p|
+          next if p.team == 'none'
+
+          if p.team == winner
+            p.increment!(:wins)
+          else
+            p.increment!(:losses)
+          end
+        end
+
+        render_success(
+          { inhouse: serialize_inhouse(@inhouse.reload) },
+          message: "Game recorded — #{winner.capitalize} team wins"
+        )
+      end
+
+      # PATCH /api/v1/inhouse/inhouses/:id/close
+      # Closes the inhouse session (sets status to done).
+      def close
+        authorize @inhouse
+
+        if @inhouse.done?
+          return render_error(
+            message: 'Session is already closed',
+            code: 'ALREADY_CLOSED',
+            status: :unprocessable_entity
+          )
+        end
+
+        if @inhouse.update(status: 'done')
+          render_success(
+            { inhouse: serialize_inhouse(@inhouse.reload) },
+            message: 'Inhouse session closed'
+          )
+        else
+          render_error(
+            message: 'Failed to close inhouse session',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: @inhouse.errors.as_json
+          )
+        end
+      end
+
+      private
+
+      def set_inhouse
+        @inhouse = current_organization.inhouses.find(params[:id])
+      rescue ActiveRecord::RecordNotFound
+        render_not_found
+      end
+
+      # Returns a tier score (0–9) for snake draft balancing.
+      # Uses LoL solo queue tiers. Higher = stronger player.
+      def tier_score(tier_snapshot)
+        case tier_snapshot.to_s.upcase
+        when 'CHALLENGER'   then 9
+        when 'GRANDMASTER'  then 8
+        when 'MASTER'       then 7
+        when 'DIAMOND'      then 6
+        when 'EMERALD'      then 5
+        when 'PLATINUM'     then 4
+        when 'GOLD'         then 3
+        when 'SILVER'       then 2
+        when 'BRONZE'       then 1
+        else                     0 # IRON or unknown
+        end
+      end
+
+      # Serializes an inhouse to a hash.
+      # Pass detailed: true to include full participation list.
+      def serialize_inhouse(inhouse, detailed: false)
+        result = {
+          id: inhouse.id,
+          status: inhouse.status,
+          games_played: inhouse.games_played,
+          blue_wins: inhouse.blue_wins,
+          red_wins: inhouse.red_wins,
+          created_at: inhouse.created_at,
+          updated_at: inhouse.updated_at
+        }
+
+        if detailed
+          participations = inhouse.inhouse_participations.includes(:player)
+          result[:participations] = participations.map do |p|
+            {
+              id: p.id,
+              player_id: p.player_id,
+              player_name: p.player&.summoner_name,
+              team: p.team,
+              tier_snapshot: p.tier_snapshot,
+              wins: p.wins,
+              losses: p.losses
+            }
+          end
+        end
+
+        result
+      end
+    end
+  end
+end
