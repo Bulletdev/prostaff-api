@@ -83,6 +83,11 @@ module Rack
       req.ip if req.path == '/api/v1/auth/forgot-password' && req.post?
     end
 
+    # Throttle public lobby endpoint — unauthenticated, runs heavy joins
+    throttle('lobby/ip', limit: 60, period: 1.minute) do |req|
+      req.ip if req.path == '/api/v1/scrims/lobby' && req.get?
+    end
+
     # Throttle API requests per authenticated user
     throttle('req/authenticated_user', limit: 1000, period: 1.hour) do |req|
       req.env['rack.jwt.payload']['user_id'] if req.env['rack.jwt.payload']
