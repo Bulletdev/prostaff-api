@@ -311,6 +311,50 @@ module Players
         end
       end
 
+      # POST /api/v1/players/:id/link_discord
+      # Links a player to a Discord account.
+      # Called by the Discord bot after a user runs /link.
+      # Body: { discord_user_id: "123456789" }
+      def link_discord
+        @player = organization_scoped(Player).find(params[:id])
+        authorize @player, :update?
+
+        discord_id = params[:discord_user_id].to_s.strip
+        if discord_id.blank?
+          return render_error(message: 'discord_user_id is required', code: 'MISSING_PARAMS',
+                              status: :unprocessable_entity)
+        end
+
+        # Unlink any other player in the same org that had this discord id
+        organization_scoped(Player)
+          .where(discord_user_id: discord_id)
+          .where.not(id: @player.id)
+          .update_all(discord_user_id: nil)
+
+        if @player.update(discord_user_id: discord_id)
+          render_success(
+            { player: PlayerSerializer.render_as_hash(@player) },
+            message: 'Discord account linked'
+          )
+        else
+          render_error(message: 'Failed to link Discord account', code: 'VALIDATION_ERROR',
+                       status: :unprocessable_entity, details: @player.errors.as_json)
+        end
+      rescue ActiveRecord::RecordNotFound
+        render_not_found
+      end
+
+      # GET /api/v1/players/by_discord/:discord_user_id
+      # Looks up a player by Discord user ID. Used by the bot to resolve player_id.
+      def by_discord
+        discord_id = params[:discord_user_id].to_s.strip
+        player = organization_scoped(Player).find_by(discord_user_id: discord_id)
+
+        return render_not_found unless player
+
+        render_success({ player: PlayerSerializer.render_as_hash(player) })
+      end
+
       private
 
       def set_player

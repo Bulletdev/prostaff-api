@@ -19,7 +19,7 @@ module Inhouses
     #   PATCH  /api/v1/inhouse/inhouses/:id/close   — close the session
     #
     class InhousesController < Api::V1::BaseController
-      before_action :set_inhouse, only: %i[join balance_teams record_game close]
+      before_action :set_inhouse, only: %i[join balance_teams start_draft captain_pick start_game record_game close]
 
       # GET /api/v1/inhouse/ladder
       # Returns per-player win/loss/win-rate aggregated across all done sessions.
@@ -86,7 +86,7 @@ module Inhouses
             blue_wins: ih.blue_wins,
             red_wins: ih.red_wins,
             player_count: ih.inhouse_participations.size,
-            formation_mode: nil,
+            formation_mode: ih.formation_mode,
             created_at: ih.created_at,
             closed_at: ih.updated_at
           }
@@ -253,26 +253,176 @@ module Inhouses
           )
         end
 
-        # Sort by LoL tier score descending for snake draft
-        sorted = participations.sort_by { |p| -tier_score(p.tier_snapshot) }
+        apply_snake_draft(participations)
 
-        # Snake draft: pair 0 → [B,R], pair 1 → [R,B], pair 2 → [B,R], ...
-        sorted.each_with_index do |participation, index|
-          pair = index / 2
-          position_in_pair = index % 2
-          team = if pair.even?
-                   position_in_pair.zero? ? 'blue' : 'red'
-                 else
-                   position_in_pair.zero? ? 'red' : 'blue'
-                 end
-          participation.update_columns(team: team)
-        end
-
-        @inhouse.update!(status: 'in_progress') if @inhouse.waiting?
+        attrs = { formation_mode: 'auto' }
+        attrs[:status] = 'in_progress' if @inhouse.waiting? || @inhouse.draft?
+        @inhouse.update!(attrs)
 
         render_success(
           { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
           message: 'Teams balanced'
+        )
+      end
+
+      # POST /api/v1/inhouse/inhouses/:id/start_draft
+      # Begins the captain draft phase. Assigns blue and red captains,
+      # transitions status to 'draft', and initialises pick_number to 0.
+      # Body: { blue_captain_id: <uuid>, red_captain_id: <uuid> }
+      def start_draft
+        authorize @inhouse
+
+        unless @inhouse.waiting?
+          return render_error(
+            message: 'Can only start draft from a waiting session',
+            code: 'INVALID_STATE',
+            status: :unprocessable_entity
+          )
+        end
+
+        blue_id = params[:blue_captain_id].to_s
+        red_id  = params[:red_captain_id].to_s
+
+        if blue_id.blank? || red_id.blank?
+          return render_error(
+            message: 'blue_captain_id and red_captain_id are required',
+            code: 'MISSING_PARAMS',
+            status: :unprocessable_entity
+          )
+        end
+
+        if blue_id == red_id
+          return render_error(
+            message: 'Blue and red captains must be different players',
+            code: 'DUPLICATE_CAPTAIN',
+            status: :unprocessable_entity
+          )
+        end
+
+        blue_participation = @inhouse.inhouse_participations.find_by(player_id: blue_id)
+        red_participation  = @inhouse.inhouse_participations.find_by(player_id: red_id)
+
+        unless blue_participation && red_participation
+          return render_error(
+            message: 'Both captains must already be in the session',
+            code: 'CAPTAIN_NOT_IN_SESSION',
+            status: :unprocessable_entity
+          )
+        end
+
+        ActiveRecord::Base.transaction do
+          # Mark captains and assign teams
+          blue_participation.update!(team: 'blue', is_captain: true)
+          red_participation.update!(team: 'red', is_captain: true)
+
+          # All other players reset to 'none' (unassigned) so draft picks them
+          @inhouse.inhouse_participations
+                  .where.not(player_id: [blue_id, red_id])
+                  .update_all(team: 'none', is_captain: false)
+
+          @inhouse.update!(
+            status: 'draft',
+            formation_mode: 'captain_draft',
+            blue_captain_id: blue_id,
+            red_captain_id: red_id,
+            draft_pick_number: 0
+          )
+        end
+
+        render_success(
+          { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
+          message: 'Captain draft started'
+        )
+      end
+
+      # POST /api/v1/inhouse/inhouses/:id/captain_pick
+      # The current team's captain picks a player from the unpicked pool.
+      # Body: { player_id: <uuid> }
+      def captain_pick
+        authorize @inhouse
+
+        unless @inhouse.draft?
+          return render_error(
+            message: 'Captain picks can only be made during the draft phase',
+            code: 'INVALID_STATE',
+            status: :unprocessable_entity
+          )
+        end
+
+        if @inhouse.draft_complete?
+          return render_error(
+            message: 'All picks have already been made',
+            code: 'DRAFT_COMPLETE',
+            status: :unprocessable_entity
+          )
+        end
+
+        player_id = params[:player_id].to_s
+        if player_id.blank?
+          return render_error(
+            message: 'player_id is required',
+            code: 'MISSING_PARAMS',
+            status: :unprocessable_entity
+          )
+        end
+
+        participation = @inhouse.inhouse_participations.find_by(player_id: player_id)
+        unless participation
+          return render_error(
+            message: 'Player is not in this inhouse session',
+            code: 'PLAYER_NOT_IN_SESSION',
+            status: :not_found
+          )
+        end
+
+        if participation.is_captain?
+          return render_error(
+            message: 'Captains cannot be picked — they are already on their teams',
+            code: 'PLAYER_IS_CAPTAIN',
+            status: :unprocessable_entity
+          )
+        end
+
+        if participation.team != 'none'
+          return render_error(
+            message: 'Player has already been picked',
+            code: 'ALREADY_PICKED',
+            status: :unprocessable_entity
+          )
+        end
+
+        picking_team = @inhouse.current_pick_team
+
+        ActiveRecord::Base.transaction do
+          participation.update!(team: picking_team)
+          @inhouse.increment!(:draft_pick_number)
+        end
+
+        render_success(
+          { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
+          message: "#{picking_team.capitalize} team picked a player"
+        )
+      end
+
+      # POST /api/v1/inhouse/inhouses/:id/start_game
+      # Transitions from draft to in_progress, locking the teams.
+      # Can be called once the draft is complete or by the coach to force-start.
+      def start_game
+        authorize @inhouse
+
+        unless @inhouse.draft?
+          return render_error(
+            message: 'Session must be in draft phase to start the game',
+            code: 'INVALID_STATE',
+            status: :unprocessable_entity
+          )
+        end
+
+        @inhouse.update!(status: 'in_progress')
+
+        render_success(
+          { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
+          message: 'Game started — teams locked'
         )
       end
 
@@ -352,6 +502,22 @@ module Inhouses
 
       private
 
+      # Snake draft: sort by tier desc, alternate teams pair by pair.
+      # Pair 0 → [B,R], pair 1 → [R,B], pair 2 → [B,R], ...
+      def apply_snake_draft(participations)
+        sorted = participations.sort_by { |p| -tier_score(p.tier_snapshot) }
+        sorted.each_with_index do |participation, index|
+          pair = index / 2
+          pos  = index % 2
+          team = if pair.even?
+                   pos.zero? ? 'blue' : 'red'
+                 else
+                   (pos.zero? ? 'red' : 'blue')
+                 end
+          participation.update_columns(team: team)
+        end
+      end
+
       def set_inhouse
         @inhouse = current_organization.inhouses.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -376,17 +542,29 @@ module Inhouses
       end
 
       # Serializes an inhouse to a hash.
-      # Pass detailed: true to include full participation list.
+      # Pass detailed: true to include full participation list and draft state.
       def serialize_inhouse(inhouse, detailed: false)
         result = {
           id: inhouse.id,
           status: inhouse.status,
+          formation_mode: inhouse.formation_mode,
           games_played: inhouse.games_played,
           blue_wins: inhouse.blue_wins,
           red_wins: inhouse.red_wins,
           created_at: inhouse.created_at,
           updated_at: inhouse.updated_at
         }
+
+        if inhouse.draft? || (detailed && inhouse.blue_captain_id.present?)
+          result[:draft_state] = {
+            blue_captain_id: inhouse.blue_captain_id,
+            red_captain_id: inhouse.red_captain_id,
+            pick_number: inhouse.draft_pick_number.to_i,
+            current_pick_team: inhouse.current_pick_team,
+            picks_remaining: [Inhouse::PICK_ORDER.size - inhouse.draft_pick_number.to_i, 0].max,
+            draft_complete: inhouse.draft_complete?
+          }
+        end
 
         if detailed
           participations = inhouse.inhouse_participations.includes(:player)
@@ -397,6 +575,7 @@ module Inhouses
               player_name: p.player&.summoner_name,
               team: p.team,
               tier_snapshot: p.tier_snapshot,
+              is_captain: p.is_captain,
               wins: p.wins,
               losses: p.losses
             }

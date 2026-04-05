@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_05_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_05_130001) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -226,6 +226,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_120000) do
     t.index ["inhouse_id", "player_id"], name: "index_inhouse_participations_on_inhouse_id_and_player_id", unique: true
     t.index ["inhouse_id"], name: "index_inhouse_participations_on_inhouse_id"
     t.index ["player_id"], name: "index_inhouse_participations_on_player_id"
+  end
+
+  create_table "inhouse_queue_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "inhouse_queue_id", null: false
+    t.uuid "player_id", null: false
+    t.string "role", null: false
+    t.string "tier_snapshot"
+    t.boolean "checked_in", default: false, null: false
+    t.datetime "checked_in_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["inhouse_queue_id", "player_id"], name: "index_inhouse_queue_entries_on_inhouse_queue_id_and_player_id", unique: true
+    t.index ["inhouse_queue_id", "role"], name: "index_inhouse_queue_entries_on_inhouse_queue_id_and_role"
+    t.index ["inhouse_queue_id"], name: "index_inhouse_queue_entries_on_inhouse_queue_id"
+    t.index ["player_id"], name: "index_inhouse_queue_entries_on_player_id"
+  end
+
+  create_table "inhouse_queues", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "check_in_deadline"
+    t.uuid "created_by_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_inhouse_queues_on_organization_id"
   end
 
   create_table "inhouses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -522,7 +547,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_120000) do
     t.datetime "last_login_at", comment: "Last login timestamp for player access"
     t.boolean "player_access_enabled", default: false, comment: "Enable/disable individual player access"
     t.string "access_token_jti", comment: "JWT token identifier for player session"
+    t.string "discord_user_id"
     t.index ["deleted_at"], name: "index_players_on_deleted_at", comment: "Index for soft delete queries"
+    t.index ["discord_user_id"], name: "index_players_on_discord_user_id", unique: true, where: "(discord_user_id IS NOT NULL)"
     t.index ["organization_id", "contract_end_date"], name: "idx_players_org_contract_end"
     t.index ["organization_id", "deleted_at", "status"], name: "idx_players_org_deleted_status"
     t.index ["organization_id", "deleted_at"], name: "idx_players_org_deleted"
@@ -935,6 +962,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_120000) do
   add_foreign_key "feedbacks", "users"
   add_foreign_key "inhouse_participations", "inhouses"
   add_foreign_key "inhouse_participations", "players"
+  add_foreign_key "inhouse_queue_entries", "inhouse_queues"
+  add_foreign_key "inhouse_queue_entries", "players"
+  add_foreign_key "inhouse_queues", "organizations"
+  add_foreign_key "inhouse_queues", "users", column: "created_by_user_id"
   add_foreign_key "inhouses", "organizations"
   add_foreign_key "inhouses", "players", column: "blue_captain_id"
   add_foreign_key "inhouses", "players", column: "red_captain_id"

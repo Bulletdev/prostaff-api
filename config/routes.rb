@@ -101,11 +101,13 @@ Rails.application.routes.draw do
           post :import
           post :bulk_sync
           get :search_riot_id
+          get 'by_discord/:discord_user_id', action: :by_discord, as: :by_discord
         end
         member do
           get :stats
           get :matches
           post :sync_from_riot
+          post :link_discord
           get 'stats/export', to: '/players/controllers/stats_export#show', as: :stats_export
         end
       end
