@@ -35,7 +35,7 @@ module PgTypeCache
       Rails.logger.error "Failed to preload pg_types: #{e.message}"
     end
 
-    def fetch_types(type_names)
+    def fetch_types(type_names) # rubocop:disable Metrics/MethodLength
       placeholders = type_names.each_with_index.map { |_, i| "$#{i + 1}" }.join(', ')
 
       sql = <<~SQL

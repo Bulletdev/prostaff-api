@@ -149,6 +149,7 @@ module Matchmaking
       private
 
       def set_request
+        # Scoped to the current org via for_organization — only the org's own requests are accessible.
         @scrim_request = ScrimRequest.for_organization(current_organization.id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         render_not_found

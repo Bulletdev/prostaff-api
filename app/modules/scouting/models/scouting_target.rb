@@ -106,7 +106,7 @@ class ScoutingTarget < ApplicationRecord
     champion_pool.first(3)
   end
 
-  def estimated_salary_range
+  def estimated_salary_range # rubocop:disable Metrics/MethodLength
     # This would be based on tier, region, and performance
     case current_tier&.upcase
     when 'CHALLENGER', 'GRANDMASTER'

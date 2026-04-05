@@ -125,7 +125,7 @@ class PlayerMatchStat < ApplicationRecord
     end
   end
 
-  def calculate_derived_stats
+  def calculate_derived_stats # rubocop:disable Metrics/AbcSize
     if match&.game_duration.present? && match.game_duration.positive?
       minutes = match.game_duration / 60.0
       self.cs_per_min = cs.to_f / minutes if cs.present?
@@ -136,7 +136,7 @@ class PlayerMatchStat < ApplicationRecord
     self.performance_score = calculate_performance_score
   end
 
-  def calculate_performance_score
+  def calculate_performance_score # rubocop:disable Metrics/AbcSize
     return 0 unless match
 
     score = 0
@@ -168,7 +168,7 @@ class PlayerMatchStat < ApplicationRecord
     cc_bonus + obj_bonus
   end
 
-  def update_champion_pool
+  def update_champion_pool # rubocop:disable Metrics/AbcSize
     pool = player.champion_pools.find_or_initialize_by(champion: champion)
 
     pool.games_played += 1

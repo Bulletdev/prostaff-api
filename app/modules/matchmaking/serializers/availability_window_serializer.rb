@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Serializer for AvailabilityWindow model using Blueprinter.
 class AvailabilityWindowSerializer < Blueprinter::Base
   identifier :id
 

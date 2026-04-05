@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :riot do
   desc 'Update Data Dragon cache (champions, items, etc.)'
   task update_data_dragon: :environment do
@@ -118,3 +119,4 @@ namespace :riot do
     puts "✅ Queued #{ScoutingTarget.unscoped_by_organization.count} scouting targets for sync!"
   end
 end
+# rubocop:enable Metrics/BlockLength

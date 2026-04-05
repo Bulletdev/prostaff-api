@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Represents a scrim request sent between two organizations for a practice match.
 class ScrimRequest < ApplicationRecord
   STATUSES = %w[pending accepted declined expired cancelled].freeze
   GAMES = %w[league_of_legends valorant cs2 dota2].freeze
@@ -12,7 +15,7 @@ class ScrimRequest < ApplicationRecord
   validate :different_organizations
 
   scope :pending, -> { where(status: 'pending').where('expires_at IS NULL OR expires_at > ?', Time.current) }
-  scope :for_organization, ->(org_id) {
+  scope :for_organization, lambda { |org_id|
     where('requesting_organization_id = ? OR target_organization_id = ?', org_id, org_id)
   }
   scope :sent_by, ->(org_id) { where(requesting_organization_id: org_id) }
@@ -62,9 +65,10 @@ class ScrimRequest < ApplicationRecord
 
   def different_organizations
     return unless requesting_organization_id.present? && target_organization_id.present?
-    if requesting_organization_id == target_organization_id
-      errors.add(:target_organization, 'cannot be the same as requesting organization')
-    end
+
+    return unless requesting_organization_id == target_organization_id
+
+    errors.add(:target_organization, 'cannot be the same as requesting organization')
   end
 
   def create_scrims_for_both_orgs!

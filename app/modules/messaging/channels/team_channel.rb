@@ -39,7 +39,7 @@ class TeamChannel < ApplicationCable::Channel
   # Receives a message sent by the frontend via cable.
   #
   # @param data [Hash] { "content" => "message text" }
-  def speak(data)
+  def speak(data) # rubocop:disable Metrics/MethodLength
     content = data['content'].to_s.strip
 
     if content.blank?

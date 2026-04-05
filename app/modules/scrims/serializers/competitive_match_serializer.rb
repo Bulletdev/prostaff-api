@@ -15,7 +15,7 @@ class CompetitiveMatchSerializer
 
   private
 
-  def base_attributes
+  def base_attributes # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     {
       id: @competitive_match.id,
       organization_id: @competitive_match.organization_id,
@@ -41,7 +41,7 @@ class CompetitiveMatchSerializer
     }
   end
 
-  def detailed_attributes
+  def detailed_attributes # rubocop:disable Metrics/MethodLength
     {
       external_match_id: @competitive_match.external_match_id,
       match_id: @competitive_match.match_id,

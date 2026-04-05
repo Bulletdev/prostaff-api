@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Represents a recurring time slot when an organization is available for scrims.
 class AvailabilityWindow < ApplicationRecord
   include OrganizationScoped
 
@@ -47,6 +50,7 @@ class AvailabilityWindow < ApplicationRecord
 
   def end_hour_after_start_hour
     return unless start_hour.present? && end_hour.present?
+
     errors.add(:end_hour, 'must be after start hour') if end_hour <= start_hour
   end
 end

@@ -10,7 +10,7 @@ module AuthSchemaInitializer
       @created = false
     end
 
-    def ensure_schema!
+    def ensure_schema! # rubocop:disable Metrics/MethodLength
       return if @created
 
       @mutex.synchronize do

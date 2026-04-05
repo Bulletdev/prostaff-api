@@ -85,7 +85,7 @@ module Players
         EXPORT_FIELDS.map { |field| export_field_value(stat, field) }
       end
 
-      def export_field_value(stat, field)
+      def export_field_value(stat, field) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         case field
         when 'match_date' then stat.match&.game_start&.strftime('%Y-%m-%d')
         when 'patch_version' then stat.match&.game_version

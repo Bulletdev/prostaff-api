@@ -16,7 +16,7 @@ module Competitive
       # @param picks [Array<String>] Champion names
       # @param patch [String, nil] Patch version
       # @return [Float] Meta score (0-100)
-      def calculate_meta_score(picks, patch)
+      def calculate_meta_score(picks, patch) # rubocop:disable Metrics/AbcSize
         return 0 if picks.blank?
 
         # Get recent pro matches

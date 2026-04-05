@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
   def up
     # Enable RLS on organization-scoped tables
@@ -415,3 +416,5 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     execute "DROP POLICY IF EXISTS #{policy_name} ON #{table_name};"
   end
 end
+
+# rubocop:enable Metrics/ClassLength

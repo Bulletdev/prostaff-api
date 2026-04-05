@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :trial do
   desc 'Expire organizations with expired trials'
   task expire: :environment do
@@ -77,3 +78,4 @@ namespace :trial do
     end
   end
 end
+# rubocop:enable Metrics/BlockLength

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-namespace :search do
-  # Lazily evaluated — models are only referenced after :environment loads Rails
-  SEARCHABLE_MODELS_PROC = -> { [Player, Organization, ScoutingTarget, OpponentTeam, SupportFaq] }
+# Lazily evaluated — models are only referenced after :environment loads Rails
+SEARCHABLE_MODELS_PROC = -> { [Player, Organization, ScoutingTarget, OpponentTeam, SupportFaq] }
 
+namespace :search do
   desc 'Configure Meilisearch index settings and reindex all searchable models'
   task reindex: :environment do
     unless MEILISEARCH_CLIENT

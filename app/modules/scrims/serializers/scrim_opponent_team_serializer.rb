@@ -16,7 +16,7 @@ class ScrimOpponentTeamSerializer
 
   private
 
-  def base_attributes
+  def base_attributes # rubocop:disable Metrics/MethodLength
     {
       id: @opponent_team.id,
       name: @opponent_team.name,

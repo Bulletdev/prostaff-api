@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddGamesAndDraftTypeToScrimRequests < ActiveRecord::Migration[7.2]
   def change
     add_column :scrim_requests, :games_planned, :integer, default: 3

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :db do
   desc 'Test database connection and RLS status'
   task test_connection: :environment do
@@ -86,3 +87,4 @@ namespace :db do
     puts '=' * 80
   end
 end
+# rubocop:enable Metrics/BlockLength

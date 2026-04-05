@@ -114,7 +114,7 @@ class ChampionPool < ApplicationRecord
     player.role
   end
 
-  def update_stats!(new_game_won:, new_kda: nil, new_cs_per_min: nil, new_damage_share: nil)
+  def update_stats!(new_game_won:, new_kda: nil, new_cs_per_min: nil, new_damage_share: nil) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     self.games_played += 1
     self.games_won += 1 if new_game_won
     self.last_played = Time.current

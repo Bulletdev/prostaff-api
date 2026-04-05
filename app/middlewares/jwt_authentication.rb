@@ -32,7 +32,7 @@ class JwtAuthentication
 
   private
 
-  def authenticate_request(env)
+  def authenticate_request(env) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     request = Rack::Request.new(env)
 
     # Skip authentication for certain paths

@@ -25,7 +25,7 @@ module ApplicationCable
 
     private
 
-    def find_verified_user
+    def find_verified_user # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       token = request.params[:token]
 
       reject_unauthorized_connection if token.blank?

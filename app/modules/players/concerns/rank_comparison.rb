@@ -12,6 +12,7 @@
 #   should_update_peak?(entity, new_tier, new_rank)
 module Players
   module Concerns
+    # Utilities for comparing League of Legends ranks and determining peak rank updates.
     module RankComparison
       extend ActiveSupport::Concern
 

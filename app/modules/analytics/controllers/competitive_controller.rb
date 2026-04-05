@@ -165,7 +165,7 @@ module Analytics
         end
       end
 
-      def build_role_performance(rows)
+      def build_role_performance(rows) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         roles      = %w[top jungle mid adc support]
         role_stats = roles.each_with_object({}) do |r, h|
           h[r] = { games: 0, wins: 0, champions: Hash.new(0) }

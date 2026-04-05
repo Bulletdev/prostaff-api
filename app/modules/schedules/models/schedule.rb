@@ -133,14 +133,6 @@ class Schedule < ApplicationRecord
     update!(status: 'ongoing')
   end
 
-  private
-
-  def end_time_after_start_time
-    return unless start_time && end_time
-
-    errors.add(:end_time, 'must be after start time') if end_time <= start_time
-  end
-
   # Map frontend aliases to canonical backend values before validation
   STATUS_ALIASES = {
     'in_progress' => 'ongoing',
@@ -148,6 +140,14 @@ class Schedule < ApplicationRecord
     'done' => 'completed',
     'finished' => 'completed'
   }.freeze
+
+  private
+
+  def end_time_after_start_time
+    return unless start_time && end_time
+
+    errors.add(:end_time, 'must be after start time') if end_time <= start_time
+  end
 
   def normalize_status
     self.status = STATUS_ALIASES.fetch(status, status) if status.present?

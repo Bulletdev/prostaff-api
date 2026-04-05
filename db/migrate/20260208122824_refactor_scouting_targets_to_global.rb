@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class RefactorScoutingTargetsToGlobal < ActiveRecord::Migration[7.1]
-  def up
+  def up # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     # Step 1: Migrate data from scouting_targets to watchlists
     # This must happen BEFORE we drop the organization_id column
     migrate_to_watchlists
@@ -217,3 +218,5 @@ class RefactorScoutingTargetsToGlobal < ActiveRecord::Migration[7.1]
     execute 'SET row_security = on;'
   end
 end
+
+# rubocop:enable Metrics/ClassLength
