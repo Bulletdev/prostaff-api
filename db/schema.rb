@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_05_130001) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_05_200002) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -223,6 +223,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_130001) do
     t.integer "wins", default: 0, null: false
     t.integer "losses", default: 0, null: false
     t.boolean "is_captain", default: false, null: false
+    t.string "role"
+    t.float "mu_snapshot"
+    t.float "sigma_snapshot"
+    t.integer "mmr_delta"
     t.index ["inhouse_id", "player_id"], name: "index_inhouse_participations_on_inhouse_id_and_player_id", unique: true
     t.index ["inhouse_id"], name: "index_inhouse_participations_on_inhouse_id"
     t.index ["player_id"], name: "index_inhouse_participations_on_player_id"
@@ -418,6 +422,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_130001) do
     t.index ["token"], name: "index_password_reset_tokens_on_token", unique: true
     t.index ["user_id", "used_at"], name: "index_password_reset_tokens_on_user_id_and_used_at"
     t.index ["user_id"], name: "index_password_reset_tokens_on_user_id"
+  end
+
+  create_table "player_inhouse_ratings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "player_id", null: false
+    t.uuid "organization_id", null: false
+    t.string "role", null: false
+    t.float "mu", default: 25.0, null: false
+    t.float "sigma", default: 8.333333333333334, null: false
+    t.integer "games_played", default: 0, null: false
+    t.integer "wins", default: 0, null: false
+    t.integer "losses", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "role"], name: "index_player_inhouse_ratings_on_organization_id_and_role"
+    t.index ["organization_id"], name: "index_player_inhouse_ratings_on_organization_id"
+    t.index ["player_id", "role"], name: "index_player_inhouse_ratings_on_player_id_and_role", unique: true
+    t.index ["player_id"], name: "index_player_inhouse_ratings_on_player_id"
   end
 
   create_table "player_match_stats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -976,6 +997,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_130001) do
   add_foreign_key "messages", "users", column: "recipient_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "password_reset_tokens", "users"
+  add_foreign_key "player_inhouse_ratings", "organizations"
+  add_foreign_key "player_inhouse_ratings", "players"
   add_foreign_key "player_match_stats", "matches"
   add_foreign_key "player_match_stats", "players"
   add_foreign_key "players", "organizations"

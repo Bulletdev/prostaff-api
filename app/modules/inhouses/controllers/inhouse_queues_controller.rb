@@ -200,12 +200,13 @@ module Inhouses
             formation_mode: formation_mode
           )
 
-          # Join all checked-in players
+          # Join all checked-in players, preserving their queued role
           entries.each do |entry|
             inhouse.inhouse_participations.create!(
               player: entry.player,
               team: 'none',
               tier_snapshot: entry.tier_snapshot,
+              role: entry.role,
               is_captain: false
             )
           end
@@ -409,7 +410,11 @@ module Inhouses
               player_id: p.player_id,
               player_name: p.player&.summoner_name,
               team: p.team,
+              role: p.role,
               tier_snapshot: p.tier_snapshot,
+              mu_snapshot: p.mu_snapshot,
+              sigma_snapshot: p.sigma_snapshot,
+              mmr_delta: p.mmr_delta,
               is_captain: p.is_captain,
               wins: p.wins,
               losses: p.losses
