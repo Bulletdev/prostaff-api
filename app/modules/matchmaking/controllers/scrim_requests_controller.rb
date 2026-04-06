@@ -78,6 +78,7 @@ module Matchmaking
         )
 
         if request.save
+          DiscordDmService.notify_new_invite(request)
           render_created({ scrim_request: ScrimRequestSerializer.render_as_hash(request) },
                          message: 'Scrim request sent')
         else
@@ -158,8 +159,12 @@ module Matchmaking
 
       def notify_discord(event, scrim_request)
         case event
-        when :accepted then DiscordNotificationService.notify_accepted(scrim_request)
-        when :declined then DiscordNotificationService.notify_declined(scrim_request)
+        when :accepted
+          DiscordNotificationService.notify_accepted(scrim_request)
+          DiscordDmService.notify_accepted(scrim_request)
+        when :declined
+          DiscordNotificationService.notify_declined(scrim_request)
+          DiscordDmService.notify_declined(scrim_request)
         end
       rescue StandardError => e
         Rails.logger.warn "[DiscordNotification] Failed to notify #{event}: #{e.message}"

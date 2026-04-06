@@ -97,7 +97,7 @@ module Api
       private
 
       def profile_params
-        params.require(:user).permit(:full_name, :email, :avatar_url, :timezone, :language)
+        params.require(:user).permit(:full_name, :email, :avatar_url, :timezone, :language, :discord_user_id)
       end
 
       def notification_params

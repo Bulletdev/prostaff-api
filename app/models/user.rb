@@ -27,6 +27,10 @@ class User < ApplicationRecord
   validates :role, presence: true, inclusion: { in: Constants::User::ROLES }
   validates :timezone, length: { maximum: 100 }
   validates :language, length: { maximum: 10 }
+  validates :discord_user_id,
+            uniqueness: { allow_blank: true },
+            format: { with: /\A\d{17,20}\z/, message: 'must be a valid Discord user ID (17–20 digits)',
+                      allow_blank: true }
   validates :password,
             length: { minimum: 8, message: 'must be at least 8 characters' },
             format: {

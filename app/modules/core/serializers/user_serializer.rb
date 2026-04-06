@@ -6,8 +6,8 @@ class UserSerializer < Blueprinter::Base
   identifier :id
 
   fields :email, :full_name, :role, :avatar_url, :timezone, :language,
-         :notifications_enabled, :notification_preferences, :last_login_at,
-         :created_at, :updated_at
+         :notifications_enabled, :notification_preferences, :discord_user_id,
+         :last_login_at, :created_at, :updated_at
 
   field :role_display do |user|
     user.full_role_name
