@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_06_100001) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_06_200002) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -762,6 +762,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_100001) do
     t.index ["target_organization_id"], name: "index_scrim_requests_on_target_organization_id"
   end
 
+  create_table "scrim_result_reports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "scrim_request_id", null: false
+    t.uuid "organization_id", null: false
+    t.string "game_outcomes", default: [], array: true
+    t.string "status", default: "pending", null: false
+    t.integer "attempt_count", default: 0, null: false
+    t.datetime "reported_at"
+    t.datetime "deadline_at", null: false
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_scrim_result_reports_on_organization_id"
+    t.index ["scrim_request_id", "organization_id"], name: "idx_scrim_result_reports_unique_per_org", unique: true
+    t.index ["scrim_request_id"], name: "index_scrim_result_reports_on_scrim_request_id"
+  end
+
   create_table "scrims", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "match_id"
@@ -1070,6 +1086,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_100001) do
   add_foreign_key "scrim_messages", "users"
   add_foreign_key "scrim_requests", "organizations", column: "requesting_organization_id"
   add_foreign_key "scrim_requests", "organizations", column: "target_organization_id"
+  add_foreign_key "scrim_result_reports", "organizations"
+  add_foreign_key "scrim_result_reports", "scrim_requests"
   add_foreign_key "scrims", "matches"
   add_foreign_key "scrims", "opponent_teams"
   add_foreign_key "scrims", "organizations"
