@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_06_200002) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_06_300001) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -982,6 +982,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_200002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "supabase_uid"
+    t.string "discord_user_id"
+    t.index ["discord_user_id"], name: "index_users_on_discord_user_id", unique: true, where: "(discord_user_id IS NOT NULL)"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["role"], name: "index_users_on_role"

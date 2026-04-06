@@ -57,6 +57,12 @@ Rails.application.routes.draw do
         get 'me', to: '/authentication/controllers/auth#me'
       end
 
+      # Organization settings (for current user's org)
+      scope 'organizations/:id', as: 'organization' do
+        patch '', to: 'organizations#update', as: 'update'
+        post 'logo', to: 'organizations#upload_logo', as: 'logo'
+      end
+
       # Profile -- stays in api/v1
       scope :profile do
         get '', to: 'profile#show'
