@@ -285,6 +285,9 @@ Rails.application.routes.draw do
             get :calendar
             get :analytics
           end
+          resources :messages, only: %i[index destroy],
+                               controller: '/scrims/controllers/scrim_messages',
+                               as: :scrim_messages
         end
 
         resources :opponent_teams, path: 'opponent-teams',

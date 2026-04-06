@@ -39,6 +39,7 @@ class Scrim < ApplicationRecord
   belongs_to :organization
   belongs_to :match, optional: true
   belongs_to :opponent_team, optional: true
+  has_many :scrim_messages, dependent: :destroy
 
   # Validations
   validates :scrim_type, inclusion: {

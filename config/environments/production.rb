@@ -112,6 +112,14 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
 
   config.active_record.dump_schema_after_migration = false
 
+  # ActionCable — allow WebSocket connections from the frontend origin.
+  # FRONTEND_URL must be set in the environment (e.g. https://app.prostaff.gg).
+  config.action_cable.allowed_request_origins = [
+    ENV.fetch('FRONTEND_URL', 'https://scrims.lol'),
+    'https://scrims.lol',
+    'https://www.scrims.lol'
+  ].compact
+
   # Remove X-Runtime header — vaza tempo de processamento, facilita timing attacks
   config.middleware.delete(Rack::Runtime)
 
