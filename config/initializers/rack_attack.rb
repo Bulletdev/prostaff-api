@@ -36,9 +36,12 @@ module Rack
       ['/sitemap.xml', '/robots.txt'].include?(req.path)
     end
 
-    # Allow localhost in development and test environments
+    # Allow localhost and Docker bridge in development and test environments
     safelist('allow from localhost') do |req|
-      (Rails.env.development? || Rails.env.test?) && ['127.0.0.1', '::1'].include?(req.ip)
+      next false unless Rails.env.development? || Rails.env.test?
+
+      ip = req.ip.to_s
+      ip == '127.0.0.1' || ip == '::1' || ip.start_with?('172.18.', '172.17.')
     end
 
     # Block known malicious bots and scrapers
@@ -73,8 +76,8 @@ module Rack
       req.ip if req.path == '/api/v1/auth/login' && req.post?
     end
 
-    # Throttle registration
-    throttle('register/ip', limit: 3, period: 1.hour) do |req|
+    # Throttle registration — 10/hour per IP to allow shared NAT (office, household)
+    throttle('register/ip', limit: 10, period: 1.hour) do |req|
       req.ip if req.path == '/api/v1/auth/register' && req.post?
     end
 

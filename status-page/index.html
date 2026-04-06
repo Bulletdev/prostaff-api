@@ -508,6 +508,71 @@
       margin-bottom: 8px;
     }
 
+    .incident-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .incident-severity {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 7px;
+      border-radius: 2px;
+      border: 1px solid;
+    }
+    .incident-severity.minor    { color: var(--yellow);  border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
+    .incident-severity.major    { color: var(--orange);  border-color: rgba(249,115,22,0.4);  background: rgba(249,115,22,0.08); }
+    .incident-severity.critical { color: var(--red);     border-color: rgba(255,68,68,0.4);   background: rgba(255,68,68,0.08); }
+
+    .incident-status-badge {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 7px;
+      border-radius: 2px;
+      border: 1px solid rgba(200,155,60,0.3);
+      color: var(--gold);
+      background: rgba(200,155,60,0.06);
+    }
+    .incident-status-badge.resolved { color: var(--green); border-color: rgba(0,211,100,0.3); background: rgba(0,211,100,0.06); }
+
+    .incident-components {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .incident-component-pill {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 1px 6px;
+      border-radius: 2px;
+      border: 1px solid rgba(5,150,170,0.3);
+      color: var(--teal);
+      background: rgba(5,150,170,0.06);
+    }
+
+    .incident-time {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .incident-body {
+      font-size: 11px;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
     .incident-update {
       padding: 6px 0 6px 12px;
       border-left: 2px solid var(--gold-faint);
@@ -516,6 +581,28 @@
     .incident-update-status { font-size: 10px; font-weight: bold; color: var(--teal); text-transform: uppercase; letter-spacing: 0.08em; }
     .incident-update-body   { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
     .incident-update-time   { font-size: 9px;  color: var(--text-dim); margin-top: 2px; letter-spacing: 0.04em; }
+
+    .incident-postmortem {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(200,155,60,0.2);
+      background: rgba(200,155,60,0.04);
+      border-radius: 2px;
+    }
+    .incident-postmortem-label {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .incident-postmortem-body {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
 
     /* ── Skeleton ─────────────────────────────────────────────────── */
     .skeleton {
@@ -944,21 +1031,30 @@
 
   function statusLabel(s) { return STATUS_LABELS[s] || s; }
 
-  function generateUptimeBars(componentStatus) {
+  function buildUptimeBars(historyForComponent) {
+    const byDate = {};
+    if (Array.isArray(historyForComponent)) {
+      historyForComponent.forEach(entry => { byDate[entry.date] = entry; });
+    }
+
     const bars = [];
     const today = new Date();
     for (let i = 89; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      let cls = 'operational';
-      const rand = Math.random();
-      if (componentStatus !== 'operational' && i === 0) {
-        cls = componentStatus === 'major_outage' ? 'outage'
-            : componentStatus === 'partial_outage' ? 'partial'
-            : componentStatus === 'degraded_performance' ? 'degraded'
-            : 'operational';
-      } else if (rand < 0.01) { cls = 'degraded'; }
-      bars.push({ date: d, cls });
+      const dateStr = d.toISOString().split('T')[0];
+      const entry = byDate[dateStr];
+
+      let cls = 'no-data';
+      let uptime = null;
+      if (entry) {
+        uptime = entry.uptime_pct;
+        if (uptime >= 99.9)      cls = 'operational';
+        else if (uptime >= 95.0) cls = 'degraded';
+        else if (uptime >= 50.0) cls = 'partial';
+        else                     cls = 'outage';
+      }
+      bars.push({ date: d, cls, uptime });
     }
     return bars;
   }
@@ -966,12 +1062,16 @@
   function renderBars(bars) {
     return bars.map(b => {
       const label = b.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      return `<div class="uptime-bar ${b.cls}" title="${label}"></div>`;
+      const tip = b.uptime !== null ? `${label} — ${b.uptime.toFixed(2)}% uptime` : `${label} — No data`;
+      return `<div class="uptime-bar ${b.cls}" title="${tip}"></div>`;
     }).join('');
   }
 
   function uptimePct(bars) {
-    return ((bars.filter(b => b.cls === 'operational').length / bars.length) * 100).toFixed(2) + '%';
+    const withData = bars.filter(b => b.uptime !== null);
+    if (withData.length === 0) return 'No data yet';
+    const avg = withData.reduce((sum, b) => sum + b.uptime, 0) / withData.length;
+    return avg.toFixed(2) + '% uptime';
   }
 
   function renderBanner(data) {
@@ -1010,30 +1110,40 @@
     document.getElementById('updatedAt').textContent = 'Last updated ' + updatedAt;
   }
 
-  function renderComponents(components) {
+  function renderComponents(components, uptimeHistory) {
     document.getElementById('componentCount').textContent =
       `${components.length} component${components.length !== 1 ? 's' : ''}`;
 
     document.getElementById('componentList').innerHTML = components.map(c => {
-      const bars = generateUptimeBars(c.status);
+      const history = uptimeHistory && uptimeHistory[c.id] ? uptimeHistory[c.id] : [];
+      const bars = buildUptimeBars(history);
+      const rtLabel = c.response_time_ms != null ? ` \u2014 ${c.response_time_ms}ms` : '';
       return `
         <div class="component-row">
           <div class="component-header">
             <div class="component-name">
               ${c.name}
-              ${c.description ? `<span class="component-description">${c.description}</span>` : ''}
+              ${c.description ? `<span class="component-description">${c.description}${rtLabel}</span>` : ''}
             </div>
             <span class="status-badge ${c.status}">${statusLabel(c.status)}</span>
           </div>
           <div class="uptime-bars">${renderBars(bars)}</div>
           <div class="uptime-meta">
             <span>90 days ago</span>
-            <span class="uptime-pct">${uptimePct(bars)} uptime</span>
+            <span class="uptime-pct">${uptimePct(bars)}</span>
             <span>Today</span>
           </div>
         </div>
       `;
     }).join('');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+    });
   }
 
   function renderIncidents(incidents) {
@@ -1049,14 +1159,44 @@
 
     noInc.style.display = 'none';
     list.innerHTML = incidents.map(incident => {
-      const updates = (incident.incident_updates || []).map(u => `
+      const components = (incident.affected_components || []).map(c =>
+        `<span class="incident-component-pill">${c}</span>`
+      ).join('');
+
+      const updates = (incident.updates || []).map(u => `
         <div class="incident-update">
           <div class="incident-update-status">${u.status || 'Update'}</div>
           <div class="incident-update-body">${u.body || ''}</div>
-          <div class="incident-update-time">${u.updated_at ? new Date(u.updated_at).toLocaleString() : ''}</div>
+          <div class="incident-update-time">${fmtDate(u.created_at)}</div>
         </div>
       `).join('');
-      return `<div class="incident-card"><div class="incident-title">${incident.name || 'Incident'}</div>${updates}</div>`;
+
+      const postmortem = incident.postmortem ? `
+        <div class="incident-postmortem">
+          <div class="incident-postmortem-label">Post-Incident Analysis</div>
+          <div class="incident-postmortem-body">${incident.postmortem}</div>
+        </div>
+      ` : '';
+
+      const resolvedLine = incident.resolved_at
+        ? `<div class="incident-time">Resolved: ${fmtDate(incident.resolved_at)}</div>`
+        : '';
+
+      return `
+        <div class="incident-card">
+          <div class="incident-title">${incident.title || 'Incident'}</div>
+          <div class="incident-meta">
+            <span class="incident-severity ${incident.severity || 'minor'}">${incident.severity || 'minor'}</span>
+            <span class="incident-status-badge ${incident.status === 'resolved' ? 'resolved' : ''}">${incident.status || ''}</span>
+          </div>
+          ${components ? `<div class="incident-components">${components}</div>` : ''}
+          <div class="incident-time">Started: ${fmtDate(incident.started_at)}</div>
+          ${resolvedLine}
+          <div class="incident-body">${incident.body || ''}</div>
+          ${updates}
+          ${postmortem}
+        </div>
+      `;
     }).join('');
   }
 
@@ -1066,7 +1206,7 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       renderBanner(data);
-      renderComponents(data.components || []);
+      renderComponents(data.components || [], data.uptime_history || {});
       renderIncidents(data.incidents || []);
     } catch (err) {
       console.error('Failed to fetch status:', err);
