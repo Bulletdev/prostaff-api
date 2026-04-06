@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_05_200002) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_06_000002) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -778,6 +778,43 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_200002) do
     t.index ["source"], name: "index_scrims_on_source"
   end
 
+  create_table "status_incident_updates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "status_incident_id", null: false
+    t.string "status", null: false
+    t.text "body", null: false
+    t.uuid "created_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status_incident_id"], name: "index_status_incident_updates_on_status_incident_id"
+  end
+
+  create_table "status_incidents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "title", null: false
+    t.text "body", null: false
+    t.string "severity", default: "minor", null: false
+    t.string "status", default: "investigating", null: false
+    t.string "affected_components", default: [], null: false, array: true
+    t.datetime "started_at", null: false
+    t.datetime "resolved_at"
+    t.text "postmortem"
+    t.uuid "created_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["severity"], name: "index_status_incidents_on_severity"
+    t.index ["started_at"], name: "index_status_incidents_on_started_at"
+    t.index ["status"], name: "index_status_incidents_on_status"
+  end
+
+  create_table "status_snapshots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "component", null: false
+    t.string "status", null: false
+    t.integer "response_time_ms"
+    t.datetime "checked_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["component", "checked_at"], name: "index_status_snapshots_on_component_and_checked_at"
+  end
+
   create_table "support_faqs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "question", null: false
     t.text "answer", null: false
@@ -1018,6 +1055,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_05_200002) do
   add_foreign_key "scrims", "matches"
   add_foreign_key "scrims", "opponent_teams"
   add_foreign_key "scrims", "organizations"
+  add_foreign_key "status_incident_updates", "status_incidents"
+  add_foreign_key "status_incident_updates", "users", column: "created_by_user_id"
+  add_foreign_key "status_incidents", "users", column: "created_by_user_id"
   add_foreign_key "support_ticket_messages", "support_tickets"
   add_foreign_key "support_ticket_messages", "users"
   add_foreign_key "support_tickets", "organizations"

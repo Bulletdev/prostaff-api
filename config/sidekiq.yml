@@ -52,9 +52,9 @@
     queue: low_priority
     description: 'Rebuild AI champion matrices and vectors nightly'
 
-  # Additional scheduled jobs can be added here
-  # Example:
-  # sync_riot_data:
-  #   every: '30m'
-  #   class: SyncRiotDataJob
-  #   description: 'Sync player data from Riot API'
+  # Record component health snapshots every 5 minutes for uptime history
+  status_snapshot:
+    cron: '*/5 * * * *'
+    class: StatusSnapshotJob
+    queue: default
+    description: 'Record component health snapshots for uptime history'

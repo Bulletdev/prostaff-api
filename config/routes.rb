@@ -139,6 +139,14 @@ Rails.application.routes.draw do
         # Audit Logs
         resources :audit_logs, only: [:index], path: 'audit-logs',
                                controller: '/admin/controllers/audit_logs'
+
+        # Status Incidents
+        resources :status_incidents, path: 'status/incidents',
+                                     controller: '/admin/controllers/status_incidents' do
+          member do
+            post :updates, action: :add_update
+          end
+        end
       end
 
       # Monitoring (admin-only observability) -- stays in api/v1

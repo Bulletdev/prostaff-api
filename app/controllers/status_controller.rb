@@ -1,12 +1,24 @@
 # frozen_string_literal: true
 
 # Public status page endpoint returning component health in Statuspage-compatible JSON.
+# No authentication required — this endpoint is consumed by status.prostaff.gg.
 class StatusController < ActionController::API
   skip_before_action :verify_authenticity_token, raise: false
 
+  COMPONENT_META = {
+    'api' => { name: 'API', description: 'Core REST API services' },
+    'database' => { name: 'Database', description: 'PostgreSQL primary database' },
+    'redis' => { name: 'Cache & Background Jobs', description: 'Redis cache and Sidekiq queue processor' },
+    'websocket' => { name: 'Real-time (WebSocket)', description: 'ActionCable WebSocket connections' },
+    'sidekiq' => { name: 'Background Jobs (Sidekiq)', description: 'Async job processing' },
+    'riot_api' => { name: 'Riot API Integration', description: 'Riot Games data synchronization' }
+  }.freeze
+
   def index
-    components = build_component_statuses
-    overall_indicator, overall_description = overall_status(components)
+    components    = build_component_statuses
+    incidents     = build_incidents
+    uptime        = build_uptime_history
+    indicator, description = overall_status(components)
 
     render json: {
       page: {
@@ -17,91 +29,119 @@ class StatusController < ActionController::API
         updated_at: Time.current.iso8601
       },
       status: {
-        indicator: overall_indicator,
-        description: overall_description
+        indicator: indicator,
+        description: description
       },
       components: components,
-      incidents: []
+      incidents: incidents,
+      uptime_history: uptime
     }, status: :ok
   end
 
   private
 
   def build_component_statuses
-    [
-      api_component,
-      database_component,
-      redis_component,
-      websocket_component,
-      riot_api_component
-    ]
-  end
+    StatusIncident::COMPONENTS.map do |component|
+      snapshot = StatusSnapshot.for_component(component).order(checked_at: :desc).first
 
-  def api_component
-    {
-      id: 'api',
-      name: 'API',
-      status: 'operational',
-      description: 'Core REST API services',
-      updated_at: Time.current.iso8601
-    }
-  end
-
-  def database_component
-    begin
-      ActiveRecord::Base.connection.execute('SELECT 1')
-      status = 'operational'
-    rescue StandardError => e
-      Rails.logger.error "Status check DB error: #{e.message}"
-      status = 'major_outage'
+      if snapshot
+        build_component_from_snapshot(component, snapshot)
+      else
+        build_component_live(component)
+      end
     end
+  end
+
+  def build_component_from_snapshot(component, snapshot)
+    meta = COMPONENT_META[component]
+    {
+      id: component,
+      name: meta[:name],
+      status: snapshot.status,
+      description: meta[:description],
+      response_time_ms: snapshot.response_time_ms,
+      last_checked_at: snapshot.checked_at.iso8601,
+      updated_at: snapshot.updated_at.iso8601
+    }
+  end
+
+  def build_component_live(component)
+    meta   = COMPONENT_META[component]
+    result = live_check(component)
 
     {
-      id: 'database',
-      name: 'Database',
-      status: status,
-      description: 'PostgreSQL primary database',
+      id: component,
+      name: meta[:name],
+      status: result[:status],
+      description: meta[:description],
+      response_time_ms: result[:response_time_ms],
+      last_checked_at: Time.current.iso8601,
       updated_at: Time.current.iso8601
     }
   end
 
-  def redis_component
-    begin
-      redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'))
-      redis.ping
-      status = 'operational'
-    rescue StandardError => e
-      Rails.logger.error "Status check Redis error: #{e.message}"
-      status = 'major_outage'
+  def live_check(component)
+    case component
+    when 'api'      then live_check_api
+    when 'database' then live_check_database
+    when 'redis'    then live_check_redis
+    else                 { status: 'operational', response_time_ms: nil }
     end
+  end
 
+  def live_check_api
+    { status: 'operational', response_time_ms: nil }
+  end
+
+  def live_check_database
+    ActiveRecord::Base.connection.execute('SELECT 1')
+    { status: 'operational', response_time_ms: nil }
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] Live DB check error: #{e.message}")
+    { status: 'major_outage', response_time_ms: nil }
+  end
+
+  def live_check_redis
+    Sidekiq.redis(&:ping)
+    { status: 'operational', response_time_ms: nil }
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] Live Redis check error: #{e.message}")
+    { status: 'major_outage', response_time_ms: nil }
+  end
+
+  def build_incidents
+    StatusIncident.active.recent.includes(:updates).limit(10).map do |incident|
+      serialize_incident(incident)
+    end
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] Failed to load incidents: #{e.message}")
+    []
+  end
+
+  def serialize_incident(incident)
     {
-      id: 'redis',
-      name: 'Cache & Background Jobs',
-      status: status,
-      description: 'Redis cache and Sidekiq queue processor',
-      updated_at: Time.current.iso8601
+      id: incident.id,
+      title: incident.title,
+      body: incident.body,
+      severity: incident.severity,
+      status: incident.status,
+      affected_components: incident.affected_components,
+      started_at: incident.started_at.iso8601,
+      resolved_at: incident.resolved_at&.iso8601,
+      postmortem: incident.postmortem,
+      updates: incident.updates.order(created_at: :desc).map do |u|
+        { id: u.id, status: u.status, body: u.body, created_at: u.created_at.iso8601 }
+      end
     }
   end
 
-  def websocket_component
-    {
-      id: 'websocket',
-      name: 'Real-time (WebSocket)',
-      status: 'operational',
-      description: 'ActionCable WebSocket connections',
-      updated_at: Time.current.iso8601
-    }
-  end
-
-  def riot_api_component
-    {
-      id: 'riot_api',
-      name: 'Riot API Integration',
-      status: 'operational',
-      description: 'Riot Games data synchronization',
-      updated_at: Time.current.iso8601
-    }
+  def build_uptime_history
+    StatusIncident::COMPONENTS.each_with_object({}) do |component, hash|
+      hash[component] = StatusSnapshot.uptime_by_day(component: component, days: 90)
+    end
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] Failed to build uptime history: #{e.message}")
+    {}
   end
 
   def overall_status(components)
