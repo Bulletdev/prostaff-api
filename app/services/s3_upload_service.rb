@@ -56,14 +56,28 @@ class S3UploadService
   # Generate a pre-signed GET URL for a stored object
   #
   # @param key [String] the S3 object key
-  # @param expires_in [Integer] expiry in seconds
+  # @param expires_in [Integer] expiry in seconds (max 604800 for AWS S3 Signature V4)
   # @return [String] signed URL
   def signed_url(key, expires_in: SIGNED_URL_EXPIRY)
+    # AWS S3 Signature V4 caps at 7 days; clamp to be safe
+    capped = [expires_in, 604_800].min
     signer = Aws::S3::Presigner.new(client: @client)
-    signer.presigned_url(:get_object, bucket: @bucket, key: key, expires_in: expires_in)
+    signer.presigned_url(:get_object, bucket: @bucket, key: key, expires_in: capped)
   rescue StandardError => e
     Rails.logger.error("[S3UploadService] Failed to generate signed URL for #{key}: #{e.message}")
     nil
+  end
+
+  # Build a permanent public URL for the object (requires the bucket to allow public access).
+  # Supabase format: {project_base}/storage/v1/object/public/{bucket}/{key}
+  #
+  # @param key [String] the S3 object key
+  # @return [String] public URL
+  def public_url(key)
+    # Strip the S3 path suffix to get the project base URL
+    # SUPABASE_S3_ENDPOINT = https://xxx.storage.supabase.co/storage/v1/s3
+    base = ENV.fetch('SUPABASE_S3_ENDPOINT').sub(%r{/s3\z}, '')
+    "#{base}/object/public/#{@bucket}/#{key}"
   end
 
   private

@@ -39,9 +39,8 @@ module Api
 
         service = S3UploadService.new
         result = service.upload(file, prefix: "orgs/#{@organization.id}/logo")
-        logo_url = service.signed_url(result[:key], expires_in: 365 * 24 * 3600)
+        logo_url = service.public_url(result[:key])
 
-        # Store the key so we can regenerate the URL later; expose via signed URL now
         @organization.update!(logo_url: logo_url)
 
         render json: {
