@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_06_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_06_100001) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -724,6 +724,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_000002) do
     t.index ["status"], name: "index_scouting_watchlists_on_status"
   end
 
+  create_table "scrim_messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "scrim_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "organization_id", null: false
+    t.text "content", null: false
+    t.boolean "deleted", default: false, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_scrim_messages_on_organization_id"
+    t.index ["scrim_id", "created_at"], name: "index_scrim_messages_on_scrim_id_and_created_at"
+    t.index ["scrim_id"], name: "index_scrim_messages_on_scrim_id"
+    t.index ["user_id"], name: "index_scrim_messages_on_user_id"
+  end
+
   create_table "scrim_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "requesting_organization_id", null: false
     t.uuid "target_organization_id", null: false
@@ -1050,6 +1065,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_000002) do
   add_foreign_key "scouting_watchlists", "scouting_targets"
   add_foreign_key "scouting_watchlists", "users", column: "added_by_id"
   add_foreign_key "scouting_watchlists", "users", column: "assigned_to_id"
+  add_foreign_key "scrim_messages", "organizations"
+  add_foreign_key "scrim_messages", "scrims"
+  add_foreign_key "scrim_messages", "users"
   add_foreign_key "scrim_requests", "organizations", column: "requesting_organization_id"
   add_foreign_key "scrim_requests", "organizations", column: "target_organization_id"
   add_foreign_key "scrims", "matches"

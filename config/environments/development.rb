@@ -76,6 +76,13 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
 
   config.assets.quiet = true if defined?(config.assets)
 
+  # ActionCable — allow frontend dev origins
+  config.action_cable.allowed_request_origins = [
+    'http://localhost:4444',
+    'http://127.0.0.1:4444',
+    %r{http://localhost.*}
+  ]
+
   # ActiveJob configuration - use Sidekiq in development
   config.active_job.queue_adapter = :sidekiq
 

@@ -29,6 +29,30 @@ class DiscordWebhookService
     post_webhook(payload)
   end
 
+  # Posts a notification when a new scrim chat message is sent.
+  #
+  # @param scrim_message [ScrimMessage]
+  # @return [void]
+  def self.notify_new_message(scrim_message)
+    return unless WEBHOOK_URL.present?
+
+    payload = {
+      embeds: [{
+        title: "New message in scrim #{scrim_message.scrim_id}",
+        description: scrim_message.content.truncate(200),
+        color: 0x5865F2,
+        fields: [
+          { name: 'Author',       value: scrim_message.user.full_name,    inline: true },
+          { name: 'Organization', value: scrim_message.organization.name, inline: true }
+        ],
+        footer: { text: 'scrims.lol — powered by ProStaff.gg' },
+        timestamp: scrim_message.created_at.iso8601
+      }]
+    }
+
+    post_webhook(payload)
+  end
+
   def self.post_webhook(payload)
     conn = Faraday.new(url: WEBHOOK_URL) do |f|
       f.request :json
