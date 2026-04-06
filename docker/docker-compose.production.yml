@@ -163,7 +163,7 @@ services:
     networks:
       - coolify
     expose:
-      - "80"
+      - "8080"
     labels:
       - coolify.managed=true
       - coolify.applicationId=1
@@ -177,7 +177,7 @@ services:
       - traefik.http.routers.prostaff-status.tls.certresolver=letsencrypt
 
       # Service
-      - traefik.http.services.prostaff-status.loadbalancer.server.port=80
+      - traefik.http.services.prostaff-status.loadbalancer.server.port=8080
       - traefik.http.services.prostaff-status.loadbalancer.server.scheme=http
 
       # HTTP → HTTPS redirect (middleware próprio, independente do api)
@@ -191,7 +191,7 @@ services:
       # Network
       - traefik.docker.network=coolify
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -206,7 +206,7 @@ services:
     networks:
       - coolify
     expose:
-      - "80"
+      - "8080"
     labels:
       - coolify.managed=true
       - coolify.applicationId=1
@@ -220,7 +220,7 @@ services:
       - traefik.http.routers.prostaff-docs.tls.certresolver=letsencrypt
 
       # Service
-      - traefik.http.services.prostaff-docs.loadbalancer.server.port=80
+      - traefik.http.services.prostaff-docs.loadbalancer.server.port=8080
       - traefik.http.services.prostaff-docs.loadbalancer.server.scheme=http
 
       # HTTP → HTTPS redirect (middleware próprio, independente do api)
@@ -234,7 +234,7 @@ services:
       # Network
       - traefik.docker.network=coolify
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
