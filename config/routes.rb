@@ -288,6 +288,9 @@ Rails.application.routes.draw do
           resources :messages, only: %i[index destroy],
                                controller: '/scrims/controllers/scrim_messages',
                                as: :scrim_messages
+          resource :result, only: %i[show create],
+                            controller: '/scrims/controllers/scrim_result_reports',
+                            as: :scrim_result
         end
 
         resources :opponent_teams, path: 'opponent-teams',

@@ -45,6 +45,13 @@
     queue: low_priority
     description: 'Trigger historical backfill on scraper and sync matches to Rails DB'
 
+  # Request and expire scrim result reports daily at 10 AM UTC
+  scrim_result_reminders:
+    cron: '0 10 * * *'
+    class: ScrimResultReminderJob
+    queue: default
+    description: 'Initialize pending result reports, send deadline reminders, expire overdue reports'
+
   # Rebuild AI champion matrices and vectors nightly at 3 AM UTC
   rebuild_ai_matrices:
     cron: '0 3 * * *'
