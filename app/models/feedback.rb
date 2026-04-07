@@ -10,6 +10,7 @@
 class Feedback < ApplicationRecord
   CATEGORIES = %w[bug feature improvement performance other].freeze
   STATUSES   = %w[open in_review resolved closed].freeze
+  SOURCES    = %w[prostaff scrims].freeze
 
   belongs_to :user,         optional: true
   belongs_to :organization, optional: true
@@ -20,8 +21,10 @@ class Feedback < ApplicationRecord
   validates :description, presence: true, length: { maximum: 4000 }
   validates :rating,      inclusion: { in: 1..5 }, allow_nil: true
   validates :status,      inclusion: { in: STATUSES }
+  validates :source,      inclusion: { in: SOURCES }
 
-  scope :open,      -> { where(status: 'open') }
-  scope :recent,    -> { order(created_at: :desc) }
+  scope :open,        -> { where(status: 'open') }
+  scope :recent,      -> { order(created_at: :desc) }
   scope :by_category, ->(cat) { where(category: cat) }
+  scope :by_source,   ->(src) { where(source: src) }
 end

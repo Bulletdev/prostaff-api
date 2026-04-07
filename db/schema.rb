@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_07_100001) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_07_200001) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -207,8 +207,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_07_100001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "votes_count", default: 0, null: false
+    t.string "source", default: "prostaff", null: false
     t.index ["category"], name: "index_feedbacks_on_category"
     t.index ["organization_id"], name: "index_feedbacks_on_organization_id"
+    t.index ["source"], name: "index_feedbacks_on_source"
     t.index ["status"], name: "index_feedbacks_on_status"
     t.index ["user_id"], name: "index_feedbacks_on_user_id"
   end
