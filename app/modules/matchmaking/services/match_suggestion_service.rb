@@ -74,6 +74,7 @@ class MatchSuggestionService
         slug: org.slug,
         region: org.region,
         tier: map_subscription_to_tier(org.subscription_plan),
+        logo_url: org.try(:logo_url),
         public_tagline: org.try(:public_tagline),
         discord_invite_url: org.try(:discord_invite_url),
         avg_tier: compute_avg_tier(org),

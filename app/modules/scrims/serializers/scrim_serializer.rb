@@ -146,6 +146,7 @@ class ScrimSerializer
     return nil unless @scrim.opponent_team
 
     t = @scrim.opponent_team
+    logo = t.logo_url.presence || Organization.find_by(name: t.name)&.logo_url
     {
       id: t.id,
       name: t.name,
@@ -154,7 +155,7 @@ class ScrimSerializer
       region: t.region,
       scrims_won: t.scrims_won || 0,
       scrims_lost: t.scrims_lost || 0,
-      logo_url: t.logo_url
+      logo_url: logo
     }
   end
 

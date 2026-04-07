@@ -48,6 +48,7 @@ class ScrimRequestSerializer < Blueprinter::Base
         slug: org.slug,
         region: org.region,
         tier: org.tier,
+        logo_url: org.logo_url,
         public_tagline: org.public_tagline,
         discord_server: org.discord_invite_url,
         scrims_won: 0,
