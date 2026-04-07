@@ -17,6 +17,7 @@ module Api
         feedbacks = Feedback.recent.includes(:feedback_votes)
         feedbacks = feedbacks.by_category(params[:category]) if params[:category].present?
         feedbacks = feedbacks.where(status: params[:status]) if params[:status].present?
+        feedbacks = feedbacks.by_source(params[:source]) if params[:source].present?
 
         result = paginate(feedbacks)
         items  = result[:data].map { |f| feedback_data(f, user: current_user) }
@@ -63,7 +64,7 @@ module Api
       end
 
       def feedback_params
-        params.require(:feedback).permit(:category, :title, :description, :rating)
+        params.require(:feedback).permit(:category, :title, :description, :rating, :source)
       end
 
       def feedback_data(feedback, user: nil)
@@ -77,6 +78,7 @@ module Api
           status: feedback.status,
           votes_count: feedback.votes_count,
           user_voted: voted,
+          source: feedback.source,
           created_at: feedback.created_at
         }
       end
