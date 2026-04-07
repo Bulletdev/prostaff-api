@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_06_300001) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_07_100001) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -569,6 +569,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_06_300001) do
     t.boolean "player_access_enabled", default: false, comment: "Enable/disable individual player access"
     t.string "access_token_jti", comment: "JWT token identifier for player session"
     t.string "discord_user_id"
+    t.string "alias"
     t.index ["deleted_at"], name: "index_players_on_deleted_at", comment: "Index for soft delete queries"
     t.index ["discord_user_id"], name: "index_players_on_discord_user_id", unique: true, where: "(discord_user_id IS NOT NULL)"
     t.index ["organization_id", "contract_end_date"], name: "idx_players_org_contract_end"

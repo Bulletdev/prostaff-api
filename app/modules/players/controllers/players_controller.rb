@@ -365,7 +365,7 @@ module Players
         # :role refers to in-game position (top/jungle/mid/adc/support), not user role
         # nosemgrep
         params.require(:player).permit(
-          :summoner_name, :real_name, :role, :region, :status, :jersey_number,
+          :summoner_name, :real_name, :professional_name, :role, :region, :status, :jersey_number,
           :birth_date, :country, :nationality,
           :contract_start_date, :contract_end_date,
           :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
