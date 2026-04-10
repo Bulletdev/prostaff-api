@@ -1,0 +1,23 @@
+---
+# Codacy analysis configuration
+# https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+
+exclude_paths:
+  # Generated files — cannot be changed by hand
+  - "Gemfile.lock"
+  - "db/schema.rb"
+
+  # Data migrations — long up/down methods are unavoidable
+  - "db/migrate/**"
+
+  # Load-test scripts — k6 JS syntax (group() callbacks) is valid k6 idiom,
+  # not a lone-block code smell
+  - "load_tests/**"
+
+  # Architecture diagram generator — standalone maintenance script, not production
+  - "scripts/update_architecture_diagram.rb"
+
+  # Pentest scripts — ShellCheck SC2016 (single-quote expansion) is intentional;
+  # payloads like '$MONGO_GT' and '`id`' must NOT expand. SC2034 (BASE_URL) is used
+  # further down in the same script.
+  - ".pentest/**"
