@@ -111,6 +111,9 @@ module Admin
       end
 
       def set_incident
+        # StatusIncidents are platform-wide (not org-scoped) — intentionally unscoped.
+        # This endpoint requires admin or owner role (see require_admin_access before_action).
+        # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find
         @incident = StatusIncident.find(params[:id])
       end
 

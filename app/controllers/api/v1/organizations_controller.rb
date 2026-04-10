@@ -63,14 +63,13 @@ module Api
       end
 
       def require_admin_or_owner
-        allowed_roles = %w[admin owner]
-        unless allowed_roles.include?(@current_user.role)
-          return render_error(
-            message: 'Only admins and owners can update organization settings',
-            code: 'FORBIDDEN',
-            status: :forbidden
-          )
-        end
+        return if %w[admin owner].include?(@current_user.role)
+
+        render_error(
+          message: 'Only admins and owners can update organization settings',
+          code: 'FORBIDDEN',
+          status: :forbidden
+        )
       end
 
       def org_params
