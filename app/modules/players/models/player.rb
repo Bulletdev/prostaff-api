@@ -38,7 +38,8 @@ class Player < ApplicationRecord
   include Searchable
 
   # Associations
-  belongs_to :organization
+  # optional: true — self-registered free agents (ArenaBR) can exist without an org
+  belongs_to :organization, optional: true
   has_many :player_match_stats, dependent: :destroy
   has_many :matches, through: :player_match_stats
   has_many :champion_pools, dependent: :destroy

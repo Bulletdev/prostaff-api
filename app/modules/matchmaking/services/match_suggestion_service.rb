@@ -32,6 +32,18 @@ class MatchSuggestionService
                       .map { |w| build_suggestion(w, score_window(w)[:score]) }
   end
 
+  TIER_SCORE = {
+    'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
+    'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
+    'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1, 'IRON' => 0
+  }.freeze
+
+  TIER_LABEL = {
+    9 => 'Challenger', 8 => 'Grandmaster', 7 => 'Master',
+    6 => 'Diamond', 5 => 'Emerald', 4 => 'Platinum',
+    3 => 'Gold', 2 => 'Silver', 1 => 'Bronze', 0 => 'Iron'
+  }.freeze
+
   private
 
   def find_candidate_windows
@@ -94,18 +106,6 @@ class MatchSuggestionService
       }
     }
   end
-
-  TIER_SCORE = {
-    'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
-    'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
-    'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1, 'IRON' => 0
-  }.freeze
-
-  TIER_LABEL = {
-    9 => 'Challenger', 8 => 'Grandmaster', 7 => 'Master',
-    6 => 'Diamond', 5 => 'Emerald', 4 => 'Platinum',
-    3 => 'Gold', 2 => 'Silver', 1 => 'Bronze', 0 => 'Iron'
-  }.freeze
 
   # Returns confirmed W/L from cross-org validated reports only
   def compute_record(org)

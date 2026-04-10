@@ -81,6 +81,16 @@ module Rack
       req.ip if req.path == '/api/v1/auth/register' && req.post?
     end
 
+    # Throttle player self-registration (ArenaBR) — 5/hour, mais restrito que staff
+    throttle('player-register/ip', limit: 5, period: 1.hour) do |req|
+      req.ip if req.path == '/api/v1/auth/player-register' && req.post?
+    end
+
+    # Throttle player login — mesma política que login de staff
+    throttle('player-logins/ip', limit: 5, period: 20.seconds) do |req|
+      req.ip if req.path == '/api/v1/auth/player-login' && req.post?
+    end
+
     # Throttle password reset requests
     throttle('password_reset/ip', limit: 5, period: 1.hour) do |req|
       req.ip if req.path == '/api/v1/auth/forgot-password' && req.post?

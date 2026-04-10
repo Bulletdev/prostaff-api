@@ -3,6 +3,16 @@
     {
       "warning_type": "Mass Assignment",
       "warning_code": 105,
+      "fingerprint": "f2fd7351c85e531b66f6444ab8a89071e039b96befcdd5a6f897d3f55bb2d9dd",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/modules/players/controllers/players_controller.rb",
+      "line": 368,
+      "note": "':role' is a player in-game position (top/jungle/mid/adc/support), not a user access role. riot_puuid and riot_summoner_id were intentionally removed from this permit list."
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
       "fingerprint": "a53e36aea1309fb0af3b08b9d5403838087ed98264a2a158a98adde5f6d496d3",
       "check_name": "PermitAttributes",
       "message": "Potentially dangerous key allowed for mass assignment",

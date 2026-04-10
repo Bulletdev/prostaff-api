@@ -37,9 +37,7 @@ class ScrimResultValidationService
       outcome = compare_with_opponent(report)
       { status: outcome, report: report }
     end
-  rescue ArgumentError => e
-    { status: :error, message: e.message }
-  rescue ActiveRecord::RecordInvalid => e
+  rescue ArgumentError, ActiveRecord::RecordInvalid => e
     { status: :error, message: e.message }
   end
 

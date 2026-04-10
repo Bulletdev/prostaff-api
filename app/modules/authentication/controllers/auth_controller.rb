@@ -26,7 +26,7 @@ module Authentication
     #
     class AuthController < Api::V1::BaseController
       skip_before_action :authenticate_request!,
-                         only: %i[register login player_login forgot_password reset_password refresh]
+                         only: %i[register login player_login player_register forgot_password reset_password refresh]
 
       # Registers a new user and organization
       #
@@ -170,6 +170,11 @@ module Authentication
         tokens = JwtService.generate_player_tokens(player)
         player.update_last_login!
 
+        Rails.logger.info(
+          "[AUTH] player_login: id=#{player.id} email=#{player_email} " \
+          "org=#{player.organization_id || 'free_agent'} ip=#{request.remote_ip}"
+        )
+
         render_success(
           {
             player: {
@@ -210,6 +215,124 @@ module Authentication
       rescue StandardError => e
         Rails.logger.error("Player login error: #{e.class} - #{e.message}")
         render_error(message: 'Credenciais inválidas', code: 'INVALID_CREDENTIALS', status: :unauthorized)
+      end
+
+      # Registers a new player (ArenaBR self-registration)
+      #
+      # Creates a Player without an organization — the player enters as a Free Agent.
+      # Uses the separate player_password auth path, completely isolated from User auth.
+      #
+      # Security:
+      # - organization_id is NEVER accepted from params (prevents privilege escalation)
+      # - player_access_enabled is always set server-side
+      # - password minimum 8 chars enforced at model level
+      # - summoner_name is the only game identity accepted (no riot_puuid injection)
+      # - rate-limited by rack-attack (player-register/ip: 5/hour)
+      #
+      # POST /api/v1/auth/player-register
+      #
+      # @param player_email [String] Email for player login
+      # @param password [String] Password (min 8 chars)
+      # @param password_confirmation [String] Must match password
+      # @param summoner_name [String] Riot summoner name (e.g. "GameName#TAG")
+      # @param discord_user_id [String] Discord username (optional)
+      #
+      def player_register # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+        player_email  = params[:player_email]&.downcase&.strip
+        summoner_name = params[:summoner_name]&.strip
+        password      = params[:password]
+        password_conf = params[:password_confirmation]
+        discord       = params[:discord_user_id]&.strip
+
+        # ── Validate required fields ─────────────────────────────────────────
+        missing = []
+        missing << 'player_email'  if player_email.blank?
+        missing << 'password'      if password.blank?
+        missing << 'summoner_name' if summoner_name.blank?
+
+        if missing.any?
+          return render_error(
+            message: "Campos obrigatórios faltando: #{missing.join(', ')}",
+            code: 'MISSING_FIELDS',
+            status: :bad_request
+          )
+        end
+
+        # ── Password confirmation ─────────────────────────────────────────────
+        if password != password_conf
+          return render_error(
+            message: 'Senhas não coincidem',
+            code: 'PASSWORD_MISMATCH',
+            status: :unprocessable_entity
+          )
+        end
+
+        # ── Duplicate email check ─────────────────────────────────────────────
+        if Player.exists?(player_email: player_email)
+          return render_error(
+            message: 'Já existe uma conta de jogador com este email',
+            code: 'DUPLICATE_EMAIL',
+            status: :unprocessable_entity
+          )
+        end
+
+        # ── Duplicate summoner name check ──────────────────────────────────────
+        if Player.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
+          return render_error(
+            message: 'Summoner name já cadastrado na plataforma',
+            code: 'DUPLICATE_SUMMONER',
+            status: :unprocessable_entity
+          )
+        end
+
+        # ── Create player — SECURITY: organization_id always nil (free agent) ──
+        player = Player.new(
+          player_email: player_email,
+          player_password: password,
+          summoner_name: summoner_name,
+          discord_user_id: discord.presence,
+          player_access_enabled: true,
+          status: 'active',
+          role: 'top' # placeholder — player updates via profile
+          # organization_id intentionally omitted (nil) — free agent
+        )
+
+        unless player.save
+          return render_error(
+            message: 'Erro ao criar conta',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: player.errors.as_json
+          )
+        end
+
+        Rails.logger.info("[AUTH] Player registered: id=#{player.id} email=#{player_email} summoner=#{summoner_name}")
+
+        tokens = JwtService.generate_player_tokens(player)
+
+        render_created(
+          {
+            player: {
+              id: player.id,
+              summoner_name: player.summoner_name,
+              player_email: player.player_email,
+              discord_user_id: player.discord_user_id,
+              role: player.role,
+              status: player.status,
+              organization_id: nil,
+              organization_name: nil,
+              is_free_agent: true,
+              solo_queue_tier: nil,
+              solo_queue_rank: nil,
+              solo_queue_lp: nil,
+              current_rank: nil
+            }
+          }.merge(tokens),
+          message: 'Conta criada! Você está no pool de Free Agents do ArenaBR Season 1.'
+        )
+      rescue StandardError => e
+        Rails.logger.error("Player register error: #{e.class} - #{e.message}")
+        render_error(message: 'Erro interno ao criar conta', code: 'INTERNAL_ERROR', status: :internal_server_error)
       end
 
       # Refreshes an access token using a refresh token

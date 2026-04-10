@@ -6,7 +6,7 @@ class CreateStatusSnapshots < ActiveRecord::Migration[7.2]
       t.string   :component,       null: false
       t.string   :status,          null: false
       t.integer  :response_time_ms
-      t.datetime :checked_at,      null: false
+      t.datetime :checked_at, null: false
 
       t.timestamps
     end

@@ -372,7 +372,8 @@ module Players
           :solo_queue_wins, :solo_queue_losses,
           :flex_queue_tier, :flex_queue_rank, :flex_queue_lp,
           :peak_tier, :peak_rank, :peak_season,
-          :riot_puuid, :riot_summoner_id,
+          # riot_puuid and riot_summoner_id are intentionally excluded —
+          # these fields must only be updated via the Riot sync service, never by user input.
           :twitter_handle, :twitch_channel, :instagram_handle,
           :notes
         )

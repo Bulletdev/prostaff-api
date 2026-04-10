@@ -49,7 +49,8 @@ Rails.application.routes.draw do
       scope :auth do
         post 'register', to: '/authentication/controllers/auth#register'
         post 'login', to: '/authentication/controllers/auth#login'
-        post 'player-login', to: '/authentication/controllers/auth#player_login'
+        post 'player-login',    to: '/authentication/controllers/auth#player_login'
+        post 'player-register', to: '/authentication/controllers/auth#player_register'
         post 'refresh', to: '/authentication/controllers/auth#refresh'
         post 'logout', to: '/authentication/controllers/auth#logout'
         post 'forgot-password', to: '/authentication/controllers/auth#forgot_password'

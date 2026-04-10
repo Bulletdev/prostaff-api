@@ -284,6 +284,71 @@ fi
 sleep 21
 
 # ─────────────────────────────────────────────────────────
+# Test 6: Player login throttle — player-login/ip
+# Mirrors the logins/ip rule but for the player auth path
+# ─────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 6: Player login throttle (player-login/ip) ---"
+
+PLAYER_LOGIN_PAYLOAD='{"player_email":"nonexistent-rate-test@arenabr.invalid","password":"WrongPassword1!"}'
+PLAYER_THROTTLED=false
+for i in $(seq 1 7); do
+  status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL/api/v1/auth/player-login" \
+    -H "Content-Type: application/json" \
+    --data-raw "$PLAYER_LOGIN_PAYLOAD" \
+    --max-time 5 2>/dev/null || echo 0)
+  if [ "$status" = "429" ]; then
+    PLAYER_THROTTLED=true
+    echo "       Request $i returned 429 (throttled after $((i-1)) requests)"
+    break
+  fi
+done
+
+if $PLAYER_THROTTLED; then
+  test_result "Player login endpoint throttled after limit" "PASS"
+else
+  test_result "Player login endpoint throttled after limit" "FAIL" \
+    "Sent 7 requests to /auth/player-login, none returned 429 — throttle not active for player path"
+  FINDINGS+=('{"severity":"HIGH","test":"player-login-throttle","detail":"7 player-login attempts without 429 — Rack::Attack rule not enforced for /auth/player-login"}')
+fi
+
+sleep 21
+
+# ─────────────────────────────────────────────────────────
+# Test 7: Player register throttle — player-register/ip
+# Self-registration endpoint should be throttled like regular register
+# ─────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 7: Player register throttle (player-register/ip) ---"
+
+PREG_THROTTLED=false
+for i in $(seq 1 5); do
+  suffix="${TIMESTAMP}p${i}"
+  preg_payload="{\"player_email\":\"rate-limit-player-${suffix}@arenabr-test.invalid\",\"password\":\"Test123!@#\",\"password_confirmation\":\"Test123!@#\",\"summoner_name\":\"RateLimitTest${suffix}\"}"
+  status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "$API_URL/api/v1/auth/player-register" \
+    -H "Content-Type: application/json" \
+    --data-raw "$preg_payload" \
+    --max-time 5 2>/dev/null || echo 0)
+  if [ "$status" = "429" ]; then
+    PREG_THROTTLED=true
+    echo "       Request $i returned 429 (throttled after $((i-1)) requests)"
+    break
+  fi
+done
+
+if $PREG_THROTTLED; then
+  test_result "Player register endpoint throttled after limit" "PASS"
+else
+  test_result "Player register endpoint throttled after limit" "FAIL" \
+    "Sent 5 requests to /auth/player-register, none returned 429 — throttle may not be configured for this path"
+  FINDINGS+=('{"severity":"HIGH","test":"player-register-throttle","detail":"5 player-register attempts without 429 — Rack::Attack rule may be missing for /auth/player-register"}')
+fi
+
+sleep 21
+
+# ─────────────────────────────────────────────────────────
 # Write report
 # ─────────────────────────────────────────────────────────
 FINDINGS_JSON="[$(IFS=,; echo "${FINDINGS[*]}")]"
@@ -301,7 +366,9 @@ cat > "$REPORT_FILE" <<EOF
   "throttle_rules_tested": [
     {"rule": "logins/ip",            "limit": 5,    "period": "20s"},
     {"rule": "register/ip",          "limit": 3,    "period": "1hr"},
-    {"rule": "req/authenticated_user","limit": 1000, "period": "1hr"}
+    {"rule": "req/authenticated_user","limit": 1000, "period": "1hr"},
+    {"rule": "player-login/ip",      "limit": 5,    "period": "20s"},
+    {"rule": "player-register/ip",   "limit": 3,    "period": "1hr"}
   ],
   "findings": $FINDINGS_JSON
 }

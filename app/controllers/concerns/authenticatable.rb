@@ -27,11 +27,15 @@ module Authenticatable
 
       if @jwt_payload[:entity_type] == 'player'
         # ── Player token ──────────────────────────────────────────────────────
-        @current_player       = Player.unscoped.find(@jwt_payload[:player_id])
-        @current_organization = Organization.find(@jwt_payload[:organization_id])
+        # Free agents (auto-cadastro via ArenaBR) têm organization_id: nil
+        @current_player = Player.unscoped.find(@jwt_payload[:player_id])
 
-        Current.organization_id = @current_organization.id
-        Rails.logger.info("[AUTH] Player token: player_id=#{@current_player.id} org=#{@current_organization.id}")
+        org_id = @jwt_payload[:organization_id]
+        @current_organization = org_id.present? ? Organization.find(org_id) : nil
+
+        Current.organization_id = @current_organization&.id
+        org_label = @current_organization&.id || 'free_agent'
+        Rails.logger.info("[AUTH] Player token: player_id=#{@current_player.id} org=#{org_label}")
         return
       end
 
