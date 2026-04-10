@@ -328,7 +328,7 @@ module Scouting
       def scouting_target_params
         # :role is the LoL in-game position (top/jungle/mid/adc/support), not an authorization role.
         # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
-        params.require(:scouting_target).permit(
+        params.require(:scouting_target).permit( # NOSONAR
           :summoner_name, :real_name, :role, :region, :nationality,
           :age, :status, :current_team,
           :current_tier, :current_rank, :current_lp,

@@ -92,7 +92,7 @@ module Scrims
         ScrimResultReport.find_by(scrim_request: @scrim_request, organization: org)
       end
 
-      def combined_status(my, opponent)
+      def combined_status(my, opponent) # rubocop:disable Naming/MethodParameterName
         return 'no_request'     unless @scrim_request
         return 'pending'        unless my
         return my.status        if %w[confirmed unresolvable expired].include?(my.status)
