@@ -25,6 +25,14 @@ module Authenticatable
     begin
       @jwt_payload = JwtService.decode(token)
 
+      # Reject refresh tokens used as access tokens.
+      # Access tokens for users carry type: 'access'.
+      # Access tokens for players carry entity_type: 'player' AND type: 'access'.
+      # Refresh tokens carry type: 'refresh' and must never authenticate a request.
+      unless valid_access_token_type?(@jwt_payload)
+        raise JwtService::TokenInvalidError, 'Invalid token type'
+      end
+
       if @jwt_payload[:entity_type] == 'player'
         # ── Player token ──────────────────────────────────────────────────────
         # Free agents (auto-cadastro via ArenaBR) têm organization_id: nil
@@ -143,6 +151,18 @@ module Authenticatable
 
   def set_current_organization
     # This method can be overridden in controllers if needed
+  end
+
+  # Returns true only for tokens that are valid for authenticating API requests.
+  #
+  # Refresh tokens (type: 'refresh') must be rejected even if they are otherwise
+  # well-formed and not expired. Player access tokens carry entity_type: 'player'
+  # AND type: 'access'; user access tokens carry type: 'access'.
+  #
+  # @param payload [HashWithIndifferentAccess] Decoded JWT payload
+  # @return [Boolean]
+  def valid_access_token_type?(payload)
+    payload[:type] == 'access'
   end
 
   def should_update_last_login?
