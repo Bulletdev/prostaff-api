@@ -369,15 +369,26 @@ module Authentication
       # Logs out the current user
       #
       # Blacklists the current access token to prevent further use.
-      # The user must login again to obtain new tokens.
+      # Optionally blacklists the refresh token if sent in the request body, so that
+      # an attacker who obtained the refresh token cannot create new sessions after
+      # the user has explicitly logged out.
+      #
+      # The client SHOULD send the refresh token in the body for full session
+      # invalidation. Omitting it is not an error, but leaves the refresh token valid
+      # until its natural expiry.
       #
       # POST /api/v1/auth/logout
       #
+      # @param refresh_token [String] (optional) The refresh token to also invalidate
       # @return [JSON] Success message
       def logout
         # Blacklist the current access token
-        token = request.headers['Authorization']&.split&.last
-        JwtService.blacklist_token(token) if token
+        access_token = request.headers['Authorization']&.split&.last
+        JwtService.blacklist_token(access_token) if access_token
+
+        # Also blacklist the refresh token when the client supplies it
+        refresh_token = params[:refresh_token]
+        JwtService.blacklist_token(refresh_token) if refresh_token.present?
 
         log_user_action(
           action: 'logout',
