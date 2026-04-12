@@ -214,6 +214,7 @@ This API follows a **modular monolith** architecture:
 │  messaging          │  Real-time team chat via Action Cable WebSocket       │
 │  search             │  Global full-text search powered by Meilisearch       │
 │  notifications      │  In-app notification system                           │
+│  tournaments        │  ArenaBR double-elimination tournament management     │
 └─────────────────────┴───────────────────────────────────────────────────────┘
 ```
 
@@ -235,6 +236,7 @@ This API follows a modular monolith architecture with the following modules:
 - `scrims` - Scrim management and opponent team tracking
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
+- `tournaments` - ArenaBR double-elimination tournament management (enrollment, bracket, match reporting)
 
 ### Architecture Diagram
 
@@ -777,6 +779,24 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `POST   /support/staff/tickets/:id/assign` — Assign ticket to staff (staff only)
 - `POST   /support/staff/tickets/:id/resolve` — Resolve ticket (staff only)
 
+#### Tournaments (ArenaBR)
+- `GET    /tournaments` — List active tournaments (public)
+- `GET    /tournaments/:id` — Show tournament with full bracket (public)
+- `POST   /tournaments` — Create tournament (admin only)
+- `PATCH  /tournaments/:id` — Update tournament (admin only)
+- `POST   /tournaments/:id/generate_bracket` — Generate 16-team double-elimination bracket (admin only)
+- `GET    /tournaments/:id/teams` — List enrolled teams with roster snapshot (public)
+- `POST   /tournaments/:id/teams` — Enroll organization as team
+- `PATCH  /tournaments/:id/teams/:team_id/approve` — Approve enrollment + lock roster (admin only)
+- `PATCH  /tournaments/:id/teams/:team_id/reject` — Reject enrollment (admin only)
+- `DELETE /tournaments/:id/teams/:team_id` — Withdraw team (own org, before bracket)
+- `GET    /tournaments/:id/matches` — List all bracket matches (public)
+- `GET    /tournaments/:id/matches/:match_id` — Show match detail with checkin status
+- `POST   /tournaments/:id/matches/:match_id/checkin` — Captain confirms presence
+- `GET    /tournaments/:id/matches/:match_id/report` — Get report status
+- `POST   /tournaments/:id/matches/:match_id/report` — Submit result report with evidence
+- `POST   /tournaments/:id/matches/:match_id/report/admin_resolve` — Admin resolves dispute (admin only)
+
 #### Global Search
 - `GET /search?q=:query` — Full-text search across players, organizations, scouting targets, opponent teams and FAQs
 
@@ -976,13 +996,13 @@ open coverage/index.html
 
 ### Rate Limiting (Rack::Attack)
 
-| Rule | Limit | Window |
-|------|-------|--------|
-| `logins/ip` | 5 requests | 20 seconds |
-| `register/ip` | 3 requests | 1 hour |
-| `password_reset/ip` | 5 requests | 1 hour |
-| `req/ip` | 300 requests (configurable) | per period |
-| `req/authenticated_user` | 1000 requests | 1 hour |
+|            Rule         |              Limit          |          Window       |
+|-------------------------|-----------------------------|-----------------------|
+| `logins/ip`             |             5 requests      |       20 seconds      |
+| `register/ip`           |             3 requests      |        1 hour         |
+| `password_reset/ip`     |          5 requests         |        1 hour         |
+| `req/ip`                | 300 requests (configurable) |       per period      |
+| `req/authenticated_user`|          1000 requests      |        1 hour         |
 
 All 429 responses include a `Retry-After` header with the exact seconds until the window resets.
 
@@ -1205,14 +1225,14 @@ docker run -p 3333:3000 prostaff-api
 
 ### CI/CD Workflows
 
-| Workflow | Trigger | What it does |
-|----------|---------|-------------|
-| `security-scan.yml` | Push / PR to master | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
-| `codeql.yml` | Push / PR to master + Saturdays 3am | CodeQL `security-extended` on Ruby + Actions workflows; SARIF to GitHub Security tab |
-| `nightly-security.yml` | Manual dispatch | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan |
-| `load-test.yml` | Nightly + manual | k6 smoke/load/stress tests |
-| `deploy-production.yml` | Push to master | Build, test, deploy to Coolify + CORS smoke test post-deploy |
-| `deploy-staging.yml` | Push to develop | Same pipeline targeting staging |
+|               Workflow      |          Trigger    |            What it does      |
+|-----------------------------|-----------------------------------------------------------------------------------------------------|
+| `security-scan.yml`         | Push / PR to master | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
+| `codeql.yml`                | Push / PR to master + Saturdays 3am | CodeQL `security-extended`+ Actions workflows; SARIF to GitHub Security tab |
+| `nightly-security.yml`      | Manual dispatch | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan |
+| `load-test.yml`             | Nightly + manual | k6 smoke/load/stress tests |
+| `deploy-production.yml`     | Push to master | Build, test, deploy to Coolify + CORS smoke test post-deploy |
+| `deploy-staging.yml`        | Push to develop | Same pipeline targeting staging |
 | `update-architecture-diagram.yml` | Changes in `app/`, `config/routes.rb`, `Gemfile` | Auto-regenerates Mermaid diagram and commits |
 
 ### CodeQL Analysis

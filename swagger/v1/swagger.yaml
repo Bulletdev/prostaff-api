@@ -6973,5 +6973,417 @@ components:
         updated_at:
           type: string
           format: date-time
+  "/api/v1/tournaments":
+    get:
+      summary: List active tournaments
+      tags:
+      - Tournaments
+      description: Returns all tournaments in registration_open, seeding or in_progress status. Public endpoint.
+      responses:
+        '200':
+          description: tournaments returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Tournament"
+    post:
+      summary: Create a tournament
+      tags:
+      - Tournaments
+      description: Admin only. Creates a new tournament in draft status.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                game:
+                  type: string
+                  default: league_of_legends
+                max_teams:
+                  type: integer
+                  default: 16
+                entry_fee_cents:
+                  type: integer
+                prize_pool_cents:
+                  type: integer
+                bo_format:
+                  type: integer
+                  default: 3
+                scheduled_start_at:
+                  type: string
+                  format: date-time
+                registration_closes_at:
+                  type: string
+                  format: date-time
+                rules:
+                  type: string
+      responses:
+        '201':
+          description: tournament created
+        '422':
+          description: validation error
+        '403':
+          description: admin access required
+  "/api/v1/tournaments/{id}":
+    get:
+      summary: Show tournament with bracket
+      tags:
+      - Tournaments
+      description: Returns tournament data including all bracket matches. Public endpoint.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: tournament returned
+        '404':
+          description: not found
+    patch:
+      summary: Update a tournament
+      tags:
+      - Tournaments
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                  - draft
+                  - registration_open
+                  - seeding
+                  - in_progress
+                  - finished
+                  - cancelled
+      responses:
+        '200':
+          description: tournament updated
+        '403':
+          description: admin access required
+  "/api/v1/tournaments/{id}/generate_bracket":
+    post:
+      summary: Generate double-elimination bracket
+      tags:
+      - Tournaments
+      description: Admin only. Creates all 30 TournamentMatch records and wires FK self-references for bracket progression.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: bracket generated, tournament returned with matches
+        '422':
+          description: bracket already exists
+        '403':
+          description: admin access required
+  "/api/v1/tournaments/{tournament_id}/teams":
+    get:
+      summary: List enrolled teams
+      tags:
+      - Tournaments
+      description: Returns all teams enrolled in the tournament with roster snapshot. Public endpoint.
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: teams returned
+    post:
+      summary: Enroll organization as a team
+      tags:
+      - Tournaments
+      description: Enrolls the authenticated organization into the tournament. Status starts as pending.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_name:
+                  type: string
+                team_tag:
+                  type: string
+                  maxLength: 5
+                logo_url:
+                  type: string
+      responses:
+        '201':
+          description: enrollment pending admin approval
+        '422':
+          description: already enrolled, tournament full, or registration closed
+  "/api/v1/tournaments/{tournament_id}/teams/{id}/approve":
+    patch:
+      summary: Approve team enrollment and lock roster
+      tags:
+      - Tournaments
+      description: Admin only. Sets team status to approved and creates immutable TournamentRosterSnapshot from current org players.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: team approved, roster locked
+        '403':
+          description: admin access required
+  "/api/v1/tournaments/{tournament_id}/teams/{id}/reject":
+    patch:
+      summary: Reject team enrollment
+      tags:
+      - Tournaments
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: team rejected
+        '403':
+          description: admin access required
+  "/api/v1/tournaments/{tournament_id}/matches":
+    get:
+      summary: List all bracket matches
+      tags:
+      - Tournaments
+      description: Returns all matches ordered by round. Public endpoint.
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: matches returned
+  "/api/v1/tournaments/{tournament_id}/matches/{id}":
+    get:
+      summary: Show match detail with checkin status
+      tags:
+      - Tournaments
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: match detail with checkin flags
+  "/api/v1/tournaments/{tournament_id}/matches/{id}/checkin":
+    post:
+      summary: Captain checks in for their team
+      tags:
+      - Tournaments
+      description: Confirms presence for the authenticated org's team. Both teams checking in transitions match to in_progress.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: checked in successfully
+        '422':
+          description: already checked in or checkin not open
+  "/api/v1/tournaments/{tournament_id}/matches/{match_id}/report":
+    get:
+      summary: Get match report status
+      tags:
+      - Tournaments
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: match_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: report status for current org
+    post:
+      summary: Submit match result report
+      tags:
+      - Tournaments
+      description: Captain submits scores and evidence screenshot. Dual-validation — if both sides match, bracket advances automatically.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: match_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - team_a_score
+              - team_b_score
+              - evidence_url
+              properties:
+                team_a_score:
+                  type: integer
+                team_b_score:
+                  type: integer
+                evidence_url:
+                  type: string
+      responses:
+        '200':
+          description: report submitted (status submitted, confirmed, or disputed)
+        '422':
+          description: validation error
+  "/api/v1/tournaments/{tournament_id}/matches/{match_id}/report/admin_resolve":
+    post:
+      summary: Admin resolves a disputed match
+      tags:
+      - Tournaments
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: tournament_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: match_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - winner_team_id
+              properties:
+                winner_team_id:
+                  type: string
+                  format: uuid
+                team_a_score:
+                  type: integer
+                team_b_score:
+                  type: integer
+      responses:
+        '200':
+          description: dispute resolved, bracket advanced
+        '422':
+          description: match is not in disputed state
+        '403':
+          description: admin access required
 security:
 - bearerAuth: []
