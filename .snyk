@@ -1,0 +1,22 @@
+# Snyk ignore file
+# Docs: https://docs.snyk.io/snyk-cli/commands/ignore
+#
+# Use this file to suppress false positives or CVEs that are not exploitable
+# in this application's runtime context.
+#
+# Format:
+#   <SNYK-ID>:
+#     - '*':
+#         reason: <why it's not applicable>
+#         expires: '<ISO 8601 date>'
+#
+# Base image: ruby:3.4.5-slim (Debian Bookworm)
+#
+# How to add an entry:
+#   1. A CVE appears in the GitHub Security tab after a Snyk scan
+#   2. Confirm it is not exploitable (e.g. package not used at runtime,
+#      only in build stage, or mitigated by another control)
+#   3. Add it below with a clear reason and a review expiry date
+
+version: v1.19.0
+ignore: {}

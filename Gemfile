@@ -115,6 +115,10 @@ group :development do
   gem 'rubocop-rails'
   gem 'rubocop-rspec'
 
+  # Security tooling — runs locally and in CI via bundle exec
+  gem 'brakeman', require: false
+  gem 'bundler-audit', '~> 0.9'
+
   # Deploy tools (only needed for deployment operations, not runtime)
   gem 'kamal', '~> 2.0'
 end

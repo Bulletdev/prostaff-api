@@ -1,10 +1,9 @@
 name: Nightly Security Audit
 
 on:
-  # TODO: Reativar quando em produção
-  # schedule:
-  #   # Run every night at 1am UTC
-  #   - cron: '0 1 * * *'
+  schedule:
+    # Run every night at 1am UTC
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 permissions:
@@ -62,22 +61,20 @@ jobs:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/prostaff_test
           REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET_KEY: nightly_audit_jwt_secret_not_for_production
         run: |
-          bundle exec rails server -p 3333 -e test &
-          sleep 10
-          curl -f http://localhost:3333/up || exit 1
+          bundle exec rails server -p 3333 -e test -d
+          timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
 
-      - name: Install Security Tools
-        run: |
-          gem install brakeman bundler-audit
-          docker pull zaproxy/zap-stable
+      - name: Install ZAP
+        run: docker pull zaproxy/zap-stable
 
       - name: Create Reports Directory
         run: mkdir -p security_tests/reports/nightly
 
       - name: Run Brakeman
         run: |
-          brakeman --rails7 \
+          bundle exec brakeman --rails7 \
             --format json \
             --output security_tests/reports/nightly/brakeman.json \
             --format html \
@@ -86,13 +83,18 @@ jobs:
 
       - name: Run Bundle Audit
         run: |
-          bundle-audit update
-          bundle-audit check > security_tests/reports/nightly/bundle-audit.txt || true
+          bundle exec bundler-audit update
+          bundle exec bundler-audit check \
+            --format json \
+            --output security_tests/reports/nightly/bundle-audit.json \
+            || true
+          # Also write plain text for human readability
+          bundle exec bundler-audit check > security_tests/reports/nightly/bundle-audit.txt || true
 
       - name: Run ZAP Baseline Scan
         run: |
           docker run --rm --network="host" \
-            -v $(pwd)/security_tests/reports/nightly:/zap/wrk:rw \
+            -v "$(pwd)/security_tests/reports/nightly:/zap/wrk:rw" \
             zaproxy/zap-stable \
             zap-baseline.py \
             -t http://localhost:3333 \
@@ -102,7 +104,7 @@ jobs:
       - name: Run ZAP API Scan
         run: |
           docker run --rm --network="host" \
-            -v $(pwd)/security_tests/reports/nightly:/zap/wrk:rw \
+            -v "$(pwd)/security_tests/reports/nightly:/zap/wrk:rw" \
             zaproxy/zap-stable \
             zap-api-scan.py \
             -t http://localhost:3333/api-docs/v1/swagger.json \
@@ -114,68 +116,56 @@ jobs:
         id: parse
         run: |
           # Brakeman
-          BRAKEMAN_HIGH=$(jq '[.warnings[] | select(.confidence == "High")] | length' security_tests/reports/nightly/brakeman.json)
-          BRAKEMAN_TOTAL=$(jq '.warnings | length' security_tests/reports/nightly/brakeman.json)
+          BRAKEMAN_HIGH=$(jq '[.warnings[] | select(.confidence == "High")] | length' \
+            security_tests/reports/nightly/brakeman.json 2>/dev/null || echo "0")
+          BRAKEMAN_TOTAL=$(jq '.warnings | length' \
+            security_tests/reports/nightly/brakeman.json 2>/dev/null || echo "0")
 
           # Bundle Audit
-          if grep -q "Vulnerabilities found" security_tests/reports/nightly/bundle-audit.txt; then
+          if grep -q "Vulnerabilities found" security_tests/reports/nightly/bundle-audit.txt 2>/dev/null; then
             VULNERABILITIES="true"
           else
             VULNERABILITIES="false"
           fi
 
           # ZAP
-          ZAP_HIGH=$(jq '[.site[0].alerts[] | select(.riskcode == "3")] | length' security_tests/reports/nightly/zap-baseline.json 2>/dev/null || echo "0")
-          ZAP_MEDIUM=$(jq '[.site[0].alerts[] | select(.riskcode == "2")] | length' security_tests/reports/nightly/zap-baseline.json 2>/dev/null || echo "0")
+          ZAP_HIGH=$(jq '[.site[0].alerts[] | select(.riskcode == "3")] | length' \
+            security_tests/reports/nightly/zap-baseline.json 2>/dev/null || echo "0")
+          ZAP_MEDIUM=$(jq '[.site[0].alerts[] | select(.riskcode == "2")] | length' \
+            security_tests/reports/nightly/zap-baseline.json 2>/dev/null || echo "0")
 
-          echo "brakeman_high=$BRAKEMAN_HIGH" >> $GITHUB_OUTPUT
-          echo "brakeman_total=$BRAKEMAN_TOTAL" >> $GITHUB_OUTPUT
-          echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
-          echo "zap_high=$ZAP_HIGH" >> $GITHUB_OUTPUT
-          echo "zap_medium=$ZAP_MEDIUM" >> $GITHUB_OUTPUT
+          echo "brakeman_high=$BRAKEMAN_HIGH"   >> "$GITHUB_OUTPUT"
+          echo "brakeman_total=$BRAKEMAN_TOTAL" >> "$GITHUB_OUTPUT"
+          echo "vulnerabilities=$VULNERABILITIES" >> "$GITHUB_OUTPUT"
+          echo "zap_high=$ZAP_HIGH"             >> "$GITHUB_OUTPUT"
+          echo "zap_medium=$ZAP_MEDIUM"         >> "$GITHUB_OUTPUT"
 
       - name: Generate Summary
         if: always()
         run: |
-          cat > security_tests/reports/nightly/SUMMARY.md << EOF
-          # Nightly Security Audit Summary
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          # Nightly Security Audit — $(date -u '+%Y-%m-%d %H:%M UTC')
 
-          **Date:** $(date)
-          **Run:** #${{ github.run_number }}
+          ## Brakeman (SAST)
+          - Total warnings: ${{ steps.parse.outputs.brakeman_total }}
+          - High confidence: ${{ steps.parse.outputs.brakeman_high }}
 
-          ## Results
-
-          ### Brakeman (Code Security)
-          - Total Warnings: ${{ steps.parse.outputs.brakeman_total }}
-          - High Confidence: ${{ steps.parse.outputs.brakeman_high }}
-
-          ### Bundle Audit (Dependencies)
+          ## Bundle Audit (CVEs)
           - Vulnerabilities: ${{ steps.parse.outputs.vulnerabilities }}
 
-          ### OWASP ZAP (Runtime Security)
-          - High Risk: ${{ steps.parse.outputs.zap_high }}
-          - Medium Risk: ${{ steps.parse.outputs.zap_medium }}
+          ## OWASP ZAP (DAST)
+          - High risk: ${{ steps.parse.outputs.zap_high }}
+          - Medium risk: ${{ steps.parse.outputs.zap_medium }}
 
           ## Status
-
-          $(if [ "${{ steps.parse.outputs.brakeman_high }}" -gt "0" ] || [ "${{ steps.parse.outputs.vulnerabilities }}" == "true" ] || [ "${{ steps.parse.outputs.zap_high }}" -gt "0" ]; then
-            echo "⚠️ **ACTION REQUIRED:** Critical security issues detected!"
+          $(if [ "${{ steps.parse.outputs.brakeman_high }}" -gt "0" ] \
+              || [ "${{ steps.parse.outputs.vulnerabilities }}" = "true" ] \
+              || [ "${{ steps.parse.outputs.zap_high }}" -gt "0" ]; then
+            echo "⚠️ **ACTION REQUIRED — critical security issues detected!**"
           else
-            echo "✅ No critical security issues found."
+            echo "✅ No critical issues found."
           fi)
-
-          ## Reports
-
-          - [Brakeman HTML Report](brakeman.html)
-          - [ZAP Baseline Report](zap-baseline.html)
-          - [ZAP API Report](zap-api.html)
-          - [Bundle Audit Report](bundle-audit.txt)
           EOF
-
-      - name: Job Summary
-        if: always()
-        run: |
-          cat security_tests/reports/nightly/SUMMARY.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Reports
         if: always()
@@ -183,45 +173,59 @@ jobs:
         with:
           name: nightly-security-reports-${{ github.run_number }}
           path: security_tests/reports/nightly/
+          retention-days: 30
 
       - name: Create GitHub Issue on Failure
-        if: steps.parse.outputs.brakeman_high > 0 || steps.parse.outputs.vulnerabilities == 'true' || steps.parse.outputs.zap_high > 0
+        if: >
+          steps.parse.outputs.brakeman_high > 0 ||
+          steps.parse.outputs.vulnerabilities == 'true' ||
+          steps.parse.outputs.zap_high > 0
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
-            const fs = require('fs');
-            const summary = fs.readFileSync('security_tests/reports/nightly/SUMMARY.md', 'utf8');
+            const date = new Date().toISOString().split('T')[0];
+            const title = `⚠️ Nightly Security Audit Failed — ${date}`;
+            const body = [
+              `## Nightly Security Audit — ${date}`,
+              '',
+              `- **Brakeman high**: ${{ steps.parse.outputs.brakeman_high }}`,
+              `- **CVEs found**: ${{ steps.parse.outputs.vulnerabilities }}`,
+              `- **ZAP high risk**: ${{ steps.parse.outputs.zap_high }}`,
+              `- **ZAP medium risk**: ${{ steps.parse.outputs.zap_medium }}`,
+              '',
+              `[View run artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            ].join('\n');
 
-            const issues = await github.rest.issues.listForRepo({
+            const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
-              labels: 'security,automated'
+              labels: 'security,automated',
             });
 
-            const existingIssue = issues.data.find(issue =>
-              issue.title.includes('Nightly Security Audit Failed')
-            );
-
-            if (existingIssue) {
+            const existing = issues.find(i => i.title.includes('Nightly Security Audit Failed'));
+            if (existing) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: existingIssue.number,
-                body: `## Update: ${new Date().toISOString()}\n\n${summary}`
+                issue_number: existing.number,
+                body: `## Update — ${new Date().toISOString()}\n\n${body}`,
               });
             } else {
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title: `⚠️ Nightly Security Audit Failed - ${new Date().toISOString().split('T')[0]}`,
-                body: summary,
-                labels: ['security', 'automated', 'critical']
+                title,
+                body,
+                labels: ['security', 'automated', 'critical'],
               });
             }
 
       - name: Fail on Critical Issues
-        if: steps.parse.outputs.brakeman_high > 0 || steps.parse.outputs.vulnerabilities == 'true' || steps.parse.outputs.zap_high > 0
+        if: >
+          steps.parse.outputs.brakeman_high > 0 ||
+          steps.parse.outputs.vulnerabilities == 'true' ||
+          steps.parse.outputs.zap_high > 0
         run: |
-          echo "::error::Critical security issues detected!"
+          echo "::error::Critical security issues detected — check the uploaded reports."
           exit 1

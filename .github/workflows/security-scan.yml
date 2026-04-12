@@ -5,10 +5,9 @@ on:
     branches: [ master, develop ]
   pull_request:
     branches: [ master, develop ]
-  # TODO: Reativar quando em produção
-  # schedule:
-  #   # Run weekly on Monday at 9am UTC
-  #   - cron: '0 9 * * 1'
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
 
 permissions:
   contents: read
@@ -28,12 +27,9 @@ jobs:
           ruby-version: 3.4.5
           bundler-cache: true
 
-      - name: Install Brakeman
-        run: gem install brakeman
-
       - name: Run Brakeman
         run: |
-          brakeman --rails7 \
+          bundle exec brakeman --rails7 \
             --format json \
             --output brakeman-report.json \
             --no-exit-on-warn \
@@ -44,10 +40,11 @@ jobs:
         run: |
           WARNINGS=$(jq '.warnings | length' brakeman-report.json)
           HIGH=$(jq '[.warnings[] | select(.confidence == "High")] | length' brakeman-report.json)
-          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
-          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
 
       - name: Upload Report
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: brakeman-report
@@ -67,11 +64,11 @@ jobs:
 
             ${high > 0 ? '⚠️ High confidence issues found! Please review.' : '✅ No high confidence issues found.'}
             `;
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body,
             });
 
       - name: Fail on High Confidence Issues
@@ -92,17 +89,19 @@ jobs:
           ruby-version: 3.4.5
           bundler-cache: true
 
-      - name: Install Bundle Audit
-        run: gem install bundler-audit
-
       - name: Update Vulnerability Database
-        run: bundle-audit update
+        run: bundle exec bundler-audit update
 
       - name: Run Bundle Audit
         id: audit
         run: |
-          bundle-audit check --output bundle-audit.txt || echo "vulnerabilities=true" >> $GITHUB_OUTPUT
-          cat bundle-audit.txt
+          if ! bundle exec bundler-audit check; then
+            echo "vulnerabilities=true" >> "$GITHUB_OUTPUT"
+            bundle exec bundler-audit check > bundle-audit.txt || true
+          else
+            echo "vulnerabilities=false" >> "$GITHUB_OUTPUT"
+            bundle exec bundler-audit check > bundle-audit.txt
+          fi
 
       - name: Upload Report
         if: always()
@@ -112,13 +111,15 @@ jobs:
           path: bundle-audit.txt
 
       - name: Comment PR
-        if: github.event_name == 'pull_request' && always()
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('bundle-audit.txt', 'utf8');
-            const hasVulns = report.includes('Vulnerabilities found');
+            const report = fs.existsSync('bundle-audit.txt')
+              ? fs.readFileSync('bundle-audit.txt', 'utf8')
+              : 'No report generated.';
+            const hasVulns = '${{ steps.audit.outputs.vulnerabilities }}' === 'true';
             const body = `## 📦 Dependency Security Check
 
             ${hasVulns ? '⚠️ Vulnerabilities found in dependencies!' : '✅ No known vulnerabilities found.'}
@@ -131,11 +132,11 @@ jobs:
             \`\`\`
             </details>
             `;
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body,
             });
 
       - name: Fail on Vulnerabilities
@@ -165,42 +166,28 @@ jobs:
             --verbose \
             || true
 
-          echo "::group::Semgrep Report Preview"
-          cat semgrep-report.json | head -c 5000
-          echo ""
-          echo "::endgroup::"
-
       - name: Parse Results
         id: parse
         run: |
-          # Count total results
           TOTAL=$(jq '.results | length' semgrep-report.json)
-
-          # Count actual ERROR severity issues (not warnings)
           ERRORS=$(jq '.results | map(select(.extra.severity == "ERROR")) | length' semgrep-report.json)
           WARNINGS=$(jq '.results | map(select(.extra.severity == "WARNING")) | length' semgrep-report.json)
-
-          # Count HIGH confidence security issues (excluding audit rules)
           CRITICAL=$(jq '.results | map(select(.extra.metadata.confidence == "HIGH" and (.extra.metadata.subcategory // "vuln") != "audit")) | length' semgrep-report.json)
 
-          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
-          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
-          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS"     >> "$GITHUB_OUTPUT"
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+          echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
 
-          echo "::notice::Semgrep Analysis Complete"
-          echo "::notice::  - Total findings: $TOTAL"
-          echo "::notice::  - ERROR severity: $ERRORS"
-          echo "::notice::  - WARNING severity: $WARNINGS"
-          echo "::notice::  - HIGH confidence (non-audit): $CRITICAL"
+          echo "::notice::Total findings: $TOTAL — errors: $ERRORS, warnings: $WARNINGS, critical: $CRITICAL"
 
-          # Show details of ERROR severity issues if any
           if [ "$ERRORS" -gt 0 ]; then
             echo "::group::ERROR Severity Issues"
-            jq -r '.results[] | select(.extra.severity == "ERROR") | "  - \(.path):\(.start.line) - \(.check_id)"' semgrep-report.json
+            jq -r '.results[] | select(.extra.severity == "ERROR") | "  - \(.path):\(.start.line) — \(.check_id)"' semgrep-report.json
             echo "::endgroup::"
           fi
 
       - name: Upload Report
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: semgrep-report
@@ -211,29 +198,33 @@ jobs:
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
-            const errors = '${{ steps.parse.outputs.errors }}';
+            const errors   = '${{ steps.parse.outputs.errors }}';
             const warnings = '${{ steps.parse.outputs.warnings }}';
             const critical = '${{ steps.parse.outputs.critical }}';
             const body = `## 🔍 Semgrep Static Analysis
 
-            - **Errors**: ${errors}
-            - **Critical Issues**: ${critical}
-            - **Warnings**: ${warnings}
+            | Severity | Count |
+            |----------|-------|
+            | Errors   | ${errors} |
+            | Critical (HIGH confidence) | ${critical} |
+            | Warnings | ${warnings} |
 
-            ${errors > 0 ? '❌ Security errors found! Please fix.' : critical > 0 ? '⚠️ High confidence security issues found. Please review.' : warnings > 0 ? '⚠️ Warnings found (non-blocking).' : '✅ No issues found.'}
+            ${errors > 0 ? '❌ Security errors found! Please fix before merging.'
+              : critical > 0 ? '⚠️ High confidence issues found. Please review.'
+              : warnings > 0 ? '⚠️ Warnings found (non-blocking).'
+              : '✅ No issues found.'}
             `;
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body,
             });
 
       - name: Fail on Critical Errors
         if: steps.parse.outputs.errors > 0
         run: |
-          echo "::error::Semgrep found ${{ steps.parse.outputs.errors }} security errors with ERROR severity!"
-          echo "::error::Review the semgrep-report.json artifact for details"
+          echo "::error::Semgrep found ${{ steps.parse.outputs.errors }} ERROR severity issues."
           exit 1
 
   secret-scan:
@@ -291,8 +282,7 @@ jobs:
           RAILS_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: |
-          bundle exec rails db:create db:migrate RAILS_ENV=test
+        run: bundle exec rails db:create db:migrate RAILS_ENV=test
 
       - name: Start Rails Server
         env:
@@ -303,10 +293,6 @@ jobs:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
         run: |
           bundle exec rails server -p 3333 -d
-          sleep 10
-
-      - name: Wait for API
-        run: |
           timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
 
       - name: Run SSRF Protection Tests
@@ -361,8 +347,7 @@ jobs:
           RAILS_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: |
-          bundle exec rails db:create db:migrate RAILS_ENV=test
+        run: bundle exec rails db:create db:migrate RAILS_ENV=test
 
       - name: Start Rails Server
         env:
@@ -373,10 +358,6 @@ jobs:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
         run: |
           bundle exec rails server -p 3333 -d
-          sleep 10
-
-      - name: Wait for API
-        run: |
           timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
 
       - name: Run Authentication Tests
@@ -424,8 +405,7 @@ jobs:
           RAILS_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/prostaff_test
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: |
-          bundle exec rails db:create db:migrate RAILS_ENV=test
+        run: bundle exec rails db:create db:migrate RAILS_ENV=test
 
       - name: Start Rails Server
         env:
@@ -436,10 +416,6 @@ jobs:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY || 'dummy_key' }}
         run: |
           bundle exec rails server -p 3333 -d
-          sleep 10
-
-      - name: Wait for API
-        run: |
           timeout 60 bash -c 'until curl -sf http://localhost:3333/up; do sleep 2; done'
 
       - name: Run SQL Injection Tests
@@ -463,66 +439,93 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [brakeman, dependency-check, semgrep, ssrf-protection, authentication-test, sql-injection-test, secrets-scan-enhanced]
+    needs:
+      - brakeman
+      - dependency-check
+      - semgrep
+      - ssrf-protection
+      - authentication-test
+      - sql-injection-test
+      - secrets-scan-enhanced
     if: always()
     steps:
       - name: Check Results
         run: |
-          echo "Brakeman: ${{ needs.brakeman.result }}"
+          echo "Brakeman:         ${{ needs.brakeman.result }}"
           echo "Dependency Check: ${{ needs.dependency-check.result }}"
-          echo "Semgrep: ${{ needs.semgrep.result }}"
-          echo "SSRF Protection: ${{ needs.ssrf-protection.result }}"
-          echo "Authentication: ${{ needs.authentication-test.result }}"
-          echo "SQL Injection: ${{ needs.sql-injection-test.result }}"
-          echo "Secrets Scan: ${{ needs.secrets-scan-enhanced.result }}"
+          echo "Semgrep:          ${{ needs.semgrep.result }}"
+          echo "SSRF Protection:  ${{ needs.ssrf-protection.result }}"
+          echo "Authentication:   ${{ needs.authentication-test.result }}"
+          echo "SQL Injection:    ${{ needs.sql-injection-test.result }}"
+          echo "Secrets Scan:     ${{ needs.secrets-scan-enhanced.result }}"
 
-      - name: Post Summary
+      - name: Write Step Summary
+        run: |
+          status() {
+            case "$1" in
+              success) echo "✅" ;;
+              failure) echo "❌" ;;
+              *)       echo "⚠️" ;;
+            esac
+          }
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          ## 🔐 Security Scan Summary
+
+          ### Static Analysis (SAST)
+          | Check | Status |
+          |-------|--------|
+          | Brakeman | $(status "${{ needs.brakeman.result }}") ${{ needs.brakeman.result }} |
+          | Dependencies | $(status "${{ needs.dependency-check.result }}") ${{ needs.dependency-check.result }} |
+          | Semgrep | $(status "${{ needs.semgrep.result }}") ${{ needs.semgrep.result }} |
+          | Secrets | $(status "${{ needs.secrets-scan-enhanced.result }}") ${{ needs.secrets-scan-enhanced.result }} |
+
+          ### Dynamic Analysis (DAST)
+          | Check | Status |
+          |-------|--------|
+          | SSRF Protection | $(status "${{ needs.ssrf-protection.result }}") ${{ needs.ssrf-protection.result }} |
+          | Authentication | $(status "${{ needs.authentication-test.result }}") ${{ needs.authentication-test.result }} |
+          | SQL Injection | $(status "${{ needs.sql-injection-test.result }}") ${{ needs.sql-injection-test.result }} |
+          EOF
+
+      - name: Comment PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
+            const s = (r) => ({ success: '✅', failure: '❌' }[r] ?? '⚠️');
             const brakeman = '${{ needs.brakeman.result }}';
-            const deps = '${{ needs.dependency-check.result }}';
-            const semgrep = '${{ needs.semgrep.result }}';
-            const ssrf = '${{ needs.ssrf-protection.result }}';
-            const auth = '${{ needs.authentication-test.result }}';
-            const sqli = '${{ needs.sql-injection-test.result }}';
-            const secrets = '${{ needs.secrets-scan-enhanced.result }}';
+            const deps     = '${{ needs.dependency-check.result }}';
+            const semgrep  = '${{ needs.semgrep.result }}';
+            const ssrf     = '${{ needs.ssrf-protection.result }}';
+            const auth     = '${{ needs.authentication-test.result }}';
+            const sqli     = '${{ needs.sql-injection-test.result }}';
+            const secrets  = '${{ needs.secrets-scan-enhanced.result }}';
 
-            const status = (result) => {
-              switch(result) {
-                case 'success': return '✅';
-                case 'failure': return '❌';
-                default: return '⚠️';
-              }
-            };
+            const allPassed = [brakeman, deps, semgrep, ssrf, auth, sqli, secrets]
+              .every(r => r === 'success');
 
             const body = `## 🔐 Security Scan Summary
 
             ### Static Analysis (SAST)
             | Check | Status |
             |-------|--------|
-            | Brakeman | ${status(brakeman)} ${brakeman} |
-            | Dependencies | ${status(deps)} ${deps} |
-            | Semgrep | ${status(semgrep)} ${semgrep} |
-            | Secrets | ${status(secrets)} ${secrets} |
+            | Brakeman | ${s(brakeman)} ${brakeman} |
+            | Dependencies | ${s(deps)} ${deps} |
+            | Semgrep | ${s(semgrep)} ${semgrep} |
+            | Secrets | ${s(secrets)} ${secrets} |
 
             ### Dynamic Analysis (DAST)
             | Check | Status |
             |-------|--------|
-            | SSRF Protection | ${status(ssrf)} ${ssrf} |
-            | Authentication | ${status(auth)} ${auth} |
-            | SQL Injection | ${status(sqli)} ${sqli} |
+            | SSRF Protection | ${s(ssrf)} ${ssrf} |
+            | Authentication | ${s(auth)} ${auth} |
+            | SQL Injection | ${s(sqli)} ${sqli} |
 
-            ${brakeman === 'success' && deps === 'success' && semgrep === 'success' &&
-              ssrf === 'success' && auth === 'success' && sqli === 'success' && secrets === 'success'
-              ? '✅ All security checks passed!'
-              : '⚠️ Some security checks failed. Please review the details above.'}
+            ${allPassed ? '✅ All security checks passed!' : '⚠️ Some checks failed — review the details above.'}
             `;
-
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body,
             });
