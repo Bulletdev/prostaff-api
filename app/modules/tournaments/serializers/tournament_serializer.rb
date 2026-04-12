@@ -28,6 +28,8 @@ class TournamentSerializer
       status: @tournament.status,
       max_teams: @tournament.max_teams,
       enrolled_teams_count: @tournament.enrolled_teams_count,
+      slots_available: @tournament.slots_available?,
+      bracket_generated: @tournament.bracket_generated?,
       bo_format: @tournament.bo_format,
       current_round_label: @tournament.current_round_label,
       rules: @tournament.rules

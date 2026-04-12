@@ -32,11 +32,20 @@ class Tournament < ApplicationRecord
   end
 
   def bracket_generated?
-    tournament_matches.exists?
+    if association(:tournament_matches).loaded?
+      tournament_matches.any?
+    else
+      tournament_matches.exists?
+    end
   end
 
   def enrolled_teams_count
-    tournament_teams.where(status: 'approved').count
+    # Use loaded association (avoids N+1 when preloaded via includes)
+    if association(:tournament_teams).loaded?
+      tournament_teams.count { |t| t.status == 'approved' }
+    else
+      tournament_teams.where(status: 'approved').count
+    end
   end
 
   def slots_available?
