@@ -40,6 +40,6 @@ jobs:
       - name: Upload SARIF to GitHub Code Scanning
         # Only upload if the sarif file was produced (snyk may not create it on auth failure)
         if: always() && hashFiles('snyk.sarif') != ''
-        uses: github/codeql-action/upload-sarif@45775bd8235c68ba998cffa5171334d58593da48  # v3
+        uses: github/codeql-action/upload-sarif@b5ebac6f4c00c8ccddb7cdcd45fdb248329f808a  # v3
         with:
           sarif_file: snyk.sarif
