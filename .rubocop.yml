@@ -29,6 +29,7 @@ Metrics/BlockLength:
     - 'config/routes/**/*'
     - 'db/migrate/*'
     - 'db/seeds.rb'
+    - 'spec/factories/**/*'
   Max: 50
 
 Metrics/MethodLength:

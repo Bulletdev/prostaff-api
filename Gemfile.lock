@@ -107,10 +107,15 @@ GEM
     blueprinter (1.2.1)
     bootsnap (1.18.6)
       msgpack (~> 1.2)
+    brakeman (8.0.4)
+      racc
     builder (3.3.0)
     bullet (8.1.0)
       activesupport (>= 3.0.0)
       uniform_notifier (~> 1.11)
+    bundler-audit (0.9.3)
+      bundler (>= 1.2.0)
+      thor (~> 1.0)
     cgi (0.5.1)
     concurrent-ruby (1.3.6)
     connection_pool (2.5.5)
@@ -469,7 +474,9 @@ DEPENDENCIES
   bcrypt (~> 3.1.7)
   blueprinter
   bootsnap
+  brakeman
   bullet
+  bundler-audit (~> 0.9)
   connection_pool (< 3.0)
   database_cleaner-active_record
   debug
