@@ -236,7 +236,6 @@ This API follows a modular monolith architecture with the following modules:
 - `scrims` - Scrim management and opponent team tracking
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
-- `tournaments` - ArenaBR double-elimination tournament management (enrollment, bracket, match reporting)
 
 ### Architecture Diagram
 
