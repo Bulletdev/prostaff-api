@@ -18,15 +18,17 @@ jobs:
   snyk:
     name: Snyk Docker Image Scan
     runs-on: ubuntu-latest
-    # Skip if SNYK_TOKEN is not configured — avoids noise on forks / early repos
-    if: ${{ secrets.SNYK_TOKEN != '' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Build Docker image
+        if: env.SNYK_TOKEN != ''
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: docker build -t prostaff-api:${{ github.sha }} .
 
       - name: Run Snyk container scan
+        if: env.SNYK_TOKEN != ''
         continue-on-error: true
         uses: snyk/actions/docker@14818c4695ecc4045f33c9cee9e795a788711ca4
         env:
