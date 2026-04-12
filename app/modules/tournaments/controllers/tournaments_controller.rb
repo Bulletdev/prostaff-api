@@ -17,7 +17,7 @@ module Tournaments
 
       # GET /api/v1/tournaments
       def index
-        tournaments = Tournament.active.by_scheduled
+        tournaments = Tournament.active.by_scheduled.includes(:tournament_teams, :tournament_matches)
         render_success(tournaments.map { |t| TournamentSerializer.new(t).as_json })
       end
 
@@ -83,12 +83,18 @@ module Tournaments
       end
 
       def tournament_params
-        params.permit(
-          :name, :game, :format, :status, :max_teams,
+        # :format is a Rails routing reserved param (from the optional (.:format) route segment).
+        # path_parameters override it to nil in the merged params hash, so we read it
+        # directly from the raw request body to get the value the client actually sent.
+        permitted = params.permit(
+          :name, :game, :status, :max_teams,
           :entry_fee_cents, :prize_pool_cents, :bo_format,
           :current_round_label, :rules,
           :registration_closes_at, :scheduled_start_at
         )
+        body_format = request.request_parameters[:format] || request.request_parameters.dig(:tournament, :format)
+        permitted[:format] = body_format if body_format.present?
+        permitted
       end
     end
   end
