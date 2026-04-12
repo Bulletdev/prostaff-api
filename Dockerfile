@@ -10,10 +10,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libyaml-dev \
     git \
     tzdata \
-    nodejs \
-    npm \
     curl \
-    && npm install -g yarn@1.22.22 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
