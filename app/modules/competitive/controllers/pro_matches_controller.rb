@@ -77,12 +77,15 @@ module Competitive
             cached: true
           }
         }
-      rescue PandascoreService::PandascoreError => e
+      rescue PandascoreService::RateLimitError => e
+        Rails.logger.warn "[ProMatches#upcoming] Rate limit: #{e.message}"
         render json: {
-          error: {
-            code: 'PANDASCORE_ERROR',
-            message: e.message
-          }
+          error: { code: 'PANDASCORE_RATE_LIMITED', message: e.message }
+        }, status: :too_many_requests
+      rescue PandascoreService::PandascoreError => e
+        Rails.logger.error "[ProMatches#upcoming] PandascoreError (#{e.class}): #{e.message}"
+        render json: {
+          error: { code: 'PANDASCORE_ERROR', message: e.message }
         }, status: :service_unavailable
       end
 
@@ -105,12 +108,15 @@ module Competitive
             cached: true
           }
         }
-      rescue PandascoreService::PandascoreError => e
+      rescue PandascoreService::RateLimitError => e
+        Rails.logger.warn "[ProMatches#past] Rate limit: #{e.message}"
         render json: {
-          error: {
-            code: 'PANDASCORE_ERROR',
-            message: e.message
-          }
+          error: { code: 'PANDASCORE_RATE_LIMITED', message: e.message }
+        }, status: :too_many_requests
+      rescue PandascoreService::PandascoreError => e
+        Rails.logger.error "[ProMatches#past] PandascoreError (#{e.class}): #{e.message}"
+        render json: {
+          error: { code: 'PANDASCORE_ERROR', message: e.message }
         }, status: :service_unavailable
       end
 

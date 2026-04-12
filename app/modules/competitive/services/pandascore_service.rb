@@ -5,7 +5,6 @@ class PandascoreService
   include Singleton
 
   BASE_URL = ENV.fetch('PANDASCORE_BASE_URL', 'https://api.pandascore.co')
-  API_KEY = ENV['PANDASCORE_API_KEY']
   CACHE_TTL = ENV.fetch('PANDASCORE_CACHE_TTL', 3600).to_i
 
   class PandascoreError < StandardError; end
@@ -103,15 +102,19 @@ class PandascoreService
 
   private
 
+  def api_key
+    ENV['PANDASCORE_API_KEY']
+  end
+
   # Make HTTP request to PandaScore API
   # @param endpoint [String] API endpoint (without base URL)
   # @param params [Hash] Query parameters
   # @return [Hash, Array] Parsed JSON response
   def make_request(endpoint, params = {})
-    raise PandascoreError, 'PANDASCORE_API_KEY not configured' if API_KEY.blank?
+    raise PandascoreError, 'PANDASCORE_API_KEY not configured' if api_key.blank?
 
     url = "#{BASE_URL}/#{endpoint}"
-    params[:token] = API_KEY
+    params[:token] = api_key
 
     Rails.logger.info "[PandaScore] GET #{endpoint} - Params: #{params.inspect}"
 
