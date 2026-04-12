@@ -457,6 +457,34 @@ Rails.application.routes.draw do
       namespace :ai do
         post 'draft/analyze', to: '/ai_intelligence/controllers/draft#analyze'
       end
+
+      # Tournaments Module — ArenaBR double elimination
+      resources :tournaments, controller: '/tournaments/controllers/tournaments',
+                              only: %i[index show create update] do
+        member do
+          post :generate_bracket
+        end
+
+        resources :teams, only: %i[index create destroy],
+                          controller: '/tournaments/controllers/tournament_teams' do
+          member do
+            patch :approve
+            patch :reject
+          end
+        end
+
+        resources :matches, only: %i[index show],
+                            controller: '/tournaments/controllers/tournament_matches' do
+          member do
+            post :checkin
+          end
+
+          resource :report, only: %i[show create],
+                            controller: '/tournaments/controllers/match_reports' do
+            post :admin_resolve, on: :member
+          end
+        end
+      end
     end
   end
 
