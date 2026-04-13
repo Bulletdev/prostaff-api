@@ -14,6 +14,8 @@ jobs:
   full-security-audit:
     name: Complete Security Audit
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     services:
       postgres:
         image: postgres:14
@@ -51,7 +53,9 @@ jobs:
       - name: Setup Database
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/prostaff_test
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/prostaff_test
+          SECRET_KEY_BASE: nightly_audit_secret_key_base_not_for_production
+          JWT_SECRET_KEY: nightly_audit_jwt_secret_not_for_production
         run: |
           bundle exec rails db:create
           bundle exec rails db:migrate
@@ -59,8 +63,9 @@ jobs:
       - name: Start Rails Server
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/prostaff_test
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/prostaff_test
           REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY_BASE: nightly_audit_secret_key_base_not_for_production
           JWT_SECRET_KEY: nightly_audit_jwt_secret_not_for_production
         run: |
           bundle exec rails server -p 3333 -e test -d
