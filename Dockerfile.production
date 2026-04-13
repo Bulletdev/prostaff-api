@@ -20,7 +20,8 @@ RUN apt-get update -qq && \
 ENV RAILS_ENV=production \
     BUNDLE_DEPLOYMENT=1 \
     BUNDLE_PATH=/usr/local/bundle \
-    BUNDLE_WITHOUT=development:test
+    BUNDLE_WITHOUT=development:test \
+    MAKEFLAGS="-j2"
 
 WORKDIR /app
 
@@ -38,7 +39,10 @@ RUN apt-get update -qq && \
 
 COPY Gemfile Gemfile.lock ./
 
-RUN bundle install --jobs 4 --retry 3 && \
+# Pin bundler to lockfile version to avoid reinstall on each build
+RUN gem install bundler -v "$(grep -A1 'BUNDLED WITH' Gemfile.lock | tail -1 | tr -d ' ')" --no-document
+
+RUN bundle install --jobs 2 --retry 3 && \
     rm -rf /usr/local/bundle/ruby/*/cache && \
     rm -rf /usr/local/bundle/ruby/*/bundler/gems/*/.git
 
