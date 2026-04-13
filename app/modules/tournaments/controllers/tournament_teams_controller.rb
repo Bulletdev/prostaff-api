@@ -52,7 +52,7 @@ module Tournaments
           tournament: @tournament,
           organization: current_organization,
           team_name: enrollment_params[:team_name] || current_organization.name,
-          team_tag: enrollment_params[:team_tag]  || current_organization.tag,
+          team_tag: enrollment_params[:team_tag]  || current_organization.team_tag,
           logo_url: enrollment_params[:logo_url]  || current_organization.logo_url
         )
 
