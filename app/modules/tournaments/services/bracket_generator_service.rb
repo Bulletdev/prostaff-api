@@ -77,6 +77,19 @@ class BracketGeneratorService
     [matches, number]
   end
 
+  # BO per phase:
+  #   UB Semifinals → BO3
+  #   Grand Final   → BO5
+  #   everything else uses the tournament default (usually BO1)
+  BO_OVERRIDES = {
+    'UB Semifinals' => 3,
+    'Grand Final'   => 5
+  }.freeze
+
+  def bo_for_round(label)
+    BO_OVERRIDES.fetch(label, @tournament.bo_format)
+  end
+
   def create_match(side, round, match_number)
     TournamentMatch.create!(
       tournament: @tournament,
@@ -84,7 +97,7 @@ class BracketGeneratorService
       round_label: round[:label],
       round_order: round[:order],
       match_number: match_number,
-      bo_format: @tournament.bo_format,
+      bo_format: bo_for_round(round[:label]),
       status: 'scheduled'
     )
   end
