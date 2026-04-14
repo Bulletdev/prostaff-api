@@ -3,7 +3,9 @@
 
 # Concurrency = number of Sidekiq threads = DB pool slots consumed.
 # Supabase Nano (2 vCPU / 2 GB) + PgBouncer session mode: keep this low.
-# Puma: 2 workers × 5 threads = 10 connections.
+# Puma: 4 workers x 5 threads = 20 connections (api container).
+# Sidekiq: 10 connections (sidekiq container).
+# Total: ~30 conexoes simultaneas de banco.
 # Sidekiq: DB_POOL should match concurrency (set both in your env together).
 # Recommended production env: SIDEKIQ_CONCURRENCY=10 DB_POOL=10
 :concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10).to_i %>
