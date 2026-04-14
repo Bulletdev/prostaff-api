@@ -54,6 +54,7 @@ jobs:
         env:
           RAILS_ENV: test
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/prostaff_test
+          REDIS_URL: redis://localhost:6379/0
           SECRET_KEY_BASE: nightly_audit_secret_key_base_not_for_production
           JWT_SECRET_KEY: nightly_audit_jwt_secret_not_for_production
         run: |
@@ -112,7 +113,7 @@ jobs:
             -v "$(pwd)/security_tests/reports/nightly:/zap/wrk:rw" \
             zaproxy/zap-stable \
             zap-api-scan.py \
-            -t http://localhost:3333/api-docs/v1/swagger.json \
+            -t http://localhost:3333/api-docs/v1/swagger.yaml \
             -f openapi \
             -r zap-api.html \
             -J zap-api.json || true
