@@ -75,7 +75,7 @@ services:
 
       # CORS Middleware Definition
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg,https://docs.prostaff.gg,https://status.prostaff.gg,https://scrims.lol,https://www.scrims.lol
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg,https://docs.prostaff.gg,https://status.prostaff.gg,https://scrims.lol,https://www.scrims.lol,https://arena-br.vercel.app
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
@@ -88,6 +88,8 @@ services:
 
     environment:
       RAILS_ENV: production
+      WEB_CONCURRENCY: '4'
+      RAILS_MAX_THREADS: '5'
       DATABASE_URL: '${DATABASE_URL}'
       # Connect to Redis via Docker network hostname
       REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
