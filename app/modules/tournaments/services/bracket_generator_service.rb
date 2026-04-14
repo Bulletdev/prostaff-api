@@ -82,8 +82,8 @@ class BracketGeneratorService
   #   Grand Final   → BO5
   #   everything else uses the tournament default (usually BO1)
   BO_OVERRIDES = {
-    'UB Semifinals' => 3,
-    'Grand Final'   => 5
+    'UB Final'    => 3,
+    'Grand Final' => 5
   }.freeze
 
   def bo_for_round(label)
