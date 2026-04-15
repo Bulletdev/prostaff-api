@@ -1,5 +1,5 @@
-# Use Ruby 3.4.9 slim image (better Windows compatibility)
-FROM ruby:3.4.9-slim
+# Use Ruby 3.4.8 slim image (better Windows compatibility)
+FROM ruby:3.4.8-slim
 
 # Install system dependencies without version pinning for compatibility
 # Note: Using latest available versions from Debian repositories

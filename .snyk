@@ -10,7 +10,7 @@
 #         reason: <why it's not applicable>
 #         expires: '<ISO 8601 date>'
 #
-# Base image: ruby:3.4.9-slim (Debian Bookworm)
+# Base image: ruby:3.4.8-slim (Debian Bookworm)
 #
 # How to add an entry:
 #   1. A CVE appears in the GitHub Security tab after a Snyk scan

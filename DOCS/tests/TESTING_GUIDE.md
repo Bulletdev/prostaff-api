@@ -43,7 +43,7 @@ Guia de referencia para executar testes unitarios, de integracao, de carga e de 
 ### Pre-requisitos locais
 
 ```bash
-ruby --version   # 3.4.9
+ruby --version   # 3.4.8
 bundle install
 
 # Banco de teste (necessario PostgreSQL rodando)

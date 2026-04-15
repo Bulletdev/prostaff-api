@@ -25,7 +25,7 @@ A aplicacao roda via **Coolify** (self-hosted PaaS) com **Traefik** como reverse
 
 | Componente    | Tecnologia               | Versao     |
 |---------------|--------------------------|------------|
-| Runtime       | Ruby                     | 3.4.9      |
+| Runtime       | Ruby                     | 3.4.8      |
 | Framework     | Rails                    | 7.2        |
 | Servidor web  | Puma                     | ~> 6.0     |
 | Banco de dados| PostgreSQL               | 15+        |
