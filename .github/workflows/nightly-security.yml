@@ -47,7 +47,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
         with:
-          ruby-version: 3.4.5
+          ruby-version: 3.4.9
           bundler-cache: true
 
       - name: Setup Database

@@ -21,7 +21,7 @@ Instrucoes para executar scans de seguranca manualmente e resolver problemas com
 ## Pre-requisitos
 
 ```bash
-ruby --version   # 3.4.5
+ruby --version   # 3.4.9
 docker --version
 
 # jq (opcional, para parsing de JSON)

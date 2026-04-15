@@ -1,5 +1,5 @@
 # RuboCop Configuration for ProStaff API
-# Ruby on Rails 7.2+ API with Ruby 3.4.5
+# Ruby on Rails 7.2+ API with Ruby 3.4.9
 #
 # This configuration balances code quality with pragmatic Rails development.
 # Generated: 2025-10-23
