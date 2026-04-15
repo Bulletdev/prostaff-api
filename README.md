@@ -19,7 +19,7 @@
 [![CodeQL](https://github.com/Bulletdev/prostaff-api/actions/workflows/codeql.yml/badge.svg)](https://github.com/Bulletdev/prostaff-api/actions/workflows/codeql.yml)
 
 
-[![Ruby Version](https://img.shields.io/badge/ruby-3.4.9-CC342D?logo=ruby)](https://www.ruby-lang.org/)
+[![Ruby Version](https://img.shields.io/badge/ruby-3.4.8-CC342D?logo=ruby)](https://www.ruby-lang.org/)
 [![Rails Version](https://img.shields.io/badge/rails-7.2-CC342D?logo=rubyonrails)](https://rubyonrails.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg?logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-6+-red.svg?logo=redis)](https://redis.io/)
@@ -171,7 +171,7 @@ open http://localhost:3333/api-docs
 ╔══════════════════════╦════════════════════════════════════════════════════╗
 ║  LAYER               ║  TECNOLOGY                                         ║
 ╠══════════════════════╬════════════════════════════════════════════════════╣
-║  Language            ║  Ruby 3.4.9                                        ║
+║  Language            ║  Ruby 3.4.8                                        ║
 ║  Framework           ║  Rails 7.2.0 (API-only mode)                       ║
 ║  Database            ║  PostgreSQL 14+                                    ║
 ║  Authentication      ║  JWT (access + refresh tokens)                     ║
@@ -452,7 +452,7 @@ graph TB
 ### Prerequisites
 
 ```
-[✓] Ruby 3.4.9+
+[✓] Ruby 3.4.8+
 [✓] PostgreSQL 14+
 [✓] Redis 6+
 ```
