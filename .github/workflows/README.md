@@ -250,7 +250,7 @@ new-feature-test:
     - name: Setup Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 3.4.5
+        ruby-version: 3.4.9
         bundler-cache: true
     - name: Setup Database
       run: bundle exec rails db:migrate RAILS_ENV=test

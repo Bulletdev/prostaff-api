@@ -36,7 +36,7 @@ Rede interna (coolify):
 
 ### Docker
 
-- `Dockerfile.production` - Build multi-stage (`ruby:3.4.5-slim`)
+- `Dockerfile.production` - Build multi-stage (`ruby:3.4.9-slim`)
   - Stage `build`: instala dependencias, compila bootsnap
   - Stage final: copia gems e app, cria usuario `rails` (uid 1000), healthcheck no `/up`
 - `docker-compose.production.yml` - Servicos de producao na rede `coolify`

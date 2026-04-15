@@ -28,7 +28,7 @@ deploy/
 ## Stack Atual
 
 ```
-Ruby 3.4.5
+Ruby 3.4.9
 Rails 7.2
 PostgreSQL 15+ (Supabase)
 Redis 7.2 (via Coolify)
