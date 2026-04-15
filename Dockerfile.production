@@ -3,7 +3,7 @@
 ############################
 # Base
 ############################
-FROM ruby:3.4.5-slim AS base
+FROM ruby:3.4.9-slim AS base
 
 # Instala dependências essenciais (incluindo curl para healthcheck)
 # hadolint ignore=DL3008
