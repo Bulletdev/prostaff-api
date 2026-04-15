@@ -202,22 +202,37 @@ module Scouting
         mastery_data = riot_service.get_champion_mastery(puuid: @target.riot_puuid, region: region)
 
         pool = extract_champion_pool(mastery_data)
-        perf = @target.recent_performance || {}
+        perf = PerformanceAggregator.new(riot_service: riot_service)
+                                               .call(puuid: @target.riot_puuid, region: region) ||
+               @target.recent_performance || {}
         tier = league_data[:solo_queue]&.dig(:tier) || @target.current_tier
+        lp   = league_data[:solo_queue]&.dig(:lp)
         strengths = derive_strengths(perf, pool, @target.role, tier)
         weaknesses = derive_weaknesses(perf, pool, @target.role, tier)
 
+        new_peak_tier, new_peak_rank = resolve_peak(
+          current_tier: tier,
+          current_lp: lp,
+          stored_peak_tier: @target.peak_tier,
+          stored_peak_rank: @target.peak_rank
+        )
+
         @target.update!(
-          # riot_summoner_id is no longer returned by Riot API
           summoner_name: "#{account_data[:game_name]}##{account_data[:tag_line]}",
-          current_tier: league_data[:solo_queue]&.dig(:tier),
+          current_tier: tier,
           current_rank: league_data[:solo_queue]&.dig(:rank),
-          current_lp: league_data[:solo_queue]&.dig(:lp),
+          current_lp: lp,
+          peak_tier: new_peak_tier,
+          peak_rank: new_peak_rank,
           champion_pool: pool,
+          recent_performance: perf,
           performance_trend: calculate_performance_trend(league_data),
           strengths: strengths,
-          weaknesses: weaknesses
+          weaknesses: weaknesses,
+          last_api_sync_at: Time.current
         )
+
+        SeasonHistoryUpdater.call(target: @target, league_data: league_data)
 
         watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
         render_success(
@@ -278,9 +293,11 @@ module Scouting
       def apply_rank_range_filter(targets)
         min_lp = params[:lp_min].presence&.to_i
         max_lp = params[:lp_max].presence&.to_i
-        return targets unless min_lp && max_lp
+        return targets unless min_lp || max_lp
 
-        targets.where(current_lp: min_lp..max_lp)
+        targets = targets.where('current_lp >= ?', min_lp) if min_lp
+        targets = targets.where('current_lp <= ?', max_lp) if max_lp
+        targets
       end
 
       def apply_search_filter(targets)
@@ -378,6 +395,29 @@ module Scouting
           :notes,
           champion_pool: []
         )
+      end
+
+      # Ordered list of tiers from lowest to highest for peak comparison.
+      TIER_ORDER = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER].freeze
+
+      # Returns [peak_tier, peak_rank] — keeps the stored peak unless the current rank is provably higher.
+      # Master+ has no divisions so LP is the tiebreaker; below Master, roman numeral rank I > II > III > IV.
+      def resolve_peak(current_tier:, current_lp:, stored_peak_tier:, stored_peak_rank:)
+        return [current_tier, nil] if stored_peak_tier.blank?
+
+        current_idx = TIER_ORDER.index(current_tier&.upcase) || 0
+        stored_idx  = TIER_ORDER.index(stored_peak_tier&.upcase) || 0
+
+        return [stored_peak_tier, stored_peak_rank] if current_idx < stored_idx
+
+        if current_idx == stored_idx
+          # Same tier — for Master+ LP is the signal but we don't have stored peak LP here,
+          # so leave peak unchanged (it was set by a prior sync at equal or higher LP)
+          return [stored_peak_tier, stored_peak_rank]
+        end
+
+        # current_idx > stored_idx — new tier is strictly higher
+        [current_tier, nil]
       end
 
       # Thresholds calibrated by tier. Mirrors RosterManagementService#tier_thresholds.

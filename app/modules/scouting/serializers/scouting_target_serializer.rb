@@ -24,6 +24,7 @@ class ScoutingTargetSerializer < Blueprinter::Base
   end
   fields :real_name, :avatar_url, :profile_icon_id
   fields :peak_tier, :peak_rank, :last_api_sync_at
+  fields :season_history
 
   # Computed fields
   field :status_text do |target|

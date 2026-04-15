@@ -22,6 +22,7 @@ module Scouting
       sync_account_name!(target, riot_service)
       sync_league_entries!(target, riot_service)
       sync_mastery_data!(target, riot_service)
+      sync_recent_performance!(target, riot_service)
 
       target.update!(last_sync_at: Time.current)
       Rails.logger.info("Successfully synced scouting target #{target.id}")
@@ -111,6 +112,7 @@ module Scouting
       end
 
       target.update!(update_attributes) if update_attributes.present?
+      SeasonHistoryUpdater.call(target: target, league_data: league_data)
     end
 
     def update_champion_pool(target, mastery_data)
@@ -124,6 +126,12 @@ module Scouting
 
     def load_champion_id_map
       DataDragonService.new.champion_id_map
+    end
+
+    def sync_recent_performance!(target, riot_service)
+      perf = PerformanceAggregator.new(riot_service: riot_service)
+                                  .call(puuid: target.riot_puuid, region: target.region)
+      target.update!(recent_performance: perf) if perf
     end
   end
 end
