@@ -94,8 +94,7 @@ class DataDragonService
     champion_map = {}
     data['data'].each_value do |champion|
       champion_id = champion['key'].to_i
-      champion_name = champion['id'] # This is the champion name like "Aatrox"
-      champion_map[champion_id] = champion_name
+      champion_map[champion_id] = champion['name'] # display name: "Wukong", "Lee Sin", etc.
     end
 
     champion_map
