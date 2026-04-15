@@ -201,14 +201,22 @@ module Scouting
         league_data = riot_service.get_league_entries_by_puuid(puuid: @target.riot_puuid, region: region)
         mastery_data = riot_service.get_champion_mastery(puuid: @target.riot_puuid, region: region)
 
+        pool = extract_champion_pool(mastery_data)
+        perf = @target.recent_performance || {}
+        tier = league_data[:solo_queue]&.dig(:tier) || @target.current_tier
+        strengths = derive_strengths(perf, pool, @target.role, tier)
+        weaknesses = derive_weaknesses(perf, pool, @target.role, tier)
+
         @target.update!(
           # riot_summoner_id is no longer returned by Riot API
           summoner_name: "#{account_data[:game_name]}##{account_data[:tag_line]}",
           current_tier: league_data[:solo_queue]&.dig(:tier),
           current_rank: league_data[:solo_queue]&.dig(:rank),
           current_lp: league_data[:solo_queue]&.dig(:lp),
-          champion_pool: extract_champion_pool(mastery_data),
-          performance_trend: calculate_performance_trend(league_data)
+          champion_pool: pool,
+          performance_trend: calculate_performance_trend(league_data),
+          strengths: strengths,
+          weaknesses: weaknesses
         )
 
         watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
@@ -240,7 +248,11 @@ module Scouting
       end
 
       def apply_basic_filters(targets)
-        targets = targets.by_role(params[:role]) if params[:role].present?
+        # role param is comma-separated lowercase: "mid,top" → ["mid", "top"]
+        if params[:role].present?
+          roles = params[:role].split(',').map(&:strip).reject(&:blank?)
+          targets = targets.by_role(roles) if roles.any?
+        end
         targets = targets.by_status(params[:status]) if params[:status].present?
         targets = targets.by_region(params[:region]) if params[:region].present?
 
@@ -256,18 +268,19 @@ module Scouting
       end
 
       def apply_age_range_filter(targets)
-        return targets unless params[:age_range].present? && params[:age_range].is_a?(Array)
+        min_age = params[:age_min].presence&.to_i
+        max_age = params[:age_max].presence&.to_i
+        return targets unless min_age && max_age
 
-        min_age, max_age = params[:age_range]
-        min_age && max_age ? targets.where(age: min_age..max_age) : targets
+        targets.where(age: min_age..max_age)
       end
 
       def apply_rank_range_filter(targets)
-        return targets unless params[:rank_range].present?
+        min_lp = params[:lp_min].presence&.to_i
+        max_lp = params[:lp_max].presence&.to_i
+        return targets unless min_lp && max_lp
 
-        # Rank range filtering by LP
-        min_lp, max_lp = params[:rank_range]
-        min_lp && max_lp ? targets.where(current_lp: min_lp..max_lp) : targets
+        targets.where(current_lp: min_lp..max_lp)
       end
 
       def apply_search_filter(targets)
@@ -367,33 +380,69 @@ module Scouting
         )
       end
 
-      # Extract top champions from mastery data
+      # Thresholds calibrated by tier. Mirrors RosterManagementService#tier_thresholds.
+      # JSONB from DB returns string keys, so we use with_indifferent_access throughout.
+      def tier_thresholds(tier)
+        case tier&.upcase
+        when 'CHALLENGER', 'GRANDMASTER', 'MASTER'
+          { wr_strength: 53, wr_weakness: 49, kda_strength: 4.5, kda_weakness: 3.0,
+            cs_strength: 9.0, cs_weakness: 7.5, vision_strength: 45, vision_weakness: 28 }
+        when 'DIAMOND', 'EMERALD'
+          { wr_strength: 54, wr_weakness: 47, kda_strength: 4.0, kda_weakness: 2.5,
+            cs_strength: 8.5, cs_weakness: 7.0, vision_strength: 42, vision_weakness: 24 }
+        else
+          { wr_strength: 55, wr_weakness: 45, kda_strength: 3.5, kda_weakness: 2.0,
+            cs_strength: 8.0, cs_weakness: 6.0, vision_strength: 40, vision_weakness: 20 }
+        end
+      end
+
+      def derive_strengths(perf, pool, role, tier = nil)
+        return [] if perf.blank?
+
+        p = perf.with_indifferent_access
+        t = tier_thresholds(tier)
+        strengths = []
+        strengths << 'Consistency'         if p[:win_rate].to_f >= t[:wr_strength]
+        strengths << 'Mechanical skill'    if p[:avg_kda].to_f >= t[:kda_strength]
+        strengths << 'CS discipline'       if non_support?(role) && p[:avg_cs_per_min].to_f >= t[:cs_strength]
+        strengths << 'Map awareness'       if vision_role?(role) && p[:avg_vision_score].to_f >= t[:vision_strength]
+        strengths << 'Team fighting'       if p[:avg_kill_participation].to_f >= 65.0
+        strengths << 'Champion pool depth' if pool.size >= 6
+        strengths
+      end
+
+      def derive_weaknesses(perf, pool, role, tier = nil)
+        return [] if perf.blank?
+
+        p = perf.with_indifferent_access
+        t = tier_thresholds(tier)
+        weaknesses = []
+        weaknesses << 'Inconsistent performance' if p[:games_played].to_i >= 10 && p[:win_rate].to_f < t[:wr_weakness]
+        weaknesses << 'Death management'         if p[:avg_kda].to_f.positive? && p[:avg_kda].to_f < t[:kda_weakness]
+        weaknesses << 'CS discipline'            if non_support?(role) && p[:avg_cs_per_min].to_f.positive? && p[:avg_cs_per_min].to_f < t[:cs_weakness]
+        weaknesses << 'Vision control'           if vision_role?(role) && p[:avg_vision_score].to_f.positive? && p[:avg_vision_score].to_f < t[:vision_weakness]
+        weaknesses << 'Limited champion pool'    if pool.size < 3
+        weaknesses
+      end
+
+      def non_support?(role)
+        role.to_s != 'support'
+      end
+
+      def vision_role?(role)
+        %w[support jungle].include?(role.to_s)
+      end
+
+      # Extract top champions from mastery data using DataDragonService for full champion coverage.
+      # Falls back to "Champion_<id>" only when Data Dragon is unreachable.
       def extract_champion_pool(mastery_data)
         return [] if mastery_data.blank?
 
-        # Get top 10 champions by mastery points
-        mastery_data.first(10).map do |mastery|
-          champion_id_to_name(mastery[:champion_id])
-        end.compact
-      end
+        id_map = DataDragonService.new.champion_id_map
 
-      # Simple champion ID to name mapping (top champions)
-      def champion_id_to_name(champion_id)
-        # This is a simplified mapping - in production you'd want a complete mapping
-        # or fetch from Data Dragon API
-        champion_map = {
-          1 => 'Annie', 2 => 'Olaf', 3 => 'Galio', 4 => 'Twisted Fate',
-          5 => 'Xin Zhao', 6 => 'Urgot', 7 => 'LeBlanc', 8 => 'Vladimir',
-          9 => 'Fiddlesticks', 10 => 'Kayle', 11 => 'Master Yi', 12 => 'Alistar',
-          13 => 'Ryze', 14 => 'Sion', 15 => 'Sivir', 16 => 'Soraka',
-          17 => 'Teemo', 18 => 'Tristana', 19 => 'Warwick', 20 => 'Nunu',
-          21 => 'Miss Fortune', 22 => 'Ashe', 23 => 'Tryndamere', 24 => 'Jax',
-          25 => 'Morgana', 26 => 'Zilean', 27 => 'Singed', 28 => 'Evelynn',
-          29 => 'Twitch', 30 => 'Karthus', 31 => 'Cho\'Gath', 32 => 'Amumu',
-          33 => 'Rammus', 34 => 'Anivia', 35 => 'Shaco', 36 => 'Dr. Mundo'
-          # Add more as needed or fetch from Data Dragon
-        }
-        champion_map[champion_id] || "Champion_#{champion_id}"
+        mastery_data.first(10).filter_map do |mastery|
+          id_map[mastery[:champion_id].to_i]
+        end
       end
 
       # Calculate performance trend based on win/loss ratio
