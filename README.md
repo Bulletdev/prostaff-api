@@ -1171,7 +1171,7 @@ graph TB
 - **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt)
 - **WebSocket Support**: Native WebSocket proxy for Action Cable
 - **Application**: Rails 7.2 API (Puma) + Action Cable + Sidekiq
-- **Database**: PostgreSQL 14+ (Supabase)
+- **Database**: PostgreSQL 14+ (Supabase self hosted) + Cassandra 
 - **Cache/Queue**: Redis 7
 - **Search**: Meilisearch (self-hosted)
 
