@@ -445,13 +445,11 @@ graph TB
 1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
 2. **API-Only**: Rails configured in API mode for JSON responses
 3. **JWT Authentication**: Stateless authentication using JWT tokens
-4. **Background Processing**: Long-running tasks handled by Sidekiq (async audit logs, Riot sync)
-5. **Cache Layer**: Redis response cache on 6 high-frequency endpoints (org-scoped, TTL 5–30 min)
-6. **Circuit Breaker**: Riot API isolation via `CircuitBreakerService` (closed/open/half-open, Redis-backed)
-7. **Graceful Degradation**: Meilisearch offline → PostgreSQL ILIKE fallback; circuit open → fast fail
-8. **External Integration**: Riot Games API integration for real-time data
-9. **Rate Limiting**: Rack::Attack for API rate limiting
-10. **CORS**: Configured for cross-origin requests from frontend
+4. **Background Processing**: Long-running tasks handled by Sidekiq
+5. **Caching**: Redis used for session management and performance optimization
+6. **External Integration**: Riot Games API integration for real-time data
+7. **Rate Limiting**: Rack::Attack for API rate limiting
+8. **CORS**: Configured for cross-origin requests from frontend
 
 ## 04 · Setup
 
