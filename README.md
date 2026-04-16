@@ -20,7 +20,7 @@
 
 
 [![Ruby Version](https://img.shields.io/badge/ruby-3.4.8-CC342D?logo=ruby)](https://www.ruby-lang.org/)
-[![Rails Version](https://img.shields.io/badge/rails-7.2-CC342D?logo=rubyonrails)](https://rubyonrails.org/)
+[![Rails Version](https://img.shields.io/badge/rails-7.2.3.1-CC342D?logo=rubyonrails)](https://rubyonrails.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg?logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-6+-red.svg?logo=redis)](https://redis.io/)
 [![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger)](http://localhost:3333/api-docs)
@@ -35,7 +35,7 @@
 ║  PROSTAFF API — Ruby on Rails 7.2 (API-Only)                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Backend for the ProStaff.gg esports team management platform.               ║
-║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~500ms        ║
+║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~200ms        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -61,13 +61,17 @@
 │  [■] Meta Intelligence        — Build aggregation, champion/item analytics  │
 │  [■] Support System           — Ticketing + staff dashboard + FAQ           │
 │  [■] Global Search            — Meilisearch full-text search across models  │
+│  [■] Search Fallback          — PostgreSQL ILIKE fallback when Meili offline│
 │  [■] Real-time Messaging      — Action Cable WebSocket team chat            │
 │  [■] Background Jobs          — Sidekiq for async background processing     │
+│  [■] Circuit Breaker          — Riot API isolation (3-state, Redis-backed)  │
+│  [■] Async Audit Log          — Non-blocking audit trail via Sidekiq job    │
+│  [■] Response Cache Layer     — Redis cache on 6 endpoints (TTL 5–30 min)   │
 │  [■] Security Hardened        — OWASP Top 10, Brakeman, Semgrep, CodeQL, ZAP│
 │  [■] Rate Limiting            — Rack::Attack: 5 rules + Retry-After headers │
-│  [■] High Performance         — p95: ~500ms · cached: ~50ms                 │
+│  [■] High Performance         — p95: ~200ms prod · cached: ~50ms · >60% hit │
 │  [■] Modular Monolith         — Scalable modular architecture               │
-│  [■] Observability            — /health/live + /health/ready + Sidekiq mon. │
+│  [■] Observability            — /health+/live /health/ready + cache metrics │
 │  [■] 401 Rate Spike Detection — Sliding-window middleware, alerts at >5%    │
 │  [■] Job Heartbeat Tracking   — Stale scheduled job detection via Redis     │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -172,7 +176,7 @@ open http://localhost:3333/api-docs
 ║  LAYER               ║  TECNOLOGY                                         ║
 ╠══════════════════════╬════════════════════════════════════════════════════╣
 ║  Language            ║  Ruby 3.4.8                                        ║
-║  Framework           ║  Rails 7.2.0 (API-only mode)                       ║
+║  Framework           ║  Rails 7.2.3.1 (API-only mode)                     ║
 ║  Database            ║  PostgreSQL 14+                                    ║
 ║  Authentication      ║  JWT (access + refresh tokens)                     ║
 ║  URL Obfuscation     ║  HashID with Base62 encoding                       ║
@@ -441,11 +445,13 @@ graph TB
 1. **Modular Monolith**: Each module is self-contained with its own controllers, models, and services
 2. **API-Only**: Rails configured in API mode for JSON responses
 3. **JWT Authentication**: Stateless authentication using JWT tokens
-4. **Background Processing**: Long-running tasks handled by Sidekiq
-5. **Caching**: Redis used for session management and performance optimization
-6. **External Integration**: Riot Games API integration for real-time data
-7. **Rate Limiting**: Rack::Attack for API rate limiting
-8. **CORS**: Configured for cross-origin requests from frontend
+4. **Background Processing**: Long-running tasks handled by Sidekiq (async audit logs, Riot sync)
+5. **Cache Layer**: Redis response cache on 6 high-frequency endpoints (org-scoped, TTL 5–30 min)
+6. **Circuit Breaker**: Riot API isolation via `CircuitBreakerService` (closed/open/half-open, Redis-backed)
+7. **Graceful Degradation**: Meilisearch offline → PostgreSQL ILIKE fallback; circuit open → fast fail
+8. **External Integration**: Riot Games API integration for real-time data
+9. **Rate Limiting**: Rack::Attack for API rate limiting
+10. **CORS**: Configured for cross-origin requests from frontend
 
 ## 04 · Setup
 
@@ -821,10 +827,14 @@ GET /health/ready             — Readiness probe: checks PostgreSQL + Redis + M
                                 Returns 200 (ok/disabled) or 503 (any dep unreachable).
                                 Use for load balancer traffic routing.
 
-GET /api/v1/monitoring/sidekiq  — Admin only. Full Sidekiq snapshot:
-                                  queue depths, worker count, dead queue, retry queue,
-                                  scheduled job heartbeats (stale detection), alert flags.
-                                  Returns 503 if Redis unavailable.
+GET /api/v1/monitoring/sidekiq      — Admin only. Full Sidekiq snapshot:
+                                      queue depths, worker count, dead queue, retry queue,
+                                      scheduled job heartbeats (stale detection), alert flags.
+                                      Returns 503 if Redis unavailable.
+
+GET /api/v1/monitoring/cache_stats  — Admin only. Real-time cache hit rate:
+                                      total reads, hits, misses, hit_rate (%).
+                                      Counters persist in Redis, reset on Redis flush.
 ```
 
 > **Monitoring endpoint response includes:**
@@ -943,11 +953,24 @@ open coverage/index.html
 ║  PERFORMANCE BENCHMARKS               ║
 ╠══════════════════╦════════════════════╣
 ║  p(95) Docker    ║  ~880ms            ║
-║  p(95) Prod est. ║  ~500ms            ║
+║  p(95) Prod est. ║  <200ms(target)    ║
 ║  With cache      ║  ~50ms             ║
+║  Cache hit rate  ║  >60%(after warmup)║
 ║  Error rate      ║  0%                ║
 ╚══════════════════╩════════════════════╝
 ```
+
+**Cached endpoints** (Redis, org-scoped, bypass on filter params):
+
+| Endpoint | TTL | Invalidation |
+|---|---|---|
+| `GET /players` | 5 min | `after_commit` on Player |
+| `GET /players/:id` | 5 min | After Riot sync |
+| `GET /matches` | 5 min | `after_commit` on Match |
+| `GET /analytics/performance` | 15 min | After Match sync |
+| `GET /tournaments` | 30 min | `after_commit` on Tournament |
+
+All cached responses include `X-Cache-Hit: true/false` header.
 
 > See [TESTING_GUIDE.md](DOCS/tests/TESTING_GUIDE.md) and [QUICK_START.md](DOCS/setup/QUICK_START.md)
 
@@ -1041,6 +1064,10 @@ We take security seriously. If you discover a security vulnerability, please fol
 ```bash
 # Requires admin Bearer token
 curl -H "Authorization: Bearer $TOKEN" https://api.prostaff.gg/api/v1/monitoring/sidekiq
+
+# Cache hit rate
+curl -H "Authorization: Bearer $TOKEN" https://api.prostaff.gg/api/v1/monitoring/cache_stats
+# { "reads": 4200, "hits": 2730, "misses": 1470, "hit_rate": "65.0%" }
 ```
 
 Response shape:
@@ -1070,6 +1097,28 @@ Response shape:
 | `ok`                   | all thresholds within bounds                       |
 | `degraded`             | queue > 100, dead > 10, or any scheduled job stale |
 | `critical`             | no Sidekiq workers running                         |
+
+### Circuit Breaker — Riot API
+
+`CircuitBreakerService` protects the Riot API integration from cascade failures.
+State persists in Redis (shared across all Puma workers and Sidekiq threads).
+
+```
+closed  (normal)    — requests pass through; failure count incremented on error
+open    (tripped)   — requests rejected immediately (<100ms); no upstream call
+half-open (recovery)— one probe request allowed; success closes, failure re-opens
+```
+
+| Parameter | Default | Env override |
+|---|---|---|
+| Failure threshold | 5 consecutive errors | `CIRCUIT_BREAKER_THRESHOLD` |
+| Recovery timeout | 60 seconds | — |
+
+Log events emitted on state transitions:
+```
+[CIRCUIT_BREAKER] Circuit riot_api OPENED after 5 consecutive failures
+[CIRCUIT_BREAKER] Circuit riot_api CLOSED after recovery
+```
 
 ### 401 Rate Spike Detection
 
@@ -1212,6 +1261,9 @@ SIDEKIQ_QUEUE_ALERT_THRESHOLD=100   # queue depth → degraded
 SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue   → degraded
 AUTH_TRACKER_THRESHOLD=0.05         # 401 rate spike threshold (5%)
 AUTH_TRACKER_WINDOW=5               # sliding window in minutes
+
+# Circuit breaker (optional, defaults shown)
+CIRCUIT_BREAKER_THRESHOLD=5         # consecutive failures before opening circuit
 ```
 
 ### Docker

@@ -32,6 +32,31 @@ module Api
         { name: 'Authentication::CleanupExpiredTokensJob', interval_hours: 24, alert_after_hours: 25 }
       ].freeze
 
+      # GET /api/v1/monitoring/cache_stats
+      #
+      # Returns Redis-backed cache hit rate counters incremented by the
+      # cache_instrumentation initializer on every cache read.
+      #
+      # @return [JSON] { reads, hits, misses, hit_rate }
+      def cache_stats
+        redis  = Rails.cache.redis
+        reads  = redis.call('GET', 'metrics:cache:reads').to_i
+        hits   = redis.call('GET', 'metrics:cache:hits').to_i
+        misses = redis.call('GET', 'metrics:cache:misses').to_i
+        rate   = reads.positive? ? (hits.to_f / reads * 100).round(2) : 0.0
+
+        render json: {
+          reads: reads,
+          hits: hits,
+          misses: misses,
+          hit_rate: "#{rate}%",
+          timestamp: Time.current.iso8601
+        }
+      rescue StandardError => e
+        Rails.logger.error("[CACHE] Failed to read cache stats: #{e.message}")
+        render json: { error: 'Cache stats unavailable' }, status: :service_unavailable
+      end
+
       # GET /api/v1/monitoring/sidekiq
       #
       # Returns a snapshot of Sidekiq operational state including queue depths,

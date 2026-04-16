@@ -61,9 +61,10 @@
     queue: low_priority
     description: 'Rebuild AI champion matrices and vectors nightly'
 
-  # Record component health snapshots every 5 minutes for uptime history
+  # Record component health snapshots every 15 minutes for uptime history.
+  # Reduced from */5 to avoid excessive DB/Redis pressure from 6 checks per run.
   status_snapshot:
-    cron: '*/5 * * * *'
+    cron: '*/15 * * * *'
     class: StatusSnapshotJob
     queue: default
     description: 'Record component health snapshots for uptime history'

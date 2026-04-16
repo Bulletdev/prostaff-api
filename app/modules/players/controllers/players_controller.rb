@@ -5,6 +5,8 @@ module Players
     # Controller for managing players within an organization
     # Business logic extracted to Services for better organization
     class PlayersController < Api::V1::BaseController
+      include Cacheable
+
       before_action :set_player, only: %i[show update destroy stats matches sync_from_riot]
 
       # GET /api/v1/players
@@ -26,10 +28,14 @@ module Players
 
         result = paginate(players.ordered_by_role.order(:summoner_name))
 
-        render_success({
-                         players: PlayerSerializer.render_as_hash(result[:data]),
-                         pagination: result[:pagination]
-                       })
+        data = cache_response('players', expires_in: 5.minutes) do
+          {
+            players: PlayerSerializer.render_as_hash(result[:data]),
+            pagination: result[:pagination]
+          }
+        end
+
+        render_success(data)
       rescue ActiveRecord::QueryCanceled => e
         Rails.logger.error "Players index query timeout: #{e.message}"
         render_error(
@@ -41,9 +47,10 @@ module Players
 
       # GET /api/v1/players/:id
       def show
-        render_success({
-                         player: PlayerSerializer.render_as_hash(@player)
-                       })
+        data = cache_response("players/#{@player.id}", expires_in: 5.minutes) do
+          { player: PlayerSerializer.render_as_hash(@player) }
+        end
+        render_success(data)
       end
 
       # POST /api/v1/players
