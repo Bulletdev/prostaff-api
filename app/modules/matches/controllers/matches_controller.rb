@@ -7,6 +7,7 @@ module Matches
     class MatchesController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
       include ParameterValidation
+      include Cacheable
 
       before_action :set_match, only: %i[show update destroy stats]
 
@@ -17,25 +18,33 @@ module Matches
 
         result = paginate(matches)
 
-        render_success({
-                         matches: MatchSerializer.render_as_hash(result[:data]),
-                         pagination: result[:pagination],
-                         summary: calculate_matches_summary(matches)
-                       })
+        data = cache_response('matches', expires_in: 5.minutes) do
+          {
+            matches: MatchSerializer.render_as_hash(result[:data]),
+            pagination: result[:pagination],
+            summary: calculate_matches_summary(matches)
+          }
+        end
+
+        render_success(data)
       end
 
       def show
-        match_data = MatchSerializer.render_as_hash(@match)
-        player_stats = PlayerMatchStatSerializer.render_as_hash(
-          @match.player_match_stats.includes(:player)
-        )
+        data = cache_response("matches/#{@match.id}", expires_in: 5.minutes) do
+          match_data = MatchSerializer.render_as_hash(@match)
+          player_stats = PlayerMatchStatSerializer.render_as_hash(
+            @match.player_match_stats.includes(:player)
+          )
 
-        render_success({
-                         match: match_data,
-                         player_stats: player_stats,
-                         team_composition: @match.team_composition,
-                         mvp: @match.mvp_player ? PlayerSerializer.render_as_hash(@match.mvp_player) : nil
-                       })
+          {
+            match: match_data,
+            player_stats: player_stats,
+            team_composition: @match.team_composition,
+            mvp: @match.mvp_player ? PlayerSerializer.render_as_hash(@match.mvp_player) : nil
+          }
+        end
+
+        render_success(data)
       end
 
       def create

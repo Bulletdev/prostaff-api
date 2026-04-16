@@ -157,7 +157,8 @@ Rails.application.routes.draw do
       end
 
       # Monitoring (admin-only observability) -- stays in api/v1
-      get 'monitoring/sidekiq', to: 'monitoring#sidekiq'
+      get 'monitoring/sidekiq',     to: 'monitoring#sidekiq'
+      get 'monitoring/cache_stats', to: 'monitoring#cache_stats'
 
       # Support System
       scope '/support', as: 'support' do

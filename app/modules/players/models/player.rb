@@ -68,9 +68,8 @@ class Player < ApplicationRecord
 
   # Callbacks
   before_save :normalize_summoner_name
-  after_update :log_audit_trail, if: :saved_changes?
-  after_create :clear_organization_cache
-  after_destroy :clear_organization_cache
+  after_update_commit :enqueue_audit_log, if: :saved_changes?
+  after_commit :clear_organization_cache, on: %i[create destroy]
   after_update :clear_organization_cache, if: :saved_change_to_deleted_at?
 
   # Scopes
@@ -221,10 +220,9 @@ class Player < ApplicationRecord
     self.summoner_name = summoner_name.strip if summoner_name.present?
   end
 
-  def log_audit_trail
-    AuditLog.create!(
-      organization: organization,
-      action: 'update',
+  def enqueue_audit_log
+    AuditLogJob.perform_later(
+      organization_id: organization_id,
       entity_type: 'Player',
       entity_id: id,
       old_values: saved_changes.transform_values(&:first),
@@ -233,6 +231,10 @@ class Player < ApplicationRecord
   end
 
   def clear_organization_cache
-    organization.clear_players_cache if organization.present?
+    return unless organization.present?
+
+    organization.clear_players_cache
+    Rails.cache.delete("v1:#{organization_id}:players")
+    Rails.cache.delete("v1:#{organization_id}:players/#{id}")
   end
 end

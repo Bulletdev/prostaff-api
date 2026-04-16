@@ -10,6 +10,8 @@ module Tournaments
     # PATCH  /api/v1/tournaments/:id        — update (admin only)
     # POST   /api/v1/tournaments/:id/generate_bracket — trigger bracket gen (admin only)
     class TournamentsController < Api::V1::BaseController
+      include Cacheable
+
       skip_before_action :authenticate_request!, only: %i[index show]
 
       before_action :set_tournament, only: %i[show update generate_bracket]
@@ -18,12 +20,21 @@ module Tournaments
       # GET /api/v1/tournaments
       def index
         tournaments = Tournament.active.by_scheduled.includes(:tournament_teams, :tournament_matches)
-        render_success(tournaments.map { |t| TournamentSerializer.new(t).as_json })
+
+        data = cache_response('tournaments', expires_in: 30.minutes) do
+          tournaments.map { |t| TournamentSerializer.new(t).as_json }
+        end
+
+        render_success(data)
       end
 
       # GET /api/v1/tournaments/:id
       def show
-        render_success(TournamentSerializer.new(@tournament, with_bracket: true).as_json)
+        data = cache_response("tournaments/#{@tournament.id}", expires_in: 30.minutes) do
+          TournamentSerializer.new(@tournament, with_bracket: true).as_json
+        end
+
+        render_success(data)
       end
 
       # POST /api/v1/tournaments

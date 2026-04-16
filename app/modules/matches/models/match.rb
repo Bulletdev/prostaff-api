@@ -49,7 +49,7 @@ class Match < ApplicationRecord
   validates :game_duration, numericality: { greater_than: 0 }, allow_blank: true
 
   # Callbacks
-  after_update :log_audit_trail, if: :saved_changes?
+  after_update_commit :enqueue_audit_log, if: :saved_changes?
   after_create :clear_organization_cache
   after_destroy :clear_organization_cache
 
@@ -142,10 +142,9 @@ class Match < ApplicationRecord
 
   private
 
-  def log_audit_trail
-    AuditLog.create!(
-      organization: organization,
-      action: 'update',
+  def enqueue_audit_log
+    AuditLogJob.perform_later(
+      organization_id: organization_id,
       entity_type: 'Match',
       entity_id: id,
       old_values: saved_changes.transform_values(&:first),
@@ -154,6 +153,10 @@ class Match < ApplicationRecord
   end
 
   def clear_organization_cache
-    organization.clear_matches_cache if organization.present?
+    return unless organization.present?
+
+    organization.clear_matches_cache
+    Rails.cache.delete("v1:#{organization_id}:matches")
+    Rails.cache.delete("v1:#{organization_id}:matches/#{id}")
   end
 end

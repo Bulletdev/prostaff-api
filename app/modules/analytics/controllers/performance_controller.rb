@@ -30,6 +30,7 @@ module Analytics
     #   GET /api/v1/analytics/performance?time_period=week
     class PerformanceController < Api::V1::BaseController
       include ::Analytics::Concerns::AnalyticsCalculations
+      include Cacheable
 
       # Returns performance analytics for the organization
       #
@@ -63,7 +64,11 @@ module Analytics
         service = PerformanceAnalyticsService.new(matches, active_players)
         performance_data = service.calculate_performance_data(player_id: player_id, all_players: all_org_players)
 
-        render_success(performance_data)
+        data = cache_response('analytics/performance', expires_in: 15.minutes) do
+          performance_data
+        end
+
+        render_success(data)
       rescue StandardError => e
         Rails.logger.error("Error in performance#index: #{e.message}")
         Rails.logger.error(e.backtrace.join("\n"))
