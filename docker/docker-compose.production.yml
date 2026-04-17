@@ -112,7 +112,7 @@ services:
       RAILS_ENV: production
       WEB_CONCURRENCY: '4'
       RAILS_MAX_THREADS: '5'
-      DATABASE_URL: '${DATABASE_URL}'
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-prostaff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prostaff_production}'
       # Connect to Redis via Docker network hostname
       REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
@@ -157,7 +157,7 @@ services:
       - coolify
     environment:
       RAILS_ENV: production
-      DATABASE_URL: '${DATABASE_URL}'
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-prostaff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prostaff_production}'
       REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
