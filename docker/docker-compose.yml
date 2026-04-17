@@ -3,22 +3,20 @@ services:
   # Para produção/homologação use Supabase (DATABASE_URL no .env)
   # Este container é opcional - apenas para desenvolvimento offline ou testes
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-prostaff_api_development}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-prostaff_production}
+      POSTGRES_USER: ${POSTGRES_USER:-prostaff}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prostaff} -d ${POSTGRES_DB:-prostaff_production}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    profiles:
-      - local-db  # Use 'docker-compose --profile local-db up' para iniciar
 
   # Redis for Sidekiq, Rails Cache and Rate Limiting
   redis:
