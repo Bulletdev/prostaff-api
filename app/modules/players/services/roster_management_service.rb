@@ -448,10 +448,16 @@ class RosterManagementService
 
     t = tier_thresholds(tier)
     weaknesses = []
-    weaknesses << 'Inconsistent performance' if perf[:games_played].to_i >= 10 && perf[:win_rate].to_f < t[:wr_weakness]
-    weaknesses << 'Death management'         if perf[:avg_kda].to_f.positive? && perf[:avg_kda].to_f < t[:kda_weakness]
-    weaknesses << 'CS discipline'            if non_support?(role) && perf[:avg_cs_per_min].to_f.positive? && perf[:avg_cs_per_min].to_f < t[:cs_weakness]
-    weaknesses << 'Vision control'           if vision_role?(role) && perf[:avg_vision_score].to_f.positive? && perf[:avg_vision_score].to_f < t[:vision_weakness]
+    weaknesses << 'Inconsistent performance' if perf[:games_played].to_i >= 10 &&
+                                                perf[:win_rate].to_f < t[:wr_weakness]
+    weaknesses << 'Death management'         if perf[:avg_kda].to_f.positive? &&
+                                                perf[:avg_kda].to_f < t[:kda_weakness]
+    weaknesses << 'CS discipline'            if non_support?(role) &&
+                                                perf[:avg_cs_per_min].to_f.positive? &&
+                                                perf[:avg_cs_per_min].to_f < t[:cs_weakness]
+    weaknesses << 'Vision control'           if vision_role?(role) &&
+                                                perf[:avg_vision_score].to_f.positive? &&
+                                                perf[:avg_vision_score].to_f < t[:vision_weakness]
     weaknesses << 'Limited champion pool'    if pool.size < 3
     weaknesses
   end

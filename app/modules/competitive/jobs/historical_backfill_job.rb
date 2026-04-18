@@ -40,95 +40,86 @@ module Competitive
     MAX_WAIT_TIME = 6.hours
 
     def perform
-      league    = ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
-      min_year  = ENV.fetch('BACKFILL_MIN_YEAR', '2013').to_i
-      our_team  = ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
+      league     = ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
+      min_year   = ENV.fetch('BACKFILL_MIN_YEAR', '2013').to_i
+      our_team   = ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
       sync_limit = ENV.fetch('BACKFILL_SYNC_LIMIT', '500').to_i
 
       scraper = ProStaffScraperService.new
 
-      # Step 1: Trigger the backfill on the scraper (returns immediately).
+      trigger_backfill(scraper, league, min_year)
+      poll_until_complete(scraper, league)
+      dispatch_sync_jobs(league, our_team, sync_limit)
+
+      record_job_heartbeat
+      Rails.logger.info('[HistoricalBackfillJob] Done.')
+    end
+
+    private
+
+    def trigger_backfill(scraper, league, min_year)
       Rails.logger.info(
         '[HistoricalBackfillJob] Triggering backfill on scraper: ' \
         "league=#{league} min_year=#{min_year}"
       )
+      result = scraper.trigger_historical_backfill(league: league, min_year: min_year)
+      Rails.logger.info("[HistoricalBackfillJob] Scraper responded: #{result.inspect}")
+    rescue ProStaffScraperService::ScraperError => e
+      Rails.logger.warn(
+        "[HistoricalBackfillJob] Scraper trigger failed: #{e.message}. " \
+        'Proceeding to sync step (scraper may already be running).'
+      )
+    end
 
-      begin
-        trigger_result = scraper.trigger_historical_backfill(
-          league: league,
-          min_year: min_year
-        )
-        Rails.logger.info(
-          "[HistoricalBackfillJob] Scraper responded: #{trigger_result.inspect}"
-        )
-      rescue ProStaffScraperService::ScraperError => e
-        Rails.logger.warn(
-          "[HistoricalBackfillJob] Scraper trigger failed: #{e.message}. " \
-          'Proceeding to sync step (scraper may already be running).'
-        )
-      end
-
-      # Step 2: Poll backfill status until completion or timeout.
+    def poll_until_complete(scraper, league)
       Rails.logger.info(
         "[HistoricalBackfillJob] Polling backfill status (max #{MAX_WAIT_TIME / 60}min)..."
       )
-
-      started_at = Time.current
+      started_at  = Time.current
       last_status = nil
 
       loop do
-        elapsed = Time.current - started_at
-        if elapsed > MAX_WAIT_TIME
-          Rails.logger.warn(
-            "[HistoricalBackfillJob] Max wait time exceeded (#{MAX_WAIT_TIME / 3600}h). " \
-            "Proceeding to sync step. Last status: #{last_status&.inspect}"
-          )
-          break
-        end
+        break if Time.current - started_at > MAX_WAIT_TIME && log_timeout_warning(last_status)
 
-        begin
-          last_status = scraper.historical_backfill_status(league: league)
-          remaining = last_status['remaining'] || 0
-          completed = last_status['completed'] || 0
-          total     = last_status['total_tournaments'] || 0
-
-          Rails.logger.info(
-            "[HistoricalBackfillJob] Progress: #{completed}/#{total} tournaments " \
-            "(#{remaining} remaining)"
-          )
-
-          # If nothing is pending/in-progress, the backfill is done.
-          break if remaining.zero?
-        rescue ProStaffScraperService::ScraperError => e
-          Rails.logger.warn(
-            "[HistoricalBackfillJob] Status poll failed: #{e.message}"
-          )
-        end
+        last_status = fetch_backfill_status(scraper, league)
+        break if last_status && (last_status['remaining'] || 0).zero?
 
         sleep POLL_INTERVAL
       end
+    end
 
-      # Step 3: Sync matches from ES into Rails DB for all organizations.
+    def fetch_backfill_status(scraper, league)
+      status    = scraper.historical_backfill_status(league: league)
+      remaining = status['remaining'] || 0
+      completed = status['completed'] || 0
+      total     = status['total_tournaments'] || 0
+      Rails.logger.info(
+        "[HistoricalBackfillJob] Progress: #{completed}/#{total} tournaments " \
+        "(#{remaining} remaining)"
+      )
+      status
+    rescue ProStaffScraperService::ScraperError => e
+      Rails.logger.warn("[HistoricalBackfillJob] Status poll failed: #{e.message}")
+      nil
+    end
+
+    def log_timeout_warning(last_status)
+      Rails.logger.warn(
+        "[HistoricalBackfillJob] Max wait time exceeded (#{MAX_WAIT_TIME / 3600}h). " \
+        "Proceeding to sync step. Last status: #{last_status&.inspect}"
+      )
+      true
+    end
+
+    def dispatch_sync_jobs(league, our_team, sync_limit)
       Rails.logger.info(
         '[HistoricalBackfillJob] Starting sync step: ' \
         "league=#{league} our_team=#{our_team} limit=#{sync_limit}"
       )
-
       Organization.find_each do |org|
-        Rails.logger.info(
-          "[HistoricalBackfillJob] Syncing for org=#{org.id} (#{org.name})"
-        )
-        SyncScraperMatchesJob.perform_later(
-          org.id,
-          league: league,
-          our_team: our_team,
-          limit: sync_limit
-        )
+        Rails.logger.info("[HistoricalBackfillJob] Syncing for org=#{org.id} (#{org.name})")
+        SyncScraperMatchesJob.perform_later(org.id, league: league, our_team: our_team, limit: sync_limit)
       end
-
-      record_job_heartbeat
-
-      Rails.logger.info('[HistoricalBackfillJob] Done.')
     end
   end
 end

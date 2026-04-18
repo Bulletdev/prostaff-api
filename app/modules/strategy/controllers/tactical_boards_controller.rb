@@ -138,61 +138,60 @@ module Strategy
         boards.order(sort_by => sort_order)
       end
 
-      def tactical_board_params # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
-        # Support both nested format (tactical_board: {map_state:...}) and flat format (name:..., board_state:...)
+      def tactical_board_params
         # Always prefer the nested tactical_board hash when present — even partial updates
         # (e.g. map_state only, no title) must read from tb, not from top-level params.
-        # The previous check `tb[:title].present? || tb[:name].present?` fell back to
-        # top-level params whenever an update omitted the title field, causing update({})
-        # to be called silently and saving nothing despite returning 200 OK.
-        tb = params[:tactical_board]
-        source = tb.present? ? tb : params
+        # Falling back to top-level params only when no tactical_board key is sent at all.
+        source = params[:tactical_board].present? ? params[:tactical_board] : params
+        permitted = build_base_params(source)
+        merge_map_state(permitted, source)
+        merge_annotations(permitted, source)
+        merge_champion_selections(permitted, source)
+        permitted
+      end
 
-        permitted = {
+      def build_base_params(source)
+        {
           title: source[:title] || source[:name],
           match_id: source[:match_id],
           scrim_id: source[:scrim_id],
           game_time: source[:game_time]
         }.compact
+      end
 
-        # Accept map_state or board_state
+      def merge_map_state(permitted, source)
         map = source[:map_state] || source[:board_state]
         permitted[:map_state] = map.as_json if map.present?
+      end
 
-        # Accept annotations
+      def merge_annotations(permitted, source)
         permitted[:annotations] = source[:annotations].as_json if source[:annotations].present?
+      end
 
-        # Merge champion_selections into map_state.players.
-        # board_state (already in permitted[:map_state]) carries the authoritative positions
-        # from the rendered canvas (drag results). champion_selections carries identity
-        # (champion name, role). For each slot, use:
-        #   1. x/y from champion_selection if explicitly provided
-        #   2. x/y from board_state.players[i] as fallback (preserves drag position)
-        #   3. 50 as last resort default
+      def merge_champion_selections(permitted, source)
         selections = source[:champion_selections]
-        if selections.present? && selections.is_a?(Array)
-          existing_players = permitted.dig(:map_state, 'players') || []
+        return unless selections.present? && selections.is_a?(Array)
 
-          permitted[:map_state] ||= { 'players' => [] }
-          permitted[:map_state]['players'] = selections.map.with_index do |cs, idx|
-            existing = existing_players[idx] || {}
+        existing_players = permitted.dig(:map_state, 'players') || []
+        permitted[:map_state] ||= { 'players' => [] }
+        permitted[:map_state]['players'] = build_player_slots(selections, existing_players)
+      end
 
-            # board_state (existing[]) represents the live canvas after a drag — it
-            # always wins for position. champion_selections x/y is only a fallback
-            # for the initial placement when board_state has no entry yet.
-            cs_x = cs[:x].nil? ? cs['x'] : cs[:x]
-            cs_y = cs[:y].nil? ? cs['y'] : cs[:y]
-
-            {
-              'champion' => cs[:champion] || cs['champion'] || existing['champion'],
-              'role' => cs[:role] || cs['role'] || existing['role'],
-              'x' => (existing['x'] || cs_x || 50).to_f,
-              'y' => (existing['y'] || cs_y || 50).to_f
-            }
-          end
+      def build_player_slots(selections, existing_players)
+        selections.map.with_index do |cs, idx|
+          existing = existing_players[idx] || {}
+          # board_state (existing[]) represents the live canvas after a drag — it
+          # always wins for position. champion_selections x/y is only a fallback
+          # for the initial placement when board_state has no entry yet.
+          cs_x = cs[:x].nil? ? cs['x'] : cs[:x]
+          cs_y = cs[:y].nil? ? cs['y'] : cs[:y]
+          {
+            'champion' => cs[:champion] || cs['champion'] || existing['champion'],
+            'role'     => cs[:role]     || cs['role']     || existing['role'],
+            'x'        => (existing['x'] || cs_x || 50).to_f,
+            'y'        => (existing['y'] || cs_y || 50).to_f
+          }
         end
-
-        permitted
       end
     end
   end

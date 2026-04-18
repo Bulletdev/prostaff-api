@@ -164,6 +164,7 @@ services:
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
       RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
+      JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
       # HashID Configuration
       HASHID_SALT: '${HASHID_SALT}'
