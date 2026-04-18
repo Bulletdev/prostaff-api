@@ -330,6 +330,12 @@ module Authentication
           }.merge(tokens),
           message: 'Conta criada! Você está no pool de Free Agents do ArenaBR Season 1.'
         )
+      rescue ActiveRecord::RecordNotUnique
+        render_error(
+          message: 'Discord já vinculado a outra conta',
+          code: 'DUPLICATE_DISCORD',
+          status: :unprocessable_entity
+        )
       rescue StandardError => e
         Rails.logger.error("Player register error: #{e.class} - #{e.message}")
         render_error(message: 'Erro interno ao criar conta', code: 'INTERNAL_ERROR', status: :internal_server_error)
