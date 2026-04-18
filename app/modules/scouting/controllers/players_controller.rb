@@ -148,6 +148,9 @@ module Scouting
                      status: :service_unavailable)
       end
 
+      # Ordered list of tiers from lowest to highest for peak comparison.
+      TIER_ORDER = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER].freeze
+
       private
 
       def require_management!
@@ -203,7 +206,7 @@ module Scouting
 
         pool = extract_champion_pool(mastery_data)
         perf = PerformanceAggregator.new(riot_service: riot_service)
-                                               .call(puuid: @target.riot_puuid, region: region) ||
+                                    .call(puuid: @target.riot_puuid, region: region) ||
                @target.recent_performance || {}
         tier = league_data[:solo_queue]&.dig(:tier) || @target.current_tier
         lp   = league_data[:solo_queue]&.dig(:lp)
@@ -397,9 +400,6 @@ module Scouting
         )
       end
 
-      # Ordered list of tiers from lowest to highest for peak comparison.
-      TIER_ORDER = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER].freeze
-
       # Returns [peak_tier, peak_rank] — keeps the stored peak unless the current rank is provably higher.
       # Master+ has no divisions so LP is the tiebreaker; below Master, roman numeral rank I > II > III > IV.
       def resolve_peak(current_tier:, current_lp:, stored_peak_tier:, stored_peak_rank:)
@@ -457,10 +457,16 @@ module Scouting
         p = perf.with_indifferent_access
         t = tier_thresholds(tier)
         weaknesses = []
-        weaknesses << 'Inconsistent performance' if p[:games_played].to_i >= 10 && p[:win_rate].to_f < t[:wr_weakness]
-        weaknesses << 'Death management'         if p[:avg_kda].to_f.positive? && p[:avg_kda].to_f < t[:kda_weakness]
-        weaknesses << 'CS discipline'            if non_support?(role) && p[:avg_cs_per_min].to_f.positive? && p[:avg_cs_per_min].to_f < t[:cs_weakness]
-        weaknesses << 'Vision control'           if vision_role?(role) && p[:avg_vision_score].to_f.positive? && p[:avg_vision_score].to_f < t[:vision_weakness]
+        weaknesses << 'Inconsistent performance' if p[:games_played].to_i >= 10 &&
+                                                    p[:win_rate].to_f < t[:wr_weakness]
+        weaknesses << 'Death management'         if p[:avg_kda].to_f.positive? &&
+                                                    p[:avg_kda].to_f < t[:kda_weakness]
+        weaknesses << 'CS discipline'            if non_support?(role) &&
+                                                    p[:avg_cs_per_min].to_f.positive? &&
+                                                    p[:avg_cs_per_min].to_f < t[:cs_weakness]
+        weaknesses << 'Vision control'           if vision_role?(role) &&
+                                                    p[:avg_vision_score].to_f.positive? &&
+                                                    p[:avg_vision_score].to_f < t[:vision_weakness]
         weaknesses << 'Limited champion pool'    if pool.size < 3
         weaknesses
       end

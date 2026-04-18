@@ -85,17 +85,21 @@ module Players
         EXPORT_FIELDS.map { |field| export_field_value(stat, field) }
       end
 
-      def export_field_value(stat, field) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
-        case field
-        when 'match_date' then stat.match&.game_start&.strftime('%Y-%m-%d')
-        when 'patch_version' then stat.match&.game_version
-        when 'opponent'     then stat.match&.opponent_name
-        when 'result'       then stat.match&.victory? ? 'W' : 'L'
-        when 'kda_display'  then stat.kda_display
-        when 'cs_per_min'   then stat.cs_per_min&.round(2)
-        when 'gold_per_min' then stat.gold_per_min&.round(0)
-        else stat.public_send(field)
-        end
+      COMPUTED_FIELDS = {
+        'match_date'    => ->(stat) { stat.match&.game_start&.strftime('%Y-%m-%d') },
+        'patch_version' => ->(stat) { stat.match&.game_version },
+        'opponent'      => ->(stat) { stat.match&.opponent_name },
+        'result'        => ->(stat) { stat.match&.victory? ? 'W' : 'L' },
+        'kda_display'   => ->(stat) { stat.kda_display },
+        'cs_per_min'    => ->(stat) { stat.cs_per_min&.round(2) },
+        'gold_per_min'  => ->(stat) { stat.gold_per_min&.round(0) }
+      }.freeze
+
+      def export_field_value(stat, field)
+        resolver = COMPUTED_FIELDS[field]
+        return resolver.call(stat) if resolver
+
+        stat.public_send(field)
       end
     end
   end

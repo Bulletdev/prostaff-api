@@ -49,6 +49,15 @@ class BracketGeneratorService
     end
   end
 
+  # BO per phase:
+  #   UB Final      → BO3
+  #   Grand Final   → BO5
+  #   everything else uses the tournament default (usually BO1)
+  BO_OVERRIDES = {
+    'UB Final' => 3,
+    'Grand Final' => 5
+  }.freeze
+
   private
 
   def build_all_matches
@@ -76,15 +85,6 @@ class BracketGeneratorService
     end
     [matches, number]
   end
-
-  # BO per phase:
-  #   UB Semifinals → BO3
-  #   Grand Final   → BO5
-  #   everything else uses the tournament default (usually BO1)
-  BO_OVERRIDES = {
-    'UB Final'    => 3,
-    'Grand Final' => 5
-  }.freeze
 
   def bo_for_round(label)
     BO_OVERRIDES.fetch(label, @tournament.bo_format)

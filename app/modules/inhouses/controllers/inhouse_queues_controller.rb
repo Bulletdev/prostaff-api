@@ -164,62 +164,13 @@ module Inhouses
         return unless queue
 
         formation_mode = params[:formation_mode].to_s
-        unless %w[auto captain_draft].include?(formation_mode)
-          return render_error(
-            message: "formation_mode must be 'auto' or 'captain_draft'",
-            code: 'INVALID_FORMATION_MODE',
-            status: :unprocessable_entity
-          )
-        end
+        return render_invalid_formation_mode unless %w[auto captain_draft].include?(formation_mode)
 
         entries = queue.checked_in_entries.includes(:player).to_a
+        return render_not_enough_players if entries.size < 2
+        return render_active_inhouse_exists if current_organization.inhouses.active.exists?
 
-        if entries.size < 2
-          return render_error(
-            message: 'Need at least 2 checked-in players to start a session',
-            code: 'NOT_ENOUGH_PLAYERS',
-            status: :unprocessable_entity
-          )
-        end
-
-        if current_organization.inhouses.active.exists?
-          return render_error(
-            message: 'There is already an active inhouse session',
-            code: 'ACTIVE_INHOUSE_EXISTS',
-            status: :unprocessable_entity
-          )
-        end
-
-        inhouse = nil
-
-        ActiveRecord::Base.transaction do
-          # Create inhouse
-          inhouse = current_organization.inhouses.create!(
-            status: 'waiting',
-            created_by: current_user,
-            formation_mode: formation_mode
-          )
-
-          # Join all checked-in players, preserving their queued role
-          entries.each do |entry|
-            inhouse.inhouse_participations.create!(
-              player: entry.player,
-              team: 'none',
-              tier_snapshot: entry.tier_snapshot,
-              role: entry.role,
-              is_captain: false
-            )
-          end
-
-          if formation_mode == 'auto'
-            apply_auto_balance(inhouse)
-          else
-            apply_captain_draft(inhouse, entries)
-          end
-
-          # Close the queue
-          queue.update!(status: 'closed')
-        end
+        inhouse = create_inhouse_from_queue!(queue, entries, formation_mode)
 
         render_success(
           { inhouse: serialize_inhouse(inhouse.reload, detailed: true) },
@@ -269,6 +220,57 @@ module Inhouses
         return { message: 'Queue is full (10/10)', code: 'QUEUE_FULL', status: :unprocessable_entity } if queue.full?
 
         nil
+      end
+
+      def render_invalid_formation_mode
+        render_error(
+          message: "formation_mode must be 'auto' or 'captain_draft'",
+          code: 'INVALID_FORMATION_MODE',
+          status: :unprocessable_entity
+        )
+      end
+
+      def render_not_enough_players
+        render_error(
+          message: 'Need at least 2 checked-in players to start a session',
+          code: 'NOT_ENOUGH_PLAYERS',
+          status: :unprocessable_entity
+        )
+      end
+
+      def render_active_inhouse_exists
+        render_error(
+          message: 'There is already an active inhouse session',
+          code: 'ACTIVE_INHOUSE_EXISTS',
+          status: :unprocessable_entity
+        )
+      end
+
+      def create_inhouse_from_queue!(queue, entries, formation_mode)
+        inhouse = nil
+        ActiveRecord::Base.transaction do
+          inhouse = current_organization.inhouses.create!(
+            status: 'waiting',
+            created_by: current_user,
+            formation_mode: formation_mode
+          )
+          entries.each do |entry|
+            inhouse.inhouse_participations.create!(
+              player: entry.player,
+              team: 'none',
+              tier_snapshot: entry.tier_snapshot,
+              role: entry.role,
+              is_captain: false
+            )
+          end
+          if formation_mode == 'auto'
+            apply_auto_balance(inhouse)
+          else
+            apply_captain_draft(inhouse, entries)
+          end
+          queue.update!(status: 'closed')
+        end
+        inhouse
       end
 
       def active_queue
@@ -364,19 +366,14 @@ module Inhouses
         }.fetch(tier.to_s.upcase, 1000)
       end
 
+      TIER_SCORES = {
+        'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
+        'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
+        'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
+      }.freeze
+
       def tier_score(tier_snapshot)
-        case tier_snapshot.to_s.upcase
-        when 'CHALLENGER'  then 9
-        when 'GRANDMASTER' then 8
-        when 'MASTER'      then 7
-        when 'DIAMOND'     then 6
-        when 'EMERALD'     then 5
-        when 'PLATINUM'    then 4
-        when 'GOLD'        then 3
-        when 'SILVER'      then 2
-        when 'BRONZE'      then 1
-        else 0
-        end
+        TIER_SCORES.fetch(tier_snapshot.to_s.upcase, 0)
       end
 
       # Reuse serializer from InhousesController via delegation

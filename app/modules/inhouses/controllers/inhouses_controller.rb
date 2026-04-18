@@ -298,62 +298,20 @@ module Inhouses
       def start_draft
         authorize @inhouse
 
-        unless @inhouse.waiting?
-          return render_error(
-            message: 'Can only start draft from a waiting session',
-            code: 'INVALID_STATE',
-            status: :unprocessable_entity
-          )
-        end
+        return render_waiting_state_required unless @inhouse.waiting?
 
         blue_id = params[:blue_captain_id].to_s
         red_id  = params[:red_captain_id].to_s
 
-        if blue_id.blank? || red_id.blank?
-          return render_error(
-            message: 'blue_captain_id and red_captain_id are required',
-            code: 'MISSING_PARAMS',
-            status: :unprocessable_entity
-          )
-        end
-
-        if blue_id == red_id
-          return render_error(
-            message: 'Blue and red captains must be different players',
-            code: 'DUPLICATE_CAPTAIN',
-            status: :unprocessable_entity
-          )
-        end
+        return render_captain_ids_required if blue_id.blank? || red_id.blank?
+        return render_duplicate_captain if blue_id == red_id
 
         blue_participation = @inhouse.inhouse_participations.find_by(player_id: blue_id)
         red_participation  = @inhouse.inhouse_participations.find_by(player_id: red_id)
 
-        unless blue_participation && red_participation
-          return render_error(
-            message: 'Both captains must already be in the session',
-            code: 'CAPTAIN_NOT_IN_SESSION',
-            status: :unprocessable_entity
-          )
-        end
+        return render_captains_not_in_session unless blue_participation && red_participation
 
-        ActiveRecord::Base.transaction do
-          # Mark captains and assign teams
-          blue_participation.update!(team: 'blue', is_captain: true)
-          red_participation.update!(team: 'red', is_captain: true)
-
-          # All other players reset to 'none' (unassigned) so draft picks them
-          @inhouse.inhouse_participations
-                  .where.not(player_id: [blue_id, red_id])
-                  .update_all(team: 'none', is_captain: false)
-
-          @inhouse.update!(
-            status: 'draft',
-            formation_mode: 'captain_draft',
-            blue_captain_id: blue_id,
-            red_captain_id: red_id,
-            draft_pick_number: 0
-          )
-        end
+        apply_draft_setup(blue_id, red_id, blue_participation, red_participation)
 
         render_success(
           { inhouse: serialize_inhouse(@inhouse.reload, detailed: true) },
@@ -367,55 +325,16 @@ module Inhouses
       def captain_pick
         authorize @inhouse
 
-        unless @inhouse.draft?
-          return render_error(
-            message: 'Captain picks can only be made during the draft phase',
-            code: 'INVALID_STATE',
-            status: :unprocessable_entity
-          )
-        end
-
-        if @inhouse.draft_complete?
-          return render_error(
-            message: 'All picks have already been made',
-            code: 'DRAFT_COMPLETE',
-            status: :unprocessable_entity
-          )
-        end
+        return render_draft_phase_required unless @inhouse.draft?
+        return render_draft_already_complete if @inhouse.draft_complete?
 
         player_id = params[:player_id].to_s
-        if player_id.blank?
-          return render_error(
-            message: 'player_id is required',
-            code: 'MISSING_PARAMS',
-            status: :unprocessable_entity
-          )
-        end
+        return render_missing_player_id if player_id.blank?
 
         participation = @inhouse.inhouse_participations.find_by(player_id: player_id)
-        unless participation
-          return render_error(
-            message: 'Player is not in this inhouse session',
-            code: 'PLAYER_NOT_IN_SESSION',
-            status: :not_found
-          )
-        end
-
-        if participation.is_captain?
-          return render_error(
-            message: 'Captains cannot be picked — they are already on their teams',
-            code: 'PLAYER_IS_CAPTAIN',
-            status: :unprocessable_entity
-          )
-        end
-
-        if participation.team != 'none'
-          return render_error(
-            message: 'Player has already been picked',
-            code: 'ALREADY_PICKED',
-            status: :unprocessable_entity
-          )
-        end
+        return render_player_not_in_session unless participation
+        return render_captain_cannot_be_picked if participation.is_captain?
+        return render_player_already_picked if participation.team != 'none'
 
         picking_team = @inhouse.current_pick_team
 
@@ -546,27 +465,88 @@ module Inhouses
         end
       end
 
+      def render_waiting_state_required
+        render_error(message: 'Can only start draft from a waiting session', code: 'INVALID_STATE',
+                     status: :unprocessable_entity)
+      end
+
+      def render_captain_ids_required
+        render_error(message: 'blue_captain_id and red_captain_id are required', code: 'MISSING_PARAMS',
+                     status: :unprocessable_entity)
+      end
+
+      def render_duplicate_captain
+        render_error(message: 'Blue and red captains must be different players', code: 'DUPLICATE_CAPTAIN',
+                     status: :unprocessable_entity)
+      end
+
+      def render_captains_not_in_session
+        render_error(message: 'Both captains must already be in the session', code: 'CAPTAIN_NOT_IN_SESSION',
+                     status: :unprocessable_entity)
+      end
+
+      def apply_draft_setup(blue_id, red_id, blue_participation, red_participation)
+        ActiveRecord::Base.transaction do
+          blue_participation.update!(team: 'blue', is_captain: true)
+          red_participation.update!(team: 'red', is_captain: true)
+          @inhouse.inhouse_participations
+                  .where.not(player_id: [blue_id, red_id])
+                  .update_all(team: 'none', is_captain: false)
+          @inhouse.update!(
+            status: 'draft',
+            formation_mode: 'captain_draft',
+            blue_captain_id: blue_id,
+            red_captain_id: red_id,
+            draft_pick_number: 0
+          )
+        end
+      end
+
+      def render_draft_phase_required
+        render_error(message: 'Captain picks can only be made during the draft phase', code: 'INVALID_STATE',
+                     status: :unprocessable_entity)
+      end
+
+      def render_draft_already_complete
+        render_error(message: 'All picks have already been made', code: 'DRAFT_COMPLETE',
+                     status: :unprocessable_entity)
+      end
+
+      def render_missing_player_id
+        render_error(message: 'player_id is required', code: 'MISSING_PARAMS', status: :unprocessable_entity)
+      end
+
+      def render_player_not_in_session
+        render_error(message: 'Player is not in this inhouse session', code: 'PLAYER_NOT_IN_SESSION',
+                     status: :not_found)
+      end
+
+      def render_captain_cannot_be_picked
+        render_error(message: 'Captains cannot be picked — they are already on their teams',
+                     code: 'PLAYER_IS_CAPTAIN', status: :unprocessable_entity)
+      end
+
+      def render_player_already_picked
+        render_error(message: 'Player has already been picked', code: 'ALREADY_PICKED',
+                     status: :unprocessable_entity)
+      end
+
       def set_inhouse
         @inhouse = current_organization.inhouses.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         render_not_found
       end
 
+      TIER_SCORES = {
+        'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
+        'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
+        'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
+      }.freeze
+
       # Returns a tier score (0–9) for snake draft balancing.
       # Uses LoL solo queue tiers. Higher = stronger player.
       def tier_score(tier_snapshot)
-        case tier_snapshot.to_s.upcase
-        when 'CHALLENGER'   then 9
-        when 'GRANDMASTER'  then 8
-        when 'MASTER'       then 7
-        when 'DIAMOND'      then 6
-        when 'EMERALD'      then 5
-        when 'PLATINUM'     then 4
-        when 'GOLD'         then 3
-        when 'SILVER'       then 2
-        when 'BRONZE'       then 1
-        else                     0 # IRON or unknown
-        end
+        TIER_SCORES.fetch(tier_snapshot.to_s.upcase, 0)
       end
 
       # Serializes an inhouse to a hash.

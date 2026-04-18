@@ -145,17 +145,11 @@ module Authentication
       # @param player_email [String] The player's individual access email
       # @param password [String] The player's individual access password
       # @return [JSON] Player info and JWT tokens
-      def player_login # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      def player_login
         player_email = params[:player_email]&.downcase&.strip
         password     = params[:password]
 
-        if player_email.blank? || password.blank?
-          return render_error(
-            message: 'Email e senha são obrigatórios',
-            code: 'MISSING_CREDENTIALS',
-            status: :bad_request
-          )
-        end
+        return render_missing_credentials if player_email.blank? || password.blank?
 
         player = Player.find_by(player_email: player_email)
 
@@ -176,40 +170,7 @@ module Authentication
         )
 
         render_success(
-          {
-            player: {
-              id: player.id,
-              name: player.real_name.presence || player.summoner_name,
-              professional_name: player.professional_name,
-              summoner_name: player.summoner_name,
-              role: player.role,
-              status: player.status,
-              country: player.country,
-              profile_icon_id: player.profile_icon_id,
-              avatar_url: player.avatar_url.presence,
-              organization_id: player.organization_id,
-              organization_name: player.organization&.name,
-              # Rank
-              solo_queue_tier: player.solo_queue_tier,
-              solo_queue_rank: player.solo_queue_rank,
-              solo_queue_lp: player.solo_queue_lp,
-              solo_queue_wins: player.solo_queue_wins,
-              solo_queue_losses: player.solo_queue_losses,
-              flex_queue_tier: player.flex_queue_tier,
-              flex_queue_rank: player.flex_queue_rank,
-              flex_queue_lp: player.flex_queue_lp,
-              peak_tier: player.peak_tier,
-              peak_rank: player.peak_rank,
-              peak_season: player.peak_season,
-              # Performance
-              win_rate: player.win_rate,
-              # Champions
-              main_champions: player.main_champions,
-              # Social
-              twitter_handle: player.twitter_handle,
-              twitch_channel: player.twitch_channel
-            }
-          }.merge(tokens),
+          { player: serialize_player_login(player) }.merge(tokens),
           message: 'Login realizado com sucesso'
         )
       rescue StandardError => e
@@ -237,65 +198,16 @@ module Authentication
       # @param summoner_name [String] Riot summoner name (e.g. "GameName#TAG")
       # @param discord_user_id [String] Discord username (optional)
       #
-      def player_register # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      def player_register
         player_email  = params[:player_email]&.downcase&.strip
         summoner_name = params[:summoner_name]&.strip
         password      = params[:password]
-        password_conf = params[:password_confirmation]
         discord       = params[:discord_user_id]&.strip
 
-        # ── Validate required fields ─────────────────────────────────────────
-        missing = []
-        missing << 'player_email'  if player_email.blank?
-        missing << 'password'      if password.blank?
-        missing << 'summoner_name' if summoner_name.blank?
+        error = validate_player_register_params(player_email, summoner_name, password)
+        return error if error
 
-        if missing.any?
-          return render_error(
-            message: "Campos obrigatórios faltando: #{missing.join(', ')}",
-            code: 'MISSING_FIELDS',
-            status: :bad_request
-          )
-        end
-
-        # ── Password confirmation ─────────────────────────────────────────────
-        if password != password_conf
-          return render_error(
-            message: 'Senhas não coincidem',
-            code: 'PASSWORD_MISMATCH',
-            status: :unprocessable_entity
-          )
-        end
-
-        # ── Duplicate email check ─────────────────────────────────────────────
-        if Player.exists?(player_email: player_email)
-          return render_error(
-            message: 'Já existe uma conta de jogador com este email',
-            code: 'DUPLICATE_EMAIL',
-            status: :unprocessable_entity
-          )
-        end
-
-        # ── Duplicate summoner name check ──────────────────────────────────────
-        if Player.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
-          return render_error(
-            message: 'Summoner name já cadastrado na plataforma',
-            code: 'DUPLICATE_SUMMONER',
-            status: :unprocessable_entity
-          )
-        end
-
-        # ── Create player — SECURITY: organization_id always nil (free agent) ──
-        player = Player.new(
-          player_email: player_email,
-          player_password: password,
-          summoner_name: summoner_name,
-          discord_user_id: discord.presence,
-          player_access_enabled: true,
-          status: 'active',
-          role: 'top' # placeholder — player updates via profile
-          # organization_id intentionally omitted (nil) — free agent
-        )
+        player = build_free_agent_player(player_email, summoner_name, password, discord)
 
         unless player.save
           return render_error(
@@ -311,23 +223,7 @@ module Authentication
         tokens = JwtService.generate_player_tokens(player)
 
         render_created(
-          {
-            player: {
-              id: player.id,
-              summoner_name: player.summoner_name,
-              player_email: player.player_email,
-              discord_user_id: player.discord_user_id,
-              role: player.role,
-              status: player.status,
-              organization_id: nil,
-              organization_name: nil,
-              is_free_agent: true,
-              solo_queue_tier: nil,
-              solo_queue_rank: nil,
-              solo_queue_lp: nil,
-              current_rank: nil
-            }
-          }.merge(tokens),
+          { player: serialize_new_free_agent(player) }.merge(tokens),
           message: 'Conta criada! Você está no pool de Free Agents do ArenaBR Season 1.'
         )
       rescue ActiveRecord::RecordNotUnique
@@ -548,6 +444,117 @@ module Authentication
                        organization: organization,
                        role: 'owner' # First user is always the owner
                      ))
+      end
+
+      def render_missing_credentials
+        render_error(
+          message: 'Email e senha são obrigatórios',
+          code: 'MISSING_CREDENTIALS',
+          status: :bad_request
+        )
+      end
+
+      def serialize_player_login(player)
+        {
+          id: player.id,
+          name: player.real_name.presence || player.summoner_name,
+          professional_name: player.professional_name,
+          summoner_name: player.summoner_name,
+          role: player.role,
+          status: player.status,
+          country: player.country,
+          profile_icon_id: player.profile_icon_id,
+          avatar_url: player.avatar_url.presence,
+          organization_id: player.organization_id,
+          organization_name: player.organization&.name,
+          solo_queue_tier: player.solo_queue_tier,
+          solo_queue_rank: player.solo_queue_rank,
+          solo_queue_lp: player.solo_queue_lp,
+          solo_queue_wins: player.solo_queue_wins,
+          solo_queue_losses: player.solo_queue_losses,
+          flex_queue_tier: player.flex_queue_tier,
+          flex_queue_rank: player.flex_queue_rank,
+          flex_queue_lp: player.flex_queue_lp,
+          peak_tier: player.peak_tier,
+          peak_rank: player.peak_rank,
+          peak_season: player.peak_season,
+          win_rate: player.win_rate,
+          main_champions: player.main_champions,
+          twitter_handle: player.twitter_handle,
+          twitch_channel: player.twitch_channel
+        }
+      end
+
+      def validate_player_register_params(player_email, summoner_name, password)
+        missing = []
+        missing << 'player_email'  if player_email.blank?
+        missing << 'password'      if password.blank?
+        missing << 'summoner_name' if summoner_name.blank?
+
+        if missing.any?
+          return render_error(
+            message: "Campos obrigatórios faltando: #{missing.join(', ')}",
+            code: 'MISSING_FIELDS',
+            status: :bad_request
+          )
+        end
+
+        if params[:password] != params[:password_confirmation]
+          return render_error(
+            message: 'Senhas não coincidem',
+            code: 'PASSWORD_MISMATCH',
+            status: :unprocessable_entity
+          )
+        end
+
+        if Player.exists?(player_email: player_email)
+          return render_error(
+            message: 'Já existe uma conta de jogador com este email',
+            code: 'DUPLICATE_EMAIL',
+            status: :unprocessable_entity
+          )
+        end
+
+        if Player.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
+          return render_error(
+            message: 'Summoner name já cadastrado na plataforma',
+            code: 'DUPLICATE_SUMMONER',
+            status: :unprocessable_entity
+          )
+        end
+
+        nil
+      end
+
+      def build_free_agent_player(player_email, summoner_name, password, discord)
+        Player.new(
+          player_email: player_email,
+          player_password: password,
+          summoner_name: summoner_name,
+          discord_user_id: discord.presence,
+          player_access_enabled: true,
+          status: 'active',
+          role: 'top'
+          # organization_id intentionally omitted (nil) — free agent
+        )
+      end
+
+      def serialize_new_free_agent(player)
+        {
+          id: player.id,
+          summoner_name: player.summoner_name,
+          player_email: player.player_email,
+          discord_user_id: player.discord_user_id,
+          role: player.role,
+          status: player.status,
+          organization_id: nil,
+          organization_name: nil,
+          is_free_agent: true,
+          solo_queue_tier: nil,
+          solo_queue_rank: nil,
+          solo_queue_lp: nil,
+          current_rank: nil
+        }
       end
 
       def authenticate_user!
