@@ -321,25 +321,13 @@ module Authentication
           )
         end
 
-        user = User.find_by(email: email)
+        user = User.unscoped.find_by(email: email)
+        player = Player.find_by(player_email: email) unless user
 
         if user
-          reset_token = user.password_reset_tokens.create!(
-            ip_address: request.remote_ip,
-            user_agent: request.user_agent
-          )
-
-          deliver_email(UserMailer.password_reset(user, reset_token))
-
-          AuditLog.create!(
-            organization: user.organization,
-            user: user,
-            action: 'password_reset_requested',
-            entity_type: 'User',
-            entity_id: user.id,
-            ip_address: request.remote_ip,
-            user_agent: request.user_agent
-          )
+          handle_user_password_reset(user)
+        elsif player
+          handle_player_password_reset(player)
         end
 
         render_success(
@@ -382,24 +370,11 @@ module Authentication
 
         reset_token = PasswordResetToken.valid.find_by(token: token)
 
-        if reset_token
-          user = reset_token.user
-          user.update!(password: new_password)
-
-          reset_token.mark_as_used!
-
-          deliver_email(UserMailer.password_reset_confirmation(user))
-
-          AuditLog.create!(
-            organization: user.organization,
-            user: user,
-            action: 'password_reset_completed',
-            entity_type: 'User',
-            entity_id: user.id,
-            ip_address: request.remote_ip,
-            user_agent: request.user_agent
-          )
-
+        if reset_token&.user
+          complete_user_password_reset(reset_token, new_password)
+          render_success({}, message: 'Password reset successful')
+        elsif reset_token&.player
+          complete_player_password_reset(reset_token, new_password)
           render_success({}, message: 'Password reset successful')
         else
           render_error(
@@ -442,7 +417,8 @@ module Authentication
       def create_user!(organization)
         User.create!(user_params.merge(
                        organization: organization,
-                       role: 'owner' # First user is always the owner
+                       role: 'owner',
+                       source_app: source_app_from_origin
                      ))
       end
 
@@ -534,7 +510,8 @@ module Authentication
           discord_user_id: discord.presence,
           player_access_enabled: true,
           status: 'active',
-          role: 'top'
+          role: 'top',
+          source_app: 'arena_br'
           # organization_id intentionally omitted (nil) — free agent
         )
       end
@@ -555,6 +532,75 @@ module Authentication
           solo_queue_lp: nil,
           current_rank: nil
         }
+      end
+
+      def handle_user_password_reset(user)
+        reset_token = user.password_reset_tokens.create!(
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+        frontend_url = frontend_url_from_origin || frontend_base_for(user)
+        deliver_email(UserMailer.password_reset(user, reset_token, frontend_url))
+        AuditLog.create!(
+          organization: user.organization,
+          user: user,
+          action: 'password_reset_requested',
+          entity_type: 'User',
+          entity_id: user.id,
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+      end
+
+      def handle_player_password_reset(player)
+        reset_token = player.password_reset_tokens.create!(
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+        frontend_url = frontend_url_from_origin || frontend_base_for(player)
+        deliver_email(PlayerMailer.password_reset(player, reset_token, frontend_url))
+      end
+
+      def complete_user_password_reset(reset_token, new_password)
+        user = reset_token.user
+        user.update!(password: new_password)
+        reset_token.mark_as_used!
+        deliver_email(UserMailer.password_reset_confirmation(user))
+        AuditLog.create!(
+          organization: user.organization,
+          user: user,
+          action: 'password_reset_completed',
+          entity_type: 'User',
+          entity_id: user.id,
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+      end
+
+      def complete_player_password_reset(reset_token, new_password)
+        player = reset_token.player
+        player.update!(player_password: new_password)
+        reset_token.mark_as_used!
+        deliver_email(PlayerMailer.password_reset_confirmation(player))
+      end
+
+      def source_app_from_origin
+        origin = request.headers['Origin']&.strip&.chomp('/')
+        return 'prostaff' unless origin.present?
+
+        Constants::SOURCE_APP_URLS.find { |_src, url| url.chomp('/') == origin }&.first || 'prostaff'
+      end
+
+      def frontend_url_from_origin
+        origin = request.headers['Origin']&.strip&.chomp('/')
+        return nil unless origin.present?
+
+        Constants::SOURCE_APP_URLS.values.find { |url| url.chomp('/') == origin }
+      end
+
+      def frontend_base_for(record)
+        source = record.source_app.presence || 'prostaff'
+        Constants::SOURCE_APP_URLS.fetch(source, ENV.fetch('PROSTAFF_URL', 'https://prostaff.gg'))
       end
 
       def authenticate_user!

@@ -30,15 +30,13 @@
 # @example Finding active players by role
 #   mid_laners = Player.active.by_role("mid")
 #
-class Player < ApplicationRecord
-  # Concerns
+class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   include Constants
   include OrganizationScoped
   include SoftDeletable
   include Searchable
 
   # Associations
-  # optional: true — self-registered free agents (ArenaBR) can exist without an org
   belongs_to :organization, optional: true
   belongs_to :scouted_from, class_name: 'ScoutingTarget', optional: true
   has_many :player_match_stats, dependent: :destroy
@@ -46,11 +44,13 @@ class Player < ApplicationRecord
   has_many :champion_pools, dependent: :destroy
   has_many :team_goals, dependent: :destroy
   has_many :vod_timestamps, foreign_key: 'target_player_id', dependent: :nullify
+  has_many :password_reset_tokens, dependent: :destroy
 
   # Password authentication for individual player access
   has_secure_password :player_password, validations: false
 
   # Validations
+  validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
   validates :summoner_name, presence: true, length: { maximum: 100 }
   validates :real_name, length: { maximum: 255 }
   validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }

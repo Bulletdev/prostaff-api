@@ -1,21 +1,45 @@
-<h2>Welcome to ProStaff!</h2>
+<h2 style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#1a1a2e;">Bem-vindo ao ProStaff!</h2>
 
-<p>Hi <%= @user.full_name || 'there' %>,</p>
+<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Ola, <strong><%= @user.full_name || 'jogador' %></strong>,</p>
 
-<p>Welcome to ProStaff! We're excited to have you on board.</p>
+<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Sua conta esta pronta. Bem-vindo a plataforma de gestao de times de esports mais completa para League of Legends.</p>
 
-<p>ProStaff is your all-in-one platform for managing your esports team, tracking player performance, and analyzing matches.</p>
+<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Com o ProStaff voce pode:</p>
 
-<p>Here are some things you can do with ProStaff:</p>
-<ul>
-  <li>Track player statistics and performance</li>
-  <li>Manage team schedules and practice sessions</li>
-  <li>Review VODs with timestamp annotations</li>
-  <li>Scout new talent and track prospects</li>
-  <li>Set and monitor team goals</li>
-</ul>
+<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+  <tr>
+    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
+      &bull;&nbsp; Gerenciar jogadores, estatisticas e performance individual
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
+      &bull;&nbsp; Acompanhar historico de partidas e dados da Riot API
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
+      &bull;&nbsp; Revisar VODs com anotacoes em timestamps
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
+      &bull;&nbsp; Fazer scouting de talentos e acompanhar prospects
+    </td>
+  </tr>
+</table>
 
-<p>If you have any questions or need help getting started, don't hesitate to reach out to our support team.</p>
+<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+  <tr>
+    <td>
+      <a href="<%= @frontend_url %>"
+         style="display:inline-block;padding:13px 28px;background-color:#e53e3e;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;border-radius:4px;">
+        Acessar ProStaff
+      </a>
+    </td>
+  </tr>
+</table>
 
-<p>Best regards,<br>
-The ProStaff Team</p>
+<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Qualquer duvida, entre em contato com <a href="mailto:hello@prostaff.gg" style="color:#e53e3e;text-decoration:none;">hello@prostaff.gg</a>.</p>
+
+<p style="margin:16px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Equipe ProStaff</p>

@@ -25,6 +25,7 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :full_name, presence: true, length: { maximum: 255 }
   validates :role, presence: true, inclusion: { in: Constants::User::ROLES }
+  validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
   validates :timezone, length: { maximum: 100 }
   validates :language, length: { maximum: 10 }
   validates :discord_user_id,

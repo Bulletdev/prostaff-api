@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
-# Secure, single-use expiring token for user password reset flows.
+# Secure, single-use expiring token for password reset flows.
+# Supports both User (staff) and Player (ArenaBR) via polymorphic owner.
 class PasswordResetToken < ApplicationRecord
-  belongs_to :user
+  belongs_to :user, optional: true
+  belongs_to :player, optional: true
 
   validates :token, presence: true, uniqueness: true
   validates :expires_at, presence: true
+  validate :owner_present
 
   scope :valid, -> { where('expires_at > ? AND used_at IS NULL', Time.current) }
   scope :expired, -> { where('expires_at <= ?', Time.current) }
@@ -13,6 +16,10 @@ class PasswordResetToken < ApplicationRecord
 
   before_validation :generate_token, on: :create
   before_validation :set_expiration, on: :create
+
+  def owner
+    user || player
+  end
 
   def mark_as_used!
     update!(used_at: Time.current)
@@ -39,6 +46,10 @@ class PasswordResetToken < ApplicationRecord
   end
 
   private
+
+  def owner_present
+    errors.add(:base, 'must belong to a user or a player') if user_id.nil? && player_id.nil?
+  end
 
   def generate_token
     self.token ||= self.class.generate_secure_token
