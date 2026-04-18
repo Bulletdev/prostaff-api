@@ -1,25 +1,20 @@
 # frozen_string_literal: true
 
-# Wrapper around the Riot Games API with built-in rate limiting and regional routing.
-# Provides methods for summoner, match, league, and champion mastery lookups.
+# Proxy to the prostaff-riot-gateway Go service.
+# Rate limiting, caching and circuit breaking are handled by the gateway.
 class RiotApiService
-  RATE_LIMITS = {
-    per_second: 20,
-    per_two_minutes: 100
-  }.freeze
-
   REGIONS = {
-    'BR' => { platform: 'BR1', region: 'americas' },
-    'NA' => { platform: 'NA1', region: 'americas' },
-    'EUW' => { platform: 'EUW1', region: 'europe' },
-    'EUNE' => { platform: 'EUN1', region: 'europe' },
-    'KR' => { platform: 'KR', region: 'asia' },
-    'JP' => { platform: 'JP1', region: 'asia' },
-    'OCE' => { platform: 'OC1', region: 'sea' },
-    'LAN' => { platform: 'LA1', region: 'americas' },
-    'LAS' => { platform: 'LA2', region: 'americas' },
-    'RU' => { platform: 'RU', region: 'europe' },
-    'TR' => { platform: 'TR1', region: 'europe' }
+    'BR' => { platform: 'br1',  region: 'americas' },
+    'NA' => { platform: 'na1',  region: 'americas' },
+    'EUW' => { platform: 'euw1', region: 'europe' },
+    'EUNE' => { platform: 'eun1', region: 'europe' },
+    'KR' => { platform: 'kr',   region: 'asia'     },
+    'JP' => { platform: 'jp1',  region: 'asia'     },
+    'OCE' => { platform: 'oc1',  region: 'sea'      },
+    'LAN' => { platform: 'la1',  region: 'americas' },
+    'LAS' => { platform: 'la2',  region: 'americas' },
+    'RU' => { platform: 'ru',   region: 'europe'   },
+    'TR' => { platform: 'tr1',  region: 'europe'   }
   }.freeze
 
   class RiotApiError < StandardError; end
@@ -27,183 +22,125 @@ class RiotApiService
   class NotFoundError < RiotApiError; end
   class UnauthorizedError < RiotApiError; end
 
-  def initialize(api_key: nil)
-    @api_key = api_key || ENV['RIOT_API_KEY']
-    raise RiotApiError, 'Riot API key not configured' if @api_key.blank?
+  def initialize(_api_key: nil)
+    @gateway_url = ENV.fetch('RIOT_GATEWAY_URL', 'http://riot-gateway:4444')
   end
 
   def get_summoner_by_name(summoner_name:, region:)
-    platform = platform_for_region(region)
-    url = "https://#{platform}.api.riotgames.com/lol/summoner/v4/summoners/by-name/#{ERB::Util.url_encode(summoner_name)}"
+    platform = platform_for(region)
+    response = get("/riot/summoner/#{platform}/by-name/#{ERB::Util.url_encode(summoner_name)}")
+    parse_summoner_response(response)
+  end
 
-    response = make_request(url)
+  def get_summoner_by_puuid(puuid:, region:)
+    platform = platform_for(region)
+    response = get("/riot/summoner/#{platform}/by-puuid/#{puuid}")
     parse_summoner_response(response)
   end
 
   def get_account_by_puuid(puuid:, region:)
-    regional_route = regional_route_for_region(region)
-    url = "https://#{regional_route}.api.riotgames.com/riot/account/v1/accounts/by-puuid/#{puuid}"
-
-    response = make_request(url)
+    routing = routing_for(region)
+    response = get("/riot/account/#{routing}/by-puuid/#{puuid}")
     parse_account_response(response)
   end
 
-  def get_summoner_by_puuid(puuid:, region:)
-    platform = platform_for_region(region)
-    url = "https://#{platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/#{puuid}"
-
-    response = make_request(url)
-    parse_summoner_response(response)
-  end
-
   def get_league_entries(summoner_id:, region:)
-    platform = platform_for_region(region)
-    url = "https://#{platform}.api.riotgames.com/lol/league/v4/entries/by-summoner/#{summoner_id}"
-
-    response = make_request(url)
+    platform = platform_for(region)
+    response = get("/riot/league/#{platform}/by-summoner/#{summoner_id}")
     parse_league_entries(response)
   end
 
   def get_league_entries_by_puuid(puuid:, region:)
-    platform = platform_for_region(region)
-    url = "https://#{platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/#{puuid}"
-
-    response = make_request(url)
+    platform = platform_for(region)
+    response = get("/riot/league/#{platform}/by-puuid/#{puuid}")
     parse_league_entries(response)
   end
 
   def get_match_history(puuid:, region:, count: 20, start: 0)
-    regional_route = regional_route_for_region(region)
-    url = "https://#{regional_route}.api.riotgames.com/lol/match/v5/matches/by-puuid/#{puuid}/ids?start=#{start}&count=#{count}"
-
-    response = make_request(url)
+    platform = platform_for(region)
+    response = get("/riot/matches/#{platform}/#{puuid}/ids?count=#{count}&start=#{start}")
     JSON.parse(response.body)
   end
 
   def get_match_details(match_id:, region:)
-    regional_route = regional_route_for_region(region)
-    url = "https://#{regional_route}.api.riotgames.com/lol/match/v5/matches/#{match_id}"
-
-    response = make_request(url)
+    platform = platform_for(region)
+    response = get("/riot/match/#{platform}/#{match_id}")
     parse_match_details(response)
   end
 
   def get_champion_mastery(puuid:, region:)
-    platform = platform_for_region(region)
-    url = "https://#{platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/#{puuid}"
-
-    response = make_request(url)
+    platform = platform_for(region)
+    response = get("/riot/mastery/#{platform}/#{puuid}/top?count=50")
     parse_champion_mastery(response)
   end
 
   private
 
-  def make_request(url)
-    check_rate_limit!
-
-    conn = Faraday.new do |f|
-      f.request :retry, max: 3, interval: 0.5, backoff_factor: 2
+  def get(path)
+    conn = Faraday.new(@gateway_url) do |f|
+      f.request :retry, max: 2, interval: 0.5, backoff_factor: 2
       f.adapter Faraday.default_adapter
     end
 
-    response = conn.get(url) do |req|
-      req.headers['X-Riot-Token'] = @api_key
+    response = conn.get(path) do |req|
+      req.headers['Authorization'] = "Bearer #{internal_jwt}"
       req.options.timeout = 10
     end
 
     handle_response(response)
   rescue Faraday::TimeoutError => e
-    raise RiotApiError, "Request timeout: #{e.message}"
+    raise RiotApiError, "Gateway timeout: #{e.message}"
   rescue Faraday::Error => e
-    raise RiotApiError, "Network error: #{e.message}"
+    raise RiotApiError, "Gateway error: #{e.message}"
+  end
+
+  def internal_jwt
+    payload = { service: 'prostaff-api', exp: 1.hour.from_now.to_i }
+    JWT.encode(payload, ENV.fetch('JWT_SECRET_KEY'), 'HS256')
   end
 
   def handle_response(response)
     case response.status
-    when 200
-      response
-    when 404
-      raise NotFoundError, 'Resource not found'
-    when 401, 403
-      raise UnauthorizedError, 'Invalid API key or unauthorized'
+    when 200 then response
+    when 404 then raise NotFoundError, 'Resource not found'
+    when 401, 403 then raise UnauthorizedError, 'Gateway auth failed'
     when 429
-      retry_after = response.headers['Retry-After']&.to_i || 120
+      retry_after = response.headers['Retry-After']&.to_i || 60
       raise RateLimitError, "Rate limit exceeded. Retry after #{retry_after} seconds"
-    when 500..599
-      raise RiotApiError, "Riot API server error: #{response.status}"
-    else
-      raise RiotApiError, "Unexpected response: #{response.status}"
+    when 503 then raise RiotApiError, 'Riot API circuit breaker open'
+    when 500..599 then raise RiotApiError, "Gateway error: #{response.status}"
+    else raise RiotApiError, "Unexpected response: #{response.status}"
     end
   end
 
-  def check_rate_limit!
-    return unless Rails.cache
-
-    current_second = Time.current.to_i
-    key_second = "riot_api:rate_limit:second:#{current_second}"
-    key_two_min = "riot_api:rate_limit:two_minutes:#{current_second / 120}"
-
-    count_second = Rails.cache.increment(key_second, 1, expires_in: 1.second) || 0
-    count_two_min = Rails.cache.increment(key_two_min, 1, expires_in: 2.minutes) || 0
-
-    if count_second > RATE_LIMITS[:per_second]
-      sleep(1 - (Time.current.to_f % 1)) # Sleep until next second
-    end
-
-    return unless count_two_min > RATE_LIMITS[:per_two_minutes]
-
-    raise RateLimitError, 'Rate limit exceeded for 2-minute window'
-  end
-
-  def platform_for_region(region)
+  def platform_for(region)
     normalized = normalize_region(region)
     REGIONS.dig(normalized, :platform) || raise(RiotApiError, "Unknown region: #{region}")
   end
 
-  def regional_route_for_region(region)
+  def routing_for(region)
     normalized = normalize_region(region)
     REGIONS.dig(normalized, :region) || raise(RiotApiError, "Unknown region: #{region}")
   end
 
-  # Normalizes platform codes (br1, na1, euw1) to region codes (BR, NA, EUW)
   def normalize_region(region)
     return nil if region.nil?
 
-    # Convert to uppercase and remove trailing digit
-    normalized = region.to_s.upcase.sub(/\d+$/, '')
+    upper = region.to_s.upcase
+    return 'LAN' if upper == 'LA1'
+    return 'LAS' if upper == 'LA2'
 
-    # Map platform codes to region codes
-    platform_to_region = {
-      'BR' => 'BR',
-      'NA' => 'NA',
-      'EUW' => 'EUW',
-      'EUN' => 'EUNE',
-      'KR' => 'KR',
-      'JP' => 'JP',
-      'OC' => 'OCE',
-      'LA' => 'LAN', # LA1 -> LAN, LA2 -> LAS (handle separately)
-      'RU' => 'RU',
-      'TR' => 'TR'
-    }
-
-    # Special case for LA1/LA2
-    if region.to_s.upcase == 'LA1'
-      return 'LAN'
-    elsif region.to_s.upcase == 'LA2'
-      return 'LAS'
-    end
-
-    # Return mapped region or the normalized value
-    platform_to_region[normalized] || normalized
+    stripped = upper.sub(/\d+$/, '')
+    {
+      'BR' => 'BR', 'NA' => 'NA', 'EUW' => 'EUW', 'EUN' => 'EUNE',
+      'KR' => 'KR', 'JP' => 'JP', 'OC' => 'OCE', 'LA' => 'LAN',
+      'RU' => 'RU', 'TR' => 'TR'
+    }.fetch(stripped, stripped)
   end
 
   def parse_account_response(response)
     data = JSON.parse(response.body)
-    {
-      puuid: data['puuid'],
-      game_name: data['gameName'],
-      tag_line: data['tagLine']
-    }
+    { puuid: data['puuid'], game_name: data['gameName'], tag_line: data['tagLine'] }
   end
 
   def parse_summoner_response(response)
@@ -219,7 +156,6 @@ class RiotApiService
 
   def parse_league_entries(response)
     entries = JSON.parse(response.body)
-
     {
       solo_queue: find_queue_entry(entries, 'RANKED_SOLO_5x5'),
       flex_queue: find_queue_entry(entries, 'RANKED_FLEX_SR')
@@ -240,8 +176,8 @@ class RiotApiService
   end
 
   def parse_match_details(response)
-    data = JSON.parse(response.body)
-    info = data['info']
+    data     = JSON.parse(response.body)
+    info     = data['info']
     metadata = data['metadata']
 
     {
@@ -282,11 +218,7 @@ class RiotApiService
       quadra_kills: participant['quadraKills'],
       penta_kills: participant['pentaKills'],
       win: participant['win'],
-      items: [
-        participant['item0'], participant['item1'], participant['item2'],
-        participant['item3'], participant['item4'], participant['item5'],
-        participant['item6']
-      ].compact.reject(&:zero?),
+      items: extract_items(participant),
       item_build_order: extract_item_build_order(participant),
       trinket: participant['item6'],
       summoner_spell_1: participant['summoner1Id'],
@@ -310,11 +242,25 @@ class RiotApiService
     }
   end
 
+  def extract_items(participant)
+    [
+      participant['item0'], participant['item1'], participant['item2'],
+      participant['item3'], participant['item4'], participant['item5'],
+      participant['item6']
+    ].compact.reject(&:zero?)
+  end
+
+  def extract_item_build_order(participant)
+    [
+      participant['item0'], participant['item1'], participant['item2'],
+      participant['item3'], participant['item4'], participant['item5']
+    ].compact.reject(&:zero?)
+  end
+
   def extract_runes(participant)
     perks = participant.dig('perks', 'styles')
     return [] unless perks
 
-    # Extract primary and sub-style selections
     perks.flat_map { |style| style['selections'].map { |s| s['perk'] } }
   end
 
@@ -338,20 +284,8 @@ class RiotApiService
     }
   end
 
-  def extract_item_build_order(participant)
-    # Riot API doesn't provide item purchase order in match details
-    # We can only get the final items, so return them in the order they appear
-    # (item0-5 are main items, item6 is trinket)
-    [
-      participant['item0'], participant['item1'], participant['item2'],
-      participant['item3'], participant['item4'], participant['item5']
-    ].compact.reject(&:zero?)
-  end
-
   def parse_champion_mastery(response)
-    masteries = JSON.parse(response.body)
-
-    masteries.map do |mastery|
+    JSON.parse(response.body).map do |mastery|
       {
         champion_id: mastery['championId'],
         champion_level: mastery['championLevel'],
