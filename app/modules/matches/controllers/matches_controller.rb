@@ -139,8 +139,9 @@ module Matches
       end
 
       def import
-        player_id = validate_required_param!(:player_id)
-        count = integer_param(:count, default: 20, min: 1, max: 100)
+        player_id    = validate_required_param!(:player_id)
+        count        = integer_param(:count, default: 20, min: 1, max: 100)
+        force_update = params[:force_update].in?([true, 'true', '1'])
 
         player = organization_scoped(Player).find(player_id)
 
@@ -152,17 +153,20 @@ module Matches
           )
         end
 
-        job_id = ImportPlayerMatchesJob.perform_later(
-          player.id,
-          current_organization.id,
-          count
-        ).job_id
+        result = ImportMatchesService.new(
+          player: player,
+          organization: current_organization,
+          count: count,
+          force_update: force_update
+        ).call
 
-        render_success({
-                         job_id: job_id,
-                         player_id: player.id.to_s,
-                         count: count
-                       }, message: 'Match import queued successfully')
+        render_success(result, message: 'Matches import started successfully')
+      rescue RiotApiService::RiotApiError => e
+        render_error(
+          message: "Riot API error: #{e.message}",
+          code: 'RIOT_API_ERROR',
+          status: :service_unavailable
+        )
       end
 
       private
