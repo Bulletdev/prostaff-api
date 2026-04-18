@@ -120,6 +120,7 @@ services:
       PORT: 3000
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
+      RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
       CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg,https://status.prostaff.gg,https://docs.prostaff.gg}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
@@ -162,6 +163,7 @@ services:
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
+      RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
       # HashID Configuration
       HASHID_SALT: '${HASHID_SALT}'
