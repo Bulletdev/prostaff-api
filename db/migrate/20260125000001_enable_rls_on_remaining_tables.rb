@@ -18,9 +18,9 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     enable_rls_on_table(:support_faqs)
     enable_rls_on_table(:organizations)
 
-    # Enable RLS on Rails internal tables (block all API access)
-    enable_rls_on_table(:ar_internal_metadata)
-    enable_rls_on_table(:schema_migrations)
+    # NOTE: schema_migrations and ar_internal_metadata intentionally excluded.
+    # Adding FORCE RLS with deny-all to Rails internal tables breaks db:migrate
+    # on every deploy. These tables are not exposed via any API and need no RLS.
 
     # ===========================================================================
     # SUPPORT TICKETS - Organization scoped
@@ -297,24 +297,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
       USING (false);
     SQL
 
-    # ===========================================================================
-    # RAILS INTERNAL TABLES - Block all API access
-    # These should never be accessible via PostgREST/API
-    # ===========================================================================
-
-    # ar_internal_metadata - Rails internal
-    execute <<-SQL
-      CREATE POLICY ar_internal_metadata_deny_all ON ar_internal_metadata
-      FOR ALL
-      USING (false);
-    SQL
-
-    # schema_migrations - Rails internal
-    execute <<-SQL
-      CREATE POLICY schema_migrations_deny_all ON schema_migrations
-      FOR ALL
-      USING (false);
-    SQL
   end
 
   def down
@@ -372,10 +354,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     drop_policy(:organizations, 'organizations_update_policy')
     drop_policy(:organizations, 'organizations_delete_policy')
 
-    # Drop policies for Rails internal tables
-    drop_policy(:ar_internal_metadata, 'ar_internal_metadata_deny_all')
-    drop_policy(:schema_migrations, 'schema_migrations_deny_all')
-
     # Disable RLS
     disable_rls_on_table(:support_tickets)
     disable_rls_on_table(:support_ticket_messages)
@@ -386,8 +364,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     disable_rls_on_table(:opponent_teams)
     disable_rls_on_table(:support_faqs)
     disable_rls_on_table(:organizations)
-    disable_rls_on_table(:ar_internal_metadata)
-    disable_rls_on_table(:schema_migrations)
   end
 
   private
