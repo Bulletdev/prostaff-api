@@ -35,14 +35,14 @@ class ImportMatchesService
     if Match.exists?(riot_match_id: match_id)
       handle_existing_match(match_id, tally)
     else
-      SyncMatchJob.perform_later(match_id, @organization.id, region)
+      Matches::SyncMatchJob.perform_later(match_id, @organization.id, region)
       tally[:imported] += 1
     end
   end
 
   def handle_existing_match(match_id, tally)
     if @force_update
-      SyncMatchJob.perform_later(match_id, @organization.id, region, force_update: true)
+      Matches::SyncMatchJob.perform_later(match_id, @organization.id, region, force_update: true)
       tally[:updated] += 1
     else
       tally[:already_imported] += 1

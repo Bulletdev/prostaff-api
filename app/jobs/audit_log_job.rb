@@ -26,6 +26,7 @@ class AuditLogJob < ApplicationJob
   # @param new_values [Hash] attribute values after the update
   # @param user_id [String, nil] UUID of the user who triggered the change (optional)
   def perform(organization_id:, entity_type:, entity_id:, old_values:, new_values:, user_id: nil)
+    Current.organization_id = organization_id
     AuditLog.create!(
       organization_id: organization_id,
       action: 'update',
@@ -35,5 +36,7 @@ class AuditLogJob < ApplicationJob
       new_values: new_values,
       user_id: user_id
     )
+  ensure
+    Current.organization_id = nil
   end
 end
