@@ -77,13 +77,19 @@ module Rack
     end
 
     # Throttle registration — 10/hour per IP to allow shared NAT (office, household)
+    # Uses X-Forwarded-For when present (Next.js proxy repassa o IP real do cliente)
     throttle('register/ip', limit: 10, period: 1.hour) do |req|
-      req.ip if req.path == '/api/v1/auth/register' && req.post?
+      next unless req.path == '/api/v1/auth/register' && req.post?
+
+      req.env['HTTP_X_FORWARDED_FOR']&.split(',')&.first&.strip || req.ip
     end
 
-    # Throttle player self-registration (ArenaBR) — 5/hour, mais restrito que staff
+    # Throttle player self-registration (ArenaBR) — 5/hour por IP real do cliente
+    # Uses X-Forwarded-For when present (Next.js proxy repassa o IP real do cliente)
     throttle('player-register/ip', limit: 5, period: 1.hour) do |req|
-      req.ip if req.path == '/api/v1/auth/player-register' && req.post?
+      next unless req.path == '/api/v1/auth/player-register' && req.post?
+
+      req.env['HTTP_X_FORWARDED_FOR']&.split(',')&.first&.strip || req.ip
     end
 
     # Throttle player login — mesma política que login de staff
