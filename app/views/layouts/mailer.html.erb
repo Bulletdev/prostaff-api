@@ -1,69 +1,47 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <style>
-      body {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-        color: #333;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 0;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      .header {
-        text-align: center;
-        padding: 20px 0;
-        border-bottom: 2px solid #e53e3e;
-      }
-      .header h1 {
-        margin: 0;
-        color: #e53e3e;
-        font-size: 28px;
-      }
-      .content {
-        padding: 30px 0;
-      }
-      .button {
-        display: inline-block;
-        padding: 12px 24px;
-        margin: 20px 0;
-        background-color: #e53e3e;
-        color: #ffffff !important;
-        text-decoration: none;
-        border-radius: 4px;
-        font-weight: bold;
-      }
-      .footer {
-        text-align: center;
-        padding: 20px 0;
-        border-top: 1px solid #e4e4e4;
-        font-size: 12px;
-        color: #999;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <h1>ProStaff</h1>
-      </div>
-      <div class="content">
-        <%= yield %>
-      </div>
-      <div class="footer">
-        <p>© <%= Time.current.year %> ProStaff.gg. All rights reserved.</p>
-        <p>This is an automated message, please do not reply.</p>
-      </div>
-    </div>
-  </body>
+<html lang="pt-BR">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProStaff</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+    <tr>
+      <td align="center" style="padding:24px 16px;">
+
+        <%# Header %>
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#1a1a2e;padding:24px 32px;text-align:center;">
+              <span style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:bold;color:#ffffff;letter-spacing:1px;">
+                Pro<span style="color:#e53e3e;">Staff</span>
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <%# Body %>
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;">
+          <tr>
+            <td style="padding:36px 40px;color:#333333;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;">
+              <%= yield %>
+            </td>
+          </tr>
+        </table>
+
+        <%# Footer %>
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-top:1px solid #e4e4e4;">
+          <tr>
+            <td style="padding:20px 40px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#888888;line-height:1.6;">
+              <p style="margin:0 0 4px 0;">&copy; <%= Time.current.year %> ProStaff.gg. Todos os direitos reservados.</p>
+              <p style="margin:0;">Esta e uma mensagem automatica. Por favor, nao responda a este email.</p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
 </html>

@@ -128,6 +128,9 @@ services:
       HASHID_SALT: '${HASHID_SALT}'
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
+      PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
+      SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
+      ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
       APP_HOST: '${APP_HOST:-api.prostaff.gg}'
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
@@ -170,6 +173,9 @@ services:
       HASHID_SALT: '${HASHID_SALT}'
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
+      PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
+      SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
+      ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'

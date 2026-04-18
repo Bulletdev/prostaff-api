@@ -91,6 +91,7 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
       password: ENV['SMTP_PASSWORD'],
       authentication: ENV.fetch('SMTP_AUTHENTICATION', 'plain').to_sym,
       enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
+      ssl: ENV.fetch('SMTP_PORT', '587') == '465',
       domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
     }
   else

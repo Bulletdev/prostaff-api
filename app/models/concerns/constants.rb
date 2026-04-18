@@ -25,6 +25,15 @@ module Constants
     }.freeze
   end
 
+  # Source application — identifies which frontend originated the record
+  SOURCE_APPS = %w[prostaff scrims arena_br].freeze
+
+  SOURCE_APP_URLS = {
+    'prostaff' => ENV.fetch('PROSTAFF_URL', 'https://prostaff.gg'),
+    'scrims'   => ENV.fetch('SCRIMS_URL', 'https://scrims.lol'),
+    'arena_br' => ENV.fetch('ARENA_BR_URL', 'https://arena-br.vercel.app')
+  }.freeze
+
   # User roles
   module User
     ROLES = %w[owner admin coach analyst viewer].freeze
