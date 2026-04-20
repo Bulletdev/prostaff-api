@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       scope 'organizations/:id', as: 'organization' do
         patch '', to: 'organizations#update', as: 'update'
         post 'logo', to: 'organizations#upload_logo', as: 'logo'
+        patch 'lines', to: 'organizations#update_lines', as: 'update_lines'
       end
 
       # Profile -- stays in api/v1

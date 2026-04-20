@@ -55,6 +55,21 @@ module Api
         )
       end
 
+      # PATCH /api/v1/organizations/:id/lines
+      def update_lines
+        lines = Array(params[:enabled_lines]).select { |l| l.in?(Constants::Player::LINES) }
+
+        if lines.empty?
+          return render_error(message: 'At least one valid line is required', code: 'VALIDATION_ERROR',
+                              status: :unprocessable_entity)
+        end
+
+        lines = (['main'] | lines).uniq
+        @organization.update!(enabled_lines: lines)
+
+        render json: { message: 'Roster lines updated', enabled_lines: @organization.enabled_lines }, status: :ok
+      end
+
       private
 
       def set_organization
@@ -63,10 +78,10 @@ module Api
       end
 
       def require_admin_or_owner
-        return if %w[admin owner].include?(@current_user.role)
+        return if %w[admin owner coach].include?(@current_user.role)
 
         render_error(
-          message: 'Only admins and owners can update organization settings',
+          message: 'Only coaches, admins and owners can update organization settings',
           code: 'FORBIDDEN',
           status: :forbidden
         )

@@ -115,6 +115,7 @@ module Scouting
           contract_end: params[:contract_end].present? ? Date.parse(params[:contract_end]) : nil,
           salary: params[:salary]&.to_d,
           jersey_number: params[:jersey_number]&.to_i,
+          line: params[:line],
           current_user: current_user
         )
 

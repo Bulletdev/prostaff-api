@@ -30,7 +30,7 @@ module Constants
 
   SOURCE_APP_URLS = {
     'prostaff' => ENV.fetch('PROSTAFF_URL', 'https://prostaff.gg'),
-    'scrims'   => ENV.fetch('SCRIMS_URL', 'https://scrims.lol'),
+    'scrims' => ENV.fetch('SCRIMS_URL', 'https://scrims.lol'),
     'arena_br' => ENV.fetch('ARENA_BR_URL', 'https://arena-br.vercel.app')
   }.freeze
 
@@ -51,6 +51,7 @@ module Constants
   module Player
     ROLES = %w[top jungle mid adc support].freeze
     STATUSES = %w[active inactive benched trial removed].freeze
+    LINES = %w[main academy farm female other].freeze
     QUEUE_RANKS = %w[I II III IV].freeze
     QUEUE_TIERS = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER].freeze
 

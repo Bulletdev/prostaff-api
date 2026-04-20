@@ -62,15 +62,14 @@ class RosterManagementService
   # @param jersey_number [Integer] Jersey number (optional)
   # @return [Hash] Result with success status and player
   def self.hire_from_scouting(scouting_target:, organization:, contract_start:, contract_end:,
-                              salary: nil, jersey_number: nil, current_user: nil)
+                              salary: nil, jersey_number: nil, line: 'main', current_user: nil)
     ActiveRecord::Base.transaction do
-      # Check if this is a free agent or needs to be restored
       player = find_or_restore_player(scouting_target, organization)
 
-      # Update player with new contract details
       player.update!(
         organization: organization,
         status: 'active',
+        line: line.presence_in(Constants::Player::LINES) || 'main',
         contract_start_date: contract_start,
         contract_end_date: contract_end,
         salary: salary,
