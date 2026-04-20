@@ -95,7 +95,7 @@ class RiotApiService
   end
 
   def internal_jwt
-    payload = { service: 'prostaff-api', exp: 1.hour.from_now.to_i }
+    payload = { service: 'prostaff-api', aud: ['prostaff-riot-gateway'], exp: 1.hour.from_now.to_i }
     JWT.encode(payload, ENV.fetch('INTERNAL_JWT_SECRET'), 'HS256')
   end
 

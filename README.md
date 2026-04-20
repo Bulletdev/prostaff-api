@@ -1244,6 +1244,8 @@ JWT_SECRET_KEY=your-production-secret
 
 # External APIs
 RIOT_API_KEY=your-riot-api-key
+RIOT_GATEWAY_URL=http://riot-gateway:4444      # prostaff-riot-gateway internal URL
+INTERNAL_JWT_SECRET=your-internal-jwt-secret  # shared with prostaff-riot-gateway (must match)
 PANDASCORE_API_KEY=your-pandascore-api-key
 
 # Frontend
