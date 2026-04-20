@@ -11,11 +11,11 @@ class PlayerPolicy < ApplicationPolicy
   end
 
   def create?
-    admin?
+    coach?
   end
 
   def update?
-    admin? && same_organization?
+    coach? && same_organization?
   end
 
   def destroy?
@@ -31,7 +31,7 @@ class PlayerPolicy < ApplicationPolicy
   end
 
   def import?
-    admin?
+    coach?
   end
 
   def sync_from_riot?
