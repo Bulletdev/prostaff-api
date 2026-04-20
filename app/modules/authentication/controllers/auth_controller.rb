@@ -151,7 +151,7 @@ module Authentication
 
         return render_missing_credentials if player_email.blank? || password.blank?
 
-        player = Player.find_by(player_email: player_email)
+        player = Player.unscoped.find_by(player_email: player_email)
 
         unless player&.has_player_access? && player.authenticate_player_password(password)
           return render_error(
@@ -209,7 +209,9 @@ module Authentication
 
         player = build_free_agent_player(player_email, summoner_name, password, discord)
 
-        unless player.save
+        saved = Player.unscoped { player.save }
+
+        unless saved
           return render_error(
             message: 'Erro ao criar conta',
             code: 'VALIDATION_ERROR',
@@ -322,7 +324,7 @@ module Authentication
         end
 
         user = User.unscoped.find_by(email: email)
-        player = Player.find_by(player_email: email) unless user
+        player = Player.unscoped.find_by(player_email: email) unless user
 
         if user
           handle_user_password_reset(user)
@@ -483,7 +485,7 @@ module Authentication
           )
         end
 
-        if Player.exists?(player_email: player_email)
+        if Player.unscoped.exists?(player_email: player_email)
           return render_error(
             message: 'Já existe uma conta de jogador com este email',
             code: 'DUPLICATE_EMAIL',
@@ -491,7 +493,7 @@ module Authentication
           )
         end
 
-        if Player.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
+        if Player.unscoped.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
           return render_error(
             message: 'Summoner name já cadastrado na plataforma',
             code: 'DUPLICATE_SUMMONER',
