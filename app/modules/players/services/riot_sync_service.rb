@@ -55,13 +55,13 @@ class RiotSyncService
   end
 
   # Class method to import a new player from Riot API
-  def self.import(summoner_name:, role:, region:, organization:)
+  def self.import(summoner_name:, role:, region:, organization:, line: 'main')
     service = new(organization, region)
-    service.import_player(summoner_name, role)
+    service.import_player(summoner_name, role, line: line)
   end
 
   # Import a new player from Riot API
-  def import_player(summoner_name, role)
+  def import_player(summoner_name, role, line: 'main')
     parsed_name = parse_summoner_name(summoner_name)
     return parsed_name unless parsed_name[:success]
 
@@ -85,7 +85,8 @@ class RiotSyncService
       solo_queue_losses: riot_data[:rank_data]['losses'] || 0,
       last_sync_at: Time.current,
       sync_status: 'success',
-      region: @region
+      region: @region,
+      line: line
     )
 
     {

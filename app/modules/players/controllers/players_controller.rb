@@ -20,6 +20,7 @@ module Players
 
         players = players.by_role(params[:role]) if params[:role].present?
         players = players.by_status(params[:status]) if params[:status].present?
+        players = players.by_line(params[:line]) if params[:line].present?
 
         if params[:search].present?
           search_term = "%#{params[:search]}%"
@@ -178,13 +179,14 @@ module Players
         summoner_name = params[:summoner_name]&.strip
         role = params[:role]
         region = params[:region] || 'br1'
+        line = params[:line].presence_in(Constants::Player::LINES) || 'main'
 
         # Validations
         return unless validate_import_params(summoner_name, role)
         return unless validate_player_uniqueness(summoner_name)
 
         # Import from Riot API
-        result = import_player_from_riot(summoner_name, role, region)
+        result = import_player_from_riot(summoner_name, role, region, line)
 
         # Handle result
         result[:success] ? handle_import_success(result) : handle_import_error(result)
@@ -426,12 +428,13 @@ module Players
       end
 
       # Import player from Riot API
-      def import_player_from_riot(summoner_name, role, region)
+      def import_player_from_riot(summoner_name, role, region, line = 'main')
         RiotSyncService.import(
           summoner_name: summoner_name,
           role: role,
           region: region,
-          organization: current_organization
+          organization: current_organization,
+          line: line
         )
       end
 

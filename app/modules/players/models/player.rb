@@ -56,6 +56,7 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
   validates :country, length: { maximum: 2 }
   validates :status, inclusion: { in: Constants::Player::STATUSES }
+  validates :line, inclusion: { in: Constants::Player::LINES }
   validates :riot_puuid, uniqueness: true, allow_blank: true
   validates :riot_summoner_id, uniqueness: true, allow_blank: true
   validates :jersey_number, uniqueness: { scope: :organization_id }, allow_blank: true
@@ -75,6 +76,7 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   # Scopes
   scope :by_role, ->(role) { where(role: role) }
   scope :by_status, ->(status) { where(status: status) }
+  scope :by_line, ->(line) { where(line: line) }
   scope :active, -> { where(status: 'active') }
   scope :with_contracts, -> { where.not(contract_start_date: nil) }
   scope :contracts_expiring_soon, lambda { |days = 30|
