@@ -142,7 +142,8 @@ module Analytics
           date: stat.match.game_start&.strftime('%Y-%m-%d %H:%M'),
           victory: stat.match.victory?,
           game_duration: stat.match.game_duration.to_i,
-          role: stat.role
+          role: stat.role,
+          opponent_champion: stat.opponent_champion
         }
       end
 
