@@ -42,8 +42,8 @@ COPY Gemfile Gemfile.lock ./
 # Pin bundler to lockfile version to avoid reinstall on each build
 RUN gem install bundler -v "$(grep -A1 'BUNDLED WITH' Gemfile.lock | tail -1 | tr -d ' ')" --no-document
 
-RUN bundle install --jobs 2 --retry 3 && \
-    rm -rf /usr/local/bundle/ruby/*/cache && \
+RUN --mount=type=cache,id=prostaff-bundle,target=/usr/local/bundle/cache \
+    bundle install --jobs 4 --retry 3 && \
     rm -rf /usr/local/bundle/ruby/*/bundler/gems/*/.git
 
 COPY . .
