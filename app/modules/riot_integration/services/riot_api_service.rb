@@ -238,6 +238,8 @@ class RiotApiService
       summoner_spell_2_casts: participant['summoner2Casts'],
       cs_at_10: challenges['laneMinionsFirst10Minutes'],
       turret_plates_destroyed: challenges['turretPlatesTaken'],
+      first_tower_kill: participant['firstTowerKill'],
+      control_wards_purchased: participant['visionWardsBoughtInGame'],
       pings: extract_pings(participant)
     }
   end

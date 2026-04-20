@@ -115,13 +115,39 @@ module Matches
       puts "SyncMatchJob: Our players in match: #{our_participants.size}"
 
       team_totals = calculate_team_totals(participants, our_participants, is_competitive)
+      opponent_map = build_opponent_map(participants)
 
       participants.each do |participant_data|
         player = organization.players.find_by(riot_puuid: participant_data[:puuid])
         next unless player
 
-        create_stat_for_participant(match, player, participant_data, team_totals)
+        create_stat_for_participant(match, player, participant_data, team_totals, opponent_map)
       end
+    end
+
+    # Builds a hash mapping each participant's puuid to the champion name of their
+    # lane opponent (same teamPosition on the opposing team).
+    # Returns an empty hash when the match has an unexpected team structure.
+    def build_opponent_map(participants)
+      by_team = participants.group_by { |p| p[:team_id] }
+      teams = by_team.keys
+      return {} unless teams.size == 2
+
+      result = {}
+      teams.each do |team_id|
+        other_team_id = teams.find { |t| t != team_id }
+        other_team = by_team[other_team_id] || []
+
+        by_team[team_id].each do |participant|
+          role = participant[:role]
+          next if role.blank?
+
+          opponent = other_team.find { |o| o[:role] == role }
+          result[participant[:puuid]] = opponent&.dig(:champion_name)
+        end
+      end
+
+      result
     end
 
     def calculate_team_totals(participants, our_participants, is_competitive)
@@ -137,7 +163,7 @@ module Matches
       end
     end
 
-    def create_stat_for_participant(match, player, participant_data, team_totals)
+    def create_stat_for_participant(match, player, participant_data, team_totals, opponent_map = {})
       team_stats = team_totals[participant_data[:team_id]]
       damage_share = calc_share(participant_data[:total_damage_dealt], team_stats&.dig(:total_damage))
       gold_share = calc_share(participant_data[:gold_earned], team_stats&.dig(:total_gold))
@@ -148,6 +174,7 @@ module Matches
         player: player,
         role: normalize_role(participant_data[:role]),
         champion: participant_data[:champion_name],
+        opponent_champion: opponent_map[participant_data[:puuid]],
         kills: participant_data[:kills],
         deaths: participant_data[:deaths],
         assists: participant_data[:assists],
@@ -160,6 +187,8 @@ module Matches
         wards_placed: participant_data[:wards_placed],
         wards_destroyed: participant_data[:wards_killed],
         first_blood: participant_data[:first_blood_kill],
+        first_tower: participant_data[:first_tower_kill],
+        control_wards_purchased: participant_data[:control_wards_purchased],
         double_kills: participant_data[:double_kills],
         triple_kills: participant_data[:triple_kills],
         quadra_kills: participant_data[:quadra_kills],
