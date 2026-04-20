@@ -7,7 +7,7 @@ module Analytics
     # with advanced filtering options
     class TeamComparisonController < Api::V1::BaseController
       def index
-        players = fetch_active_players
+        players = fetch_roster_players
         matches = build_matches_query
 
         comparison_data = build_comparison_data(players, matches)
@@ -17,8 +17,8 @@ module Analytics
 
       private
 
-      def fetch_active_players
-        organization_scoped(Player).includes(:organization).active
+      def fetch_roster_players
+        organization_scoped(Player).includes(:organization).where(status: %w[active benched trial])
       end
 
       def build_matches_query
