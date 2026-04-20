@@ -183,6 +183,12 @@ services:
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'sidekiq' > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
