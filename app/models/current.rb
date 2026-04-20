@@ -3,5 +3,5 @@
 # Thread-safe storage for request-scoped data
 # Use Current.organization_id instead of Thread.current[:organization_id]
 class Current < ActiveSupport::CurrentAttributes
-  attribute :organization_id, :user_id, :user_role
+  attribute :organization_id, :user_id, :user_role, :skip_organization_scope
 end

@@ -209,7 +209,9 @@ module Authentication
 
         player = build_free_agent_player(player_email, summoner_name, password, discord)
 
-        saved = Player.unscoped { player.save }
+        Current.skip_organization_scope = true
+        saved = player.save
+        Current.skip_organization_scope = false
 
         unless saved
           return render_error(
