@@ -84,10 +84,9 @@ echo "[4/5] Running database migrations..." >&2
 if bundle exec rails db:migrate 2>&1 | tee /tmp/migration.log >&2; then
   echo "  [OK] Migrations completed" >&2
 else
-  echo "  [WARNING] Migration failed, check output above" >&2
-  echo "  → Attempting to create database..." >&2
-  bundle exec rails db:create 2>&1 | tee -a /tmp/migration.log >&2
-  bundle exec rails db:migrate 2>&1 | tee -a /tmp/migration.log >&2
+  echo "  [ERROR] Migration failed — aborting startup to prevent running stale schema" >&2
+  echo "  → Check /tmp/migration.log for details" >&2
+  exit 1
 fi
 
 # Skip preload in production - Puma will handle it
