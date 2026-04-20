@@ -24,7 +24,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg?logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-6+-red.svg?logo=redis)](https://redis.io/)
 [![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger)](http://localhost:3333/api-docs)
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](http://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 </div>
 
@@ -1048,11 +1048,11 @@ We take security seriously. If you discover a security vulnerability, please fol
 
 ### Health Probes
 
-| Endpoint | Purpose | Returns |
-|---|---|---|
-| `GET /health/live` | Liveness — is Puma responding? | Always 200 |
-| `GET /health/ready` | Readiness — all deps reachable? | 200 / 503 |
-| `GET /up` | Legacy backward-compatible alias | 200 |
+|       Endpoint      |             Purpose              |   Returns  |
+|---------------------|----------------------------------|------------|
+| `GET /health/live`  | Liveness — is Puma responding?   | Always 200 |
+| `GET /health/ready` | Readiness — all deps reachable?  | 200 / 503  |
+| `GET /up`           | Legacy backward-compatible alias |    200     |
 
 > **Rule**: never point the liveness probe at an endpoint that checks Redis or DB.
 > A Redis crash → liveness fail → container restart → reconnect storm → worse incident.
@@ -1107,10 +1107,10 @@ open    (tripped)   — requests rejected immediately (<100ms); no upstream call
 half-open (recovery)— one probe request allowed; success closes, failure re-opens
 ```
 
-| Parameter | Default | Env override |
-|---|---|---|
+|     Parameter     |        Default       |           Env override      |
+|-------------------|----------------------|-----------------------------|
 | Failure threshold | 5 consecutive errors | `CIRCUIT_BREAKER_THRESHOLD` |
-| Recovery timeout | 60 seconds | — |
+| Recovery timeout  | 60 seconds           |                —            |
 
 Log events emitted on state transitions:
 ```
@@ -1277,15 +1277,16 @@ docker run -p 3333:3000 prostaff-api
 
 ### CI/CD Workflows
 
-|               Workflow      |          Trigger    |            What it does      |
-|-----------------------------|-----------------------------------------------------------------------------------------------------|
-| `security-scan.yml`         | Push / PR to master | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
-| `codeql.yml`                | Push / PR to master + Saturdays 3am | CodeQL `security-extended`+ Actions workflows; SARIF to GitHub Security tab |
-| `nightly-security.yml`      | Manual dispatch | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan |
-| `load-test.yml`             | Nightly + manual | k6 smoke/load/stress tests |
-| `deploy-production.yml`     | Push to master | Build, test, deploy to Coolify + CORS smoke test post-deploy |
-| `deploy-staging.yml`        | Push to develop | Same pipeline targeting staging |
-| `update-architecture-diagram.yml` | Changes in `app/`, `config/routes.rb`, `Gemfile` | Auto-regenerates Mermaid diagram and commits |
+|           Workflow     |                    Trigger                   |                         What it does                                          |
+|------------------------|----------------------------------------------|-------------------------------------------------------------------------------|
+| `security-scan.yml`    | Push / PR → master, develop                  | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
+| `codeql.yml`           | Push / PR → master + Saturdays 3am UTC       | CodeQL `security-extended` + Actions workflows; SARIF to GitHub Security tab  |
+| `nightly-security.yml` | Nightly 1am UTC + manual dispatch            | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan             |
+| `load-test.yml`        | Manual dispatch                              | k6 smoke/load/stress tests                                                    |
+| `snyk-container.yml`   | Push / PR → master, develop + weekly         | Snyk container image vulnerability scan                                       |
+| `deploy-production.yml`| Push tag `v*.*.*` + manual dispatch          | Build, test, deploy to Coolify + CORS smoke test post-deploy                  |
+| `deploy-staging.yml`   | Push → develop + manual dispatch             | Same pipeline targeting staging                                               |
+| `update-architecture-diagram.yml`  Push / PR + manual dispatch        | Auto-regenerates Mermaid diagram and commits                                  |
 
 ### CodeQL Analysis
 
@@ -1382,20 +1383,13 @@ We follow [Ruby Style Guide](https://rubystyle.guide/) and enforce code quality 
 ║  This repository contains the official ProStaff.gg API source code.          ║
 ║  Released under:                                                             ║
 ║                                                                              ║
-║  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International     ║
+║  GNU Affero General Public License v3.0 (AGPLv3)                             ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
-[![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-This work is licensed under a
-[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
-
-[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
-
-[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
-[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
-[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
 ---
 
