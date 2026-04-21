@@ -17,6 +17,9 @@ module Tournaments
       before_action :set_tournament, only: %i[show update generate_bracket]
       before_action :require_admin!, only: %i[create update generate_bracket]
 
+      after_action -> { invalidate_cache('tournaments') }, only: %i[update]
+      after_action -> { invalidate_cache("tournaments/#{@tournament&.id}") }, only: %i[update]
+
       # GET /api/v1/tournaments
       def index
         tournaments = Tournament.active.by_scheduled.includes(:tournament_teams, :tournament_matches)

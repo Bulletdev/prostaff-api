@@ -17,16 +17,16 @@ module Analytics
     # Main endpoints:
     # - GET show: Returns comprehensive champion statistics including mastery grades and diversity metrics
     class ChampionsController < Api::V1::BaseController
+      before_action :set_player, only: %i[show details]
+
       def show
-        player = organization_scoped(Player).find(params[:player_id])
-        stats = fetch_champion_stats(player)
+        stats = fetch_champion_stats(@player)
         champion_stats = build_champion_stats(stats)
 
-        render_success(build_champion_data(player, champion_stats))
+        render_success(build_champion_data(@player, champion_stats))
       end
 
       def details
-        player = organization_scoped(Player).find(params[:player_id])
         champion = params[:champion]
 
         if champion.blank?
@@ -34,7 +34,7 @@ module Analytics
                               status: :bad_request)
         end
 
-        matches = fetch_champion_matches(player, champion)
+        matches = fetch_champion_matches(@player, champion)
 
         if matches.empty?
           return render_error(message: "No matches found for champion #{champion}", code: 'NO_MATCHES',
@@ -45,14 +45,12 @@ module Analytics
         matches_array = matches.to_a
 
         render_success({
-                         player: PlayerSerializer.render_as_hash(player),
+                         player: PlayerSerializer.render_as_hash(@player),
                          champion: champion,
                          icon_url: riot_service.champion_icon_url(champion),
                          aggregate_stats: build_aggregate_stats(matches, matches_array),
                          matches: serialize_champion_matches(matches_array, riot_service)
                        })
-      rescue ActiveRecord::RecordNotFound
-        render_error(message: 'Player not found', code: 'PLAYER_NOT_FOUND', status: :not_found)
       rescue StandardError => e
         Rails.logger.error("Error in champions#details: #{e.message}")
         Rails.logger.error(e.backtrace.join("\n"))
@@ -252,6 +250,10 @@ module Analytics
 
       def round_or_default(value, precision, default = 0)
         value&.round(precision) || default
+      end
+
+      def set_player
+        @player = organization_scoped(Player).find(params[:player_id])
       end
 
       def build_champion_data(player, champion_stats)

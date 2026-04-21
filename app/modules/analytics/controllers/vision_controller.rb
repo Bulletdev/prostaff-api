@@ -8,17 +8,17 @@ module Analytics
     # without unpacking nested keys.
     #
     class VisionController < Api::V1::BaseController
-      def show # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
-        player = organization_scoped(Player).find(params[:player_id])
+      before_action :set_player, only: %i[show]
 
+      def show # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         stats = PlayerMatchStat.joins(:match)
                                .includes(:match)
-                               .where(player: player, match: { organization: current_organization })
+                               .where(player: @player, match: { organization: current_organization })
                                .order('"match"."game_start" DESC')
                                .limit(20)
 
         vision_data = {
-          player: PlayerSerializer.render_as_hash(player),
+          player: PlayerSerializer.render_as_hash(@player),
           avg_vision_score: stats.average(:vision_score)&.round(1) || 0,
           avg_wards_placed: stats.average(:wards_placed)&.round(1) || 0,
           avg_wards_destroyed: stats.average(:wards_destroyed)&.round(1) || 0,
@@ -27,7 +27,7 @@ module Analytics
           total_wards_placed: stats.sum(:wards_placed) || 0,
           total_wards_destroyed: stats.sum(:wards_destroyed) || 0,
           vision_per_min: calculate_avg_vision_per_min(stats),
-          role_comparison: calculate_role_comparison(player),
+          role_comparison: calculate_role_comparison(@player),
           vision_trend: build_vision_trend(stats)
         }
 
@@ -35,6 +35,10 @@ module Analytics
       end
 
       private
+
+      def set_player
+        @player = organization_scoped(Player).find(params[:player_id])
+      end
 
       def build_vision_trend(stats)
         stats.map do |stat|

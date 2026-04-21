@@ -84,6 +84,8 @@ module Analytics
                      status: :internal_server_error)
       end
 
+      PERFORMANCE_ROLES = %w[top jungle mid adc support].freeze
+
       # ── Private helpers ────────────────────────────────────────────
       private
 
@@ -165,36 +167,39 @@ module Analytics
         end
       end
 
-      def build_role_performance(rows) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
-        roles      = %w[top jungle mid adc support]
-        role_stats = roles.each_with_object({}) do |r, h|
-          h[r] = { games: 0, wins: 0, champions: Hash.new(0) }
-        end
+      def build_role_performance(rows)
+        role_stats = initial_role_stats
+        rows.each { |match| accumulate_match_picks(role_stats, match) }
+        role_stats.map { |role, stats| format_role_stat(role, stats) }
+      end
 
-        rows.each do |match|
-          won = match.victory
-          (match.our_picks || []).each do |pick|
-            role  = pick['role']&.downcase
-            champ = pick['champion']
-            next unless role_stats.key?(role) && champ.present?
+      def initial_role_stats
+        PERFORMANCE_ROLES.each_with_object({}) { |r, h| h[r] = { games: 0, wins: 0, champions: Hash.new(0) } }
+      end
 
-            role_stats[role][:games]          += 1
-            role_stats[role][:wins]           += 1 if won
-            role_stats[role][:champions][champ] += 1
-          end
-        end
+      def accumulate_match_picks(role_stats, match)
+        won = match.victory
+        (match.our_picks || []).each do |pick|
+          role  = pick['role']&.downcase
+          champ = pick['champion']
+          next unless role_stats.key?(role) && champ.present?
 
-        role_stats.map do |role, s|
-          most_played = s[:champions].max_by { |_, c| c }&.first || 'N/A'
-          {
-            role: role,
-            games: s[:games],
-            wins: s[:wins],
-            win_rate: s[:games].positive? ? (s[:wins].to_f / s[:games] * 100).round(1) : 0,
-            most_played_champion: most_played,
-            champion_pool_size: s[:champions].size
-          }
+          role_stats[role][:games]            += 1
+          role_stats[role][:wins]             += 1 if won
+          role_stats[role][:champions][champ] += 1
         end
+      end
+
+      def format_role_stat(role, stats)
+        most_played = stats[:champions].max_by { |_, c| c }&.first || 'N/A'
+        {
+          role: role,
+          games: stats[:games],
+          wins: stats[:wins],
+          win_rate: stats[:games].positive? ? (stats[:wins].to_f / stats[:games] * 100).round(1) : 0,
+          most_played_champion: most_played,
+          champion_pool_size: stats[:champions].size
+        }
       end
 
       def extract_meta_champions(matches)

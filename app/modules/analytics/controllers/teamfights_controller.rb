@@ -16,18 +16,18 @@ module Analytics
     # Main endpoints:
     # - GET show: Returns teamfight statistics for the last 20 matches including damage and multikills
     class TeamfightsController < Api::V1::BaseController
-      def show
-        player = organization_scoped(Player).find(params[:player_id])
+      before_action :set_player, only: %i[show]
 
+      def show
         stats = PlayerMatchStat.joins(:match)
-                               .where(player: player)
+                               .where(player: @player)
                                .where('matches.organization_id = ?', current_organization.id)
                                .order('matches.game_start DESC')
                                .preload(:match)
                                .limit(20)
 
         teamfight_data = {
-          player: PlayerSerializer.render_as_hash(player),
+          player: PlayerSerializer.render_as_hash(@player),
           damage_performance: {
             avg_damage_dealt: stats.average(:damage_dealt_total)&.round(0),
             avg_damage_taken: stats.average(:damage_taken)&.round(0),
@@ -67,6 +67,10 @@ module Analytics
       end
 
       private
+
+      def set_player
+        @player = organization_scoped(Player).find(params[:player_id])
+      end
 
       def calculate_avg_damage_per_min(stats)
         total_damage = 0

@@ -9,12 +9,12 @@ module Analytics
     # so those fields are omitted (nil) and the frontend falls back gracefully.
     #
     class LaningController < Api::V1::BaseController
-      def show
-        player = organization_scoped(Player).find(params[:player_id])
+      before_action :set_player, only: %i[show]
 
+      def show
         stats = PlayerMatchStat.joins(:match)
                                .includes(:match)
-                               .where(player: player, match: { organization: current_organization })
+                               .where(player: @player, match: { organization: current_organization })
                                .order('"match"."game_start" DESC')
                                .limit(20)
 
@@ -22,7 +22,7 @@ module Analytics
         wins  = stats.where(match: { victory: true }).count
 
         laning_data = {
-          player: PlayerSerializer.render_as_hash(player),
+          player: PlayerSerializer.render_as_hash(@player),
           avg_cs_per_min: stats.average(:cs_per_min)&.round(1) || calculate_avg_cs_per_min(stats),
           avg_cs_total: stats.average(:cs)&.round(1) || 0,
           lane_win_rate: games.zero? ? nil : ((wins.to_f / games) * 100).round(1),
@@ -42,6 +42,10 @@ module Analytics
       end
 
       private
+
+      def set_player
+        @player = organization_scoped(Player).find(params[:player_id])
+      end
 
       def build_laning_trend(stats)
         stats.map do |stat|

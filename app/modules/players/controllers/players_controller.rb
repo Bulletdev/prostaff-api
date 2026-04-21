@@ -9,6 +9,9 @@ module Players
 
       before_action :set_player, only: %i[show update destroy stats matches sync_from_riot]
 
+      after_action -> { invalidate_cache('players') }, only: %i[update destroy]
+      after_action -> { invalidate_cache("players/#{@player&.id}") }, only: %i[update destroy]
+
       # GET /api/v1/players
       def index
         # Optimized query to prevent timeout during bulk sync operations
