@@ -90,7 +90,7 @@ class RosterManagementService
       # that informed the hiring decision, so coaches can audit it later.
       player.update_columns(
         scouted_from_id: scouting_target.id,
-        scouting_data_snapshot: RosterManagementService.build_scouting_snapshot(scouting_target)
+        scouting_data_snapshot: build_scouting_snapshot(scouting_target)
       )
 
       # Log the action
