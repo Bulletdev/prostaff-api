@@ -12,7 +12,7 @@ module Scouting
       # Returns global scouting targets with optional watchlist filtering
       def index
         # Start with global scouting targets
-        targets = ScoutingTarget.includes(:scouting_watchlists)
+        targets = ScoutingTarget.all
 
         # Filter by watchlist if requested
         if params[:my_watchlist] == 'true'
@@ -26,9 +26,14 @@ module Scouting
 
         result = paginate(targets)
 
+        # Load only this org's watchlists for the paginated targets in one query
+        org_watchlists = current_organization.scouting_watchlists
+                                             .where(scouting_target_id: result[:data].map(&:id))
+                                             .index_by(&:scouting_target_id)
+
         # Serialize with watchlist context
         players_data = result[:data].map do |target|
-          watchlist = target.scouting_watchlists.find { |w| w.organization_id == current_organization.id }
+          watchlist = org_watchlists[target.id]
           JSON.parse(ScoutingTargetSerializer.render(target, watchlist: watchlist))
         end
 

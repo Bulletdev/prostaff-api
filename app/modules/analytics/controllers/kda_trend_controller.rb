@@ -16,12 +16,12 @@ module Analytics
     # Main endpoints:
     # - GET show: Returns KDA trends for the last 50 matches with rolling averages
     class KdaTrendController < Api::V1::BaseController
-      def show
-        player = organization_scoped(Player).find(params[:player_id])
+      before_action :set_player, only: %i[show]
 
+      def show
         # Get recent matches for the player
         stats = PlayerMatchStat.joins(:match)
-                               .where(player: player, matches: { organization_id: current_organization.id })
+                               .where(player: @player, matches: { organization_id: current_organization.id })
                                .order('matches.game_start DESC')
                                .limit(50)
                                .includes(:match)
@@ -29,7 +29,7 @@ module Analytics
         stats_array = stats.to_a
 
         trend_data = {
-          player: PlayerSerializer.render_as_hash(player),
+          player: PlayerSerializer.render_as_hash(@player),
           kda_by_match: stats_array.map do |stat|
             kda = if stat.deaths.zero?
                     (stat.kills + stat.assists).to_f
@@ -58,6 +58,10 @@ module Analytics
       end
 
       private
+
+      def set_player
+        @player = organization_scoped(Player).find(params[:player_id])
+      end
 
       def calculate_kda_average(stats)
         return 0 if stats.empty?

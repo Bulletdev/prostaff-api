@@ -11,14 +11,15 @@ module Matches
 
       before_action :set_match, only: %i[show update destroy stats]
 
+      after_action -> { invalidate_cache('matches') }, only: %i[update destroy]
+      after_action -> { invalidate_cache("matches/#{@match&.id}") }, only: %i[update destroy]
+
       def index
         matches = organization_scoped(Match).includes(:player_match_stats, :players)
-        matches = apply_match_filters(matches)
-        matches = apply_match_sorting(matches)
-
-        result = paginate(matches)
+        matches = MatchFilterQuery.new(matches, params).call
 
         data = cache_response('matches', expires_in: 5.minutes) do
+          result = paginate(matches)
           {
             matches: MatchSerializer.render_as_hash(result[:data]),
             pagination: result[:pagination],
@@ -170,50 +171,6 @@ module Matches
       end
 
       private
-
-      def apply_match_filters(matches)
-        matches = apply_basic_match_filters(matches)
-        matches = apply_date_filters_to_matches(matches)
-        matches = apply_opponent_filter(matches)
-        apply_tournament_filter(matches)
-      end
-
-      def apply_basic_match_filters(matches)
-        matches = matches.by_type(params[:match_type]) if params[:match_type].present?
-        matches = matches.victories if params[:result] == 'victory'
-        matches = matches.defeats if params[:result] == 'defeat'
-        matches
-      end
-
-      def apply_date_filters_to_matches(matches)
-        if params[:start_date].present? && params[:end_date].present?
-          matches.in_date_range(params[:start_date], params[:end_date])
-        elsif params[:days].present?
-          matches.recent(params[:days].to_i)
-        else
-          matches
-        end
-      end
-
-      def apply_opponent_filter(matches)
-        params[:opponent].present? ? matches.with_opponent(params[:opponent]) : matches
-      end
-
-      def apply_tournament_filter(matches)
-        return matches unless params[:tournament].present?
-
-        matches.where('tournament_name ILIKE ?', "%#{params[:tournament]}%")
-      end
-
-      def apply_match_sorting(matches)
-        allowed_sort_fields = %w[game_start game_duration match_type victory created_at]
-        allowed_sort_orders = %w[asc desc]
-
-        sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'game_start'
-        sort_order = allowed_sort_orders.include?(params[:sort_order]) ? params[:sort_order] : 'desc'
-
-        matches.order(sort_by => sort_order)
-      end
 
       def set_match
         @match = organization_scoped(Match).find(params[:id])

@@ -42,6 +42,14 @@ module Cacheable
     Rails.cache.fetch(cache_key, expires_in: expires_in, &block)
   end
 
+  # Deletes one or more org-scoped cache keys.
+  # Use in after_action callbacks on mutating actions.
+  #
+  # @param keys [Array<String>] keys to invalidate (same identifiers passed to cache_response)
+  def invalidate_cache(*keys)
+    keys.each { |key| Rails.cache.delete(build_cache_key(key)) }
+  end
+
   private
 
   # Builds an organisation-scoped cache key to prevent cross-tenant leakage.
