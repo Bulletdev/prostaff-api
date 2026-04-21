@@ -272,7 +272,11 @@ module Scouting
           roles = params[:role].split(',').map(&:strip).reject(&:blank?)
           targets = targets.by_role(roles) if roles.any?
         end
-        targets = targets.by_status(params[:status]) if params[:status].present?
+        if params[:status].present?
+          targets = targets.by_status(params[:status])
+        else
+          targets = targets.where.not(status: 'signed')
+        end
         targets = targets.by_region(params[:region]) if params[:region].present?
 
         # Filter by watchlist fields if in watchlist mode
