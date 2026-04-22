@@ -14,10 +14,7 @@ module Players
 
       # GET /api/v1/players
       def index
-        # Optimized query to prevent timeout during bulk sync operations
-        # PostgreSQL will allow concurrent reads even during updates (MVCC)
-        # Set a reasonable timeout to prevent 504s
-        ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '5000'") # 5 seconds
+        ActiveRecord::Base.connection.execute("SET statement_timeout = '5000'")
 
         players = organization_scoped(Player).includes(:organization)
 
@@ -47,6 +44,8 @@ module Players
           code: 'QUERY_TIMEOUT',
           status: :request_timeout
         )
+      ensure
+        ActiveRecord::Base.connection.execute("RESET statement_timeout") rescue nil
       end
 
       # GET /api/v1/players/:id

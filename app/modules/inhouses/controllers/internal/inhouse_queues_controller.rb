@@ -9,7 +9,6 @@ module Inhouses
       class InhouseQueuesController < ApplicationController
         before_action :verify_internal_token
 
-        # GET /internal/api/inhouse_queues/active
         def active
           queues = InhouseQueue.check_in
                                .where('check_in_deadline > ?', Time.current)
@@ -28,10 +27,14 @@ module Inhouses
 
           render json: { error: 'unauthorized' }, status: :unauthorized and return unless token.present?
 
-          payload = JwtService.decode(token)
+          secret = ENV.fetch('INTERNAL_JWT_SECRET', nil)
+          render json: { error: 'unauthorized' }, status: :unauthorized and return unless secret.present?
+
+          decoded = JWT.decode(token, secret, true, { algorithm: 'HS256' })
+          payload = HashWithIndifferentAccess.new(decoded[0])
 
           render json: { error: 'forbidden' }, status: :forbidden and return unless payload[:type] == 'internal'
-        rescue JwtService::AuthenticationError
+        rescue JWT::DecodeError, JWT::ExpiredSignature
           render json: { error: 'unauthorized' }, status: :unauthorized
         end
 
