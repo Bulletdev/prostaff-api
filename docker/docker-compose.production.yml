@@ -125,6 +125,8 @@ services:
       RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
       INTERNAL_JWT_SECRET: '${INTERNAL_JWT_SECRET}'
       PANDASCORE_API_KEY: '${PANDASCORE_API_KEY}'
+      SCRAPER_API_URL: 'http://scraper-api:8000'
+      SCRAPER_API_KEY: '${SCRAPER_API_KEY}'
       CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg,https://status.prostaff.gg,https://docs.prostaff.gg}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
@@ -179,6 +181,8 @@ services:
       RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
       INTERNAL_JWT_SECRET: '${INTERNAL_JWT_SECRET}'
       PANDASCORE_API_KEY: '${PANDASCORE_API_KEY}'
+      SCRAPER_API_URL: 'http://scraper-api:8000'
+      SCRAPER_API_KEY: '${SCRAPER_API_KEY}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
       # HashID Configuration
