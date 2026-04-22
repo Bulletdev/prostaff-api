@@ -139,6 +139,12 @@ services:
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      # SMTP (email delivery)
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
 
     healthcheck:
       test:
@@ -185,12 +191,18 @@ services:
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      # SMTP (email delivery)
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'sidekiq' > /dev/null || exit 1"]
+      test: ["CMD-SHELL", "ps aux | grep '[s]idekiq' || exit 1"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
