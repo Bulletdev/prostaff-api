@@ -15,6 +15,7 @@
   - critical
   - high
   - default
+  - events
   - search
   - mailers
   - low

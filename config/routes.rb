@@ -490,6 +490,14 @@ Rails.application.routes.draw do
     end
   end
 
+  # Internal service-to-service routes — authenticated via INTERNAL_JWT_SECRET only.
+  # Used by prostaff-events for startup reconciliation of active InhouseQueues.
+  namespace :internal do
+    namespace :api do
+      get 'inhouse_queues/active', to: '/inhouses/controllers/internal/inhouse_queues#active'
+    end
+  end
+
   # Mount Sidekiq web UI in development
   if Rails.env.development?
     require 'sidekiq/web'
