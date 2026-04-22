@@ -2022,8 +2022,8 @@ paths:
                     slug: team-prostaff-br
                     region: BR
                     tier: semi_pro
-                  access_token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZDRlNWY2YTctYjhjOS0wMTIzLWRlZmEtMjM0NTY3ODkwMTIzIn0.abc123
-                  refresh_token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZDRlNWY2YTctYjhjOS0wMTIzLWRlZmEtMjM0NTY3ODkwMTIzIiwidHlwZSI6InJlZnJlc2gifQ.def456
+                  access_token: EXAMPLE_ACCESS_TOKEN
+                  refresh_token: EXAMPLE_REFRESH_TOKEN
                   expires_in: 86400
         '422':
           description: validation errors
@@ -2192,8 +2192,8 @@ paths:
                     slug: team-prostaff-br
                     region: BR
                     tier: semi_pro
-                  access_token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZDRlNWY2YTctYjhjOS0wMTIzLWRlZmEtMjM0NTY3ODkwMTIzIn0.abc123
-                  refresh_token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZDRlNWY2YTctYjhjOS0wMTIzLWRlZmEtMjM0NTY3ODkwMTIzIiwidHlwZSI6InJlZnJlc2gifQ.def456
+                  access_token: EXAMPLE_ACCESS_TOKEN
+                  refresh_token: EXAMPLE_REFRESH_TOKEN
                   expires_in: 86400
         '401':
           description: invalid credentials
@@ -2292,8 +2292,8 @@ paths:
               example:
                 message: Token refreshed successfully
                 data:
-                  access_token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZDRlNWY2YTctYjhjOS0wMTIzLWRlZmEtMjM0NTY3ODkwMTIzIn0.newtoken
-                  refresh_token: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZDRlNWY2YTctYjhjOS0wMTIzLWRlZmEtMjM0NTY3ODkwMTIzIiwidHlwZSI6InJlZnJlc2gifQ.newrefresh
+                  access_token: EXAMPLE_ACCESS_TOKEN
+                  refresh_token: EXAMPLE_REFRESH_TOKEN
                   expires_in: 86400
         '401':
           description: invalid refresh token
