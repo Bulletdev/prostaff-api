@@ -169,6 +169,12 @@ class TeamGoal < ApplicationRecord
       progress: 100,
       current_value: target_value
     )
+    Events::EventPublisher.publish(
+      user_id: created_by_id || assigned_to_id || organization.users.first&.id || 'system',
+      org_id: organization_id,
+      type: 'team_goal.completed',
+      payload: { goal_id: id, title: title, player_id: player_id }
+    )
   end
 
   def mark_as_failed!
@@ -183,6 +189,12 @@ class TeamGoal < ApplicationRecord
     self.current_value = new_current_value
     calculate_progress_if_needed
     save!
+    Events::EventPublisher.publish(
+      user_id: created_by_id || assigned_to_id || organization.users.first&.id || 'system',
+      org_id: organization_id,
+      type: 'team_goal.progress_updated',
+      payload: { goal_id: id, title: title, progress: progress, current_value: current_value }
+    )
   end
 
   def assigned_to_name

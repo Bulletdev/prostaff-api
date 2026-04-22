@@ -280,6 +280,17 @@ module Admin
           )
         end
 
+        Events::EventPublisher.publish(
+          user_id: current_user.id,
+          org_id: old_org_id,
+          type: 'player.transferred',
+          payload: {
+            player_id: @player.id,
+            player_name: @player.summoner_name,
+            from_org_id: old_org_id,
+            to_org_id: new_organization_id
+          }
+        )
         render_success({
                          message: 'Player transferred successfully',
                          player: PlayerSerializer.render_as_hash(@player),

@@ -65,23 +65,25 @@ module Inhouses
         queue = active_queue
         return unless queue
 
-        error = validate_join(queue, params[:role].to_s.downcase, params[:player_id].to_s)
-        return render_error(**error) if error
+        queue.with_lock do
+          error = validate_join(queue, params[:role].to_s.downcase, params[:player_id].to_s)
+          return render_error(**error) if error
 
-        role   = params[:role].to_s.downcase
-        player = current_organization.players.find(params[:player_id])
-        entry  = queue.inhouse_queue_entries.new(
-          player: player,
-          role: role,
-          tier_snapshot: player.solo_queue_tier.presence || 'IRON'
-        )
+          role   = params[:role].to_s.downcase
+          player = current_organization.players.find(params[:player_id])
+          entry  = queue.inhouse_queue_entries.new(
+            player: player,
+            role: role,
+            tier_snapshot: player.solo_queue_tier.presence || 'IRON'
+          )
 
-        if entry.save
-          render_success({ queue: queue.reload.serialize(detailed: true) },
-                         message: "#{player.summoner_name} joined the queue as #{role}")
-        else
-          render_error(message: 'Failed to join queue', code: 'VALIDATION_ERROR',
-                       status: :unprocessable_entity, details: entry.errors.as_json)
+          if entry.save
+            render_success({ queue: queue.reload.serialize(detailed: true) },
+                           message: "#{player.summoner_name} joined the queue as #{role}")
+          else
+            render_error(message: 'Failed to join queue', code: 'VALIDATION_ERROR',
+                         status: :unprocessable_entity, details: entry.errors.as_json)
+          end
         end
       end
 
@@ -124,6 +126,7 @@ module Inhouses
 
         deadline = Time.current + CHECK_IN_DURATION_SECONDS.seconds
         queue.update!(status: 'check_in', check_in_deadline: deadline)
+        InhouseCheckInDeadlineJob.set(wait_until: deadline).perform_later(queue.id)
 
         render_success({ queue: queue.reload.serialize(detailed: true) }, message: 'Check-in started')
       end
@@ -166,16 +169,29 @@ module Inhouses
         formation_mode = params[:formation_mode].to_s
         return render_invalid_formation_mode unless %w[auto captain_draft].include?(formation_mode)
 
-        entries = queue.checked_in_entries.includes(:player).to_a
-        return render_not_enough_players if entries.size < 2
-        return render_active_inhouse_exists if current_organization.inhouses.active.exists?
+        queue.with_lock do
+          entries = queue.checked_in_entries.includes(:player).to_a
+          return render_not_enough_players if entries.size < 2
+          return render_active_inhouse_exists if current_organization.inhouses.active.exists?
 
-        inhouse = create_inhouse_from_queue!(queue, entries, formation_mode)
+          inhouse = create_inhouse_from_queue!(queue, entries, formation_mode)
 
-        render_success(
-          { inhouse: serialize_inhouse(inhouse.reload, detailed: true) },
-          message: 'Inhouse session started from queue'
-        )
+          Events::EventPublisher.publish(
+            user_id: current_user.id,
+            org_id: current_organization.id,
+            type: 'inhouse.session_started',
+            payload: {
+              inhouse_id: inhouse.id,
+              queue_id: queue.id,
+              formation_mode: formation_mode,
+              player_count: entries.size
+            }
+          )
+          render_success(
+            { inhouse: serialize_inhouse(inhouse.reload, detailed: true) },
+            message: 'Inhouse session started from queue'
+          )
+        end
       rescue ActiveRecord::RecordInvalid => e
         render_error(message: e.message, code: 'VALIDATION_ERROR', status: :unprocessable_entity)
       end
@@ -190,6 +206,12 @@ module Inhouses
         queue.update!(status: 'closed')
         render_success({ queue: nil }, message: 'Queue closed')
       end
+
+      TIER_SCORES = {
+        'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
+        'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
+        'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
+      }.freeze
 
       private
 
@@ -365,12 +387,6 @@ module Inhouses
           'GOLD' => 1400, 'SILVER' => 1200, 'BRONZE' => 1000, 'IRON' => 800
         }.fetch(tier.to_s.upcase, 1000)
       end
-
-      TIER_SCORES = {
-        'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
-        'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
-        'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
-      }.freeze
 
       def tier_score(tier_snapshot)
         TIER_SCORES.fetch(tier_snapshot.to_s.upcase, 0)

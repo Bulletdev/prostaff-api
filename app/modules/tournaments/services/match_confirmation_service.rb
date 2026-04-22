@@ -110,6 +110,18 @@ class MatchConfirmationService
 
     BracketProgressionService.new(@match, winner: winner, loser: loser).call
     broadcast_update
+    Events::EventPublisher.publish(
+      user_id: @user.id,
+      org_id: @user.organization_id,
+      type: 'tournament_match.confirmed',
+      payload: {
+        match_id: @match.id,
+        tournament_id: @match.tournament_id,
+        team_a_score: @match.team_a_score,
+        team_b_score: @match.team_b_score,
+        winner_id: winner&.id
+      }
+    )
   end
 
   def dispute_match!(my_report, other_report)

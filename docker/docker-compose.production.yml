@@ -147,6 +147,9 @@ services:
       SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
       SMTP_PORT: '${SMTP_PORT:-587}'
       SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
+      # prostaff-events integration (set PHOENIX_EVENTS_ENABLED=true in Coolify panel when deploying events service)
+      PHOENIX_EVENTS_ENABLED: '${PHOENIX_EVENTS_ENABLED:-false}'
+      PHOENIX_EVENTS_URL: '${PHOENIX_EVENTS_URL:-http://events:4000}'
 
     healthcheck:
       test:

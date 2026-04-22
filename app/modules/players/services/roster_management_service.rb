@@ -39,6 +39,12 @@ class RosterManagementService
       # Log the action
       log_roster_removal(previous_org_id, reason)
 
+      Events::EventPublisher.publish(
+        user_id: current_user&.id || 'system',
+        org_id: previous_org_id,
+        type: 'roster.player_removed',
+        payload: { player_id: player.id, player_name: player.summoner_name, reason: reason }
+      )
       {
         success: true,
         player: player,
@@ -96,6 +102,12 @@ class RosterManagementService
       # Log the action
       log_roster_addition(player, scouting_target, current_user)
 
+      Events::EventPublisher.publish(
+        user_id: current_user&.id || 'system',
+        org_id: organization.id,
+        type: 'roster.player_hired',
+        payload: { player_id: player.id, player_name: player.summoner_name, org_id: organization.id }
+      )
       {
         success: true,
         player: player,

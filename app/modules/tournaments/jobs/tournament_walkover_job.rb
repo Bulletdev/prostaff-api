@@ -39,6 +39,12 @@ module Tournaments
     def apply_walkover(match, winner:, loser:)
       BracketProgressionService.new(match, winner: winner, loser: loser, status: 'walkover').call
       broadcast_update(match)
+      Events::EventPublisher.publish(
+        user_id: match.tournament.organization.users.first&.id || 'system',
+        org_id: match.tournament.organization_id,
+        type: 'tournament_match.walkover',
+        payload: { match_id: match.id, tournament_id: match.tournament_id, winner_id: winner&.id }
+      )
     end
 
     def broadcast_update(match)

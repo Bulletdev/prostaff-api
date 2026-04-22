@@ -42,7 +42,8 @@ class HealthController < ActionController::API
     checks = {
       database: check_database,
       redis: check_redis,
-      meilisearch: check_meilisearch
+      meilisearch: check_meilisearch,
+      events_service: check_events_service
     }
 
     # 'disabled' means the service is not configured (expected in some environments).
@@ -96,6 +97,29 @@ class HealthController < ActionController::API
     { status: 'ok' }
   rescue StandardError => e
     Rails.logger.error "[HealthCheck] Redis check failed: #{e.message}"
+    { status: 'error', message: e.message }
+  end
+
+  # Pings the prostaff-events Phoenix service GET /health endpoint.
+  # Non-critical: events service being down does not break Rails (Redis is the transport).
+  # Reports as disabled if PHOENIX_EVENTS_ENABLED is not set to 'true'.
+  #
+  # @return [Hash] { status: 'ok'|'disabled'|'error', message: String }
+  def check_events_service
+    return { status: 'disabled', message: 'prostaff-events not enabled' } unless ENV['PHOENIX_EVENTS_ENABLED'] == 'true'
+
+    events_url = ENV['PHOENIX_EVENTS_URL'].presence || 'http://localhost:4000'
+
+    conn = Faraday.new { |f| f.options.timeout = 2 }
+    response = conn.get("#{events_url}/health")
+
+    if response.success?
+      { status: 'ok' }
+    else
+      { status: 'error', message: "HTTP #{response.status}" }
+    end
+  rescue StandardError => e
+    Rails.logger.warn "[HealthCheck] prostaff-events check failed: #{e.message}"
     { status: 'error', message: e.message }
   end
 
