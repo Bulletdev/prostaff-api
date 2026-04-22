@@ -202,7 +202,7 @@ services:
       SMTP_PORT: '${SMTP_PORT:-587}'
       SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
     healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep '[s]idekiq' || exit 1"]
+      test: ["CMD-SHELL", "grep -q sidekiq /proc/1/cmdline || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
