@@ -1161,6 +1161,17 @@ SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue size that triggers degraded
 
 ## 11 · Deployment
 
+### Ecosystem
+
+This API is one service in the ProStaff ecosystem. The other services it integrates with:
+
+|                    Service                          |          Stack        |                          Role                                                     |
+|-----------------------------------------------------|-----------------------|-----------------------------------------------------------------------------------|
+| [prostaff-analytics-hub](../prostaff-analytics-hub) | Next.js 15 / vinext   | Frontend SPA — consumes API(also: https://prostaff.gg, https://scrims.lol )       |
+| [prostaff-events](../prostaff-events)               | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
+| [prostaff-riot-gateway](../prostaff-gateway)        |       Go 1.23         | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker;        |
+| [ProStaff-Scraper](../ProStaff-Scraper)             |     Python / FastAPI  | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
+
 ### Deployment Architecture
 
 ```mermaid
@@ -1175,9 +1186,19 @@ graph TB
     end
 
     subgraph "Rails — Puma"
-        Cable["Action Cable<br/>WebSocket /cable<br/>(team chat)"]
+        Cable["Action Cable<br/>WSS /cable<br/>(team chat)"]
         Router["Rails Router<br/>REST API v1<br/>200+ endpoints"]
-        Sidekiq["Sidekiq<br/>Background Workers<br/>(Riot sync + reindex)"]
+        Sidekiq["Sidekiq<br/>Background Workers<br/>(sync + backfill)"]
+    end
+
+    subgraph "prostaff-events — Elixir/Phoenix"
+        PhoenixEndpoint["Phoenix Endpoint<br/>WSS /socket<br/>(domain events)"]
+        RedisSub["RedisSubscriber<br/>PSUBSCRIBE prostaff:events:*"]
+        InhouseQ["InhouseQueue<br/>GenServer per active queue"]
+    end
+
+    subgraph "prostaff-riot-gateway — Go"
+        Gateway["Riot Gateway :4444<br/>Token bucket · L1/L2 cache<br/>Circuit breaker"]
     end
 
     subgraph "Data"
@@ -1194,30 +1215,42 @@ graph TB
 
     FrontendApp -- "HTTPS REST" --> Traefik
     FrontendApp -- "WSS /cable" --> Traefik
+    FrontendApp -- "WSS /socket" --> Traefik
     PlayerPortal -- "HTTPS REST" --> Traefik
 
     Traefik -- "HTTP" --> Router
     Traefik -- "WS upgrade /cable" --> Cable
+    Traefik -- "WS upgrade /socket" --> PhoenixEndpoint
 
     Router -- "reads / writes" --> PG
     Router -- "cache · JWT blacklist" --> RD
     Router -- "full-text search" --> Meili
+    Router -- "publish prostaff:events:*" --> RD
+    Router -- "match detail · H2H" --> ES
+    Router -- "internal JWT" --> Gateway
     Cable -- "pub/sub" --> RD
     Sidekiq -- "async jobs" --> PG
     Sidekiq -- "queue · cache" --> RD
     Sidekiq -- "reindex docs" --> Meili
-
-    Router -- "player data" --> RiotAPI
-    Sidekiq -- "match + profile sync" --> RiotAPI
-    Router -- "pro matches" --> PandaScore
-    Router -- "match detail · H2H" --> ES
     Sidekiq -- "historical backfill" --> ES
+    Sidekiq -- "internal JWT" --> Gateway
+
+    RedisSub -- "PSUBSCRIBE" --> RD
+    RedisSub --> InhouseQ
+    RedisSub --> PhoenixEndpoint
+
+    Gateway -- "rate limited" --> RiotAPI
+    Router -- "pro matches" --> PandaScore
 
     style FrontendApp fill:#1e88e5
     style PlayerPortal fill:#5c6bc0
     style Traefik fill:#1565c0
     style Cable fill:#b1003e
     style Sidekiq fill:#b1003e
+    style PhoenixEndpoint fill:#4B275F
+    style RedisSub fill:#4B275F
+    style InhouseQ fill:#4B275F
+    style Gateway fill:#00ADD8
     style PG fill:#336791
     style RD fill:#d82c20
     style Meili fill:#ff5722
@@ -1247,19 +1280,21 @@ graph TB
 
 **Production Stack (Coolify):**
 - **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt)
-- **WebSocket Support**: Native WebSocket proxy for Action Cable
 - **Application**: Rails 7.2 API (Puma) + Action Cable + Sidekiq
-- **Database**: PostgreSQL 14+ (Supabase self hosted) + Cassandra 
+- **Event Bus**: prostaff-events — Elixir/Phoenix 1.7 (domain events via Phoenix Channels)
+- **Riot Gateway**: prostaff-riot-gateway — Go 1.23 (token bucket, L1/L2 cache, circuit breaker)
+- **Database**: PostgreSQL 14+ (Supabase self-hosted)
 - **Cache/Queue**: Redis 7
 - **Search**: Meilisearch (self-hosted)
 - **Data Lake**: Elasticsearch 8 (self-hosted, 97K+ pro games)
 
 **Data Flow:**
 1. Clients connect via HTTPS/WSS through Traefik
-2. REST requests → Rails Router → PostgreSQL/Redis/Meilisearch
-3. WebSocket connections → Action Cable → Redis (pub/sub)
-4. Background jobs → Sidekiq → PostgreSQL/Redis/Meilisearch
-5. External API calls → Riot Games API / PandaScore API
+2. REST requests → Rails Router → PostgreSQL / Redis / Meilisearch / Elasticsearch
+3. Team chat WebSocket → Action Cable → Redis pub/sub
+4. Domain event WebSocket → prostaff-events (Phoenix Channels) ← Redis `PSUBSCRIBE prostaff:events:*` ← Rails
+5. Riot API calls → prostaff-riot-gateway (rate limiter + cache) → Riot Games API
+6. Background jobs → Sidekiq → PostgreSQL / Redis / Meilisearch / Elasticsearch / Gateway
 
 ---
 
