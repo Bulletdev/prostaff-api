@@ -22,7 +22,8 @@ module Api
         'ddragon.leagueoflegends.com',
         'raw.communitydragon.org',
         'static.wikia.nocookie.net',
-        'commons.wikimedia.org'
+        'commons.wikimedia.org',
+        'cdn-api.pandascore.co'
       ].freeze
 
       HTTP_TIMEOUT_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze
