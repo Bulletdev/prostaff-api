@@ -28,9 +28,17 @@ module Middleware
       @app = app
     end
 
+    SIDEKIQ_CSP = "default-src 'self'; img-src 'self' data:; " \
+                  "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'".freeze
+
     def call(env)
       status, headers, body = @app.call(env)
-      return [status, headers, body] if env['PATH_INFO'].start_with?('/sidekiq')
+
+      if env['PATH_INFO'].start_with?('/sidekiq')
+        headers.delete('Content-Security-Policy')
+        headers['Content-Security-Policy'] = SIDEKIQ_CSP
+        return [status, headers, body]
+      end
 
       HEADERS.each { |key, value| headers[key] ||= value }
       [status, headers, body]
