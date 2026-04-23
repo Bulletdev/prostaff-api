@@ -38,15 +38,35 @@
     class: Analytics::RefreshMetadataViewsJob
     description: 'Refresh materialized views for database metadata (table privileges, extensions, policies)'
 
-  # Historical backfill: triggers scraper backfill (Leaguepedia → ES) then
-  # syncs new matches into Rails DB.  Resumable — only processes pending
-  # tournaments.  First run imports full history (~8-12h), subsequent runs
-  # take minutes.  Runs daily at 4 AM UTC.
-  historical_backfill:
+  # Historical backfill — CBLOL main split (highest priority, runs first)
+  historical_backfill_cblol:
     cron: '0 4 * * *'
     class: Competitive::HistoricalBackfillJob
     queue: low_priority
-    description: 'Trigger historical backfill on scraper and sync matches to Rails DB'
+    args:
+      kwargs:
+        league: 'CBLOL'
+    description: 'Backfill CBLOL main split (Leaguepedia → ES → Rails DB)'
+
+  # CBLOL Academy — runs 30min after CBLOL to avoid scraper contention
+  historical_backfill_academy:
+    cron: '30 4 * * *'
+    class: Competitive::HistoricalBackfillJob
+    queue: low_priority
+    args:
+      kwargs:
+        league: 'CBLOL Academy'
+    description: 'Backfill CBLOL Academy (Leaguepedia → ES → Rails DB)'
+
+  # Circuito Desafiante — runs 1h after CBLOL
+  historical_backfill_cd:
+    cron: '0 5 * * *'
+    class: Competitive::HistoricalBackfillJob
+    queue: low_priority
+    args:
+      kwargs:
+        league: 'Circuito Desafiante'
+    description: 'Backfill Circuito Desafiante (Leaguepedia → ES → Rails DB)'
 
   # Request and expire scrim result reports daily at 10 AM UTC
   scrim_result_reminders:

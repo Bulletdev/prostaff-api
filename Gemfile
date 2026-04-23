@@ -77,7 +77,7 @@ gem 'rswag-api'
 gem 'rswag-ui'
 
 # Elasticsearch client (for analytics queries)
-gem 'elasticsearch', '~> 9.1', '>= 9.1.3'
+gem 'elasticsearch', '~> 8.19'
 
 # Meilisearch — full-text search for players, organizations, scouting targets, etc.
 gem 'meilisearch', '~> 0.33'

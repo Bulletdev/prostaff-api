@@ -43,6 +43,21 @@ class ProMatchSerializer < Blueprinter::Base
     match.tournament_display
   end
 
+  field :our_team_logo do |match|
+    match.organization&.logo_url
+  end
+
+  field :opponent_team_logo do |match|
+    # Prefer the linked OpponentTeam record if populated
+    explicit = match.opponent_team&.logo_url
+    return explicit if explicit.present?
+
+    # Fall back to image stored in game_stats during ES import
+    stats = match.game_stats || {}
+    our_is_team1 = stats['team1_name'].to_s.strip.downcase == match.our_team_name.to_s.strip.downcase
+    our_is_team1 ? stats['team2_image'] : stats['team1_image']
+  end
+
   field :game_label do |match|
     match.game_label
   end

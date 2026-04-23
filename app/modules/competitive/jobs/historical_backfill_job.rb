@@ -39,10 +39,12 @@ module Competitive
     # resumable, so the next scheduled run will pick up where it left off.
     MAX_WAIT_TIME = 6.hours
 
-    def perform
-      league     = ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
+    # @param league    [String, nil] override — defaults to BACKFILL_LEAGUE env
+    # @param our_team  [String, nil] override — defaults to BACKFILL_OUR_TEAM env
+    def perform(league: nil, our_team: nil)
+      league     = league.presence     || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
+      our_team   = our_team.presence   || ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
       min_year   = ENV.fetch('BACKFILL_MIN_YEAR', '2013').to_i
-      our_team   = ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
       sync_limit = ENV.fetch('BACKFILL_SYNC_LIMIT', '500').to_i
 
       scraper = ProStaffScraperService.new
@@ -52,7 +54,7 @@ module Competitive
       dispatch_sync_jobs(league, our_team, sync_limit)
 
       record_job_heartbeat
-      Rails.logger.info('[HistoricalBackfillJob] Done.')
+      Rails.logger.info("[HistoricalBackfillJob] Done — league=#{league}")
     end
 
     private

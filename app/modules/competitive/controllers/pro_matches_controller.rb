@@ -13,6 +13,7 @@ module Competitive
       # List recent professional matches from database
       def index
         matches = current_organization.competitive_matches
+                                      .includes(:opponent_team, :organization)
                                       .ordered_by_date
                                       .page(params[:page] || 1)
                                       .per(params[:per_page] || 20)
@@ -59,65 +60,54 @@ module Competitive
       end
 
       # GET /api/v1/competitive/pro-matches/upcoming
-      # Fetch upcoming matches from PandaScore API
       def upcoming
-        league = params[:league]
-        per_page = params[:per_page]&.to_i || 10
+        league   = params[:league]
+        per_page = params[:per_page]&.to_i || 20
+        page     = params[:page]&.to_i     || 1
 
-        matches = @pandascore_service.fetch_upcoming_matches(
-          league: league,
-          per_page: per_page
-        )
+        result = @pandascore_service.fetch_upcoming_matches(league: league, per_page: per_page, page: page)
+
+        total_pages = build_total_pages(result, page)
 
         render json: {
-          message: 'Upcoming matches retrieved successfully',
           data: {
-            matches: matches,
+            matches: result[:data],
+            pagination: pagination_for(result, total_pages),
             source: 'pandascore',
             cached: true
           }
         }
       rescue PandascoreService::RateLimitError => e
         Rails.logger.warn "[ProMatches#upcoming] Rate limit: #{e.message}"
-        render json: {
-          error: { code: 'PANDASCORE_RATE_LIMITED', message: e.message }
-        }, status: :too_many_requests
+        render json: { error: { code: 'PANDASCORE_RATE_LIMITED', message: e.message } }, status: :too_many_requests
       rescue PandascoreService::PandascoreError => e
-        Rails.logger.error "[ProMatches#upcoming] PandascoreError (#{e.class}): #{e.message}"
-        render json: {
-          error: { code: 'PANDASCORE_ERROR', message: e.message }
-        }, status: :service_unavailable
+        Rails.logger.error "[ProMatches#upcoming] #{e.class}: #{e.message}"
+        render json: { error: { code: 'PANDASCORE_ERROR', message: e.message } }, status: :service_unavailable
       end
 
       # GET /api/v1/competitive/pro-matches/past
-      # Fetch past matches from PandaScore API
       def past
-        league = params[:league]
+        league   = params[:league]
         per_page = params[:per_page]&.to_i || 20
+        page     = params[:page]&.to_i     || 1
 
-        matches = @pandascore_service.fetch_past_matches(
-          league: league,
-          per_page: per_page
-        )
+        result = @pandascore_service.fetch_past_matches(league: league, per_page: per_page, page: page)
+        total_pages = build_total_pages(result, page)
 
         render json: {
-          message: 'Past matches retrieved successfully',
           data: {
-            matches: matches,
+            matches: result[:data],
+            pagination: pagination_for(result, total_pages),
             source: 'pandascore',
             cached: true
           }
         }
       rescue PandascoreService::RateLimitError => e
         Rails.logger.warn "[ProMatches#past] Rate limit: #{e.message}"
-        render json: {
-          error: { code: 'PANDASCORE_RATE_LIMITED', message: e.message }
-        }, status: :too_many_requests
+        render json: { error: { code: 'PANDASCORE_RATE_LIMITED', message: e.message } }, status: :too_many_requests
       rescue PandascoreService::PandascoreError => e
-        Rails.logger.error "[ProMatches#past] PandascoreError (#{e.class}): #{e.message}"
-        render json: {
-          error: { code: 'PANDASCORE_ERROR', message: e.message }
-        }, status: :service_unavailable
+        Rails.logger.error "[ProMatches#past] #{e.class}: #{e.message}"
+        render json: { error: { code: 'PANDASCORE_ERROR', message: e.message } }, status: :service_unavailable
       end
 
       # POST /api/v1/competitive/pro-matches/refresh
@@ -393,10 +383,156 @@ module Competitive
         }, status: :unprocessable_entity
       end
 
+      # GET /api/v1/competitive/pro-matches/match-preview
+      # Aggregate preview data for a head-to-head matchup between two pro teams.
+      # Params: team1_id (integer), team2_id (integer), team1_name (string), team2_name (string)
+      def match_preview
+        team1_id   = params[:team1_id]
+        team2_id   = params[:team2_id]
+        team1_name = params[:team1_name].to_s.strip
+        team2_name = params[:team2_name].to_s.strip
+
+        if team1_id.blank? || team2_id.blank?
+          return render json: {
+            error: { code: 'MISSING_PARAMS', message: 'team1_id and team2_id are required' }
+          }, status: :unprocessable_entity
+        end
+
+        # Fetch PandaScore data in parallel
+        t1_data   = Thread.new { @pandascore_service.fetch_team(team1_id) }
+        t2_data   = Thread.new { @pandascore_service.fetch_team(team2_id) }
+        t1_recent = Thread.new { @pandascore_service.fetch_team_recent_matches(team1_id) }
+        t2_recent = Thread.new { @pandascore_service.fetch_team_recent_matches(team2_id) }
+
+        team1_data   = t1_data.value
+        team2_data   = t2_data.value
+        team1_recent = t1_recent.value
+        team2_recent = t2_recent.value
+
+        # H2H stats from Elasticsearch
+        must_clauses = [
+          {
+            bool: {
+              should: [
+                { bool: { must: [team_clause(team1_name, 'team1'), team_clause(team2_name, 'team2')] } },
+                { bool: { must: [team_clause(team2_name, 'team1'), team_clause(team1_name, 'team2')] } }
+              ],
+              minimum_should_match: 1
+            }
+          }
+        ]
+
+        es_body = {
+          query: { bool: { must: must_clauses } },
+          size: 0,
+          aggs: {
+            team1_wins: { filter: win_team_clause(team1_name) },
+            team2_wins: { filter: win_team_clause(team2_name) }
+          }
+        }
+
+        es_result    = ElasticsearchClient.new.search(index: 'lol_pro_matches', body: es_body)
+        h2h_wins_t1  = es_result.dig('aggregations', 'team1_wins', 'doc_count') || 0
+        h2h_wins_t2  = es_result.dig('aggregations', 'team2_wins', 'doc_count') || 0
+
+        render json: {
+          data: {
+            team1: serialize_team(team1_data, team1_recent),
+            team2: serialize_team(team2_data, team2_recent),
+            h2h_wins_team1: h2h_wins_t1,
+            h2h_wins_team2: h2h_wins_t2,
+            h2h_total: h2h_wins_t1 + h2h_wins_t2
+          }
+        }
+      rescue StandardError => e
+        Rails.logger.error "[ProMatches#match_preview] #{e.class}: #{e.message}"
+        render json: { error: { code: 'MATCH_PREVIEW_ERROR', message: 'Failed to build match preview' } },
+               status: :service_unavailable
+      end
+
+      # GET /api/v1/competitive/pro-matches/es-series
+      # Search Elasticsearch for games between two teams.
+      # Params: team1, team2, league (optional), after (ISO date), before (ISO date), limit (default 20)
+      def es_series
+        team1 = params[:team1].to_s.strip
+        team2 = params[:team2].to_s.strip
+        limit = (params[:limit] || 20).to_i.clamp(1, 50)
+
+        raise ArgumentError, 'team1 and team2 are required' if team1.blank? || team2.blank?
+
+        must_clauses = [
+          {
+            bool: {
+              should: [
+                { bool: { must: [team_clause(team1, 'team1'), team_clause(team2, 'team2')] } },
+                { bool: { must: [team_clause(team2, 'team1'), team_clause(team1, 'team2')] } }
+              ],
+              minimum_should_match: 1
+            }
+          }
+        ]
+
+        if params[:after].present? && params[:before].present?
+          must_clauses << {
+            range: { start_time: { gte: params[:after], lte: params[:before] } }
+          }
+        end
+
+        es_body = {
+          query: { bool: { must: must_clauses } },
+          sort: [{ start_time: { order: 'desc' } }],
+          size: limit
+        }
+
+        result = ElasticsearchClient.new.search(index: 'lol_pro_matches', body: es_body)
+        games  = result.dig('hits', 'hits')&.map { |h| h['_source'] } || []
+
+        render json: { data: { games: games, total: games.size } }
+      rescue ArgumentError => e
+        render json: { error: { code: 'INVALID_PARAMS', message: e.message } }, status: :unprocessable_entity
+      rescue StandardError => e
+        Rails.logger.error("[ES Series] #{e.class}: #{e.message}")
+        render json: { error: { code: 'ES_ERROR', message: 'Failed to fetch series data' } },
+               status: :internal_server_error
+      end
+
       private
 
       def set_pandascore_service
         @pandascore_service = PandascoreService.instance
+      end
+
+      # Builds an ES should clause that matches a team name using:
+      # 1. Exact term match (handles perfect name equality)
+      # 2. Prefix wildcard on first word, case-insensitive (handles suffix differences
+      #    between sources, e.g. PandaScore "RED Academy" vs Leaguepedia "RED Kalunga Academy")
+      def team_clause(name, field)
+        prefix = name.split.first.to_s
+        {
+          bool: {
+            should: [
+              { term: { "#{field}.name" => name } },
+              { wildcard: { "#{field}.name" => { value: "#{prefix}*", case_insensitive: true } } }
+            ],
+            minimum_should_match: 1
+          }
+        }
+      end
+
+      # Matches win_team using the same prefix-wildcard logic as team_clause.
+      # Needed because PandaScore names have sponsor suffixes (e.g. "FlyQuest NZXT")
+      # while Oracle's Elixir stores the base name ("FlyQuest").
+      def win_team_clause(name)
+        prefix = name.split.first.to_s
+        {
+          bool: {
+            should: [
+              { term: { win_team: name } },
+              { wildcard: { win_team: { value: "#{prefix}*", case_insensitive: true } } }
+            ],
+            minimum_should_match: 1
+          }
+        }
       end
 
       def apply_filters(matches)
@@ -414,6 +550,57 @@ module Competitive
         end
 
         matches
+      end
+
+      def build_total_pages(result, page)
+        pages = result[:per_page].positive? ? [(result[:total].to_f / result[:per_page]).ceil, 1].max : 1
+        result[:data].length >= result[:per_page] ? [pages, page].max : pages
+      end
+
+      def pagination_for(result, total_pages)
+        {
+          current_page: result[:page],
+          per_page: result[:per_page],
+          total_count: result[:total],
+          total_pages: total_pages
+        }
+      end
+
+      def serialize_team(team_data, recent_matches)
+        {
+          id: team_data['id'],
+          name: team_data['name'],
+          acronym: team_data['acronym'],
+          image_url: team_data['image_url'],
+          players: (team_data['players'] || []).map do |p|
+            {
+              id: p['id'],
+              name: p['name'],
+              role: p['role'],
+              image_url: p['image_url'],
+              nationality: p['nationality']
+            }
+          end.sort_by { |p| %w[top jun mid adc sup].index(p[:role]) || 99 },
+          recent: (recent_matches || []).first(5).map { |m| serialize_recent_match(m, team_data['id']) }
+        }
+      end
+
+      def serialize_recent_match(match, our_team_id) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+        opponents  = match['opponents'] || []
+        other_side = opponents.find { |o| o.dig('opponent', 'id') != our_team_id }
+        result       = (match['results'] || []).find { |r| r['team_id'] == our_team_id }
+        other_result = (match['results'] || []).find { |r| r['team_id'] != our_team_id }
+        our_score    = result&.dig('score') || 0
+        opp_score    = other_result&.dig('score') || 0
+
+        {
+          opponent_name: other_side&.dig('opponent', 'name'),
+          opponent_acronym: other_side&.dig('opponent', 'acronym'),
+          opponent_image_url: other_side&.dig('opponent', 'image_url'),
+          won: our_score > opp_score,
+          score: "#{our_score}-#{opp_score}",
+          date: match['begin_at']&.to_s&.first(10)
+        }
       end
 
       def import_match_to_database(match_data)

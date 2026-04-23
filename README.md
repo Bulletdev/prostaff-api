@@ -55,7 +55,10 @@
 │  [■] VOD Review System        — Collaborative timestamp annotations         │
 │  [■] Schedule Management      — Matches, scrims and team events             │
 │  [■] Goal Tracking            — Performance goals (team and players)        │
-│  [■] Competitive Module       — PandaScore integration + draft analysis     │
+│  [■] Competitive Module       — PandaScore + ES match detail + H2H          │
+│  [■] Match Detail View        — Per-game picks, KDA, gold, CS, DMG from ES  │
+│  [■] Pro Match Data Lake      — 97K+ games (2014-2026) in Elasticsearch     │
+│  [■] Multi-League Backfill    — CBLOL · Academy · CD auto-sync daily        │
 │  [■] Scrims Management        — Opponent tracking + analytics               │
 │  [■] Strategy Module          — Draft planning + tactical boards            │
 │  [■] Meta Intelligence        — Build aggregation, champion/item analytics  │
@@ -188,6 +191,7 @@ open http://localhost:3333/api-docs
 ║  Serialization       ║  Blueprinter                                       ║
 ║  Full-text Search    ║  Meilisearch                                       ║
 ║  Real-time           ║  Action Cable (WebSocket)                          ║
+║  Data Lake           ║  Elasticsearch 8 (97K+ pro games, all leagues)     ║
 ╚══════════════════════╩════════════════════════════════════════════════════╝
 ```
 
@@ -213,7 +217,7 @@ This API follows a **modular monolith** architecture:
 │  vod_reviews        │  Video review and timestamp management                │
 │  team_goals         │  Goal setting and tracking                            │
 │  riot_integration   │  Riot Games API integration                           │
-│  competitive        │  PandaScore integration, pro matches, draft analysis  │
+│  competitive        │  PandaScore + Elasticsearch match detail, H2H, draft  │
 │  meta_intelligence  │  Build aggregation, champion/item meta analytics      │
 │  scrims             │  Scrim management and opponent team tracking          │
 │  strategy           │  Draft planning and tactical board system             │
@@ -239,7 +243,7 @@ This API follows a modular monolith architecture with the following modules:
 - `vod_reviews` - Video review and timestamp management
 - `team_goals` - Goal setting and tracking
 - `riot_integration` - Riot Games API integration
-- `competitive` - PandaScore integration, pro matches, draft analysis
+- `competitive` - PandaScore + Elasticsearch match detail, H2H, draft analysis
 - `scrims` - Scrim management and opponent team tracking
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
@@ -712,7 +716,7 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 #### Riot Integration
 - `GET /riot-integration/sync-status` — Get sync status for all players
 
-#### Competitive (PandaScore Integration)
+#### Competitive (PandaScore + Elasticsearch)
 - `GET  /competitive-matches` — List competitive matches
 - `GET  /competitive-matches/:id` — Get competitive match details
 - `GET  /competitive/pro-matches` — List all pro matches
@@ -721,10 +725,14 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `GET  /competitive/pro-matches/past` — Get past pro matches
 - `POST /competitive/pro-matches/refresh` — Refresh pro matches from PandaScore
 - `POST /competitive/pro-matches/import` — Import specific pro match
+- `GET  /competitive/pro-matches/match-preview` — Per-game picks + stats for a recent series (ES)
+- `GET  /competitive/pro-matches/es-series` — H2H series history between two teams (ES)
 - `POST /competitive/draft-comparison` — Compare team compositions
 - `GET  /competitive/meta/:role` — Get meta champions by role
 - `GET  /competitive/composition-winrate` — Get composition winrate statistics
 - `GET  /competitive/counters` — Get champion counter suggestions
+
+> `match-preview` and `es-series` query the Elasticsearch data lake (97K+ games) and are league-agnostic. They accept `?team1=&team2=&league=&limit=` query params.
 
 #### Scrims Management
 - `GET    /scrims/scrims` — List all scrims
@@ -1176,6 +1184,7 @@ graph TB
         PG[("PostgreSQL")]
         RD[("Redis")]
         Meili[("Meilisearch")]
+        ES[("Elasticsearch\n97K+ pro games")]
     end
 
     subgraph "External APIs"
@@ -1201,6 +1210,8 @@ graph TB
     Router -- "player data" --> RiotAPI
     Sidekiq -- "match + profile sync" --> RiotAPI
     Router -- "pro matches" --> PandaScore
+    Router -- "match detail · H2H" --> ES
+    Sidekiq -- "historical backfill" --> ES
 
     style FrontendApp fill:#1e88e5
     style PlayerPortal fill:#5c6bc0
@@ -1210,9 +1221,29 @@ graph TB
     style PG fill:#336791
     style RD fill:#d82c20
     style Meili fill:#ff5722
+    style ES fill:#005571
     style RiotAPI fill:#eb0029
     style PandaScore fill:#ff6b35
 ```
+
+### Scheduled Jobs (Sidekiq Scheduler)
+
+```
+╔══════════════════════════════╦═══════════════╦═══════════════════════════════════════════╗
+║  Job                         ║  Schedule     ║  Description                              ║
+╠══════════════════════════════╬═══════════════╬═══════════════════════════════════════════╣
+║  CleanupExpiredTokensJob     ║  0 2 * * *    ║  Purge expired JWT blacklist + pwd tokens ║
+║  RefreshMetadataViewsJob     ║  0 */2 * * *  ║  Refresh DB metadata materialized views   ║
+║  HistoricalBackfillJob       ║  0 4 * * *    ║  CBLOL: Leaguepedia → ES → DB             ║
+║  HistoricalBackfillJob       ║  30 4 * * *   ║  CBLOL Academy: Leaguepedia → ES → DB     ║
+║  HistoricalBackfillJob       ║  0 5 * * *    ║  Circuito Desafiante: Leaguepedia → ES    ║
+║  ScrimResultReminderJob      ║  0 10 * * *   ║  Send deadline reminders, expire reports  ║
+║  RebuildChampionMatrixJob    ║  0 3 * * *    ║  Rebuild AI champion matrices/vectors     ║
+║  StatusSnapshotJob           ║  */15 * * * * ║  Record component health snapshots        ║
+╚══════════════════════════════╩═══════════════╩═══════════════════════════════════════════╝
+```
+
+> Backfill jobs are resumable — re-running skips already-completed tournaments. First run imports full history (~8-12h); subsequent runs only process new/failed tournaments (minutes).
 
 **Production Stack (Coolify):**
 - **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt)
@@ -1221,6 +1252,7 @@ graph TB
 - **Database**: PostgreSQL 14+ (Supabase self hosted) + Cassandra 
 - **Cache/Queue**: Redis 7
 - **Search**: Meilisearch (self-hosted)
+- **Data Lake**: Elasticsearch 8 (self-hosted, 97K+ pro games)
 
 **Data Flow:**
 1. Clients connect via HTTPS/WSS through Traefik
@@ -1264,6 +1296,17 @@ AUTH_TRACKER_WINDOW=5               # sliding window in minutes
 
 # Circuit breaker (optional, defaults shown)
 CIRCUIT_BREAKER_THRESHOLD=5         # consecutive failures before opening circuit
+
+# Elasticsearch data lake
+ELASTICSEARCH_URL=https://user:password@elastic.example.com   # ES 8.x with basic auth
+
+# Historical backfill (Sidekiq scheduled jobs — override per-job via sidekiq.yml kwargs)
+BACKFILL_LEAGUE=CBLOL               # default league for manual runs
+BACKFILL_OUR_TEAM=paiN Gaming       # team name used in sync step
+BACKFILL_MIN_YEAR=2013              # earliest year to import
+BACKFILL_SYNC_LIMIT=500             # max matches synced per job run
+SIDEKIQ_CONCURRENCY=10              # Sidekiq thread count (keep DB_POOL equal)
+DB_POOL=10                          # ActiveRecord pool size for Sidekiq container
 ```
 
 ### Docker
@@ -1279,16 +1322,16 @@ docker run -p 3333:3000 prostaff-api
 
 ### CI/CD Workflows
 
-|           Workflow     |                    Trigger                   |                         What it does                                          |
-|------------------------|----------------------------------------------|-------------------------------------------------------------------------------|
-| `security-scan.yml`    | Push / PR → master, develop                  | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
-| `codeql.yml`           | Push / PR → master + Saturdays 3am UTC       | CodeQL `security-extended` + Actions workflows; SARIF to GitHub Security tab  |
-| `nightly-security.yml` | Nightly 1am UTC + manual dispatch            | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan             |
-| `load-test.yml`        | Manual dispatch                              | k6 smoke/load/stress tests                                                    |
-| `snyk-container.yml`   | Push / PR → master, develop + weekly         | Snyk container image vulnerability scan                                       |
-| `deploy-production.yml`| Push tag `v*.*.*` + manual dispatch          | Build, test, deploy to Coolify + CORS smoke test post-deploy                  |
-| `deploy-staging.yml`   | Push → develop + manual dispatch             | Same pipeline targeting staging                                               |
-| `update-architecture-diagram.yml`  Push / PR + manual dispatch        | Auto-regenerates Mermaid diagram and commits                                  |
+|           Workflow     |                    Trigger              |                         What it does                                          |
+|------------------------|-----------------------------------------|-------------------------------------------------------------------------------|
+| `security-scan.yml`    | Push / PR → master, develop             | Brakeman, Bundle Audit, Semgrep, TruffleHog, SSRF + auth + SQLi runtime tests |
+| `codeql.yml`           | Push / PR → master + Saturdays 3am UTC  | CodeQL `security-extended` + Actions workflows; SARIF to GitHub Security tab  |
+| `nightly-security.yml` | Nightly 1am UTC + manual dispatch       | Full audit: Brakeman + Bundle Audit + ZAP baseline + ZAP API scan             |
+| `load-test.yml`        | Manual dispatch                         | k6 smoke/load/stress tests                                                    |
+| `snyk-container.yml`   | Push / PR → master, develop + weekly    | Snyk container image vulnerability scan                                       |
+| `deploy-production.yml`| Push tag `v*.*.*` + manual dispatch     | Build, test, deploy to Coolify + CORS smoke test post-deploy                  |
+| `deploy-staging.yml`   | Push → develop + manual dispatch        | Same pipeline targeting staging                                               |
+| `update-architecture-diagram.yml`  Push / PR + manual dispatch   | Auto-regenerates Mermaid diagram and commits                                  |
 
 ### CodeQL Analysis
 

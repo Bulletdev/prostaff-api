@@ -228,6 +228,8 @@ class ScraperImporterService
       'win_team' => match['win_team'],
       'team1_name' => team1_name.presence || match.dig('team1', 'name'),
       'team2_name' => team2_name.presence || match.dig('team2', 'name'),
+      'team1_image' => match.dig('team1', 'image'),
+      'team2_image' => match.dig('team2', 'image'),
       'participants' => match['participants'] || []
     }.compact
   end
