@@ -515,5 +515,10 @@ Rails.application.routes.draw do
 
     user_match && password_match
   end
+  # Rails API mode strips session middleware — Sidekiq::Web needs it for CSRF
+  Sidekiq::Web.use Rack::Session::Cookie,
+                   secret: Rails.application.secret_key_base,
+                   same_site: true,
+                   max_age: 86_400
   mount Sidekiq::Web => '/sidekiq'
 end
