@@ -243,7 +243,7 @@ This API follows a modular monolith architecture with the following modules:
 - `vod_reviews` - Video review and timestamp management
 - `team_goals` - Goal setting and tracking
 - `riot_integration` - Riot Games API integration
-- `competitive` - PandaScore + Elasticsearch match detail, H2H, draft analysis
+- `competitive` - PandaScore integration, pro matches, draft analysis
 - `scrims` - Scrim management and opponent team tracking
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
