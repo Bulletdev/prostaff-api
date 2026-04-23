@@ -502,10 +502,18 @@ Rails.application.routes.draw do
 
   require 'sidekiq/web'
   Sidekiq::Web.use(Rack::Auth::Basic) do |user, password|
-    user == 'prostaff' && ActiveSupport::SecurityUtils.secure_compare(
+    expected_user     = ENV.fetch('SIDEKIQ_WEB_USER', nil)
+    expected_password = ENV.fetch('SIDEKIQ_WEB_PASSWORD', nil)
+
+    next false if expected_user.blank? || expected_password.blank?
+
+    user_match = ActiveSupport::SecurityUtils.secure_compare(user, expected_user)
+    password_match = ActiveSupport::SecurityUtils.secure_compare(
       ::Digest::SHA256.hexdigest(password),
-      ::Digest::SHA256.hexdigest(ENV.fetch('SIDEKIQ_WEB_PASSWORD', ''))
+      ::Digest::SHA256.hexdigest(expected_password)
     )
+
+    user_match && password_match
   end
   mount Sidekiq::Web => '/sidekiq'
 end
