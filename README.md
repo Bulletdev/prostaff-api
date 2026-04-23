@@ -199,7 +199,7 @@ open http://localhost:3333/api-docs
 
 ## 03 · Architecture
 
-This API follows a **modular monolith** architecture:
+This API follows a **modular monolith** architecture with the following modules:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -228,26 +228,6 @@ This API follows a **modular monolith** architecture:
 │  tournaments        │  ArenaBR double-elimination tournament management     │
 └─────────────────────┴───────────────────────────────────────────────────────┘
 ```
-
-### Architecture
-
-This API follows a modular monolith architecture with the following modules:
-
-- `authentication` - User authentication and authorization
-- `dashboard` - Dashboard statistics and metrics
-- `players` - Player management and statistics
-- `scouting` - Player scouting and talent discovery
-- `analytics` - Performance analytics and reporting
-- `matches` - Match data and statistics
-- `schedules` - Event and schedule management
-- `vod_reviews` - Video review and timestamp management
-- `team_goals` - Goal setting and tracking
-- `riot_integration` - Riot Games API integration
-- `competitive` - PandaScore integration, pro matches, draft analysis
-- `scrims` - Scrim management and opponent team tracking
-- `strategy` - Draft planning and tactical board system
-- `support` - Support ticket system with staff and FAQ management
-
 ### Architecture Diagram
 
 ```mermaid
@@ -465,7 +445,8 @@ graph TB
 [✓] Redis 6+
 ```
 
-### Installation
+<details>
+<summary><kbd>▶ Installation (click to expand)</kbd></summary>
 
 **1. Clone the repository:**
 ```bash
@@ -513,6 +494,8 @@ rails server
 ```
 
 > API available at `http://localhost:3333`
+</details>
+
 
 ---
 
@@ -1264,6 +1247,9 @@ graph TB
 ---
 
 ### Environment Variables
+<details>
+<summary><kbd>▶ Environments (click to expand)</kbd></summary>
+
 
 ```bash
 # Core
@@ -1308,6 +1294,8 @@ BACKFILL_SYNC_LIMIT=500             # max matches synced per job run
 SIDEKIQ_CONCURRENCY=10              # Sidekiq thread count (keep DB_POOL equal)
 DB_POOL=10                          # ActiveRecord pool size for Sidekiq container
 ```
+</details>
+
 
 ### Docker
 
@@ -1431,8 +1419,6 @@ We follow [Ruby Style Guide](https://rubystyle.guide/) and enforce code quality 
 ║  GNU Affero General Public License v3.0 (AGPLv3)                             ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
-
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
