@@ -15,33 +15,36 @@ class PandascoreService
   # @param league [String] Filter by league (e.g., 'cblol', 'lcs', 'lck')
   # @param per_page [Integer] Number of results per page (default: 10)
   # @return [Array<Hash>] Array of match data
-  def fetch_upcoming_matches(league: nil, per_page: 10)
+  def fetch_upcoming_matches(league: nil, per_page: 20, page: 1)
     params = {
       'filter[videogame]': 'lol',
       sort: 'begin_at',
-      per_page: per_page
+      per_page: per_page,
+      page: page
     }
 
     params['filter[league_id]'] = league if league.present?
 
-    cached_get('matches/upcoming', params)
+    paginated_get('matches/upcoming', params)
   end
 
   # Fetch past LoL matches
   # @param league [String] Filter by league
   # @param per_page [Integer] Number of results per page (default: 20)
-  # @return [Array<Hash>] Array of match data
-  def fetch_past_matches(league: nil, per_page: 20)
+  # @param page [Integer] Page number (default: 1)
+  # @return [Hash] { data: Array, total: Integer, page: Integer, per_page: Integer }
+  def fetch_past_matches(league: nil, per_page: 20, page: 1)
     params = {
       'filter[videogame]': 'lol',
       'filter[finished]': true,
       sort: '-begin_at',
-      per_page: per_page
+      per_page: per_page,
+      page: page
     }
 
     params['filter[league_id]'] = league if league.present?
 
-    cached_get('matches/past', params)
+    paginated_get('matches/past', params)
   end
 
   # Fetch detailed information about a specific match
@@ -91,6 +94,32 @@ class PandascoreService
     params['filter[videogame_version]'] = patch if patch.present?
 
     cached_get('lol/champions', params)
+  end
+
+  # Fetch a LoL team by PandaScore team ID
+  # @param team_id [Integer, String] PandaScore team ID
+  # @return [Hash] Team data including players
+  def fetch_team(team_id)
+    raise ArgumentError, 'Team ID cannot be blank' if team_id.blank?
+
+    cached_get("teams/#{team_id}", {}, ttl: 86_400)
+  end
+
+  # Fetch recent past matches for a LoL team
+  # @param team_id [Integer, String] PandaScore team ID
+  # @param limit [Integer] Number of matches to return (default: 5)
+  # @return [Array<Hash>] Array of match hashes
+  def fetch_team_recent_matches(team_id, limit: 5)
+    raise ArgumentError, 'Team ID cannot be blank' if team_id.blank?
+
+    params = {
+      'filter[videogame]': 'lol',
+      'filter[opponent_id]': team_id,
+      sort: '-begin_at',
+      per_page: limit
+    }
+
+    cached_get('lol/matches/past', params, ttl: 1_800)
   end
 
   # Clear cache for PandaScore data
@@ -161,11 +190,6 @@ class PandascoreService
     "pandascore:#{normalized_endpoint}:#{param_hash}"
   end
 
-  # Cached GET request with TTL
-  # @param endpoint [String] API endpoint
-  # @param params [Hash] Query parameters
-  # @param ttl [Integer] Cache time-to-live in seconds
-  # @return [Hash, Array] API response data
   def cached_get(endpoint, params = {}, ttl: CACHE_TTL)
     key = cache_key(endpoint, params)
 
@@ -173,5 +197,50 @@ class PandascoreService
       Rails.logger.info "[PandaScore] Cache miss: #{key}"
       make_request(endpoint, params)
     end
+  end
+
+  def paginated_get(endpoint, params = {}, ttl: CACHE_TTL)
+    key = cache_key(endpoint, params)
+
+    Rails.cache.fetch(key, expires_in: ttl) do
+      Rails.logger.info "[PandaScore] Cache miss (paginated): #{key}"
+      make_paginated_request(endpoint, params)
+    end
+  end
+
+  def make_paginated_request(endpoint, params = {})
+    raise PandascoreError, 'PANDASCORE_API_KEY not configured' if api_key.blank?
+
+    url = "#{BASE_URL}/#{endpoint}"
+    params[:token] = api_key
+
+    Rails.logger.info "[PandaScore] GET #{endpoint} (paginated) - Params: #{params.inspect}"
+
+    response = Faraday.get(url, params) do |req|
+      req.options.timeout = 10
+      req.options.open_timeout = 5
+    end
+
+    case response.status
+    when 200
+      total = response.headers['x-total'].to_i
+      {
+        data: JSON.parse(response.body),
+        total: total,
+        page: params[:page] || 1,
+        per_page: params[:per_page] || 20
+      }
+    when 429
+      raise RateLimitError, 'Rate limit exceeded. Try again later.'
+    when 401, 403
+      raise PandascoreError, 'API key invalid or unauthorized'
+    else
+      Rails.logger.error "[PandaScore] Error #{response.status}: #{response.body}"
+      raise PandascoreError, "API error: #{response.status}"
+    end
+  rescue Faraday::TimeoutError
+    raise PandascoreError, 'Request timed out'
+  rescue Faraday::Error => e
+    raise PandascoreError, "Failed to connect to PandaScore API: #{e.message}"
   end
 end

@@ -376,6 +376,8 @@ Rails.application.routes.draw do
             post :import
             post 'sync-from-scraper',      action: :sync_from_scraper
             post 'sync-from-leaguepedia',  action: :sync_from_leaguepedia
+            get  'match-preview',           action: :match_preview
+            get  'es-series',              action: :es_series
             get  'diagnose-missing',       action: :diagnose_missing
             post 'recover-missing',        action: :recover_missing
             post 'historical-backfill',        action: :historical_backfill
