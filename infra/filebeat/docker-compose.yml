@@ -1,0 +1,21 @@
+services:
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.19.0
+    user: root
+    restart: unless-stopped
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    networks:
+      - vcgokoow00g0ggs0wwg4so4o
+      - coolify
+    mem_limit: 100m
+    labels:
+      - coolify.managed=true
+
+networks:
+  vcgokoow00g0ggs0wwg4so4o:
+    external: true
+  coolify:
+    external: true
