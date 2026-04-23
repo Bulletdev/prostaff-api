@@ -507,32 +507,28 @@ module Competitive
       # 2. Prefix wildcard on first word, case-insensitive (handles suffix differences
       #    between sources, e.g. PandaScore "RED Academy" vs Leaguepedia "RED Kalunga Academy")
       def team_clause(name, field)
-        prefix = name.split.first.to_s
-        {
-          bool: {
-            should: [
-              { term: { "#{field}.name" => name } },
-              { wildcard: { "#{field}.name" => { value: "#{prefix}*", case_insensitive: true } } }
-            ],
-            minimum_should_match: 1
-          }
-        }
+        clauses = [{ term: { "#{field}.name" => name } }]
+
+        # Wildcard only for multi-word names to handle sponsor suffixes (e.g. "FlyQuest NZXT").
+        # Uses the full name as prefix to avoid false matches ("Team" would hit "Team WE").
+        if name.split.length > 1
+          clauses << { wildcard: { "#{field}.name" => { value: "#{name}*", case_insensitive: true } } }
+        end
+
+        { bool: { should: clauses, minimum_should_match: 1 } }
       end
 
       # Matches win_team using the same prefix-wildcard logic as team_clause.
       # Needed because PandaScore names have sponsor suffixes (e.g. "FlyQuest NZXT")
       # while Oracle's Elixir stores the base name ("FlyQuest").
       def win_team_clause(name)
-        prefix = name.split.first.to_s
-        {
-          bool: {
-            should: [
-              { term: { win_team: name } },
-              { wildcard: { win_team: { value: "#{prefix}*", case_insensitive: true } } }
-            ],
-            minimum_should_match: 1
-          }
-        }
+        clauses = [{ term: { win_team: name } }]
+
+        if name.split.length > 1
+          clauses << { wildcard: { win_team: { value: "#{name}*", case_insensitive: true } } }
+        end
+
+        { bool: { should: clauses, minimum_should_match: 1 } }
       end
 
       def apply_filters(matches)
