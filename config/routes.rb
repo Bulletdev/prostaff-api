@@ -501,6 +501,7 @@ Rails.application.routes.draw do
   end
 
   require 'sidekiq/web'
+  require 'rack/session'
   Sidekiq::Web.use(Rack::Auth::Basic) do |user, password|
     expected_user     = ENV.fetch('SIDEKIQ_WEB_USER', nil)
     expected_password = ENV.fetch('SIDEKIQ_WEB_PASSWORD', nil)
