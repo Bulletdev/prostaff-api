@@ -150,6 +150,8 @@ services:
       # prostaff-events integration (set PHOENIX_EVENTS_ENABLED=true in Coolify panel when deploying events service)
       PHOENIX_EVENTS_ENABLED: '${PHOENIX_EVENTS_ENABLED:-false}'
       PHOENIX_EVENTS_URL: '${PHOENIX_EVENTS_URL:-http://events:4000}'
+      SIDEKIQ_WEB_USER: '${SIDEKIQ_WEB_USER}'
+      SIDEKIQ_WEB_PASSWORD: '${SIDEKIQ_WEB_PASSWORD}'
 
     healthcheck:
       test:
