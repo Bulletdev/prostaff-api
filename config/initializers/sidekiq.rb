@@ -36,7 +36,13 @@ if configure_sidekiq_with_retry
       pool_timeout: 5
     }
 
+    config.logger = Sidekiq::Logger.new($stdout, level: :info)
+    config.logger.formatter = Sidekiq::Logger::Formatters::JSON.new
+
     config.on(:startup) do
+      Rails.logger = Sidekiq.logger
+      ActiveRecord::Base.logger = nil
+
       schedule_file = Rails.root.join('config', 'sidekiq.yml')
       if File.exist?(schedule_file)
         schedule = YAML.load_file(schedule_file)
