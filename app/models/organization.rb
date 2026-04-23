@@ -40,6 +40,7 @@ class Organization < ApplicationRecord
   has_many :players, dependent: :destroy
   has_many :matches, dependent: :destroy
   has_many :scouting_targets, dependent: :destroy
+  has_many :scouting_watchlists, dependent: :destroy
   has_many :schedules, dependent: :destroy
   has_many :vod_reviews, dependent: :destroy
   has_many :team_goals, dependent: :destroy
