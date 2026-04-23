@@ -1,7 +1,7 @@
 services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.19.0
-    user: root
+    user: root # required to read /var/lib/docker/containers (owned by root on host)
     restart: unless-stopped
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
