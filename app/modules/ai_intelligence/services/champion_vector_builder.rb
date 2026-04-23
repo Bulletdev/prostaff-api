@@ -17,20 +17,8 @@ class ChampionVectorBuilder
   end
 
   def self.rebuild_all!
-    champion_names = extract_all_champion_names
-    champion_names.each do |name|
-      vector = call(champion_name: name)
-      next if vector.nil?
-
-      appearances_count = new(champion_name: name).send(:all_appearances).size
-
-      AiChampionVector.find_or_initialize_by(champion_name: name).tap do |v|
-        v.vector_data = vector.to_a
-        v.games_count = appearances_count
-        v.updated_at  = Time.current
-        v.save!
-      end
-    end
+    all_matches = CompetitiveMatch.unscoped.to_a
+    collect_champion_names(all_matches).each { |name| persist_vector(name, all_matches) }
   end
 
   def build
@@ -47,14 +35,45 @@ class ChampionVectorBuilder
     normalize_vector(vector)
   end
 
-  def self.extract_all_champion_names
-    CompetitiveMatch.unscoped.flat_map do |m|
-      picks = (m.our_picks || []) + (m.opponent_picks || [])
-      picks.map { |p| p['champion'] }
-    end.compact.uniq
+  def appearances_from_preloaded(matches)
+    filtered = @league ? matches.select { |m| m.tournament_name == @league } : matches
+    filtered.flat_map { |match| extract_from_match(match) }
+  end
+
+  def build_from_appearances(appearances)
+    arrays = extract_stat_arrays(appearances)
+    stats = build_stat_hash(appearances.size, arrays)
+    vector = Numo::DFloat[
+      stats[:win_rate], stats[:avg_kda], stats[:avg_damage_share],
+      stats[:avg_gold_share], normalize(stats[:avg_cs], 0, 400)
+    ]
+    normalize_vector(vector)
   end
 
   private
+
+  def self.collect_champion_names(matches)
+    matches.flat_map { |m|
+      ((m.our_picks || []) + (m.opponent_picks || [])).map { |p| p['champion'] }
+    }.compact.uniq
+  end
+  private_class_method :collect_champion_names
+
+  def self.persist_vector(champion_name, all_matches)
+    builder = new(champion_name: champion_name)
+    appearances = builder.appearances_from_preloaded(all_matches)
+    return if appearances.empty?
+
+    vector = builder.build_from_appearances(appearances)
+
+    AiChampionVector.find_or_initialize_by(champion_name: champion_name).tap do |v|
+      v.vector_data = vector.to_a
+      v.games_count = appearances.size
+      v.updated_at  = Time.current
+      v.save!
+    end
+  end
+  private_class_method :persist_vector
 
   def aggregate_stats
     appearances = all_appearances
