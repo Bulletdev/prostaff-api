@@ -30,6 +30,8 @@ module Middleware
 
     def call(env)
       status, headers, body = @app.call(env)
+      return [status, headers, body] if env['PATH_INFO'].start_with?('/sidekiq')
+
       HEADERS.each { |key, value| headers[key] ||= value }
       [status, headers, body]
     end
