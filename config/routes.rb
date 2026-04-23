@@ -500,9 +500,12 @@ Rails.application.routes.draw do
     end
   end
 
-  # Mount Sidekiq web UI in development
-  if Rails.env.development?
-    require 'sidekiq/web'
-    mount Sidekiq::Web => '/sidekiq'
+  require 'sidekiq/web'
+  Sidekiq::Web.use(Rack::Auth::Basic) do |user, password|
+    user == 'prostaff' && ActiveSupport::SecurityUtils.secure_compare(
+      ::Digest::SHA256.hexdigest(password),
+      ::Digest::SHA256.hexdigest(ENV.fetch('SIDEKIQ_WEB_PASSWORD', ''))
+    )
   end
+  mount Sidekiq::Web => '/sidekiq'
 end

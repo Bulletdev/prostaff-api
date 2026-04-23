@@ -1,0 +1,2 @@
+- `POST /api/v1/support/uploads` — authenticated file upload endpoint
+- Supabase S3-compatible storage via `aws-sdk-s3`

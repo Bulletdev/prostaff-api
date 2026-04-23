@@ -1,0 +1,62 @@
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      templates:
+        - condition:
+            contains:
+              docker.container.name: "api"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              json.keys_under_root: false
+              fields:
+                service: api
+        - condition:
+            contains:
+              docker.container.name: "sidekiq"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: sidekiq
+        - condition:
+            contains:
+              docker.container.name: "events"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: events
+        - condition:
+            contains:
+              docker.container.name: "scraper"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: scraper
+        - condition:
+            contains:
+              docker.container.name: "enrichment"
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: enrichment
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch-vcgokoow00g0ggs0wwg4so4o:9200"]
+  index: "prostaff-logs-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "http://kibana-fccsw00gc0oo4g0gwk0kcw4w:5601"
+
+setup.ilm.enabled: false
+setup.template.name: "prostaff-logs"
+setup.template.pattern: "prostaff-logs-*"
