@@ -250,6 +250,25 @@ This API follows a **modular monolith** architecture with the following modules:
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
 
+### Architecture
+
+This API follows a modular monolith architecture with the following modules:
+
+- `authentication` - User authentication and authorization
+- `dashboard` - Dashboard statistics and metrics
+- `players` - Player management and statistics
+- `scouting` - Player scouting and talent discovery
+- `analytics` - Performance analytics and reporting
+- `matches` - Match data and statistics
+- `schedules` - Event and schedule management
+- `vod_reviews` - Video review and timestamp management
+- `team_goals` - Goal setting and tracking
+- `riot_integration` - Riot Games API integration
+- `competitive` - PandaScore integration, pro matches, draft analysis
+- `scrims` - Scrim management and opponent team tracking
+- `strategy` - Draft planning and tactical board system
+- `support` - Support ticket system with staff and FAQ management
+
 ### Architecture Diagram
 
 ```mermaid
@@ -326,7 +345,6 @@ graph TB
             CompetitiveController[Competitive Controller]
             ProMatchesController[Pro Matches Controller]
             PandaScoreService[PandaScore Service]
-            Grid.gg[Grid.gg]
             DraftAnalyzer[Draft Analyzer]
         end
 
@@ -364,8 +382,6 @@ graph TB
     subgraph "External Services"
         RiotAPI[Riot Games API]
         PandaScoreAPI[PandaScore API]
-        Grid.gg[Grid.gg]
-
     end
 
     Client -->|HTTP/JSON| CORS
@@ -408,8 +424,6 @@ graph TB
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
     CompetitiveController --> PandaScoreService
-    CompetitiveController --> Grid.gg
-
     CompetitiveController --> DraftAnalyzer
     ScrimsController --> ScrimAnalytics
     ScrimAnalytics --> PostgreSQL
@@ -431,8 +445,6 @@ graph TB
     RiotService --> Sidekiq
 
     PandaScoreService --> PandaScoreAPI
-    Grid.gg --> Grid.gg
-
     Sidekiq -- Uses --> Redis
 
     style Client fill:#e1f5ff
@@ -440,8 +452,6 @@ graph TB
     style Redis fill:#d82c20
     style RiotAPI fill:#eb0029
     style PandaScoreAPI fill:#ff6b35
-    style Grid.gg fill:#000000
-
     style Sidekiq fill:#b1003e
 ```
 
