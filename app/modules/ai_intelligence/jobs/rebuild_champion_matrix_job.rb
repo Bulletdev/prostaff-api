@@ -8,17 +8,21 @@ module AiIntelligence
     queue_as :low_priority
 
     def perform(scope: :all, league: nil)
-      lock_key = "sidekiq:rebuild_champion_matrix:lock"
-      acquired = Sidekiq.redis { |r| r.call("SET", lock_key, "1", "NX", "EX", 3600) }
+      lock_key = 'sidekiq:rebuild_champion_matrix:lock'
+      acquired = Sidekiq.redis { |r| r.call('SET', lock_key, '1', 'NX', 'EX', 3600) }
 
       unless acquired
-        Rails.logger.info("[AI] RebuildChampionMatrixJob skipped — already running")
+        Rails.logger.info('[AI] RebuildChampionMatrixJob skipped — already running')
         return
       end
 
+      # 31k+ records with per-row upserts exceed the default 10s statement_timeout.
+      # Scope this to the current session only — the connection returns to the pool
+      # with its normal timeout restored after the job finishes.
+      ActiveRecord::Base.connection.execute('SET LOCAL statement_timeout = 0')
       rebuild_matrices(scope:, league:)
     ensure
-      Sidekiq.redis { |r| r.call("DEL", lock_key) } if acquired
+      Sidekiq.redis { |r| r.call('DEL', lock_key) } if acquired
     end
 
     private

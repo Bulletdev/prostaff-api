@@ -9,11 +9,24 @@ class AiChampionMatrix < ApplicationRecord
   scope :with_sufficient_sample, -> { where('total_games >= ?', 10) }
 
   def self.upsert_win(winner, loser, patch: nil, league: nil)
-    matrix = find_or_initialize_by(champion_a: winner, champion_b: loser, patch: patch, league: league)
-    matrix.wins_a      = matrix.wins_a.to_i + 1
-    matrix.total_games = matrix.total_games.to_i + 1
-    matrix.updated_at  = Time.current
-    matrix.save!
+    # Two separate partial indexes cover the two cases:
+    # - both null  → index_ai_champion_matrices_null_pair
+    # - both present → index_ai_champion_matrices_unique
+    index = if patch.nil? && league.nil?
+              :index_ai_champion_matrices_null_pair
+            else
+              :index_ai_champion_matrices_unique
+            end
+    upsert(
+      { champion_a: winner, champion_b: loser, patch: patch, league: league,
+        wins_a: 1, total_games: 1, updated_at: Time.current },
+      unique_by: index,
+      on_duplicate: Arel.sql(
+        'wins_a = ai_champion_matrices.wins_a + 1, ' \
+        'total_games = ai_champion_matrices.total_games + 1, ' \
+        'updated_at = excluded.updated_at'
+      )
+    )
   end
 
   def win_rate
