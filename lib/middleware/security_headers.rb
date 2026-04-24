@@ -28,15 +28,17 @@ module Middleware
       @app = app
     end
 
-    SIDEKIQ_CSP = "default-src 'self'; img-src 'self' data:; " \
-                  "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'".freeze
-
     def call(env)
+      # Capture path before @app.call — Rails mutates PATH_INFO during routing
+      path = env['PATH_INFO']
       status, headers, body = @app.call(env)
 
-      if env['PATH_INFO'].start_with?('/sidekiq')
+      if path.start_with?('/sidekiq')
+        # Rack 3 normalises header keys to lowercase; delete both variants to be safe.
+        # Sidekiq::Web already injects its own permissive CSP with nonce, so we just
+        # remove the restrictive one added by ActionDispatch / our own HEADERS hash.
         headers.delete('Content-Security-Policy')
-        headers['Content-Security-Policy'] = SIDEKIQ_CSP
+        headers.delete('content-security-policy')
         return [status, headers, body]
       end
 
