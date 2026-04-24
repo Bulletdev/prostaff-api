@@ -459,7 +459,8 @@ Rails.application.routes.draw do
       # AI Intelligence Module — draft analysis and win probability
       # Requires Tier 1 (Professional) subscription.
       namespace :ai do
-        post 'draft/analyze', to: '/ai_intelligence/controllers/draft#analyze'
+        post 'draft/analyze',   to: '/ai_intelligence/controllers/draft#analyze'
+        post 'recommend-pick',  to: '/ai_intelligence/controllers/recommend#recommend_pick'
       end
 
       # Tournaments Module — ArenaBR double elimination
