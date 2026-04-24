@@ -456,7 +456,7 @@ module Competitive
       def es_series
         team1 = params[:team1].to_s.strip
         team2 = params[:team2].to_s.strip
-        limit = (params[:limit] || 20).to_i.clamp(1, 50)
+        limit = (params[:limit] || 5).to_i.clamp(1, 50)
 
         raise ArgumentError, 'team1 and team2 are required' if team1.blank? || team2.blank?
 
@@ -524,9 +524,7 @@ module Competitive
       def win_team_clause(name)
         clauses = [{ term: { win_team: name } }]
 
-        if name.split.length > 1
-          clauses << { wildcard: { win_team: { value: "#{name}*", case_insensitive: true } } }
-        end
+        clauses << { wildcard: { win_team: { value: "#{name}*", case_insensitive: true } } } if name.split.length > 1
 
         { bool: { should: clauses, minimum_should_match: 1 } }
       end
@@ -576,7 +574,8 @@ module Competitive
               image_url: p['image_url'],
               nationality: p['nationality']
             }
-          end.sort_by { |p| %w[top jun mid adc sup].index(p[:role]) || 99 },
+          end.select { |p| %w[top jun mid adc sup].include?(p[:role]) }
+                                               .sort_by { |p| %w[top jun mid adc sup].index(p[:role]) },
           recent: (recent_matches || []).first(5).map { |m| serialize_recent_match(m, team_data['id']) }
         }
       end
