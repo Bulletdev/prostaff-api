@@ -1055,6 +1055,8 @@ We take security seriously. If you discover a security vulnerability, please fol
 ---
 
 ## 10 · Observability & Monitoring
+<details>
+<summary><kbd>▶ for details (click to expand)</kbd></summary>
 
 ### Health Probes
 
@@ -1158,6 +1160,7 @@ AUTH_TRACKER_WINDOW=5         # default: 5 minutes
 SIDEKIQ_QUEUE_ALERT_THRESHOLD=100   # queue depth that triggers degraded
 SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue size that triggers degraded
 ```
+</details>
 
 ---
 
@@ -1169,10 +1172,10 @@ This API is one service in the ProStaff ecosystem. The other services it integra
 
 |                    Service                          |          Stack        |                          Role                                                     |
 |-----------------------------------------------------|-----------------------|-----------------------------------------------------------------------------------|
-| [prostaff-analytics-hub](../prostaff-analytics-hub) | Next.js 15 / vinext   | Frontend SPA — consumes API(also: https://prostaff.gg, https://scrims.lol )       |
-| [prostaff-events](../prostaff-events)               | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
-| [prostaff-riot-gateway](../prostaff-gateway)        |       Go 1.23         | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker;        |
-| [ProStaff-Scraper](../ProStaff-Scraper)             |     Python / FastAPI  | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
+| [prostaff-analytics-hub](https://prostaff.gg) | Next.js 15 / vinext   | Frontend SPA — consumes API(also: https://prostaff.gg, https://scrims.lol )       |
+| [prostaff-events](https://github.com/bulletdev/prostaff-events)               | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
+| [prostaff-riot-gateway](https://github.com/bulletdev/prostaff-gateway)        |       Go 1.23         | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker;        |
+| [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)             |     Python / FastAPI  | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
 
 ### Deployment Architecture
 
