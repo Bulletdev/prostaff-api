@@ -197,9 +197,14 @@ open http://localhost:3333/api-docs
 
 ---
 
+
 ## 03 · Architecture
 
 This API follows a **modular monolith** architecture with the following modules:
+
+<details>
+<summary><kbd>▶ See details (click to expand)</kbd></summary>
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -228,9 +233,7 @@ This API follows a **modular monolith** architecture with the following modules:
 │  tournaments        │  ArenaBR double-elimination tournament management     │
 └─────────────────────┴───────────────────────────────────────────────────────┘
 ```
-### Architecture
-
-This API follows a modular monolith architecture with the following modules:
+</details>
 
 - `authentication` - User authentication and authorization
 - `dashboard` - Dashboard statistics and metrics
