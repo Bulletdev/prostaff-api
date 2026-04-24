@@ -28,6 +28,15 @@ class ChampionMatrixBuilder
     end
   end
 
+  RECORD_APPEARANCE_SQL = <<~SQL.squish.freeze
+    INSERT INTO ai_champion_matrices
+      (champion_a, champion_b, patch, league, wins_a, total_games, updated_at, created_at)
+    VALUES (?, ?, NULL, NULL, 0, 1, NOW(), NOW())
+    ON CONFLICT (champion_a, champion_b) WHERE patch IS NULL AND league IS NULL
+    DO UPDATE SET total_games = ai_champion_matrices.total_games + 1,
+                  updated_at  = NOW()
+  SQL
+
   private
 
   def register_matchups(winner_picks, loser_picks)
@@ -43,14 +52,7 @@ class ChampionMatrixBuilder
   end
 
   def record_appearance(champion_a, champion_b)
-    AiChampionMatrix.upsert(
-      { champion_a: champion_a, champion_b: champion_b, patch: nil, league: nil,
-        wins_a: 0, total_games: 1, updated_at: Time.current },
-      unique_by: :index_ai_champion_matrices_null_pair,
-      on_duplicate: Arel.sql(
-        'total_games = ai_champion_matrices.total_games + 1, ' \
-        'updated_at = excluded.updated_at'
-      )
-    )
+    sql = AiChampionMatrix.sanitize_sql_array([RECORD_APPEARANCE_SQL, champion_a, champion_b])
+    AiChampionMatrix.connection.execute(sql)
   end
 end
