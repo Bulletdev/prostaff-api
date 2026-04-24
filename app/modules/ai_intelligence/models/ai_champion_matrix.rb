@@ -8,25 +8,18 @@ class AiChampionMatrix < ApplicationRecord
 
   scope :with_sufficient_sample, -> { where('total_games >= ?', 10) }
 
+  UPSERT_WIN_SQL = <<~SQL.squish.freeze
+    INSERT INTO ai_champion_matrices
+      (champion_a, champion_b, patch, league, wins_a, total_games, updated_at, created_at)
+    VALUES (?, ?, ?, ?, 1, 1, NOW(), NOW())
+    ON CONFLICT (champion_a, champion_b) WHERE patch IS NULL AND league IS NULL
+    DO UPDATE SET wins_a      = ai_champion_matrices.wins_a + 1,
+                  total_games = ai_champion_matrices.total_games + 1,
+                  updated_at  = NOW()
+  SQL
+
   def self.upsert_win(winner, loser, patch: nil, league: nil)
-    # Two separate partial indexes cover the two cases:
-    # - both null  → index_ai_champion_matrices_null_pair
-    # - both present → index_ai_champion_matrices_unique
-    index = if patch.nil? && league.nil?
-              :index_ai_champion_matrices_null_pair
-            else
-              :index_ai_champion_matrices_unique
-            end
-    upsert(
-      { champion_a: winner, champion_b: loser, patch: patch, league: league,
-        wins_a: 1, total_games: 1, updated_at: Time.current },
-      unique_by: index,
-      on_duplicate: Arel.sql(
-        'wins_a = ai_champion_matrices.wins_a + 1, ' \
-        'total_games = ai_champion_matrices.total_games + 1, ' \
-        'updated_at = excluded.updated_at'
-      )
-    )
+    connection.execute(sanitize_sql_array([UPSERT_WIN_SQL, winner, loser, patch, league]))
   end
 
   def win_rate
