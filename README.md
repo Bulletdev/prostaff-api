@@ -1183,6 +1183,7 @@ This API is one service in the ProStaff ecosystem. The other services it integra
 ### Deployment Architecture
 
 ```mermaid
+
 graph TB
     subgraph "Clients"
         FrontendApp["ProStaff.gg<br/>Front + TypeScript SPA"]
@@ -1191,6 +1192,7 @@ graph TB
 
     subgraph "Production — Coolify"
         Traefik["Traefik<br/>TLS + Let's Encrypt<br/>WebSocket proxy"]
+        CoolifyNode["Coolify<br/>Deploys & Manages<br/>all production services"]
     end
 
     subgraph "Rails — Puma"
@@ -1221,6 +1223,7 @@ graph TB
         PandaScore["PandaScore API"]
     end
 
+    %% === Conexões ===
     FrontendApp -- "HTTPS REST" --> Traefik
     FrontendApp -- "WSS /cable" --> Traefik
     FrontendApp -- "WSS /socket" --> Traefik
@@ -1235,13 +1238,15 @@ graph TB
     Router -- "full-text search" --> Meili
     Router -- "publish prostaff:events:*" --> RD
     Router -- "match detail · H2H" --> ES
-    Router -- "internal JWT" --> Gateway
+    Router -. "internal JWT<br/>(internal only)" .-> Gateway
+
     Cable -- "pub/sub" --> RD
+
     Sidekiq -- "async jobs" --> PG
     Sidekiq -- "queue · cache" --> RD
     Sidekiq -- "reindex docs" --> Meili
     Sidekiq -- "historical backfill" --> ES
-    Sidekiq -- "internal JWT" --> Gateway
+    Sidekiq -. "internal JWT<br/>(internal only)" .-> Gateway
 
     RedisSub -- "PSUBSCRIBE" --> RD
     RedisSub --> InhouseQ
@@ -1250,9 +1255,11 @@ graph TB
     Gateway -- "rate limited" --> RiotAPI
     Router -- "pro matches" --> PandaScore
 
+    %% === Estilos ===
     style FrontendApp fill:#1e88e5
     style PlayerPortal fill:#5c6bc0
     style Traefik fill:#1565c0
+    style CoolifyNode fill:#0d47a1, stroke:#ffffff, stroke-width:3px
     style Cable fill:#b1003e
     style Sidekiq fill:#b1003e
     style PhoenixEndpoint fill:#4B275F
