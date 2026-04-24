@@ -222,7 +222,7 @@ This API follows a **modular monolith** architecture with the following modules:
 │  vod_reviews        │  Video review and timestamp management                │
 │  team_goals         │  Goal setting and tracking                            │
 │  riot_integration   │  Riot Games API integration                           │
-│  competitive        │  PandaScore + Elasticsearch match detail, H2H, draft  │
+│  competitive        │  PandaScore/Grid.gg + Elasticsearch match detail/Draft│
 │  meta_intelligence  │  Build aggregation, champion/item meta analytics      │
 │  scrims             │  Scrim management and opponent team tracking          │
 │  strategy           │  Draft planning and tactical board system             │
@@ -245,7 +245,7 @@ This API follows a **modular monolith** architecture with the following modules:
 - `vod_reviews` - Video review and timestamp management
 - `team_goals` - Goal setting and tracking
 - `riot_integration` - Riot Games API integration
-- `competitive` - PandaScore integration, pro matches, draft analysis
+- `competitive` - PandaScore & Grid.gg integration, pro matches, draft analysis
 - `scrims` - Scrim management and opponent team tracking
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
@@ -326,6 +326,7 @@ graph TB
             CompetitiveController[Competitive Controller]
             ProMatchesController[Pro Matches Controller]
             PandaScoreService[PandaScore Service]
+            Grid.gg[Grid.gg]
             DraftAnalyzer[Draft Analyzer]
         end
 
@@ -363,6 +364,8 @@ graph TB
     subgraph "External Services"
         RiotAPI[Riot Games API]
         PandaScoreAPI[PandaScore API]
+        Grid.gg[Grid.gg]
+
     end
 
     Client -->|HTTP/JSON| CORS
@@ -405,6 +408,8 @@ graph TB
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
     CompetitiveController --> PandaScoreService
+    CompetitiveController --> Grid.gg
+
     CompetitiveController --> DraftAnalyzer
     ScrimsController --> ScrimAnalytics
     ScrimAnalytics --> PostgreSQL
@@ -426,6 +431,8 @@ graph TB
     RiotService --> Sidekiq
 
     PandaScoreService --> PandaScoreAPI
+    Grid.gg --> Grid.gg
+
     Sidekiq -- Uses --> Redis
 
     style Client fill:#e1f5ff
@@ -433,6 +440,8 @@ graph TB
     style Redis fill:#d82c20
     style RiotAPI fill:#eb0029
     style PandaScoreAPI fill:#ff6b35
+    style Grid.gg fill:#000000
+
     style Sidekiq fill:#b1003e
 ```
 
@@ -1221,6 +1230,8 @@ graph TB
     subgraph "External APIs"
         RiotAPI["Riot Games API"]
         PandaScore["PandaScore API"]
+        Grid.gg["Grid.gg"]
+
     end
 
     %% === Conexões ===
@@ -1254,6 +1265,7 @@ graph TB
 
     Gateway -- "rate limited" --> RiotAPI
     Router -- "pro matches" --> PandaScore
+    Router -- "pro matches" --> Grid.gg
 
     %% === Estilos ===
     style FrontendApp fill:#1e88e5
@@ -1271,7 +1283,9 @@ graph TB
     style Meili fill:#ff5722
     style ES fill:#005571
     style RiotAPI fill:#eb0029
-    style PandaScore fill:#ff6b35
+    style PandaScore fill:#B069DB
+    style Grid.gg fill:#000000
+
 ```
 
 ### Scheduled Jobs (Sidekiq Scheduler)
