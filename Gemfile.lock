@@ -149,7 +149,7 @@ GEM
       ostruct
     elasticsearch-api (8.19.3)
       multi_json
-    erb (6.0.2)
+    erb (6.0.4)
     erubi (1.13.1)
     et-orbi (1.4.0)
       tzinfo
