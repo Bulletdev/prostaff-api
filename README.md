@@ -61,6 +61,7 @@
 │  [■] Multi-League Backfill    — CBLOL · Academy · CD auto-sync daily        │
 │  [■] Scrims Management        — Opponent tracking + analytics               │
 │  [■] Strategy Module          — Draft planning + tactical boards            │
+│  [■] AI Pick Recommendations  — Champion2Vec + XGBoost, 97K+ game dataset   │
 │  [■] Meta Intelligence        — Build aggregation, champion/item analytics  │
 │  [■] Support System           — Ticketing + staff dashboard + FAQ           │
 │  [■] Global Search            — Meilisearch full-text search across models  │
@@ -192,6 +193,7 @@ open http://localhost:3333/api-docs
 ║  Full-text Search    ║  Meilisearch                                       ║
 ║  Real-time           ║  Action Cable (WebSocket)                          ║
 ║  Data Lake           ║  Elasticsearch 8 (97K+ pro games, all leagues)     ║
+║  ML Service          ║  Python 3.11 · FastAPI · XGBoost · Gensim Word2Vec ║
 ╚══════════════════════╩════════════════════════════════════════════════════╝
 ```
 
@@ -226,6 +228,7 @@ This API follows a **modular monolith** architecture with the following modules:
 │  meta_intelligence  │  Build aggregation, champion/item meta analytics      │
 │  scrims             │  Scrim management and opponent team tracking          │
 │  strategy           │  Draft planning and tactical board system             │
+│  ai_intelligence    │  Champion2Vec embeddings, win probability, ML picks   │
 │  support            │  Support ticket system with staff dashboard and FAQ   │
 │  messaging          │  Real-time team chat via Action Cable WebSocket       │
 │  search             │  Global full-text search powered by Meilisearch       │
@@ -764,6 +767,49 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `DELETE /scrims/opponent-teams/:id` — Delete opponent team
 - `GET    /scrims/opponent-teams/:id/scrim-history` — Get scrim history with opponent
 
+#### AI Intelligence
+
+> Requires Tier 1 (Professional) subscription — `predictive_analytics` feature gate.
+
+- `POST /ai/draft/analyze` — Analyze a saved draft plan (synergy, counter, risk, readiness)
+- `POST /ai/recommend-pick` — Top-5 ML champion recommendations for a partial draft
+
+**Request** (`/ai/recommend-pick`):
+```json
+{
+  "our_picks":      ["Jinx", "Thresh", "Azir"],
+  "opponent_picks": ["Caitlyn", "Nautilus", "Syndra", "Renekton", "Graves"],
+  "our_bans":       ["Corki"],
+  "opponent_bans":  ["Zeri"],
+  "patch":          "16.08",
+  "league":         "LCK"
+}
+```
+
+**Response**:
+```json
+{
+  "data": {
+    "source": "ml_v2",
+    "model_version": "v2",
+    "recommendations": [
+      {
+        "champion": "Lissandra",
+        "score": 0.5219,
+        "win_probability": 0.553,
+        "synergy_score": 0.3557,
+        "counter_score": 0.3252,
+        "reasoning_tokens": ["high win probability (55%)", "decent synergy with current picks"]
+      }
+    ]
+  }
+}
+```
+
+Response header `X-AI-Source: ml_v2` (XGBoost) or `X-AI-Source: legacy` (DraftSuggester fallback when ML service is unreachable).
+
+The ML service (`prostaff-ml`) is a FastAPI container trained on 97K+ competitive matches using Champion2Vec embeddings (64D, Gensim Word2Vec) and an XGBoost classifier with 327 features. Training pipeline: `extract_features → train_champion2vec → train_win_probability → validate → export`. See [`prostaff-ml`](https://github.com/bulletdev/prostaff-ml).
+
 #### Strategy Module
 - `GET    /strategy/draft-plans` — List draft plans
 - `GET    /strategy/draft-plans/:id` — Get draft plan details
@@ -1182,12 +1228,13 @@ SIDEKIQ_DEAD_ALERT_THRESHOLD=10     # dead queue size that triggers degraded
 
 This API is one service in the ProStaff ecosystem. The other services it integrates with:
 
-|                    Service                          |          Stack        |                          Role                                                     |
-|-----------------------------------------------------|-----------------------|-----------------------------------------------------------------------------------|
-| [prostaff-analytics-hub](https://prostaff.gg) | Next.js 15 / vinext   | Frontend SPA — consumes API(also: https://prostaff.gg, https://scrims.lol )       |
-| [prostaff-events](https://github.com/bulletdev/prostaff-events)               | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
-| [prostaff-riot-gateway](https://github.com/bulletdev/prostaff-gateway)        |       Go 1.23         | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker;        |
-| [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)             |     Python / FastAPI  | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
+|                    Service                          |      Stack       |                          Role                                                                             |
+|-----------------------------------------------------|------------------|-----------------------------------------------------------------------------------------------------------|
+| [prostaff-analytics-hub](https://prostaff.gg) | Next.js 15 / vinext    | Frontend SPA — consumes API (also: https://prostaff.gg, https://scrims.lol)                               |
+| [prostaff-events](https://github.com/bulletdev/prostaff-events)        | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
+| [prostaff-riot-gateway](https://github.com/bulletdev/prostaff-gateway) | Go 1.23               | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker         |
+| [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)      | Python / FastAPI      | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
+| [prostaff-ml](https://github.com/bulletdev/prostaff-ml)                | Python 3.11 / FastAPI | ML service — Champion2Vec + XGBoost pick recommendations (serves `POST /ai/recommend-pick`) |
 
 ### Deployment Architecture
 
@@ -1218,6 +1265,11 @@ graph TB
 
     subgraph "prostaff-riot-gateway — Go"
         Gateway["Riot Gateway :4444<br/>Token bucket · L1/L2 cache<br/>Circuit breaker"]
+    end
+
+    subgraph "prostaff-ml — Python/FastAPI"
+        MlService["ML Service :8001<br/>Champion2Vec + XGBoost<br/>POST /recommend · /win-probability"]
+        MlModels[("Models<br/>champion2vec.bin<br/>win_probability_v2.pkl")]
     end
 
     subgraph "Data"
@@ -1266,6 +1318,8 @@ graph TB
     Gateway -- "rate limited" --> RiotAPI
     Router -- "pro matches" --> PandaScore
     Router -- "pro matches" --> Grid.gg
+    Router -. "HTTP POST /recommend<br/>(fallback: DraftSuggester)" .-> MlService
+    MlService --- MlModels
 
     %% === Estilos ===
     style FrontendApp fill:#1e88e5
@@ -1285,6 +1339,8 @@ graph TB
     style RiotAPI fill:#eb0029
     style PandaScore fill:#B069DB
     style Grid.gg fill:#000000
+    style MlService fill:#1a6b3a
+    style MlModels fill:#0f3d22
 
 ```
 
@@ -1366,6 +1422,10 @@ CIRCUIT_BREAKER_THRESHOLD=5         # consecutive failures before opening circui
 
 # Elasticsearch data lake
 ELASTICSEARCH_URL=https://user:password@elastic.example.com   # ES 8.x with basic auth
+
+# ML AI Service (prostaff-ml FastAPI container)
+# Local dev: http://localhost:8001 | Coolify production: http://ai-service:8001
+AI_SERVICE_URL=http://ai-service:8001
 
 # Historical backfill (Sidekiq scheduled jobs — override per-job via sidekiq.yml kwargs)
 BACKFILL_LEAGUE=CBLOL               # default league for manual runs
