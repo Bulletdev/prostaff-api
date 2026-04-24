@@ -43,12 +43,14 @@ class ChampionMatrixBuilder
   end
 
   def record_appearance(champion_a, champion_b)
-    AiChampionMatrix
-      .find_or_initialize_by(champion_a:, champion_b:)
-      .tap do |m|
-      m.total_games = m.total_games.to_i + 1
-      m.updated_at = Time.current
-      m.save!
-    end
+    AiChampionMatrix.upsert(
+      { champion_a: champion_a, champion_b: champion_b, patch: nil, league: nil,
+        wins_a: 0, total_games: 1, updated_at: Time.current },
+      unique_by: :index_ai_champion_matrices_null_pair,
+      on_duplicate: Arel.sql(
+        'total_games = ai_champion_matrices.total_games + 1, ' \
+        'updated_at = excluded.updated_at'
+      )
+    )
   end
 end
