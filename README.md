@@ -1342,8 +1342,7 @@ graph TB
     ScraperCron -- "indexes new games" --> ES
     ScraperCron -- "polls events" --> LoLEsports
     Enrichment -- "enriches KDA/items" --> ES
-    Enrichment -- "enrichment source" --> Leaguepedia
-    Enrichment -. "match detail" .-> RiotAPI
+    Enrichment -- "items/runes/KDA" --> Leaguepedia
     Backfill -- "historical backfill" --> ES
     Backfill -- "historical data" --> Leaguepedia
     ScraperApi -- "reads / status" --> ES
