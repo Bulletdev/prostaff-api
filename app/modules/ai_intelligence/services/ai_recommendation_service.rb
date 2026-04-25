@@ -83,7 +83,16 @@ class AiRecommendationService
     {
       source: 'legacy',
       model_version: nil,
-      recommendations: suggestions.map { |champ| { champion: champ, score: nil } }
+      recommendations: suggestions.map do |champ|
+        {
+          champion: champ,
+          score: nil,
+          win_probability: nil,
+          synergy_score: nil,
+          counter_score: nil,
+          reasoning_tokens: []
+        }
+      end
     }
   end
 
