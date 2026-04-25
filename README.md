@@ -1282,6 +1282,13 @@ graph TB
         MlModels[("Models<br/>champion2vec.bin<br/>win_probability_v2.pkl")]
     end
 
+    subgraph "prostaff-scraper — Python/FastAPI"
+        ScraperApi["Scraper API :8000<br/>GET /health · /matches · /status"]
+        ScraperCron["scraper-cron<br/>polls LoL Esports API<br/>(every SYNC_INTERVAL_HOURS)"]
+        Enrichment["enrichment daemon<br/>Leaguepedia + Riot<br/>(items/runes/KDA)"]
+        Backfill["backfill daemon<br/>historical Leaguepedia<br/>(2013 → present)"]
+    end
+
     subgraph "Data"
         PG[("PostgreSQL")]
         RD[("Redis")]
@@ -1293,7 +1300,8 @@ graph TB
         RiotAPI["Riot Games API"]
         PandaScore["PandaScore API"]
         Grid.gg["Grid.gg"]
-
+        LoLEsports["LoL Esports API"]
+        Leaguepedia["Leaguepedia<br/>(lol.fandom.com)"]
     end
 
     %% === Conexões ===
@@ -1331,6 +1339,15 @@ graph TB
     Router -. "HTTP POST /recommend<br/>(fallback: DraftSuggester)" .-> MlService
     MlService --- MlModels
 
+    ScraperCron -- "indexes new games" --> ES
+    ScraperCron -- "polls events" --> LoLEsports
+    Enrichment -- "enriches KDA/items" --> ES
+    Enrichment -- "enrichment source" --> Leaguepedia
+    Enrichment -. "match detail" .-> RiotAPI
+    Backfill -- "historical backfill" --> ES
+    Backfill -- "historical data" --> Leaguepedia
+    ScraperApi -- "reads / status" --> ES
+
     %% === Estilos ===
     style FrontendApp fill:#1e88e5
     style PlayerPortal fill:#5c6bc0
@@ -1349,8 +1366,14 @@ graph TB
     style RiotAPI fill:#eb0029
     style PandaScore fill:#B069DB
     style Grid.gg fill:#000000
+    style LoLEsports fill:#c89b3c
+    style Leaguepedia fill:#8a6914
     style MlService fill:#1a6b3a
     style MlModels fill:#0f3d22
+    style ScraperApi fill:#3d6b1a
+    style ScraperCron fill:#2d5010
+    style Enrichment fill:#2d5010
+    style Backfill fill:#2d5010
 
 ```
 
