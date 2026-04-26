@@ -44,8 +44,7 @@
     class: Competitive::HistoricalBackfillJob
     queue: low_priority
     args:
-      kwargs:
-        league: 'CBLOL'
+      - league: 'CBLOL'
     description: 'Backfill CBLOL main split (Leaguepedia → ES → Rails DB)'
 
   # CBLOL Academy — runs 30min after CBLOL to avoid scraper contention
@@ -54,8 +53,7 @@
     class: Competitive::HistoricalBackfillJob
     queue: low_priority
     args:
-      kwargs:
-        league: 'CBLOL Academy'
+      - league: 'CBLOL Academy'
     description: 'Backfill CBLOL Academy (Leaguepedia → ES → Rails DB)'
 
   # Circuito Desafiante — runs 1h after CBLOL
@@ -64,8 +62,7 @@
     class: Competitive::HistoricalBackfillJob
     queue: low_priority
     args:
-      kwargs:
-        league: 'Circuito Desafiante'
+      - league: 'Circuito Desafiante'
     description: 'Backfill Circuito Desafiante (Leaguepedia → ES → Rails DB)'
 
   # Request and expire scrim result reports daily at 10 AM UTC
