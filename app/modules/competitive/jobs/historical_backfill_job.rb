@@ -39,12 +39,11 @@ module Competitive
     # resumable, so the next scheduled run will pick up where it left off.
     MAX_WAIT_TIME = 6.hours
 
-    # @param options [Hash] optional — supports :league and :our_team keys.
+    # @param options [Hash] optional — supports :league key.
     #   Handles sidekiq-scheduler kwargs wrapper format for backward compat.
     def perform(options = {})
       opts     = options[:kwargs] || options["kwargs"] || options
-      league   = (opts[:league]   || opts["league"]).presence   || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
-      our_team = (opts[:our_team] || opts["our_team"]).presence || ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
+      league   = (opts[:league] || opts["league"]).presence || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
       min_year   = ENV.fetch('BACKFILL_MIN_YEAR', '2013').to_i
       sync_limit = ENV.fetch('BACKFILL_SYNC_LIMIT', '500').to_i
 
@@ -52,7 +51,7 @@ module Competitive
 
       trigger_backfill(scraper, league, min_year)
       poll_until_complete(scraper, league)
-      dispatch_sync_jobs(league, our_team, sync_limit)
+      dispatch_sync_jobs(league, sync_limit)
 
       record_job_heartbeat
       Rails.logger.info("[HistoricalBackfillJob] Done — league=#{league}")
@@ -114,14 +113,18 @@ module Competitive
       true
     end
 
-    def dispatch_sync_jobs(league, our_team, sync_limit)
-      Rails.logger.info(
-        '[HistoricalBackfillJob] Starting sync step: ' \
-        "league=#{league} our_team=#{our_team} limit=#{sync_limit}"
-      )
-      Organization.find_each do |org|
-        Rails.logger.info("[HistoricalBackfillJob] Syncing for org=#{org.id} (#{org.name})")
-        SyncScraperMatchesJob.perform_later(org.id, league: league, our_team: our_team, limit: sync_limit)
+    def dispatch_sync_jobs(league, sync_limit)
+      Rails.logger.info("[HistoricalBackfillJob] Starting sync step: league=#{league} limit=#{sync_limit}")
+      Organization.where.not(competitive_team_name: [nil, '']).find_each do |org|
+        Rails.logger.info(
+          "[HistoricalBackfillJob] Syncing org=#{org.id} (#{org.name}) team=#{org.competitive_team_name}"
+        )
+        SyncScraperMatchesJob.perform_later(
+          org.id,
+          league: league,
+          our_team: org.competitive_team_name,
+          limit: sync_limit
+        )
       end
     end
   end
