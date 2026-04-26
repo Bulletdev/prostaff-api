@@ -39,11 +39,12 @@ module Competitive
     # resumable, so the next scheduled run will pick up where it left off.
     MAX_WAIT_TIME = 6.hours
 
-    # @param league    [String, nil] override — defaults to BACKFILL_LEAGUE env
-    # @param our_team  [String, nil] override — defaults to BACKFILL_OUR_TEAM env
-    def perform(league: nil, our_team: nil)
-      league     = league.presence     || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
-      our_team   = our_team.presence   || ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
+    # @param options [Hash] optional — supports :league and :our_team keys.
+    #   Handles sidekiq-scheduler kwargs wrapper format for backward compat.
+    def perform(options = {})
+      opts     = options[:kwargs] || options["kwargs"] || options
+      league   = (opts[:league]   || opts["league"]).presence   || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
+      our_team = (opts[:our_team] || opts["our_team"]).presence || ENV.fetch('BACKFILL_OUR_TEAM', 'paiN Gaming')
       min_year   = ENV.fetch('BACKFILL_MIN_YEAR', '2013').to_i
       sync_limit = ENV.fetch('BACKFILL_SYNC_LIMIT', '500').to_i
 
