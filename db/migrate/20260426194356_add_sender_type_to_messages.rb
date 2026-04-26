@@ -2,6 +2,6 @@
 
 class AddSenderTypeToMessages < ActiveRecord::Migration[7.2]
   def change
-    add_column :messages, :sender_type, :string, default: 'User', null: false
+    add_column :messages, :sender_type, :string, default: 'User', null: false, if_not_exists: true
   end
 end
