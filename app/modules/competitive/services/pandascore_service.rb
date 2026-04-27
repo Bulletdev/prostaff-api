@@ -15,7 +15,7 @@ class PandascoreService
   # @param league [String] Filter by league (e.g., 'cblol', 'lcs', 'lck')
   # @param per_page [Integer] Number of results per page (default: 10)
   # @return [Array<Hash>] Array of match data
-  def fetch_upcoming_matches(league: nil, per_page: 20, page: 1)
+  def fetch_upcoming_matches(league: nil, per_page: 20, page: 1, search: nil)
     params = {
       'filter[videogame]': 'lol',
       sort: 'begin_at',
@@ -24,6 +24,7 @@ class PandascoreService
     }
 
     params['filter[league_id]'] = league if league.present?
+    params['search[name]']      = search if search.present?
 
     paginated_get('matches/upcoming', params)
   end
@@ -33,7 +34,7 @@ class PandascoreService
   # @param per_page [Integer] Number of results per page (default: 20)
   # @param page [Integer] Page number (default: 1)
   # @return [Hash] { data: Array, total: Integer, page: Integer, per_page: Integer }
-  def fetch_past_matches(league: nil, per_page: 20, page: 1)
+  def fetch_past_matches(league: nil, per_page: 20, page: 1, search: nil)
     params = {
       'filter[videogame]': 'lol',
       'filter[finished]': true,
@@ -43,6 +44,7 @@ class PandascoreService
     }
 
     params['filter[league_id]'] = league if league.present?
+    params['search[name]']      = search if search.present?
 
     paginated_get('matches/past', params)
   end
