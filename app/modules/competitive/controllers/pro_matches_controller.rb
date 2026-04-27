@@ -530,6 +530,7 @@ module Competitive
       end
 
       def apply_filters(matches)
+        matches = apply_search(matches)
         matches = matches.by_tournament(params[:tournament]) if params[:tournament].present?
         matches = matches.by_region(params[:region]) if params[:region].present?
         matches = matches.by_patch(params[:patch]) if params[:patch].present?
@@ -544,6 +545,36 @@ module Competitive
         end
 
         matches
+      end
+
+      def apply_search(matches)
+        return matches unless params[:search].present?
+
+        term      = ActiveRecord::Base.sanitize_sql_like(params[:search])
+        norm_term = ActiveRecord::Base.sanitize_sql_like(normalize_search_term(params[:search]))
+
+        # Search by original term (case-insensitive) OR by normalized term
+        # translate() maps special chars (Ø→O, æ→a, etc.) directly in PostgreSQL.
+        matches.where(
+          'lower(opponent_team_name) LIKE lower(:t) OR lower(our_team_name) LIKE lower(:t) ' \
+          'OR lower(tournament_display) LIKE lower(:t) ' \
+          'OR translate(lower(opponent_team_name), :from, :to) LIKE :n ' \
+          'OR translate(lower(our_team_name), :from, :to) LIKE :n ' \
+          'OR translate(lower(tournament_display), :from, :to) LIKE :n',
+          t: "%#{term}%",
+          n: "%#{norm_term}%",
+          from: 'øæåðþ',
+          to:   'oaadt'
+        )
+      end
+
+      def normalize_search_term(term)
+        term.downcase
+            .tr('øåðþ', 'oadt')
+            .gsub('æ', 'ae')
+            .gsub('ß', 'ss')
+            .unicode_normalize(:nfkd)
+            .gsub(/\p{Mn}/, '')
       end
 
       def build_total_pages(result, page)
