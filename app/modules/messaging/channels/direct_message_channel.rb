@@ -17,6 +17,10 @@ class DirectMessageChannel < ApplicationCable::Channel
   MAX_CONTENT_LENGTH = 2000
 
   def subscribed
+    # ActionCable channels do not go through authenticate_request!, so
+    # Current.organization_id must be set manually for OrganizationScoped models.
+    Current.organization_id = current_org_id
+
     recipient = find_and_validate_recipient
     return unless recipient
 

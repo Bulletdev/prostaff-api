@@ -8,10 +8,14 @@
 # A user from org A cannot subscribe to org B's draft stream.
 class DraftChannel < ApplicationCable::Channel
   def subscribed
+    # ActionCable channels do not go through authenticate_request!, so
+    # Current.organization_id must be set manually for OrganizationScoped models.
+    Current.organization_id = current_org_id
+
     return if unauthorized_draft_subscription?
 
     stream_from "draft_#{current_org_id}_#{params[:draft_id]}"
-    logger.info "[DraftChannel] user=#{current_user.id} subscribed to draft=#{params[:draft_id]}"
+    logger.info "[DraftChannel] user=#{current_user&.id || current_player&.id} subscribed to draft=#{params[:draft_id]}"
   end
 
   def unsubscribed
