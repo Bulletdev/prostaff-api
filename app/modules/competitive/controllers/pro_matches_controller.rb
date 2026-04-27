@@ -557,10 +557,11 @@ module Competitive
         # translate() maps special chars (Ø→O, æ→a, etc.) directly in PostgreSQL.
         matches.where(
           'lower(opponent_team_name) LIKE lower(:t) OR lower(our_team_name) LIKE lower(:t) ' \
-          'OR lower(tournament_display) LIKE lower(:t) ' \
+          'OR lower(tournament_name) LIKE lower(:t) OR lower(tournament_region) LIKE lower(:t) ' \
           'OR translate(lower(opponent_team_name), :from, :to) LIKE :n ' \
           'OR translate(lower(our_team_name), :from, :to) LIKE :n ' \
-          'OR translate(lower(tournament_display), :from, :to) LIKE :n',
+          'OR translate(lower(tournament_name), :from, :to) LIKE :n ' \
+          'OR translate(lower(tournament_region), :from, :to) LIKE :n',
           t: "%#{term}%",
           n: "%#{norm_term}%",
           from: 'øæåðþ',
