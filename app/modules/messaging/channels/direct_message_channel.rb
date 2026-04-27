@@ -36,6 +36,8 @@ class DirectMessageChannel < ApplicationCable::Channel
 
   # Receives { "content" => "...", "recipient_id" => "...", "recipient_type" => "..." } from client.
   def speak(data) # rubocop:disable Metrics/MethodLength
+    Current.organization_id = current_org_id
+
     content      = data['content'].to_s.strip
     recipient_id = data['recipient_id'].to_s
 
