@@ -4,29 +4,44 @@
 # Orchestrates synergy, counter, and win probability calculations.
 class DraftAnalyzer
   Result = Struct.new(:win_probability, :confidence, :synergy_scores,
-                      :counter_scores, :suggested_picks, :low_sample, keyword_init: true)
+                      :counter_scores, :suggested_picks, :low_sample, :source, keyword_init: true)
 
   def self.call(team_a:, team_b:, patch: nil)
     new(team_a:, team_b:, patch:).analyze
   end
 
   def analyze
-    synergies = calculate_synergies
-    counters  = calculate_counters
-    win_prob  = WinProbabilityCalculator.call(
-      team_a: @team_a, team_b: @team_b,
-      synergies:, counters:
-    )
+    synergies   = calculate_synergies
+    counters    = calculate_counters
     suggestions = DraftSuggester.call(team_a: @team_a, team_b: @team_b) if @team_a.size == 4
 
-    Result.new(
-      win_probability: win_prob[:score].round(4),
-      confidence: win_prob[:confidence].round(4),
-      synergy_scores: synergies,
-      counter_scores: counters,
-      suggested_picks: suggestions,
-      low_sample: win_prob[:confidence] < 0.5
-    )
+    ml_result = MlDraftService.call(team_a: @team_a, team_b: @team_b, patch: @patch, league: nil)
+
+    if ml_result
+      Result.new(
+        win_probability: ml_result[:win_probability].round(4),
+        confidence:      ml_result[:confidence].round(4),
+        synergy_scores:  synergies,
+        counter_scores:  counters,
+        suggested_picks: suggestions,
+        low_sample:      ml_result[:confidence] < 0.5,
+        source:          'ml_v2'
+      )
+    else
+      win_prob = WinProbabilityCalculator.call(
+        team_a: @team_a, team_b: @team_b,
+        synergies:, counters:
+      )
+      Result.new(
+        win_probability: win_prob[:score].round(4),
+        confidence:      win_prob[:confidence].round(4),
+        synergy_scores:  synergies,
+        counter_scores:  counters,
+        suggested_picks: suggestions,
+        low_sample:      win_prob[:confidence] < 0.5,
+        source:          'legacy_ruby'
+      )
+    end
   end
 
   private

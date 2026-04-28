@@ -33,6 +33,16 @@ module AiIntelligence
           league: params[:league]
         )
 
+        patch = params[:patch]
+        if patch.present? && result[:recommendations].is_a?(Array)
+          result[:recommendations].each do |rec|
+            rec[:patch_win_rate] = Services::ChampionWinrateService.win_rate_for(
+              champion: rec[:champion],
+              patch: patch
+            )
+          end
+        end
+
         response.set_header('X-AI-Source', result[:source])
         render_success(result)
       end
