@@ -9,9 +9,11 @@ module AiIntelligence
 
       # POST /api/v1/ai/draft/analyze
       def analyze
-        team_a = params.require(:team_a)
-        team_b = params.require(:team_b)
+        team_a = Array(params[:team_a]).reject(&:blank?)
+        team_b = Array(params[:team_b]).reject(&:blank?)
         patch  = params[:patch]
+
+        return render json: { error: 'team_a or team_b required' }, status: :bad_request if team_a.empty? && team_b.empty?
 
         result = DraftAnalyzer.call(team_a: team_a, team_b: team_b, patch: patch)
 
