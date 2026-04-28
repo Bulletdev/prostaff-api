@@ -253,6 +253,25 @@ This API follows a **modular monolith** architecture with the following modules:
 - `strategy` - Draft planning and tactical board system
 - `support` - Support ticket system with staff and FAQ management
 
+### Architecture
+
+This API follows a modular monolith architecture with the following modules:
+
+- `authentication` - User authentication and authorization
+- `dashboard` - Dashboard statistics and metrics
+- `players` - Player management and statistics
+- `scouting` - Player scouting and talent discovery
+- `analytics` - Performance analytics and reporting
+- `matches` - Match data and statistics
+- `schedules` - Event and schedule management
+- `vod_reviews` - Video review and timestamp management
+- `team_goals` - Goal setting and tracking
+- `riot_integration` - Riot Games API integration
+- `competitive` - PandaScore integration, pro matches, draft analysis
+- `scrims` - Scrim management and opponent team tracking
+- `strategy` - Draft planning and tactical board system
+- `support` - Support ticket system with staff and FAQ management
+
 ### Architecture Diagram
 
 ```mermaid
