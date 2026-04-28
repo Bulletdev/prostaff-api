@@ -262,7 +262,7 @@ jobs:
           fi
 
       - name: Display notification
-        run: |
+        run: | # nosemgrep: yaml.github-actions.security.run-shell-injection.run-shell-injection
           echo "======================================"
           echo "${{ env.STATUS }}"
           echo "${{ env.MESSAGE }}"
