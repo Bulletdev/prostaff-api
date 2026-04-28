@@ -4,14 +4,16 @@
 #
 # Calls POST /recommend on the ML service and returns top-N champion picks
 # with composite scores. Falls back to DraftSuggester (Ruby cosine-similarity
-# implementation) when the ML service is unreachable or returns an error.
+# implementation) when the ML service is unreachable, returns an error, is
+# disabled via kill switch, or when the circuit breaker is open.
 #
 # Configuration:
-#   AI_SERVICE_URL — base URL of the FastAPI service, e.g. http://ai-service:8001
-#                    Defaults to http://localhost:8001 for local development.
+#   AI_SERVICE_URL      — base URL of the FastAPI service, e.g. http://ai-service:8001
+#                         Defaults to http://localhost:8001 for local development.
+#   ML_SERVICE_ENABLED  — set to 'false' to disable all ML calls (kill switch).
 #
 # Source tagging:
-#   Returns { source: "ml_v2" } when ML responded successfully.
+#   Returns { source: "ml_v2" }  when ML responded successfully.
 #   Returns { source: "legacy" } when falling back to DraftSuggester.
 #
 # @example
@@ -28,7 +30,7 @@
 class AiRecommendationService
   class MlServiceError < StandardError; end
 
-  REQUEST_TIMEOUT = 5
+  REQUEST_TIMEOUT = ENV.fetch('ML_SERVICE_TIMEOUT', '5').to_i
 
   def self.call(**)
     new(**).call
@@ -41,41 +43,44 @@ class AiRecommendationService
     @opponent_bans  = opponent_bans
     @patch          = patch
     @league         = league
-    @base_url       = ENV.fetch('AI_SERVICE_URL', 'http://localhost:8001')
   end
 
   def call
     call_ml_service
+  rescue MlServiceClient::MlServiceDisabledError, MlServiceClient::MlCircuitOpenError => e
+    Rails.logger.info("[AiRecommendationService] ML unavailable (#{e.class.name.split('::').last}), using legacy fallback: #{e.message}")
+    legacy_fallback
   rescue MlServiceError => e
-    Rails.logger.warn("[AiRecommendationService] ML service unavailable, using legacy fallback: #{e.message}")
+    Rails.logger.warn("[AiRecommendationService] ML service error, using legacy fallback: #{e.message}")
     legacy_fallback
   end
 
   private
 
   def call_ml_service
-    response = connection.post('/recommend') do |req|
-      req.headers['Content-Type'] = 'application/json'
-      req.body = build_payload.to_json
-      req.options.timeout = REQUEST_TIMEOUT
-    end
-
-    raise MlServiceError, "ML service returned #{response.status}" unless response.success?
-
-    body = JSON.parse(response.body, symbolize_names: true)
-    {
+    body = MlServiceClient.post('/recommend', build_payload, timeout: REQUEST_TIMEOUT)
+    result = {
       source: body[:source] || 'ml_v2',
       model_version: body[:model_version],
       recommendations: body[:recommendations] || []
     }
-  rescue Faraday::TimeoutError => e
-    raise MlServiceError, "timeout: #{e.message}"
-  rescue Faraday::ConnectionFailed => e
-    raise MlServiceError, "connection failed: #{e.message}"
-  rescue Faraday::Error => e
-    raise MlServiceError, "network error: #{e.message}"
-  rescue JSON::ParserError => e
-    raise MlServiceError, "invalid JSON response: #{e.message}"
+
+    if result[:source] == 'ml_v2'
+      win_prob = result[:recommendations].first&.dig(:win_probability)&.to_f || 0.5
+      PredictionLogger.log(
+        blue_picks:         @our_picks,
+        red_picks:          @opponent_picks,
+        predicted_win_prob: win_prob,
+        source:             result[:source],
+        model_version:      result[:model_version],
+        patch:              @patch,
+        league:             @league
+      )
+    end
+
+    result
+  rescue MlServiceClient::MlServiceError => e
+    raise MlServiceError, e.message
   end
 
   def legacy_fallback
@@ -105,11 +110,5 @@ class AiRecommendationService
       patch: @patch,
       league: @league
     }
-  end
-
-  def connection
-    @connection ||= Faraday.new(url: @base_url) do |f|
-      f.adapter Faraday.default_adapter
-    end
   end
 end

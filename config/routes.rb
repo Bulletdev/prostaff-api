@@ -148,6 +148,9 @@ Rails.application.routes.draw do
         resources :audit_logs, only: [:index], path: 'audit-logs',
                                controller: '/admin/controllers/audit_logs'
 
+        # ML quality metrics (rolling AUC from RollingAucJob)
+        get 'ml-metrics', to: '/admin/controllers/ml_metrics#index'
+
         # Status Incidents
         resources :status_incidents, path: 'status/incidents',
                                      controller: '/admin/controllers/status_incidents' do
@@ -416,6 +419,18 @@ Rails.application.routes.draw do
           end
         end
 
+        # Draft Simulations (DS1 — live draft simulator, multi-game series)
+        resources :draft_simulations, path: 'draft-simulations',
+                                      controller: '/strategy/controllers/draft_simulations',
+                                      only: %i[create destroy] do
+          collection do
+            get ':series_id', action: :index, as: :series
+          end
+          member do
+            patch :update
+          end
+        end
+
         # Assets endpoints
         get 'assets/champion/:champion_name', to: '/strategy/controllers/assets#champion_assets'
         get 'assets/map', to: '/strategy/controllers/assets#map_assets'
@@ -459,8 +474,10 @@ Rails.application.routes.draw do
       # AI Intelligence Module — draft analysis and win probability
       # Requires Tier 1 (Professional) subscription.
       namespace :ai do
-        post 'draft/analyze',   to: '/ai_intelligence/controllers/draft#analyze'
-        post 'recommend-pick',  to: '/ai_intelligence/controllers/recommend#recommend_pick'
+        post 'draft/analyze',        to: '/ai_intelligence/controllers/draft#analyze'
+        post 'draft/synergy-matrix', to: '/ai_intelligence/controllers/draft#synergy_matrix'
+        post 'recommend-pick',       to: '/ai_intelligence/controllers/recommend#recommend_pick'
+        get  'champion-analytics',   to: '/ai_intelligence/controllers/champion_analytics#index'
       end
 
       # Tournaments Module — ArenaBR double elimination
