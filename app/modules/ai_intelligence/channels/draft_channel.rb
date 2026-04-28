@@ -39,7 +39,7 @@ class DraftChannel < ApplicationCable::Channel
 
     # 2. Sinergia via embeddings: SynergyMatrixService quando team_a tem >= 2 picks
     synergy_data = if team_a.size >= 2
-                     AiIntelligence::SynergyMatrixService.call(champions: team_a)
+                     SynergyMatrixService.call(champions: team_a)
                    else
                      { champions: team_a, matrix: [], top_pairs: [], weakest_pairs: [] }
                    end
@@ -64,7 +64,7 @@ class DraftChannel < ApplicationCable::Channel
 
     # 5. Patch win rates para todos os campeões envolvidos
     all_champions  = (team_a + team_b).uniq
-    patch_win_rates = patch.present? ? AiIntelligence::Services::ChampionWinrateService.bulk_lookup(all_champions, patch) : {}
+    patch_win_rates = patch.present? ? ChampionWinrateService.bulk_lookup(all_champions, patch) : {}
 
     ActionCable.server.broadcast(
       "draft_#{current_org_id}_#{draft_id}",

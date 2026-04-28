@@ -29,7 +29,7 @@ module AiIntelligence
         blueprint = DraftAnalysisBlueprint.render_as_hash(result)
 
         all_champs = (Array(team_a) + Array(team_b)).uniq
-        champion_win_rates = Services::ChampionWinrateService.bulk_lookup(all_champs, patch)
+        champion_win_rates = ChampionWinrateService.bulk_lookup(all_champs, patch)
         blueprint[:champion_win_rates] = champion_win_rates
 
         render_success(blueprint)
