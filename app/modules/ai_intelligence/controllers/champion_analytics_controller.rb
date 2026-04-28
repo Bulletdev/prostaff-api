@@ -23,12 +23,12 @@ module AiIntelligence
         return render json: { error: 'team_champions required' }, status: :bad_request if champions.empty?
 
         data = champions.filter_map do |champ|
-          wr = Services::ChampionWinrateService.win_rate_for(champion: champ, patch: patch)
+          wr = ChampionWinrateService.win_rate_for(champion: champ, patch: patch)
           next if wr.nil?
 
           prev_wr = if patch.present?
                       prev_patch = patch.to_s.split('.').first.to_i - 1
-                      Services::ChampionWinrateService.win_rate_for(champion: champ, patch: prev_patch.to_s)
+                      ChampionWinrateService.win_rate_for(champion: champ, patch: prev_patch.to_s)
                     end
 
           trend = if prev_wr.nil?       then 'stable'
