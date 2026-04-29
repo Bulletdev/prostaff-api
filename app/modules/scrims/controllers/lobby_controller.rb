@@ -47,7 +47,7 @@ module Scrims
       def fetch_scrim_entries(game:, region:)
         scrims = Scrim.unscoped
                       .eager_load(:organization)
-                      .includes(:opponent_team, organization: :players)
+                      .includes(:opponent_team)
                       .where(scrims: { visibility: 'public' })
                       .where(organizations: { is_public: true })
                       .where('scrims.scheduled_at >= ?', Time.current)
@@ -58,7 +58,9 @@ module Scrims
         scrims = scrims.where(organizations: { region: region })               if region
         scrims = filter_by_tier(scrims, params[:tier])                         if params[:tier].present?
 
-        scrims.map { |s| serialize_lobby_scrim(s) }
+        records = scrims.to_a
+        players_by_org = load_public_players(records.map { |s| s.organization_id })
+        records.map { |s| serialize_lobby_scrim(s, players_by_org) }
       end
 
       # ── Source 2: AvailabilityWindow records → next occurrence ───────────────
@@ -69,18 +71,20 @@ module Scrims
                                     .joins(:organization)
                                     .where(organizations: { is_public: true })
                                     .where.not(organization_id: exclude_org_ids.to_a)
-                                    .includes(organization: :players)
+                                    .includes(:organization)
                                     .limit(WINDOW_CAP)
 
         windows = windows.where(availability_windows: { game: game }) if game
         windows = windows.where(availability_windows: { region: region }) if region
 
-        windows.filter_map { |w| serialize_lobby_window(w) }
+        records = windows.to_a
+        players_by_org = load_public_players(records.map { |w| w.organization_id })
+        records.filter_map { |w| serialize_lobby_window(w, players_by_org) }
       end
 
       # ── Serializers ───────────────────────────────────────────────────────────
 
-      def serialize_lobby_scrim(scrim)
+      def serialize_lobby_scrim(scrim, players_by_org)
         org = scrim.organization
         {
           id: scrim.id,
@@ -90,15 +94,16 @@ module Scrims
           games_planned: scrim.games_planned,
           status: scrim.status,
           source: scrim.try(:source) || 'internal',
-          organization: serialize_org(org)
+          organization: serialize_org(org, players_by_org[org.id] || [])
         }
       end
 
       # Returns nil if next_occurrence cannot be computed — filter_map drops nils.
-      def serialize_lobby_window(window)
+      def serialize_lobby_window(window, players_by_org)
         occurs_at = next_occurrence(window)
         return nil unless occurs_at
 
+        org = window.organization
         {
           id: "window-#{window.id}", # namespaced to avoid collision with Scrim IDs
           scheduled_at: occurs_at,
@@ -107,13 +112,13 @@ module Scrims
           games_planned: 3,
           status: 'open',
           source: 'availability_window',
-          organization: serialize_org(window.organization)
+          organization: serialize_org(org, players_by_org[org.id] || [])
         }
       end
 
       # Only expose fields safe for public consumption.
       # Notably absent: email, subscription_plan, is_public, internal config.
-      def serialize_org(org)
+      def serialize_org(org, players)
         {
           id: org.id,
           name: org.name,
@@ -122,18 +127,18 @@ module Scrims
           tier: org.try(:tier),
           public_tagline: org.try(:public_tagline),
           discord_invite_url: org.try(:discord_invite_url),
-          roster: serialize_org_roster(org)
+          roster: serialize_org_roster(players)
         }
       end
 
-      # Returns the org's active players sorted by role, already preloaded via includes.
+      # Players are preloaded via load_public_players — no association traversal here.
       # Capped at 10 to keep the response lean.
-      def serialize_org_roster(org)
+      def serialize_org_roster(players)
         role_sort = %w[top jungle mid adc support]
-        players = org.players.select(&:active?)
-        players.sort_by { |p| [role_sort.index(p.role) || 99, p.summoner_name] }
-               .first(10)
-               .map do |p|
+        active = players.select { |p| p.status == 'active' && p.deleted_at.nil? }
+        active.sort_by { |p| [role_sort.index(p.role) || 99, p.summoner_name.to_s] }
+              .first(10)
+              .map do |p|
           {
             summoner_name: p.summoner_name,
             role: p.role,
@@ -144,6 +149,19 @@ module Scrims
       end
 
       # ── Helpers ───────────────────────────────────────────────────────────────
+
+      # Loads players for the given org_ids bypassing OrganizationScoped, since
+      # this is a public endpoint with no authenticated user. Returns a Hash
+      # keyed by organization_id (UUID string) for O(1) lookup in serializers.
+      def load_public_players(org_ids)
+        return {} if org_ids.empty?
+
+        Player.unscoped
+              .where(organization_id: org_ids, deleted_at: nil)
+              .select(:id, :organization_id, :summoner_name, :role,
+                      :solo_queue_tier, :solo_queue_rank, :status, :deleted_at)
+              .group_by(&:organization_id)
+      end
 
       def filter_by_tier(scrims, tier)
         tier_plans = case tier
