@@ -201,57 +201,7 @@ open http://localhost:3333/api-docs
 
 
 ## 03 · Architecture
-
-This API follows a **modular monolith** architecture with the following modules:
-
-<details>
-<summary><kbd>▶ See details (click to expand)</kbd></summary>
-
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  MODULE             │  RESPONSIBILITY                                       │
-├─────────────────────┼───────────────────────────────────────────────────────┤
-│  core               │  Shared base classes, concerns and constants          │
-│  authentication     │  User auth and authorization                          │
-│  admin              │  Organization, audit log and admin player management  │
-│  dashboard          │  Dashboard statistics and metrics                     │
-│  players            │  Player management, rosters and statistics            │
-│  scouting           │  Player scouting and talent discovery                 │
-│  analytics          │  Performance, competitive draft, tournament & opponent│
-│  matches            │  Match data and statistics                            │
-│  schedules          │  Event and schedule management                        │
-│  vod_reviews        │  Video review and timestamp management                │
-│  team_goals         │  Goal setting and tracking                            │
-│  riot_integration   │  Riot Games API integration                           │
-│  competitive        │  PandaScore/Grid.gg + Elasticsearch match detail/Draft│
-│  meta_intelligence  │  Build aggregation, champion/item meta analytics      │
-│  scrims             │  Scrim management and opponent team tracking          │
-│  strategy           │  Draft planning and tactical board system             │
-│  ai_intelligence    │  Champion2Vec embeddings, win probability, ML picks   │
-│  support            │  Support ticket system with staff dashboard and FAQ   │
-│  messaging          │  Real-time team chat via Action Cable WebSocket       │
-│  search             │  Global full-text search powered by Meilisearch       │
-│  notifications      │  In-app notification system                           │
-│  tournaments        │  ArenaBR double-elimination tournament management     │
-└─────────────────────┴───────────────────────────────────────────────────────┘
-```
-</details>
-
-- `authentication` - User authentication and authorization
-- `dashboard` - Dashboard statistics and metrics
-- `players` - Player management and statistics
-- `scouting` - Player scouting and talent discovery
-- `analytics` - Performance analytics and reporting
-- `matches` - Match data and statistics
-- `schedules` - Event and schedule management
-- `vod_reviews` - Video review and timestamp management
-- `team_goals` - Goal setting and tracking
-- `riot_integration` - Riot Games API integration
-- `competitive` - PandaScore integration, pro matches, draft analysis
-- `scrims` - Scrim management and opponent team tracking
-- `strategy` - Draft planning and tactical board system
-- `support` - Support ticket system with staff and FAQ management
+  
 
 ### Architecture
 
