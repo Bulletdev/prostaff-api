@@ -516,6 +516,9 @@ Rails.application.routes.draw do
     namespace :api do
       get 'inhouse_queues/active', to: '/inhouses/controllers/internal/inhouse_queues#active'
     end
+
+    # Called by ProPay TierSyncJob when a subscription is activated or cancelled.
+    patch 'organizations/by_user/:user_id/tier', to: 'organizations#update_tier'
   end
 
   require 'sidekiq/web'
