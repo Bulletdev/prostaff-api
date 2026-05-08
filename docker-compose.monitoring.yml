@@ -53,8 +53,7 @@ services:
     restart: unless-stopped
     networks:
       - monitoring
-    ports:
-      - "127.0.0.1:3001:3000"
+      - coolify
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -64,7 +63,21 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD}'
       GF_PATHS_PROVISIONING: '/etc/grafana/provisioning'
       GF_USERS_ALLOW_SIGN_UP: 'false'
-      GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL:-http://localhost:3001}'
+      GF_SERVER_ROOT_URL: 'https://monitoring.prostaff.gg'
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.routers.grafana-http.rule=Host(`monitoring.prostaff.gg`)
+      - traefik.http.routers.grafana-http.entrypoints=http
+      - traefik.http.routers.grafana-http.middlewares=grafana-redirect-https
+      - traefik.http.middlewares.grafana-redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.grafana-redirect-https.redirectscheme.permanent=true
+      - traefik.http.routers.grafana.rule=Host(`monitoring.prostaff.gg`)
+      - traefik.http.routers.grafana.entrypoints=https
+      - traefik.http.routers.grafana.tls=true
+      - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+      - traefik.http.services.grafana.loadbalancer.server.scheme=http
     depends_on:
       - prometheus
 
@@ -77,3 +90,5 @@ volumes:
 networks:
   monitoring:
     driver: bridge
+  coolify:
+    external: true
