@@ -1,0 +1,159 @@
+{
+  "uid": "prostaff-containers",
+  "title": "ProStaff - Containers",
+  "tags": ["prostaff", "docker"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1, "type": "table", "title": "Container Status",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 7 },
+      "options": { "sortBy": [{ "displayName": "CPU %", "desc": true }] },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "CPU %" }, "properties": [{ "id": "unit", "value": "percent" }, { "id": "custom.displayMode", "value": "color-background-solid" },
+            { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 50 }, { "color": "red", "value": 80 }] } }
+          ]},
+          { "matcher": { "id": "byName", "options": "Memory" }, "properties": [{ "id": "unit", "value": "bytes" }] },
+          { "matcher": { "id": "byName", "options": "Mem %" }, "properties": [{ "id": "unit", "value": "percent" }, { "id": "custom.displayMode", "value": "color-background-solid" },
+            { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 60 }, { "color": "red", "value": 85 }] } }
+          ]}
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sort_desc(sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\",name!~\".*pause.*\"}[5m])) * 100)",
+          "legendFormat": "{{name}}", "instant": true, "format": "table", "refId": "CPU"
+        },
+        {
+          "expr": "sort_desc(sum by (name) (container_memory_usage_bytes{name!=\"\",name!~\".*pause.*\"}))",
+          "legendFormat": "{{name}}", "instant": true, "format": "table", "refId": "MEM"
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        { "id": "organize", "options": { "renameByName": { "Value #CPU": "CPU %", "Value #MEM": "Memory", "name": "Container" } } }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "CPU % — ProStaff Core",
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*x8ogsg0s4gws0840w8kksokk-api.*\"}[5m]) * 100", "legendFormat": "api" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*x8ogsg0s4gws0840w8kksokk-sidekiq.*\"}[5m]) * 100", "legendFormat": "sidekiq" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*events-ocosg.*\"}[5m]) * 100", "legendFormat": "events" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*x8ogsg0s4gws0840w8kksokk-redis.*\"}[5m]) * 100", "legendFormat": "redis" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*x8ogsg0s4gws0840w8kksokk-postgres.*\"}[5m]) * 100", "legendFormat": "postgres" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "CPU % — Infraestrutura",
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*elasticsearch.*\"}[5m]) * 100", "legendFormat": "elasticsearch" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*scraper-api.*\"}[5m]) * 100", "legendFormat": "scraper-api" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*gateway.*\"}[5m]) * 100", "legendFormat": "gateway" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*ai-service.*\"}[5m]) * 100", "legendFormat": "ml" },
+        { "expr": "rate(container_cpu_usage_seconds_total{name=~\".*coolify$\"}[5m]) * 100", "legendFormat": "coolify" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Memoria — ProStaff Core",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name=~\".*x8ogsg0s4gws0840w8kksokk-api.*\"}", "legendFormat": "api" },
+        { "expr": "container_memory_usage_bytes{name=~\".*x8ogsg0s4gws0840w8kksokk-sidekiq.*\"}", "legendFormat": "sidekiq" },
+        { "expr": "container_memory_usage_bytes{name=~\".*events-ocosg.*\"}", "legendFormat": "events" },
+        { "expr": "container_memory_usage_bytes{name=~\".*x8ogsg0s4gws0840w8kksokk-postgres.*\"}", "legendFormat": "postgres" },
+        { "expr": "container_memory_usage_bytes{name=~\".*x8ogsg0s4gws0840w8kksokk-redis.*\"}", "legendFormat": "redis" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Memoria — Infraestrutura",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name=~\".*elasticsearch.*\"}", "legendFormat": "elasticsearch" },
+        { "expr": "container_memory_usage_bytes{name=~\".*kibana.*\"}", "legendFormat": "kibana" },
+        { "expr": "container_memory_usage_bytes{name=~\".*scraper-api.*\"}", "legendFormat": "scraper-api" },
+        { "expr": "container_memory_usage_bytes{name=~\".*ai-service.*\"}", "legendFormat": "ml" },
+        { "expr": "container_memory_usage_bytes{name=~\".*coolify$\"}", "legendFormat": "coolify" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Network Receive — por container",
+      "gridPos": { "x": 0, "y": 21, "w": 12, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "rate(container_network_receive_bytes_total{name=~\".*x8ogsg0s4gws0840w8kksokk-api.*\"}[5m])", "legendFormat": "api" },
+        { "expr": "rate(container_network_receive_bytes_total{name=~\".*x8ogsg0s4gws0840w8kksokk-sidekiq.*\"}[5m])", "legendFormat": "sidekiq" },
+        { "expr": "rate(container_network_receive_bytes_total{name=~\".*events-ocosg.*\"}[5m])", "legendFormat": "events" },
+        { "expr": "rate(container_network_receive_bytes_total{name=~\".*scraper-api.*\"}[5m])", "legendFormat": "scraper-api" },
+        { "expr": "rate(container_network_receive_bytes_total{name=~\".*elasticsearch.*\"}[5m])", "legendFormat": "elasticsearch" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Network Transmit — por container",
+      "gridPos": { "x": 12, "y": 21, "w": 12, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "rate(container_network_transmit_bytes_total{name=~\".*x8ogsg0s4gws0840w8kksokk-api.*\"}[5m])", "legendFormat": "api" },
+        { "expr": "rate(container_network_transmit_bytes_total{name=~\".*x8ogsg0s4gws0840w8kksokk-sidekiq.*\"}[5m])", "legendFormat": "sidekiq" },
+        { "expr": "rate(container_network_transmit_bytes_total{name=~\".*events-ocosg.*\"}[5m])", "legendFormat": "events" },
+        { "expr": "rate(container_network_transmit_bytes_total{name=~\".*scraper-api.*\"}[5m])", "legendFormat": "scraper-api" },
+        { "expr": "rate(container_network_transmit_bytes_total{name=~\".*elasticsearch.*\"}[5m])", "legendFormat": "elasticsearch" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 8, "type": "stat", "title": "Containers rodando",
+      "gridPos": { "x": 0, "y": 28, "w": 6, "h": 3 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "fieldConfig": {
+        "defaults": { "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [{ "expr": "count(container_last_seen{name!=\"\",name!~\".*pause.*\"})", "legendFormat": "" }],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Container Restarts",
+      "gridPos": { "x": 6, "y": 28, "w": 18, "h": 5 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "increase(container_start_time_seconds{name!=\"\",name!~\".*pause.*\"}[1h]) > 0", "legendFormat": "{{name}}" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "pluginId": "prometheus",
+        "current": { "text": "Prometheus", "value": "Prometheus" }
+      }
+    ]
+  }
+}

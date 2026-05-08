@@ -24,7 +24,7 @@ services:
     networks:
       - monitoring
     ports:
-      - "127.0.0.1:9200:8080"
+      - "127.0.0.1:9202:8080"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -58,6 +58,7 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
       GF_SECURITY_ADMIN_USER: '${GRAFANA_ADMIN_USER:-admin}'
       GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD}'
