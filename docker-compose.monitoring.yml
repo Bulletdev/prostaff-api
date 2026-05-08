@@ -18,7 +18,7 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     restart: unless-stopped
     privileged: true
     networks:
@@ -41,12 +41,33 @@ services:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    environment:
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      ALERT_EMAIL_TO: '${ALERT_EMAIL_TO}'
 
   grafana:
     image: grafana/grafana:latest
@@ -85,6 +106,8 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  alertmanager-data:
     driver: local
 
 networks:
