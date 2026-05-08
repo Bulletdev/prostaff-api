@@ -44,9 +44,9 @@ module Analytics
       # @param player_id [Integer] Player ID for individual stats (optional)
       # @return [JSON] Performance analytics data
       def index
-        # Use active players for team-wide stats (best performers, role breakdown, etc.)
-        # but validate player_id against ALL org players so that bench/trial/inactive
-        # players can still have their individual stats viewed.
+        # Use all non-deleted org players for team-wide stats (best performers, role
+        # breakdown, etc.) so that bench/trial/inactive players who have match stats
+        # still appear in the leaderboard. Individual player stats use the same scope.
         all_org_players = organization_scoped(Player).includes(:organization)
         player_id = params[:player_id].presence
 
@@ -61,8 +61,7 @@ module Analytics
         cache_key = performance_cache_key(player_id)
         data = cache_response(cache_key, expires_in: 15.minutes) do
           matches = apply_date_filters(organization_scoped(Match))
-          active_players = organization_scoped(Player).includes(:organization).active
-          service = PerformanceAnalyticsService.new(matches, active_players)
+          service = PerformanceAnalyticsService.new(matches, all_org_players)
           service.calculate_performance_data(player_id: player_id, all_players: all_org_players)
         end
 
