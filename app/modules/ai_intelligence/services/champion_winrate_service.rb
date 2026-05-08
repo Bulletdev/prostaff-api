@@ -30,7 +30,7 @@ class ChampionWinrateService
   # @param patch     [String]
   # @return [Hash{String => Float, nil}]
   def self.bulk_lookup(champions, patch)
-    Array(champions).map { |c| [c, win_rate_for(champion: c, patch: patch)] }.to_h
+    Array(champions).to_h { |c| [c, win_rate_for(champion: c, patch: patch)] }
   end
 
   # Loads (and caches) the win-rate JSON. Returns {} on any error.
@@ -45,7 +45,7 @@ class ChampionWinrateService
         Rails.logger.warn 'ChampionWinrateService: champion_patch_winrate.json not found in any known path'
         {}
       end
-    rescue => e
+    rescue StandardError => e
       Rails.logger.warn "ChampionWinrateService: failed to load win-rate data — #{e.message}"
       {}
     end

@@ -14,38 +14,55 @@ class SynergyMatrixService
   # @param champions [Array<String>] 2–10 champion names
   # @return [Hash] { champions:, matrix:, top_pairs:, weakest_pairs: }
   def self.call(champions:)
-    embs = embeddings
-    resolved = champions.filter_map do |c|
-      vec = embs[c] || embs[c.downcase]
-      [c, vec] if vec
-    end.to_h
+    resolved = resolve_embeddings(champions)
+    present  = resolved.keys
+    return empty_result(present) if present.size < 2
 
-    present = resolved.keys
-    return { champions: present, matrix: [], top_pairs: [], weakest_pairs: [] } if present.size < 2
-
-    matrix = present.map.with_index do |a, i|
-      present.map.with_index do |b, j|
-        i == j ? 1.0 : cosine_similarity(resolved[a], resolved[b])
-      end
-    end
-
-    pairs = []
-    present.combination(2).each do |a, b|
-      ia = present.index(a)
-      ib = present.index(b)
-      pairs << { pair: [a, b], score: matrix[ia][ib].round(4) }
-    end
-    pairs.sort_by! { |p| -p[:score] }
+    matrix = build_matrix(present, resolved)
+    pairs  = build_sorted_pairs(present, matrix)
 
     {
-      champions:     present,
-      matrix:        matrix.map { |row| row.map { |v| v.round(4) } },
-      top_pairs:     pairs.first(5),
+      champions: present,
+      matrix: matrix.map { |row| row.map { |val| val.round(4) } },
+      top_pairs: pairs.first(5),
       weakest_pairs: pairs.last(3)
     }
   end
 
   # ── private ──────────────────────────────────────────────────────────
+
+  def self.empty_result(present)
+    { champions: present, matrix: [], top_pairs: [], weakest_pairs: [] }
+  end
+  private_class_method :empty_result
+
+  def self.resolve_embeddings(champions)
+    embs = embeddings
+    champions.filter_map do |champ|
+      vec = embs[champ] || embs[champ.downcase]
+      [champ, vec] if vec
+    end.to_h
+  end
+  private_class_method :resolve_embeddings
+
+  def self.build_matrix(present, resolved)
+    present.map.with_index do |champ_a, idx_a|
+      present.map.with_index do |champ_b, idx_b|
+        idx_a == idx_b ? 1.0 : cosine_similarity(resolved[champ_a], resolved[champ_b])
+      end
+    end
+  end
+  private_class_method :build_matrix
+
+  def self.build_sorted_pairs(present, matrix)
+    pairs = present.combination(2).map do |champ_a, champ_b|
+      ia = present.index(champ_a)
+      ib = present.index(champ_b)
+      { pair: [champ_a, champ_b], score: matrix[ia][ib].round(4) }
+    end
+    pairs.sort_by { |entry| -entry[:score] }
+  end
+  private_class_method :build_sorted_pairs
 
   def self.embeddings
     Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_TTL) { load_embeddings }
@@ -60,13 +77,13 @@ class SynergyMatrixService
   end
   private_class_method :load_embeddings
 
-  def self.cosine_similarity(a, b)
-    dot = a.zip(b).sum { |x, y| x * y }
-    na  = Math.sqrt(a.sum { |x| x**2 })
-    nb  = Math.sqrt(b.sum { |x| x**2 })
-    return 0.0 if na < 1e-9 || nb < 1e-9
+  def self.cosine_similarity(vec_a, vec_b)
+    dot = vec_a.zip(vec_b).sum { |x, y| x * y }
+    norm_a = Math.sqrt(vec_a.sum { |x| x**2 })
+    norm_b = Math.sqrt(vec_b.sum { |x| x**2 })
+    return 0.0 if norm_a < 1e-9 || norm_b < 1e-9
 
-    (dot / (na * nb)).clamp(-1.0, 1.0)
+    (dot / (norm_a * norm_b)).clamp(-1.0, 1.0)
   end
   private_class_method :cosine_similarity
 end

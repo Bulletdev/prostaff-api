@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module Internal
+  # Internal API controller for updating organization tier and subscription data.
+  # Called exclusively by the ProPay payment gateway via a signed internal JWT.
   class OrganizationsController < ActionController::API
     include InternalServiceAuthenticatable
 

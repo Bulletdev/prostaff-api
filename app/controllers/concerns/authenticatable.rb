@@ -27,16 +27,9 @@ module Authenticatable
 
   def perform_authentication(token)
     @jwt_payload = JwtService.decode(token)
-
-    # Reject refresh tokens used as access tokens.
-    # Refresh tokens carry type: 'refresh' and must never authenticate a request.
     raise JwtService::TokenInvalidError, 'Invalid token type' unless valid_access_token_type?(@jwt_payload)
 
-    if @jwt_payload[:entity_type] == 'player'
-      authenticate_player_token
-    else
-      authenticate_user_token
-    end
+    dispatch_token_authentication
   rescue JwtService::AuthenticationError => e
     Rails.logger.error("JWT Authentication error: #{e.class} - #{e.message}")
     render_unauthorized(e.message)
@@ -44,8 +37,23 @@ module Authenticatable
     Rails.logger.error("User not found during authentication: #{e.message}")
     render_unauthorized('User not found')
   rescue StandardError => e
-    Rails.logger.error("Unexpected authentication error: #{e.class} - #{e.message}")
-    Rails.logger.error(e.backtrace.join("\n"))
+    handle_unexpected_auth_error(e)
+  end
+
+  def dispatch_token_authentication
+    # Reject refresh tokens used as access tokens.
+    # Refresh tokens carry type: 'refresh' and must never authenticate a request.
+    # Player access tokens carry entity_type: 'player' AND type: 'access'.
+    if @jwt_payload[:entity_type] == 'player'
+      authenticate_player_token
+    else
+      authenticate_user_token
+    end
+  end
+
+  def handle_unexpected_auth_error(error)
+    Rails.logger.error("Unexpected authentication error: #{error.class} - #{error.message}")
+    Rails.logger.error(error.backtrace.join("\n"))
     render json: { error: { code: 'INTERNAL_ERROR', message: 'An internal error occurred' } },
            status: :internal_server_error
   end

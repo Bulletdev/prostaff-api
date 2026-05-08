@@ -178,20 +178,28 @@ module Strategy
       end
 
       def build_player_slots(selections, existing_players)
-        selections.map.with_index do |cs, idx|
+        selections.map.with_index do |selection, idx|
           existing = existing_players[idx] || {}
-          # board_state (existing[]) represents the live canvas after a drag — it
-          # always wins for position. champion_selections x/y is only a fallback
-          # for the initial placement when board_state has no entry yet.
-          cs_x = cs[:x].nil? ? cs['x'] : cs[:x]
-          cs_y = cs[:y].nil? ? cs['y'] : cs[:y]
-          {
-            'champion' => cs[:champion] || cs['champion'] || existing['champion'],
-            'role'     => cs[:role]     || cs['role']     || existing['role'],
-            'x'        => (existing['x'] || cs_x || 50).to_f,
-            'y'        => (existing['y'] || cs_y || 50).to_f
-          }
+          build_player_slot(selection, existing)
         end
+      end
+
+      # board_state (existing) represents the live canvas after a drag — it
+      # always wins for position. champion_selections x/y is only a fallback
+      # for the initial placement when board_state has no entry yet.
+      def build_player_slot(selection, existing)
+        sel_x = selection[:x].nil? ? selection['x'] : selection[:x]
+        sel_y = selection[:y].nil? ? selection['y'] : selection[:y]
+        {
+          'champion' => fetch_first_value(selection[:champion], selection['champion'], existing['champion']),
+          'role' => fetch_first_value(selection[:role], selection['role'], existing['role']),
+          'x' => (existing['x'] || sel_x || 50).to_f,
+          'y' => (existing['y'] || sel_y || 50).to_f
+        }
+      end
+
+      def fetch_first_value(*candidates)
+        candidates.find { |val| !val.nil? }
       end
     end
   end

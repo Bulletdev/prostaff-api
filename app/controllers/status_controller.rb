@@ -6,12 +6,12 @@ class StatusController < ActionController::API
   skip_before_action :verify_authenticity_token, raise: false
 
   COMPONENT_META = {
-    'api'       => { name: 'API',                        description: 'Core REST API services' },
-    'database'  => { name: 'Database',                   description: 'PostgreSQL primary database' },
-    'redis'     => { name: 'Cache & Background Jobs',    description: 'Redis cache and Sidekiq queue processor' },
-    'websocket' => { name: 'Real-time (WebSocket)',       description: 'ActionCable WebSocket connections' },
-    'sidekiq'   => { name: 'Background Jobs (Sidekiq)',  description: 'Async job processing' },
-    'riot_api'  => { name: 'Riot API Integration',       description: 'Riot Games data synchronization' }
+    'api' => { name: 'API', description: 'Core REST API services' },
+    'database' => { name: 'Database', description: 'PostgreSQL primary database' },
+    'redis' => { name: 'Cache & Background Jobs', description: 'Redis cache and Sidekiq queue processor' },
+    'websocket' => { name: 'Real-time (WebSocket)', description: 'ActionCable WebSocket connections' },
+    'sidekiq' => { name: 'Background Jobs (Sidekiq)', description: 'Async job processing' },
+    'riot_api' => { name: 'Riot API Integration', description: 'Riot Games data synchronization' }
   }.freeze
 
   def index
@@ -22,19 +22,19 @@ class StatusController < ActionController::API
       indicator, description = overall_status(components)
 
       {
-        status:         { indicator: indicator, description: description },
-        components:     components,
-        incidents:      incidents,
+        status: { indicator: indicator, description: description },
+        components: components,
+        incidents: incidents,
         uptime_history: uptime
       }
     end
 
     render json: cached.merge(
       page: {
-        id:         'prostaff',
-        name:       'ProStaff',
-        url:        'https://status.prostaff.gg',
-        time_zone:  'UTC',
+        id: 'prostaff',
+        name: 'ProStaff',
+        url: 'https://status.prostaff.gg',
+        time_zone: 'UTC',
         updated_at: Time.current.iso8601
       }
     ), status: :ok
@@ -57,13 +57,13 @@ class StatusController < ActionController::API
   def build_component_from_snapshot(component, snapshot)
     meta = COMPONENT_META[component]
     {
-      id:               component,
-      name:             meta[:name],
-      status:           snapshot.status,
-      description:      meta[:description],
+      id: component,
+      name: meta[:name],
+      status: snapshot.status,
+      description: meta[:description],
       response_time_ms: snapshot.response_time_ms,
-      last_checked_at:  snapshot.checked_at.iso8601,
-      updated_at:       snapshot.updated_at.iso8601
+      last_checked_at: snapshot.checked_at.iso8601,
+      updated_at: snapshot.updated_at.iso8601
     }
   end
 
@@ -72,13 +72,13 @@ class StatusController < ActionController::API
     result = live_check(component)
 
     {
-      id:               component,
-      name:             meta[:name],
-      status:           result[:status],
-      description:      meta[:description],
+      id: component,
+      name: meta[:name],
+      status: result[:status],
+      description: meta[:description],
       response_time_ms: result[:response_time_ms],
-      last_checked_at:  Time.current.iso8601,
-      updated_at:       Time.current.iso8601
+      last_checked_at: Time.current.iso8601,
+      updated_at: Time.current.iso8601
     }
   end
 
@@ -122,16 +122,16 @@ class StatusController < ActionController::API
 
   def serialize_incident(incident)
     {
-      id:                  incident.id,
-      title:               incident.title,
-      body:                incident.body,
-      severity:            incident.severity,
-      status:              incident.status,
+      id: incident.id,
+      title: incident.title,
+      body: incident.body,
+      severity: incident.severity,
+      status: incident.status,
       affected_components: incident.affected_components,
-      started_at:          incident.started_at.iso8601,
-      resolved_at:         incident.resolved_at&.iso8601,
-      postmortem:          incident.postmortem,
-      updates:             incident.updates.order(created_at: :desc).map do |u|
+      started_at: incident.started_at.iso8601,
+      resolved_at: incident.resolved_at&.iso8601,
+      postmortem: incident.postmortem,
+      updates: incident.updates.order(created_at: :desc).map do |u|
         { id: u.id, status: u.status, body: u.body, created_at: u.created_at.iso8601 }
       end
     }

@@ -40,19 +40,7 @@ module PredictionLogger
     return unless source == 'ml_v2'
 
     prob = predicted_win_prob.to_f.round(4)
-
-    MlPredictionLog.create!(
-      blue_picks:         blue_picks,
-      red_picks:          red_picks,
-      predicted_win_prob: prob,
-      patch:              patch,
-      league:             league,
-      model_version:      model_version,
-      source:             source,
-      match_id:           match_id,
-      predicted_at:       Time.current
-    )
-
+    persist_prediction(blue_picks:, red_picks:, prob:, patch:, league:, model_version:, source:, match_id:)
     push_to_redis(prob: prob, source: source)
   rescue StandardError => e
     Rails.logger.warn("[PredictionLogger] log failed: #{e.message}")
@@ -71,6 +59,21 @@ module PredictionLogger
   end
 
   # ---------------------------------------------------------------------------
+  private_class_method def self.persist_prediction(blue_picks:, red_picks:, prob:,
+                                                   patch:, league:, model_version:, source:, match_id:)
+    MlPredictionLog.create!(
+      blue_picks: blue_picks,
+      red_picks: red_picks,
+      predicted_win_prob: prob,
+      patch: patch,
+      league: league,
+      model_version: model_version,
+      source: source,
+      match_id: match_id,
+      predicted_at: Time.current
+    )
+  end
+
   private_class_method def self.push_to_redis(prob:, source:)
     payload = { prob: prob, at: Time.current.iso8601, source: source }.to_json
 

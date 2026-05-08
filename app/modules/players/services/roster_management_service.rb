@@ -458,19 +458,13 @@ class RosterManagementService
     return [] if perf.blank?
 
     t = tier_thresholds(tier)
-    weaknesses = []
-    weaknesses << 'Inconsistent performance' if perf[:games_played].to_i >= 10 &&
-                                                perf[:win_rate].to_f < t[:wr_weakness]
-    weaknesses << 'Death management'         if perf[:avg_kda].to_f.positive? &&
-                                                perf[:avg_kda].to_f < t[:kda_weakness]
-    weaknesses << 'CS discipline'            if non_support?(role) &&
-                                                perf[:avg_cs_per_min].to_f.positive? &&
-                                                perf[:avg_cs_per_min].to_f < t[:cs_weakness]
-    weaknesses << 'Vision control'           if vision_role?(role) &&
-                                                perf[:avg_vision_score].to_f.positive? &&
-                                                perf[:avg_vision_score].to_f < t[:vision_weakness]
-    weaknesses << 'Limited champion pool'    if pool.size < 3
-    weaknesses
+    [
+      ('Inconsistent performance' if inconsistent_performance?(perf, t)),
+      ('Death management'         if poor_kda?(perf, t)),
+      ('CS discipline'            if poor_cs?(perf, role, t)),
+      ('Vision control'           if poor_vision?(perf, role, t)),
+      ('Limited champion pool'    if pool.size < 3)
+    ].compact
   end
 
   def non_support?(role)
@@ -479,6 +473,26 @@ class RosterManagementService
 
   def vision_role?(role)
     %w[support jungle].include?(role.to_s)
+  end
+
+  def inconsistent_performance?(perf, thresholds)
+    perf[:games_played].to_i >= 10 && perf[:win_rate].to_f < thresholds[:wr_weakness]
+  end
+
+  def poor_kda?(perf, thresholds)
+    perf[:avg_kda].to_f.positive? && perf[:avg_kda].to_f < thresholds[:kda_weakness]
+  end
+
+  def poor_cs?(perf, role, thresholds)
+    non_support?(role) &&
+      perf[:avg_cs_per_min].to_f.positive? &&
+      perf[:avg_cs_per_min].to_f < thresholds[:cs_weakness]
+  end
+
+  def poor_vision?(perf, role, thresholds)
+    vision_role?(role) &&
+      perf[:avg_vision_score].to_f.positive? &&
+      perf[:avg_vision_score].to_f < thresholds[:vision_weakness]
   end
 
   # Extract playstyle from player notes

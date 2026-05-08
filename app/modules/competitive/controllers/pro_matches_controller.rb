@@ -65,7 +65,8 @@ module Competitive
         per_page = params[:per_page]&.to_i || 20
         page     = params[:page]&.to_i     || 1
 
-        result = @pandascore_service.fetch_upcoming_matches(league: league, per_page: per_page, page: page, search: params[:search])
+        result = @pandascore_service.fetch_upcoming_matches(league: league, per_page: per_page, page: page,
+                                                            search: params[:search])
 
         total_pages = build_total_pages(result, page)
 
@@ -91,7 +92,8 @@ module Competitive
         per_page = params[:per_page]&.to_i || 20
         page     = params[:page]&.to_i     || 1
 
-        result = @pandascore_service.fetch_past_matches(league: league, per_page: per_page, page: page, search: params[:search])
+        result = @pandascore_service.fetch_past_matches(league: league, per_page: per_page, page: page,
+                                                        search: params[:search])
         total_pages = build_total_pages(result, page)
 
         render json: {
@@ -565,7 +567,7 @@ module Competitive
           t: "%#{term}%",
           n: "%#{norm_term}%",
           from: 'øæåðþ',
-          to:   'oaadt'
+          to: 'oaadt'
         )
       end
 

@@ -37,8 +37,8 @@ class RollingAucJob < ApplicationJob
     auc       = calculate_auc_roc(y_true, y_score)
     mean_prob = y_score.sum / y_score.size
 
-    persist_metrics(auc: auc.round(4), n: logs.size, mean_prob: mean_prob.round(4))
-    emit_alerts(auc: auc, mean_prob: mean_prob, n: logs.size)
+    persist_metrics(auc: auc.round(4), sample_size: logs.size, mean_prob: mean_prob.round(4))
+    emit_alerts(auc: auc, mean_prob: mean_prob, sample_size: logs.size)
 
     record_job_heartbeat
   rescue StandardError => e
@@ -65,16 +65,19 @@ class RollingAucJob < ApplicationJob
 
     sorted = y_true.zip(y_score).sort_by { |_, score| -score }
 
-    tp = 0; fp = 0; prev_fp = 0; auc = 0.0
+    tp = 0
+    fp = 0
+    prev_fp = 0
+    auc = 0.0
 
-    sorted.each do |label, _|
+    sorted.each_key do |label|
       if label == 1
         tp += 1
       else
         # Accumulate trapezoid area for the strip [prev_fp..fp]
         auc += tp.to_f * (fp - prev_fp + 1) / (n_pos * n_neg)
         prev_fp = fp
-        fp      += 1
+        fp += 1
       end
     end
 
@@ -84,21 +87,19 @@ class RollingAucJob < ApplicationJob
     [auc, 1.0].min
   end
 
-  def persist_metrics(auc:, n:, mean_prob:)
+  def persist_metrics(auc:, sample_size:, mean_prob:)
     Sidekiq.redis { |r| r.call('SET', 'ml:metrics:rolling_auc',   auc.to_s) }
-    Sidekiq.redis { |r| r.call('SET', 'ml:metrics:n_predictions', n.to_s) }
+    Sidekiq.redis { |r| r.call('SET', 'ml:metrics:n_predictions', sample_size.to_s) }
     Sidekiq.redis { |r| r.call('SET', 'ml:metrics:mean_win_prob', mean_prob.to_s) }
   rescue StandardError => e
     Rails.logger.warn("[RollingAucJob] Failed to persist metrics to Redis: #{e.message}")
   end
 
-  def emit_alerts(auc:, mean_prob:, n:)
-    if auc < 0.51
-      Rails.logger.warn("[RollingAucJob] ML rolling AUC degraded: #{auc} (n=#{n})")
-    end
+  def emit_alerts(auc:, mean_prob:, sample_size:)
+    Rails.logger.warn("[RollingAucJob] ML rolling AUC degraded: #{auc} (n=#{sample_size})") if auc < 0.51
 
-    if mean_prob < 0.48 || mean_prob > 0.58
-      Rails.logger.warn("[RollingAucJob] ML win prob drift: mean=#{mean_prob} (n=#{n})")
-    end
+    return unless mean_prob < 0.48 || mean_prob > 0.58
+
+    Rails.logger.warn("[RollingAucJob] ML win prob drift: mean=#{mean_prob} (n=#{sample_size})")
   end
 end

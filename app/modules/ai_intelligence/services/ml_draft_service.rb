@@ -40,14 +40,14 @@ class MlDraftService
     body = MlServiceClient.post('/win-probability', build_payload, timeout: REQUEST_TIMEOUT)
 
     unless body.is_a?(Hash) && body[:win_probability]
-      Rails.logger.warn("[MlDraftService] Unexpected response shape from ML service")
+      Rails.logger.warn('[MlDraftService] Unexpected response shape from ML service')
       return nil
     end
 
     {
       win_probability: body[:win_probability].to_f,
-      confidence:      body[:confidence].to_f,
-      source:          'ml_v2'
+      confidence: body[:confidence].to_f,
+      source: 'ml_v2'
     }
   rescue MlServiceClient::MlServiceDisabledError, MlServiceClient::MlCircuitOpenError
     # Kill switch active or circuit open — return nil silently (no error-level log)
@@ -63,9 +63,9 @@ class MlDraftService
     {
       team_a_picks: @team_a,
       team_b_picks: @team_b,
-      patch:        @patch,
-      league:       @league,
-      side:         @side
+      patch: @patch,
+      league: @league,
+      side: @side
     }
   end
 end

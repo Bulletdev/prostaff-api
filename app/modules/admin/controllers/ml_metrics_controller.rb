@@ -28,10 +28,10 @@ module Admin
       rescue StandardError => e
         Rails.logger.warn("[Admin::MlMetricsController] Failed to read metrics: #{e.message}")
         render_success({
-                         rolling_auc:   nil,
+                         rolling_auc: nil,
                          mean_win_prob: nil,
                          n_predictions: nil,
-                         circuit_open:  false
+                         circuit_open: false
                        })
       end
 
@@ -55,10 +55,10 @@ module Admin
           open_until = r.call('GET', MlServiceClient::CIRCUIT_OPEN_UNTIL_KEY).to_i
 
           {
-            rolling_auc:   auc_raw  ? auc_raw.to_f  : nil,
-            mean_win_prob: mean_raw ? mean_raw.to_f : nil,
-            n_predictions: n_raw    ? n_raw.to_i    : nil,
-            circuit_open:  open_until > Time.now.to_i
+            rolling_auc: auc_raw&.to_f,
+            mean_win_prob: mean_raw&.to_f,
+            n_predictions: n_raw&.to_i,
+            circuit_open: open_until > Time.now.to_i
           }
         end
       end

@@ -2,7 +2,7 @@
 
 class CreateDraftSimulations < ActiveRecord::Migration[7.2]
   def change
-    create_table :draft_simulations, id: :uuid, default: -> { "gen_random_uuid()" } do |t|
+    create_table :draft_simulations, id: :uuid, default: -> { 'gen_random_uuid()' } do |t|
       t.uuid   :organization_id, null: false
       t.string :series_id, null: false
       t.integer :game_number, null: false, default: 1
@@ -27,6 +27,6 @@ class CreateDraftSimulations < ActiveRecord::Migration[7.2]
     add_index :draft_simulations, :organization_id
     add_index :draft_simulations, :series_id
     add_index :draft_simulations, %i[organization_id series_id game_number], unique: true,
-              name: 'index_draft_simulations_on_org_series_game'
+                                                                             name: 'index_draft_simulations_on_org_series_game'
   end
 end
