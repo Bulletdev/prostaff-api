@@ -22,6 +22,9 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
     'prostaff.gg',
     'www.prostaff.gg',
     ENV.fetch('APP_HOST', nil),
+    # Internal service names: prostaff-events Reconciler calls the API using the
+    # Docker Compose service hostname (e.g. "api" or "api:3000") at boot time.
+    /\Aapi(:\d+)?\z/,
     # Internal IPs: Docker bridge, Coolify overlay, localhost — used by health check probes
     /\A(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?\z/
   ].compact
