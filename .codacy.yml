@@ -22,8 +22,7 @@ exclude_paths:
   # further down in the same script.
   - ".pentest/**"
 
-  # Monitoring infrastructure templates — credential-looking keys (smtp_auth_password,
-  # SMTP_PASSWORD) are env var references, not hardcoded secrets. KICS/credential
-  # scanners produce false positives on these files.
-  - "monitoring/alertmanager.yml"
+  # Monitoring infrastructure templates — SMTP environment variable references
+  # in docker-compose look like credentials to static scanners. alertmanager.yml
+  # is gitignored (only .example is tracked).
   - "docker-compose.monitoring.yml"
