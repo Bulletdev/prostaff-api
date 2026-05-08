@@ -2,6 +2,8 @@
 
 module RiotIntegration
   module Controllers
+    # Serves Riot static data (champions, items, version) from Data Dragon cache.
+    # Public endpoints skip authentication for client-side consumption.
     class RiotDataController < Api::V1::BaseController
       skip_before_action :authenticate_request!, only: %i[champions champion_details items version]
 
@@ -15,7 +17,7 @@ module RiotIntegration
                          count: champions.count
                        })
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to fetch champion data', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to fetch champion data', status: :service_unavailable, details: e.message)
       end
 
       # GET /api/v1/riot-data/champions/:champion_key
@@ -28,10 +30,10 @@ module RiotIntegration
                            champion: champion
                          })
         else
-          render_error('Champion not found', :not_found)
+          render_error(message: 'Champion not found', status: :not_found)
         end
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to fetch champion details', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to fetch champion details', status: :service_unavailable, details: e.message)
       end
 
       # GET /api/v1/riot-data/all-champions
@@ -44,7 +46,7 @@ module RiotIntegration
                          count: champions.count
                        })
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to fetch champions', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to fetch champions', status: :service_unavailable, details: e.message)
       end
 
       # GET /api/v1/riot-data/items
@@ -57,7 +59,7 @@ module RiotIntegration
                          count: items.count
                        })
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to fetch items', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to fetch items', status: :service_unavailable, details: e.message)
       end
 
       # GET /api/v1/riot-data/summoner-spells
@@ -70,7 +72,7 @@ module RiotIntegration
                          count: spells.count
                        })
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to fetch summoner spells', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to fetch summoner spells', status: :service_unavailable, details: e.message)
       end
 
       # GET /api/v1/riot-data/version
@@ -82,7 +84,7 @@ module RiotIntegration
                          version: version
                        })
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to fetch version', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to fetch version', status: :service_unavailable, details: e.message)
       end
 
       # POST /api/v1/riot-data/clear-cache
@@ -96,7 +98,7 @@ module RiotIntegration
           action: 'clear_cache',
           entity_type: 'RiotData',
           entity_id: nil,
-          details: { message: 'Data Dragon cache cleared' }
+          new_values: { message: 'Data Dragon cache cleared' }
         )
 
         render_success({
@@ -121,7 +123,7 @@ module RiotIntegration
           action: 'update_cache',
           entity_type: 'RiotData',
           entity_id: nil,
-          details: {
+          new_values: {
             version: version,
             champions_count: champions.count,
             items_count: items.count,
@@ -139,7 +141,7 @@ module RiotIntegration
                          }
                        })
       rescue DataDragonService::DataDragonError => e
-        render_error('Failed to update cache', :service_unavailable, details: e.message)
+        render_error(message: 'Failed to update cache', status: :service_unavailable, details: e.message)
       end
     end
   end

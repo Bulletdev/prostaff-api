@@ -62,11 +62,12 @@ RSpec.describe Player, type: :model do
     let(:organization) { create(:organization) }
     let!(:active_player) { create(:player, status: 'active', organization: organization) }
     let!(:benched_player) { create(:player, status: 'benched', organization: organization) }
+    let(:players) { Player.unscoped.where(organization: organization) }
 
     describe '.active' do
       it 'returns only active players' do
-        expect(Player.active).to include(active_player)
-        expect(Player.active).not_to include(benched_player)
+        expect(players.active).to include(active_player)
+        expect(players.active).not_to include(benched_player)
       end
     end
 
@@ -74,7 +75,7 @@ RSpec.describe Player, type: :model do
       let!(:mid_player) { create(:player, role: 'mid', organization: organization) }
 
       it 'filters players by role' do
-        expect(Player.by_role('mid')).to include(mid_player)
+        expect(players.by_role('mid')).to include(mid_player)
       end
     end
   end

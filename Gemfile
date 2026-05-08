@@ -3,10 +3,11 @@
 source 'https://rubygems.org'
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby '3.4.5'
+ruby '3.4.8'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails', '~> 7.2.0'
+gem 'rails', '~> 7.2.3', '>= 7.2.3.1'
+gem 'connection_pool', '< 3.0'
 
 # Use postgresql as the database for Active Record
 gem 'pg', '~> 1.1'
@@ -76,10 +77,22 @@ gem 'rswag-api'
 gem 'rswag-ui'
 
 # Elasticsearch client (for analytics queries)
-gem 'elasticsearch', '~> 9.1', '>= 9.1.3'
+gem 'elasticsearch', '~> 8.19'
+
+# Meilisearch — full-text search for players, organizations, scouting targets, etc.
+gem 'meilisearch', '~> 0.33'
 
 # LLM Integration for Support Chatbot
 gem 'ruby-openai', '~> 7.0'
+
+# S3-compatible storage for file uploads (Supabase Storage)
+gem 'aws-sdk-s3', '~> 1.0'
+
+# Linear algebra for AI draft analysis
+gem 'numo-narray', '~> 0.9'
+
+# Structured JSON logging (12-Factor XI)
+gem 'lograge'
 
 # HashID for URL obfuscation and shortening
 gem 'hashid-rails', '~> 1.0'
@@ -97,9 +110,14 @@ group :development do
   # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
   # gem "spring"
   gem 'annotate'
+  gem 'bullet'
   gem 'rubocop'
   gem 'rubocop-rails'
   gem 'rubocop-rspec'
+
+  # Security tooling — runs locally and in CI via bundle exec
+  gem 'brakeman', require: false
+  gem 'bundler-audit', '~> 0.9'
 
   # Deploy tools (only needed for deployment operations, not runtime)
   gem 'kamal', '~> 2.0'
@@ -107,6 +125,7 @@ end
 
 group :test do
   gem 'database_cleaner-active_record'
+  gem 'pundit-matchers'
   gem 'shoulda-matchers'
   gem 'simplecov', require: false
   gem 'vcr'

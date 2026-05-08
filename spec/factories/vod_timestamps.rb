@@ -20,6 +20,7 @@ FactoryBot.define do
 
     trait :good_play do
       category { 'good_play' }
+      importance { 'normal' }
     end
 
     trait :critical do

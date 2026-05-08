@@ -3,9 +3,9 @@
 require 'swagger_helper'
 
 RSpec.describe 'Scrims API', type: :request do
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, tier: 'tier_2_semi_pro') }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Scrims
@@ -83,8 +83,8 @@ RSpec.describe 'Scrims API', type: :request do
       end
 
       response '422', 'validation error' do
-        schema '$ref' => '#/components/schemas/Error'
-        let(:scrim) { { scrim: { format: '' } } }
+        schema type: :object, properties: { errors: { type: :array, items: { type: :string } } }
+        let(:scrim) { { scrim: { scrim_type: 'invalid_type' } } }
         run_test!
       end
     end
@@ -101,7 +101,7 @@ RSpec.describe 'Scrims API', type: :request do
 
       response '200', 'calendar returned' do
         schema type: :object,
-               properties: { data: { type: :array, items: { type: :object } } }
+               properties: { data: { type: :object } }
         run_test!
       end
     end
@@ -144,12 +144,12 @@ RSpec.describe 'Scrims API', type: :request do
       response '200', 'scrim found' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:scrim, organization: organization).id }
         run_test!
       end
 
       response '404', 'scrim not found' do
-        schema '$ref' => '#/components/schemas/Error'
+        schema type: :object, properties: { error: { type: :string } }
         let(:id) { 'nonexistent' }
         run_test!
       end
@@ -178,7 +178,7 @@ RSpec.describe 'Scrims API', type: :request do
       response '200', 'scrim updated' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:scrim, organization: organization).id }
         let(:scrim) { { scrim: { notes: 'Updated notes' } } }
         run_test!
       end
@@ -191,10 +191,8 @@ RSpec.describe 'Scrims API', type: :request do
 
       parameter name: :id, in: :path, type: :string, required: true
 
-      response '200', 'scrim deleted' do
-        schema type: :object,
-               properties: { message: { type: :string } }
-        let(:id) { 'nonexistent' }
+      response '204', 'scrim deleted' do
+        let(:id) { create(:scrim, organization: organization).id }
         run_test!
       end
     end
@@ -224,11 +222,11 @@ RSpec.describe 'Scrims API', type: :request do
         }
       }
 
-      response '201', 'game added' do
+      response '200', 'game added' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
-        let(:game) { { game: { result: 'win', side: 'blue' } } }
+        let(:id) { create(:scrim, organization: organization).id }
+        let(:game) { { victory: true, duration: 1800 } }
         run_test!
       end
     end
@@ -287,7 +285,7 @@ RSpec.describe 'Scrims API', type: :request do
       response '201', 'opponent team created' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:opponent_team) { { opponent_team: { name: 'Team Rival', region: 'BR', tier: 'semi_pro' } } }
+        let(:opponent_team) { { opponent_team: { name: 'Team Rival', region: 'BR', tier: 'tier_2' } } }
         run_test!
       end
     end
@@ -304,7 +302,7 @@ RSpec.describe 'Scrims API', type: :request do
       response '200', 'opponent team found' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:opponent_team).id }
         run_test!
       end
     end
@@ -332,7 +330,9 @@ RSpec.describe 'Scrims API', type: :request do
       response '200', 'opponent team updated' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let!(:opp) { create(:opponent_team) }
+        let!(:_scrim) { create(:scrim, organization: organization, opponent_team: opp) }
+        let(:id) { opp.id }
         let(:opponent_team) { { opponent_team: { name: 'Updated Name' } } }
         run_test!
       end
@@ -345,10 +345,10 @@ RSpec.describe 'Scrims API', type: :request do
 
       parameter name: :id, in: :path, type: :string, required: true
 
-      response '200', 'opponent team deleted' do
-        schema type: :object,
-               properties: { message: { type: :string } }
-        let(:id) { 'nonexistent' }
+      response '204', 'opponent team deleted' do
+        let!(:opp) { create(:opponent_team) }
+        let!(:_scrim) { create(:scrim, organization: organization, opponent_team: opp) }
+        let(:id) { opp.id }
         run_test!
       end
     end
@@ -381,7 +381,7 @@ RSpec.describe 'Scrims API', type: :request do
                    }
                  }
                }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:opponent_team).id }
         run_test!
       end
     end

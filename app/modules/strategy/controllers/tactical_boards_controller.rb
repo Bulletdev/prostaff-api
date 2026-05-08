@@ -1,152 +1,205 @@
 # frozen_string_literal: true
 
-module Api
-  module V1
-    module Strategy
-      # Tactical Boards Controller
-      # Manages tactical board snapshots with player positions and annotations
-      class TacticalBoardsController < Api::V1::BaseController
-        before_action :set_tactical_board, only: %i[show update destroy statistics]
+module Strategy
+  module Controllers
+    # Tactical Boards Controller
+    # Manages tactical board snapshots with player positions and annotations
+    class TacticalBoardsController < Api::V1::BaseController
+      before_action :set_tactical_board, only: %i[show update destroy statistics]
 
-        # GET /api/v1/strategy/tactical_boards
-        def index
-          boards = organization_scoped(TacticalBoard).includes(:created_by, :updated_by, :match, :scrim)
-          boards = apply_filters(boards)
-          boards = apply_sorting(boards)
+      # GET /api/v1/strategy/tactical_boards
+      def index
+        boards = organization_scoped(TacticalBoard).includes(:organization, :created_by, :updated_by, :match, :scrim)
+        boards = apply_filters(boards)
+        boards = apply_sorting(boards)
 
-          result = paginate(boards)
+        result = paginate(boards)
 
-          render_success({
-                           tactical_boards: Strategy::Serializers::TacticalBoardSerializer.render_as_hash(result[:data]),
-                           total: result[:pagination][:total_count],
-                           page: result[:pagination][:current_page],
-                           per_page: result[:pagination][:per_page],
-                           total_pages: result[:pagination][:total_pages]
-                         })
-        end
+        render_success({
+                         tactical_boards: TacticalBoardSerializer.render_as_hash(result[:data]),
+                         total: result[:pagination][:total_count],
+                         page: result[:pagination][:current_page],
+                         per_page: result[:pagination][:per_page],
+                         total_pages: result[:pagination][:total_pages]
+                       })
+      end
 
-        # GET /api/v1/strategy/tactical_boards/:id
-        def show
-          render_success({
-                           tactical_board: Strategy::Serializers::TacticalBoardSerializer.render_as_hash(@tactical_board)
-                         })
-        end
+      # GET /api/v1/strategy/tactical_boards/:id
+      def show
+        render_success({
+                         tactical_board: TacticalBoardSerializer.render_as_hash(@tactical_board)
+                       })
+      end
 
-        # POST /api/v1/strategy/tactical_boards
-        def create
-          board = organization_scoped(TacticalBoard).new(tactical_board_params)
-          board.organization = current_organization
-          board.created_by = current_user
-          board.updated_by = current_user
+      # POST /api/v1/strategy/tactical_boards
+      def create
+        board_params = tactical_board_params
+        board = organization_scoped(TacticalBoard).new
+        board.assign_attributes(board_params.to_h)
+        board.organization = current_organization
+        board.created_by = current_user
+        board.updated_by = current_user
 
-          if board.save
-            log_user_action(
-              action: 'create',
-              entity_type: 'TacticalBoard',
-              entity_id: board.id,
-              new_values: board.attributes
-            )
+        if board.save
+          log_user_action(
+            action: 'create',
+            entity_type: 'TacticalBoard',
+            entity_id: board.id,
+            new_values: board.attributes
+          )
 
-            render_created({
-                             tactical_board: Strategy::Serializers::TacticalBoardSerializer.render_as_hash(board)
-                           }, message: 'Tactical board created successfully')
-          else
-            render_error(
-              message: 'Failed to create tactical board',
-              code: 'VALIDATION_ERROR',
-              status: :unprocessable_entity,
-              details: board.errors.as_json
-            )
-          end
-        end
-
-        # PATCH /api/v1/strategy/tactical_boards/:id
-        def update
-          old_values = @tactical_board.attributes.dup
-          @tactical_board.updated_by = current_user
-
-          if @tactical_board.update(tactical_board_params)
-            log_user_action(
-              action: 'update',
-              entity_type: 'TacticalBoard',
-              entity_id: @tactical_board.id,
-              old_values: old_values,
-              new_values: @tactical_board.attributes
-            )
-
-            render_updated({
-                             tactical_board: Strategy::Serializers::TacticalBoardSerializer.render_as_hash(@tactical_board)
-                           })
-          else
-            render_error(
-              message: 'Failed to update tactical board',
-              code: 'VALIDATION_ERROR',
-              status: :unprocessable_entity,
-              details: @tactical_board.errors.as_json
-            )
-          end
-        end
-
-        # DELETE /api/v1/strategy/tactical_boards/:id
-        def destroy
-          if @tactical_board.destroy
-            log_user_action(
-              action: 'delete',
-              entity_type: 'TacticalBoard',
-              entity_id: @tactical_board.id,
-              old_values: @tactical_board.attributes
-            )
-
-            render_deleted(message: 'Tactical board deleted successfully')
-          else
-            render_error(
-              message: 'Failed to delete tactical board',
-              code: 'DELETE_ERROR',
-              status: :unprocessable_entity
-            )
-          end
-        end
-
-        # GET /api/v1/strategy/tactical_boards/:id/statistics
-        def statistics
-          stats = @tactical_board.statistics
-
-          render_success({
-                           tactical_board_id: @tactical_board.id,
-                           statistics: stats
-                         })
-        end
-
-        private
-
-        def set_tactical_board
-          @tactical_board = organization_scoped(TacticalBoard).find(params[:id])
-        end
-
-        def apply_filters(boards)
-          boards = boards.for_match(params[:match_id]) if params[:match_id].present?
-          boards = boards.for_scrim(params[:scrim_id]) if params[:scrim_id].present?
-          boards = boards.by_time(params[:game_time]) if params[:game_time].present?
-          boards
-        end
-
-        def apply_sorting(boards)
-          sort_by = params[:sort_by] || 'created_at'
-          sort_order = params[:sort_order]&.downcase == 'asc' ? :asc : :desc
-
-          boards.order(sort_by => sort_order)
-        end
-
-        def tactical_board_params
-          params.require(:tactical_board).permit(
-            :title,
-            :match_id,
-            :scrim_id,
-            :game_time,
-            map_state: {},
-            annotations: []
+          render_created({
+                           tactical_board: TacticalBoardSerializer.render_as_hash(board)
+                         }, message: 'Tactical board created successfully')
+        else
+          render_error(
+            message: 'Failed to create tactical board',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: board.errors.as_json
           )
         end
+      end
+
+      # PATCH /api/v1/strategy/tactical_boards/:id
+      def update
+        old_values = @tactical_board.attributes.dup
+        @tactical_board.updated_by = current_user
+
+        if @tactical_board.update(tactical_board_params)
+          log_user_action(
+            action: 'update',
+            entity_type: 'TacticalBoard',
+            entity_id: @tactical_board.id,
+            old_values: old_values,
+            new_values: @tactical_board.attributes
+          )
+
+          render_updated({
+                           tactical_board: TacticalBoardSerializer.render_as_hash(@tactical_board)
+                         })
+        else
+          render_error(
+            message: 'Failed to update tactical board',
+            code: 'VALIDATION_ERROR',
+            status: :unprocessable_entity,
+            details: @tactical_board.errors.as_json
+          )
+        end
+      end
+
+      # DELETE /api/v1/strategy/tactical_boards/:id
+      def destroy
+        if @tactical_board.destroy
+          log_user_action(
+            action: 'delete',
+            entity_type: 'TacticalBoard',
+            entity_id: @tactical_board.id,
+            old_values: @tactical_board.attributes
+          )
+
+          render_deleted(message: 'Tactical board deleted successfully')
+        else
+          render_error(
+            message: 'Failed to delete tactical board',
+            code: 'DELETE_ERROR',
+            status: :unprocessable_entity
+          )
+        end
+      end
+
+      # GET /api/v1/strategy/tactical_boards/:id/statistics
+      def statistics
+        stats = @tactical_board.statistics
+
+        render_success({
+                         tactical_board_id: @tactical_board.id,
+                         statistics: stats
+                       })
+      end
+
+      private
+
+      def set_tactical_board
+        @tactical_board = organization_scoped(TacticalBoard).find(params[:id])
+      end
+
+      def apply_filters(boards)
+        boards = boards.for_match(params[:match_id]) if params[:match_id].present?
+        boards = boards.for_scrim(params[:scrim_id]) if params[:scrim_id].present?
+        boards = boards.by_time(params[:game_time]) if params[:game_time].present?
+        boards
+      end
+
+      def apply_sorting(boards)
+        sort_by = params[:sort_by] || 'created_at'
+        sort_order = params[:sort_order]&.downcase == 'asc' ? :asc : :desc
+
+        boards.order(sort_by => sort_order)
+      end
+
+      def tactical_board_params
+        # Always prefer the nested tactical_board hash when present — even partial updates
+        # (e.g. map_state only, no title) must read from tb, not from top-level params.
+        # Falling back to top-level params only when no tactical_board key is sent at all.
+        source = params[:tactical_board].present? ? params[:tactical_board] : params
+        permitted = build_base_params(source)
+        merge_map_state(permitted, source)
+        merge_annotations(permitted, source)
+        merge_champion_selections(permitted, source)
+        permitted
+      end
+
+      def build_base_params(source)
+        {
+          title: source[:title] || source[:name],
+          match_id: source[:match_id],
+          scrim_id: source[:scrim_id],
+          game_time: source[:game_time]
+        }.compact
+      end
+
+      def merge_map_state(permitted, source)
+        map = source[:map_state] || source[:board_state]
+        permitted[:map_state] = map.as_json if map.present?
+      end
+
+      def merge_annotations(permitted, source)
+        permitted[:annotations] = source[:annotations].as_json if source[:annotations].present?
+      end
+
+      def merge_champion_selections(permitted, source)
+        selections = source[:champion_selections]
+        return unless selections.present? && selections.is_a?(Array)
+
+        existing_players = permitted.dig(:map_state, 'players') || []
+        permitted[:map_state] ||= { 'players' => [] }
+        permitted[:map_state]['players'] = build_player_slots(selections, existing_players)
+      end
+
+      def build_player_slots(selections, existing_players)
+        selections.map.with_index do |selection, idx|
+          existing = existing_players[idx] || {}
+          build_player_slot(selection, existing)
+        end
+      end
+
+      # board_state (existing) represents the live canvas after a drag — it
+      # always wins for position. champion_selections x/y is only a fallback
+      # for the initial placement when board_state has no entry yet.
+      def build_player_slot(selection, existing)
+        sel_x = selection[:x].nil? ? selection['x'] : selection[:x]
+        sel_y = selection[:y].nil? ? selection['y'] : selection[:y]
+        {
+          'champion' => fetch_first_value(selection[:champion], selection['champion'], existing['champion']),
+          'role' => fetch_first_value(selection[:role], selection['role'], existing['role']),
+          'x' => (existing['x'] || sel_x || 50).to_f,
+          'y' => (existing['y'] || sel_y || 50).to_f
+        }
+      end
+
+      def fetch_first_value(*candidates)
+        candidates.find { |val| !val.nil? }
       end
     end
   end

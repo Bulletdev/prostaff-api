@@ -92,7 +92,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
         with:
-          ruby-version: 3.4.5
+          ruby-version: 3.4.8
           bundler-cache: true
 
       - name: Install dependencies
@@ -236,7 +236,7 @@ jobs:
 
     steps:
       - name: Manual approval checkpoint
-        run: |
+        run: | # nosemgrep: yaml.github-actions.security.run-shell-injection.run-shell-injection
           echo "=================================="
           echo "🚨 PRODUCTION DEPLOYMENT"
           echo "=================================="
@@ -302,7 +302,7 @@ jobs:
 
             # Create comprehensive backup
             echo "💾 Creating full database backup..."
-            docker-compose -f docker-compose.production.yml run --rm backup
+            docker-compose -f docker/docker-compose.production.yml run --rm backup
 
             # Verify backup
             LATEST_BACKUP=$(ls -t backups/*.sql.gz | head -1)
@@ -319,7 +319,7 @@ jobs:
 
             # Pull new images
             echo "📦 Pulling production images..."
-            docker-compose -f docker-compose.production.yml pull
+            docker-compose -f docker/docker-compose.production.yml pull
 
             # Pre-migration health check
             echo "🏥 Pre-deployment health check..."
@@ -327,13 +327,13 @@ jobs:
 
             # Run migrations in a separate container first (test run)
             echo "🧪 Testing migrations..."
-            docker-compose -f docker-compose.production.yml run --rm api bundle exec rails db:migrate:status
+            docker-compose -f docker/docker-compose.production.yml run --rm api bundle exec rails db:migrate:status
 
             # Deploy with rolling update
             echo "🔄 Deploying new version with zero downtime..."
-            docker-compose -f docker-compose.production.yml up -d --no-deps --scale api=4 api
+            docker-compose -f docker/docker-compose.production.yml up -d --no-deps --scale api=4 api
             sleep 5
-            docker-compose -f docker-compose.production.yml up -d --no-deps --scale api=2 --remove-orphans api
+            docker-compose -f docker/docker-compose.production.yml up -d --no-deps --scale api=2 --remove-orphans api
 
             # Wait for new containers to be healthy
             echo "⏳ Waiting for new instances to be healthy..."
@@ -341,11 +341,11 @@ jobs:
 
             # Run migrations on production
             echo "📊 Running database migrations..."
-            docker-compose -f docker-compose.production.yml exec -T api bundle exec rails db:migrate
+            docker-compose -f docker/docker-compose.production.yml exec -T api bundle exec rails db:migrate
 
             # Restart all services
             echo "🔄 Restarting all services..."
-            docker-compose -f docker-compose.production.yml restart sidekiq
+            docker-compose -f docker/docker-compose.production.yml restart sidekiq
 
             # Extended health check
             echo "🏥 Running comprehensive health checks..."
@@ -367,9 +367,9 @@ jobs:
               # Rollback
               ROLLBACK_VERSION=$(cat .rollback_version)
               echo "🔄 Rolling back to: $ROLLBACK_VERSION"
-              docker-compose -f docker-compose.production.yml down
+              docker-compose -f docker/docker-compose.production.yml down
               # Restore previous version
-              docker-compose -f docker-compose.production.yml up -d
+              docker-compose -f docker/docker-compose.production.yml up -d
 
               exit 1
             fi
@@ -392,7 +392,7 @@ jobs:
           # Health check
           for i in {1..5}; do
             if curl -f https://api.prostaff.gg/up; then
-              echo "✅ Health check passed"
+              echo "Health check passed"
               break
             else
               echo "Retry $i/5..."
@@ -404,7 +404,59 @@ jobs:
           echo "Checking API version..."
           curl -s https://api.prostaff.gg/api/health | jq '.' || true
 
-          echo "✅ All post-deployment checks passed!"
+          echo "All post-deployment checks passed!"
+
+      - name: CORS smoke test
+        # Gap 6 from FAILURE_MODE_ANALYSIS.md: verify CORS is not broken after deploy.
+        # Sends a preflight request from each allowed origin and checks that the
+        # Access-Control-Allow-Origin header matches. Fails the pipeline if CORS is
+        # misconfigured, so frontend teams are notified before users are affected.
+        env:
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+        run: |
+          echo "Running CORS smoke test..."
+
+          API_URL="https://api.prostaff.gg"
+          ORIGINS="${CORS_ORIGINS:-https://app.prostaff.gg,https://prostaff.gg}"
+          FAILED=0
+
+          IFS=',' read -ra ORIGIN_LIST <<< "$ORIGINS"
+          for ORIGIN in "${ORIGIN_LIST[@]}"; do
+            ORIGIN="${ORIGIN// /}"
+            echo "  Testing origin: $ORIGIN"
+
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X OPTIONS \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization" \
+              "$API_URL/api/v1/constants")
+
+            ALLOW_ORIGIN=$(curl -sI \
+              -X OPTIONS \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization" \
+              "$API_URL/api/v1/constants" | grep -i "access-control-allow-origin" | tr -d '\r\n')
+
+            echo "    HTTP status: $RESPONSE"
+            echo "    $ALLOW_ORIGIN"
+
+            if echo "$ALLOW_ORIGIN" | grep -qi "$ORIGIN\|\*"; then
+              echo "    CORS OK for $ORIGIN"
+            else
+              echo "    CORS FAILED for $ORIGIN — missing Access-Control-Allow-Origin header"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "CORS smoke test FAILED for $FAILED origin(s)"
+            echo "Check CORS_ORIGINS environment variable and cors.rb initializer"
+            exit 1
+          fi
+
+          echo "CORS smoke test passed for all origins"
 
       - name: Create GitHub Release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e  # v1
@@ -438,7 +490,7 @@ jobs:
           echo "1. SSH to production server"
           echo "2. cd /var/www/prostaff-api"
           echo "3. git checkout <previous-tag>"
-          echo "4. docker-compose -f docker-compose.production.yml up -d --force-recreate"
+          echo "4. docker-compose -f docker/docker-compose.production.yml up -d --force-recreate"
           echo "5. Restore database backup if needed"
 
   notify:
@@ -459,7 +511,7 @@ jobs:
           fi
 
       - name: Display notification
-        run: |
+        run: | # nosemgrep: yaml.github-actions.security.run-shell-injection.run-shell-injection
           echo "=============================================="
           echo "${{ env.STATUS }}"
           echo "${{ env.MESSAGE }}"

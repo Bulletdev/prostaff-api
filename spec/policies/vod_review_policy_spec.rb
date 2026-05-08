@@ -74,7 +74,7 @@ RSpec.describe VodReviewPolicy, type: :policy do
     let!(:other_vod_review) { create(:vod_review, organization: create(:organization)) }
 
     it 'includes vod reviews from user organization' do
-      scope = described_class::Scope.new(user, VodReview).resolve
+      scope = described_class::Scope.new(user, VodReview.unscoped).resolve
       expect(scope).to include(vod_review1, vod_review2)
       expect(scope).not_to include(other_vod_review)
     end
@@ -83,7 +83,7 @@ RSpec.describe VodReviewPolicy, type: :policy do
       let!(:viewer) { create(:user, :viewer, organization: organization) }
 
       it 'excludes vod reviews for viewers' do
-        scope = described_class::Scope.new(viewer, VodReview).resolve
+        scope = described_class::Scope.new(viewer, VodReview.unscoped).resolve
         expect(scope).to be_empty
       end
     end

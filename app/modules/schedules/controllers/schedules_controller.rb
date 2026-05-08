@@ -2,11 +2,12 @@
 
 module Schedules
   module Controllers
+    # CRUD API for practice and match schedules within an organization.
     class SchedulesController < Api::V1::BaseController
       before_action :set_schedule, only: %i[show update destroy]
 
       def index
-        schedules = apply_schedule_filters(organization_scoped(Schedule).includes(:match))
+        schedules = apply_schedule_filters(organization_scoped(Schedule).includes(:organization, :match))
         schedules = apply_schedule_sorting(schedules)
         result = paginate(schedules)
 

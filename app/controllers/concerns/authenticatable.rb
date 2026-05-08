@@ -22,50 +22,61 @@ module Authenticatable
       return
     end
 
-    begin
-      @jwt_payload = Authentication::Services::JwtService.decode(token)
+    perform_authentication(token)
+  end
 
-      if @jwt_payload[:entity_type] == 'player'
-        # ── Player token ──────────────────────────────────────────────────────
-        @current_player       = Player.unscoped.find(@jwt_payload[:player_id])
-        @current_organization = Organization.find(@jwt_payload[:organization_id])
+  def perform_authentication(token)
+    @jwt_payload = JwtService.decode(token)
+    raise JwtService::TokenInvalidError, 'Invalid token type' unless valid_access_token_type?(@jwt_payload)
 
-        Current.organization_id = @current_organization.id
-        Rails.logger.info("[AUTH] Player token: player_id=#{@current_player.id} org=#{@current_organization.id}")
-        return
-      end
+    dispatch_token_authentication
+  rescue JwtService::AuthenticationError => e
+    Rails.logger.error("JWT Authentication error: #{e.class} - #{e.message}")
+    render_unauthorized(e.message)
+  rescue ActiveRecord::RecordNotFound => e
+    Rails.logger.error("User not found during authentication: #{e.message}")
+    render_unauthorized('User not found')
+  rescue StandardError => e
+    handle_unexpected_auth_error(e)
+  end
 
-      # ── Regular user token ────────────────────────────────────────────────
-      # Bypass RLS for authentication queries - we need to find the user before we can set RLS context
-      @current_user = User.unscoped.find(@jwt_payload[:user_id])
-      @current_organization = @current_user.organization
-
-      # Set request-scoped attributes for OrganizationScoped models (thread-safe)
-      Current.organization_id = @current_organization.id
-      Current.user_id = @current_user.id
-      Current.user_role = @current_user.role
-
-      # Debug log in production to verify Current is being set
-      Rails.logger.info("[AUTH] Set Current.organization_id=#{Current.organization_id} for user #{@current_user.email}")
-
-      # Update last login time (uses update_column which skips callbacks/audit logs)
-      @current_user.update_last_login! if should_update_last_login?
-    rescue Authentication::Services::JwtService::AuthenticationError => e
-      Rails.logger.error("JWT Authentication error: #{e.class} - #{e.message}")
-      render_unauthorized(e.message)
-    rescue ActiveRecord::RecordNotFound => e
-      Rails.logger.error("User not found during authentication: #{e.message}")
-      render_unauthorized('User not found')
-    rescue StandardError => e
-      Rails.logger.error("Unexpected authentication error: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n"))
-      render json: {
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'An internal error occurred'
-        }
-      }, status: :internal_server_error
+  def dispatch_token_authentication
+    # Reject refresh tokens used as access tokens.
+    # Refresh tokens carry type: 'refresh' and must never authenticate a request.
+    # Player access tokens carry entity_type: 'player' AND type: 'access'.
+    if @jwt_payload[:entity_type] == 'player'
+      authenticate_player_token
+    else
+      authenticate_user_token
     end
+  end
+
+  def handle_unexpected_auth_error(error)
+    Rails.logger.error("Unexpected authentication error: #{error.class} - #{error.message}")
+    Rails.logger.error(error.backtrace.join("\n"))
+    render json: { error: { code: 'INTERNAL_ERROR', message: 'An internal error occurred' } },
+           status: :internal_server_error
+  end
+
+  def authenticate_player_token
+    # Free agents (auto-cadastro via ArenaBR) têm organization_id: nil
+    @current_player = Player.unscoped.find(@jwt_payload[:player_id])
+    org_id = @jwt_payload[:organization_id]
+    @current_organization = org_id.present? ? Organization.find(org_id) : nil
+    Current.organization_id = @current_organization&.id
+    org_label = @current_organization&.id || 'free_agent'
+    Rails.logger.info("[AUTH] Player token: player_id=#{@current_player.id} org=#{org_label}")
+  end
+
+  def authenticate_user_token
+    # Bypass RLS for authentication queries - we need to find the user before we can set RLS context
+    @current_user = User.unscoped.find(@jwt_payload[:user_id])
+    @current_organization = @current_user.organization
+    Current.organization_id = @current_organization.id
+    Current.user_id = @current_user.id
+    Current.user_role = @current_user.role
+    Rails.logger.info("[AUTH] Set Current.organization_id=#{Current.organization_id} for user #{@current_user.email}")
+    @current_user.update_last_login! if should_update_last_login?
   end
 
   def extract_token_from_header
@@ -122,6 +133,13 @@ module Authenticatable
     render_forbidden("Required role: #{allowed_roles.join(' or ')}")
   end
 
+  # Rejects player tokens — for endpoints that are staff-only (e.g. chat members)
+  def require_user_auth!
+    return if user_signed_in?
+
+    render_forbidden('User authentication required — player tokens are not accepted here')
+  end
+
   def organization_scoped(model_class)
     model_class.where(organization: current_organization)
   end
@@ -132,6 +150,18 @@ module Authenticatable
 
   def set_current_organization
     # This method can be overridden in controllers if needed
+  end
+
+  # Returns true only for tokens that are valid for authenticating API requests.
+  #
+  # Refresh tokens (type: 'refresh') must be rejected even if they are otherwise
+  # well-formed and not expired. Player access tokens carry entity_type: 'player'
+  # AND type: 'access'; user access tokens carry type: 'access'.
+  #
+  # @param payload [HashWithIndifferentAccess] Decoded JWT payload
+  # @return [Boolean]
+  def valid_access_token_type?(payload)
+    payload[:type] == 'access'
   end
 
   def should_update_last_login?

@@ -135,15 +135,29 @@ export default function(data) {
 
       sleep(2);
 
-      const statsRes = http.get(
-        `${config.baseUrl}${config.endpoints.players.stats}`,
-        { headers }
-      );
-      apiCalls.add(1);
+      if (playersRes.status === 200) {
+        try {
+          const body = JSON.parse(playersRes.body);
+          const players = body.data || body;
 
-      check(statsRes, {
-        'player stats loaded': (r) => r.status === 200,
-      }) || errorRate.add(1);
+          if (Array.isArray(players) && players.length > 0) {
+            const randomPlayer = players[Math.floor(Math.random() * players.length)];
+
+            const statsRes = http.get(
+              `${config.baseUrl}${config.endpoints.players.show(randomPlayer.id)}/stats`,
+              { headers }
+            );
+            apiCalls.add(1);
+
+            check(statsRes, {
+              'player stats loaded': (r) => r.status === 200,
+            }) || errorRate.add(1);
+          }
+        } catch (e) {
+          console.error('Failed to parse players for stats:', e);
+          errorRate.add(1);
+        }
+      }
 
       sleep(3);
     });

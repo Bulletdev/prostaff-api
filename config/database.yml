@@ -17,6 +17,12 @@
 default: &default
   adapter: postgresql
   encoding: unicode
+  # Supabase transaction pooler (port 6543) does not support prepared statements.
+  # Disabling here prevents PG::DuplicatePstatement errors across all envs.
+  prepared_statements: false
+  # PgBouncer transaction mode doesn't support session-level advisory locks.
+  # Disabling prevents ConcurrentMigrationError on container restarts.
+  advisory_locks: false
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   # DB_POOL lets you set a higher pool for Sidekiq without raising Puma threads.
@@ -76,15 +82,9 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  # SAFETY: NEVER use DATABASE_URL in test - ALWAYS localhost only
-  # This is hardcoded to prevent accidental production database access
-  database: prostaff_api_test
-  host: localhost
-  port: 5432
-  username: postgres
-  password: password
-  # Explicitly ignore DATABASE_URL for test environment
-  url: postgresql://postgres:password@localhost:5432/prostaff_api_test
+  # TEST_DATABASE_URL allows overriding for CI/staging runs (e.g. Supabase staging branch).
+  # Falls back to localhost-only default to prevent accidental production DB access.
+  url: <%= ENV['TEST_DATABASE_URL'] || 'postgresql://postgres:postgres@127.0.0.1:5432/prostaff_api_test' %>
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is

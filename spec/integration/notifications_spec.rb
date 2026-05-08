@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Notifications API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Notifications
@@ -123,7 +123,7 @@ RSpec.describe 'Notifications API', type: :request do
       response '200', 'notification found' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:notification, user: user).id }
         run_test!
       end
 
@@ -144,7 +144,7 @@ RSpec.describe 'Notifications API', type: :request do
       response '200', 'notification deleted' do
         schema type: :object,
                properties: { message: { type: :string } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:notification, user: user).id }
         run_test!
       end
 
@@ -167,7 +167,7 @@ RSpec.describe 'Notifications API', type: :request do
       response '200', 'notification marked as read' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:notification, user: user).id }
         run_test!
       end
 

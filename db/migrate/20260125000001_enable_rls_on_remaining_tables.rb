@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
   def up
     # Enable RLS on organization-scoped tables
@@ -17,21 +18,21 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     enable_rls_on_table(:support_faqs)
     enable_rls_on_table(:organizations)
 
-    # Enable RLS on Rails internal tables (block all API access)
-    enable_rls_on_table(:ar_internal_metadata)
-    enable_rls_on_table(:schema_migrations)
+    # NOTE: schema_migrations and ar_internal_metadata intentionally excluded.
+    # Adding FORCE RLS with deny-all to Rails internal tables breaks db:migrate
+    # on every deploy. These tables are not exposed via any API and need no RLS.
 
     # ===========================================================================
     # SUPPORT TICKETS - Organization scoped
     # ===========================================================================
     create_policy(:support_tickets, :select, 'support_tickets_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:support_tickets, :insert, 'support_tickets_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:support_tickets, :update, 'support_tickets_update_policy',
-      'organization_id = public.user_organization_id() AND (public.is_admin() OR user_id = public.current_user_id())')
+                  'organization_id = public.user_organization_id() AND (public.is_admin() OR user_id = public.current_user_id())')
     create_policy(:support_tickets, :delete, 'support_tickets_delete_policy',
-      'organization_id = public.user_organization_id() AND public.is_admin()')
+                  'organization_id = public.user_organization_id() AND public.is_admin()')
 
     # ===========================================================================
     # SUPPORT TICKET MESSAGES - Scoped via support_tickets relationship
@@ -90,25 +91,25 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     # DRAFT PLANS - Organization scoped
     # ===========================================================================
     create_policy(:draft_plans, :select, 'draft_plans_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:draft_plans, :insert, 'draft_plans_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:draft_plans, :update, 'draft_plans_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:draft_plans, :delete, 'draft_plans_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # ===========================================================================
     # TACTICAL BOARDS - Organization scoped
     # ===========================================================================
     create_policy(:tactical_boards, :select, 'tactical_boards_select_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:tactical_boards, :insert, 'tactical_boards_insert_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:tactical_boards, :update, 'tactical_boards_update_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
     create_policy(:tactical_boards, :delete, 'tactical_boards_delete_policy',
-      'organization_id = public.user_organization_id()')
+                  'organization_id = public.user_organization_id()')
 
     # ===========================================================================
     # PASSWORD RESET TOKENS - Scoped via user relationship
@@ -211,7 +212,7 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     SQL
 
     create_policy(:opponent_teams, :insert, 'opponent_teams_insert_policy',
-      'public.user_organization_id() IS NOT NULL')
+                  'public.user_organization_id() IS NOT NULL')
 
     execute <<-SQL
       CREATE POLICY opponent_teams_update_policy ON opponent_teams
@@ -295,25 +296,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
       FOR DELETE
       USING (false);
     SQL
-
-    # ===========================================================================
-    # RAILS INTERNAL TABLES - Block all API access
-    # These should never be accessible via PostgREST/API
-    # ===========================================================================
-
-    # ar_internal_metadata - Rails internal
-    execute <<-SQL
-      CREATE POLICY ar_internal_metadata_deny_all ON ar_internal_metadata
-      FOR ALL
-      USING (false);
-    SQL
-
-    # schema_migrations - Rails internal
-    execute <<-SQL
-      CREATE POLICY schema_migrations_deny_all ON schema_migrations
-      FOR ALL
-      USING (false);
-    SQL
   end
 
   def down
@@ -371,10 +353,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     drop_policy(:organizations, 'organizations_update_policy')
     drop_policy(:organizations, 'organizations_delete_policy')
 
-    # Drop policies for Rails internal tables
-    drop_policy(:ar_internal_metadata, 'ar_internal_metadata_deny_all')
-    drop_policy(:schema_migrations, 'schema_migrations_deny_all')
-
     # Disable RLS
     disable_rls_on_table(:support_tickets)
     disable_rls_on_table(:support_ticket_messages)
@@ -385,8 +363,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     disable_rls_on_table(:opponent_teams)
     disable_rls_on_table(:support_faqs)
     disable_rls_on_table(:organizations)
-    disable_rls_on_table(:ar_internal_metadata)
-    disable_rls_on_table(:schema_migrations)
   end
 
   private
@@ -415,3 +391,5 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
     execute "DROP POLICY IF EXISTS #{policy_name} ON #{table_name};"
   end
 end
+
+# rubocop:enable Metrics/ClassLength

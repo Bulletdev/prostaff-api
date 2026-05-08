@@ -2,6 +2,7 @@
 
 module Dashboard
   module Controllers
+    # Aggregates team dashboard data: stats, recent matches, schedule, goals, and roster.
     class DashboardController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
 
@@ -33,6 +34,7 @@ module Dashboard
 
       def schedule
         events = organization_scoped(Schedule)
+                 .includes(:organization, :match)
                  .where('start_time >= ?', Time.current)
                  .order(start_time: :asc)
                  .limit(10)
@@ -74,16 +76,18 @@ module Dashboard
         # Query 2: player counts — total + active in one pass
         # (organization_scoped already adds deleted_at IS NULL)
         player_row = organization_scoped(Player).select(
-          "COUNT(*) AS total",
+          'COUNT(*) AS total',
           "COUNT(*) FILTER (WHERE status = 'active') AS active_count"
         ).take
 
         # Query 3: avg KDA — single aggregate instead of Exists? + 3× SUM
         kda_row = PlayerMatchStat
-          .where(match: matches)
-          .select('SUM(kills) AS k, SUM(deaths) AS d, SUM(assists) AS a')
-          .take
-        k = kda_row&.k.to_i; d = kda_row&.d.to_i; a = kda_row&.a.to_i
+                  .where(match: matches)
+                  .select('SUM(kills) AS k, SUM(deaths) AS d, SUM(assists) AS a')
+                  .take
+        k = kda_row&.k.to_i
+        d = kda_row&.d.to_i
+        a = kda_row&.a.to_i
         avg_kda = ((k + a).to_f / (d.zero? ? 1 : d)).round(2)
 
         # Query 4: recent form (5 records — small, fine as-is)
@@ -94,20 +98,20 @@ module Dashboard
 
         # Query 6: upcoming matches
         upcoming_matches = organization_scoped(Schedule)
-          .where('start_time >= ? AND event_type = ?', Time.current, 'match')
-          .count
+                           .where('start_time >= ? AND event_type = ?', Time.current, 'match')
+                           .count
 
         {
-          total_players:    player_row&.total.to_i,
-          active_players:   player_row&.active_count.to_i,
-          total_matches:    total_matches,
-          wins:             wins,
-          losses:           losses,
-          win_rate:         win_rate,
-          recent_form:      recent_form,
-          avg_kda:          avg_kda,
-          active_goals:     goals_by_status['active'].to_i,
-          completed_goals:  goals_by_status['completed'].to_i,
+          total_players: player_row&.total.to_i,
+          active_players: player_row&.active_count.to_i,
+          total_matches: total_matches,
+          wins: wins,
+          losses: losses,
+          win_rate: win_rate,
+          recent_form: recent_form,
+          avg_kda: avg_kda,
+          active_goals: goals_by_status['active'].to_i,
+          completed_goals: goals_by_status['completed'].to_i,
           upcoming_matches: upcoming_matches
         }
       end
@@ -117,6 +121,7 @@ module Dashboard
 
       def recent_matches_data
         matches = organization_scoped(Match)
+                  .includes(:organization)
                   .order(game_start: :desc)
                   .limit(5)
 
@@ -125,6 +130,7 @@ module Dashboard
 
       def upcoming_events_data
         events = organization_scoped(Schedule)
+                 .includes(:organization, :match)
                  .where('start_time >= ?', Time.current)
                  .order(start_time: :asc)
                  .limit(5)
@@ -155,9 +161,11 @@ module Dashboard
       end
 
       def fetch_recent_activities
-        # Fetch recent audit logs and format them
-        activities = AuditLog
-                     .where(organization: current_organization)
+        # Fetch recent audit logs and format them.
+        # includes(:user) preloads the user in one query — avoids N+1 on log.user&.email
+        # SECURITY: Use organization_scoped helper for consistent scoping
+        activities = organization_scoped(AuditLog)
+                     .includes(:user)
                      .order(created_at: :desc)
                      .limit(20)
 

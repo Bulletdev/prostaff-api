@@ -1,0 +1,38 @@
+# frozen_string_literal: true
+
+# Serializer for VodReview model
+# Renders video review data with timestamps and analysis
+class VodReviewSerializer < Blueprinter::Base
+  identifier :id
+
+  fields :title, :description, :review_type, :review_date,
+         :video_url, :thumbnail_url, :duration,
+         :is_public, :share_link, :shared_with_players,
+         :status, :tags, :metadata,
+         :created_at, :updated_at
+
+  # HashID for short, obfuscated public URLs
+  field :hashid do |vod_review|
+    vod_review.hashid
+  end
+
+  # Public URL using HashID (preferred) or share_link (fallback)
+  field :public_url do |vod_review|
+    vod_review.public_url
+  end
+
+  # Direct HashID URL (for explicit HashID usage)
+  field :public_hashid_url do |vod_review|
+    vod_review.public_hashid_url
+  end
+
+  field :timestamps_count do |vod_review, options|
+    # Use .size (not .count) so that when vod_timestamps is eager-loaded (via includes)
+    # the count comes from the in-memory collection — avoids 1 COUNT query per review.
+    options[:include_timestamps_count] ? vod_review.vod_timestamps.size : nil
+  end
+
+  association :organization, blueprint: OrganizationSerializer
+  association :match, blueprint: MatchSerializer
+  association :reviewer, blueprint: UserSerializer
+end

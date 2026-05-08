@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'VOD Reviews API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/vod-reviews' do
     get 'List all VOD reviews' do
@@ -77,7 +77,7 @@ RSpec.describe 'VOD Reviews API', type: :request do
             vod_review: {
               match_id: match.id,
               title: 'Game Review vs Team X',
-              vod_url: 'https://youtube.com/watch?v=test',
+              video_url: 'https://youtube.com/watch?v=test',
               vod_platform: 'youtube',
               summary: 'Strong early game, need to work on mid-game transitions',
               status: 'draft'

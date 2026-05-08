@@ -32,6 +32,7 @@ module Api
     #     end
     #   end
     class BaseController < ApplicationController
+      include ActionController::MimeResponds
       include Authenticatable
       include Pundit::Authorization
       include TrialChecker
@@ -42,11 +43,12 @@ module Api
       # Add trial warning headers to all responses
       after_action :add_trial_warning_headers, if: -> { current_organization.present? }
 
+      rescue_from StandardError, with: :render_internal_error
       rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+      rescue_from ActiveRecord::StatementInvalid, with: :render_not_found
       rescue_from ActiveRecord::RecordInvalid, with: :render_validation_errors
       rescue_from ActionController::ParameterMissing, with: :render_parameter_missing
       rescue_from Pundit::NotAuthorizedError, with: :render_forbidden_policy
-      rescue_from StandardError, with: :render_internal_error
 
       protected
 
@@ -93,7 +95,8 @@ module Api
       end
 
       def render_not_found(exception = nil)
-        resource_name = exception&.model&.humanize || 'Resource'
+        resource_name = exception.respond_to?(:model) ? exception.model&.humanize : nil
+        resource_name ||= 'Resource'
         render_error(
           message: "#{resource_name} not found",
           code: 'NOT_FOUND',
@@ -163,7 +166,7 @@ module Api
 
       def render_internal_error(exception)
         # Log detailed error information
-        Rails.logger.error("=" * 80)
+        Rails.logger.error('=' * 80)
         Rails.logger.error("INTERNAL ERROR: #{exception.class}")
         Rails.logger.error("Message: #{exception.message}")
         Rails.logger.error("Controller: #{controller_name}##{action_name}")
@@ -171,9 +174,9 @@ module Api
         Rails.logger.error("Organization: #{current_organization&.name || 'N/A'}")
         Rails.logger.error("Request: #{request.method} #{request.path}")
         Rails.logger.error("Params: #{params.except(:controller, :action).inspect}")
-        Rails.logger.error("Backtrace:")
+        Rails.logger.error('Backtrace:')
         Rails.logger.error(exception.backtrace&.first(10)&.join("\n"))
-        Rails.logger.error("=" * 80)
+        Rails.logger.error('=' * 80)
 
         # In development, show detailed error; in production, be vague for security
         if Rails.env.development?

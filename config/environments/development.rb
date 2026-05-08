@@ -2,19 +2,18 @@
 
 require 'active_support/core_ext/integer/time'
 
-Rails.application.configure do
+Rails.application.configure do # rubocop:disable Metrics/BlockLength
   # Settings specified here will take precedence over those in config/application.rb.
 
   # In the development environment your application's code is reloaded any time
   # it changes. This slows down response time but is perfect for development
   # since you don't have to restart the web server when you make code changes.
-  config.cache_classes = false
+  config.enable_reloading = true
 
   config.eager_load = false
 
-  # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
-  # We want detailed exceptions in development environment
-  config.consider_all_requests_local = true
+  # Intentional: development needs full error reports for debugging
+  config.consider_all_requests_local = true # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
 
   config.server_timing = true
 
@@ -77,16 +76,25 @@ Rails.application.configure do
 
   config.assets.quiet = true if defined?(config.assets)
 
+  # ActionCable — allow frontend dev origins
+  config.action_cable.allowed_request_origins = [
+    'http://localhost:4444',
+    'http://127.0.0.1:4444',
+    %r{http://localhost.*}
+  ]
+
   # ActiveJob configuration - use Sidekiq in development
   config.active_job.queue_adapter = :sidekiq
 
-  # Bullet for N+1 query detection
-  # Uncomment if using Bullet gem
-  # config.after_initialize do
-  #   Bullet.enable = true
-  #   Bullet.alert = true
-  #   Bullet.bullet_logger = true
-  #   Bullet.console = true
-  #   Bullet.rails_logger = true
-  # end
+  # Bullet — N+1 query detection
+  config.after_initialize do
+    Bullet.enable        = true
+    Bullet.bullet_logger = true                    # log/bullet.log
+    Bullet.rails_logger  = true                    # log/development.log
+    Bullet.add_footer    = false                   # API-only, sem HTML footer
+    Bullet.raise         = false                   # não levantar exceção em dev
+
+    # Ignore associations que são consultadas via SQL puro (não associação AR)
+    # Bullet.add_safelist type: :n_plus_one_query, class_name: 'Foo', association: :bar
+  end
 end

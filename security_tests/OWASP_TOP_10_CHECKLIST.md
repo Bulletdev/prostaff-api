@@ -387,11 +387,11 @@ Comprehensive security checklist covering both OWASP Top 10 2025 (Release Candid
 
 - [ ] **Vulnerable Patterns**
   ```ruby
-  # ❌ VULNERABLE
+  # VULNERABLE
   Player.where("name = '#{params[:name]}'")
   Player.find_by_sql("SELECT * FROM players WHERE id = #{params[:id]}")
 
-  # ✅ SAFE
+  # SAFE
   Player.where(name: params[:name])
   Player.find_by_sql(["SELECT * FROM players WHERE id = ?", params[:id]])
   ```
@@ -626,12 +626,12 @@ Comprehensive security checklist covering both OWASP Top 10 2025 (Release Candid
 
 - [ ] **URL Validation**
   ```ruby
-  # ✅ SAFE
+  # SAFE
   ALLOWED_HOSTS = ['americas.api.riotgames.com', 'europe.api.riotgames.com']
   url = URI.parse(riot_api_url)
   raise unless ALLOWED_HOSTS.include?(url.host)
 
-  # ❌ VULNERABLE
+  # VULNERABLE
   url = params[:callback_url]
   HTTP.get(url) # User could access internal services
   ```
@@ -709,5 +709,5 @@ Before deploying to production:
 
 ---
 
-**Last Updated:** $(date)
-**Next Review:** $(date -d "+1 month" 2>/dev/null || date -v +1m)
+**Last Updated:** 2026-02-25
+**Next Review:** 2026-03-25

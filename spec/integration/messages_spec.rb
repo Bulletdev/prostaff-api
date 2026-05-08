@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Messages API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Messages
@@ -17,6 +17,7 @@ RSpec.describe 'Messages API', type: :request do
       produces 'application/json'
       security [bearerAuth: []]
 
+      parameter name: :recipient_id, in: :query, type: :string, required: true
       parameter name: :page, in: :query, type: :integer, required: false
       parameter name: :per_page, in: :query, type: :integer, required: false
 
@@ -44,11 +45,14 @@ RSpec.describe 'Messages API', type: :request do
                    }
                  }
                }
+        let(:recipient) { create(:user, organization: organization) }
+        let(:recipient_id) { recipient.id }
         run_test!
       end
 
       response '401', 'unauthorized' do
         let(:Authorization) { nil }
+        let(:recipient_id) { 'any' }
         schema '$ref' => '#/components/schemas/Error'
         run_test!
       end
@@ -66,7 +70,7 @@ RSpec.describe 'Messages API', type: :request do
       response '200', 'message deleted' do
         schema type: :object,
                properties: { message: { type: :string } }
-        let(:id) { 'nonexistent' }
+        let(:id) { create(:message, organization: organization, user: user).id }
         run_test!
       end
 

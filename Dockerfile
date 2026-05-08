@@ -1,18 +1,16 @@
-# Use Ruby 3.4.5 slim image (better Windows compatibility)
-FROM ruby:3.4.5-slim
+# Use Ruby 3.4.8 slim image (better Windows compatibility)
+FROM ruby:3.4.8-slim
 
 # Install system dependencies without version pinning for compatibility
 # Note: Using latest available versions from Debian repositories
+# hadolint ignore=DL3008
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libyaml-dev \
     git \
     tzdata \
-    nodejs \
-    npm \
     curl \
-    && npm install -g yarn@1.22.22 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

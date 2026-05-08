@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Authenticated user within an organization, with role-based access and notification support.
 class User < ApplicationRecord
   has_secure_password
 
@@ -22,10 +23,22 @@ class User < ApplicationRecord
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :full_name, length: { maximum: 255 }
+  validates :full_name, presence: true, length: { maximum: 255 }
   validates :role, presence: true, inclusion: { in: Constants::User::ROLES }
+  validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
   validates :timezone, length: { maximum: 100 }
   validates :language, length: { maximum: 10 }
+  validates :discord_user_id,
+            uniqueness: { allow_blank: true },
+            format: { with: /\A\d{17,20}\z/, message: 'must be a valid Discord user ID (17–20 digits)',
+                      allow_blank: true }
+  validates :password,
+            length: { minimum: 8, message: 'must be at least 8 characters' },
+            format: {
+              with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*\z/,
+              message: 'must contain at least one uppercase letter, one lowercase letter, and one number'
+            },
+            if: -> { password.present? }
 
   # Callbacks
   before_save :downcase_email

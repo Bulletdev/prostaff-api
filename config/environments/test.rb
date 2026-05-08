@@ -10,8 +10,8 @@ require 'active_support/core_ext/integer/time'
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
-  # Turn false under Spring and add config.action_view.cache_template_loading = true.
-  config.cache_classes = true
+  # Disable code reloading between requests in test (replaces removed config.cache_classes).
+  config.enable_reloading = false
 
   # Eager loading loads your whole application. When running a single test locally,
   # this probably isn't necessary. It's a good idea to do in a continuous integration
@@ -25,9 +25,8 @@ Rails.application.configure do
   }
 
   # Show full error reports and disable caching.
-  # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
-  # We want detailed exceptions in test environment for debugging
-  config.consider_all_requests_local       = true
+  # Intentional: test env needs full error reports for debugging test failures
+  config.consider_all_requests_local       = true # nosemgrep: ruby.rails.security.audit.detailed-exceptions.detailed-exceptions
   config.action_controller.perform_caching = false
   config.cache_store = :null_store
 

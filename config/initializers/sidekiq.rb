@@ -4,7 +4,7 @@ require 'sidekiq'
 require 'sidekiq-scheduler'
 
 # Gracefully handle Redis unavailability
-def configure_sidekiq_with_retry
+def configure_sidekiq_with_retry # rubocop:disable Metrics/AbcSize
   return false unless ENV['REDIS_URL'].present?
 
   # Test Redis connection before configuring Sidekiq
@@ -17,11 +17,11 @@ def configure_sidekiq_with_retry
     redis_client.call('PING')
     redis_client.close
 
-    Rails.logger.info "✓ Redis connection successful"
+    Rails.logger.info '✓ Redis connection successful'
     true
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "✗ Redis connection failed: #{e.class} - #{e.message}"
-    Rails.logger.error "  Sidekiq and background jobs will be disabled"
+    Rails.logger.error '  Sidekiq and background jobs will be disabled'
     Rails.logger.error "  Backtrace: #{e.backtrace.first(3).join("\n  ")}"
     false
   end
@@ -36,7 +36,13 @@ if configure_sidekiq_with_retry
       pool_timeout: 5
     }
 
+    config.logger = Sidekiq::Logger.new($stdout, level: :info)
+    config.logger.formatter = Sidekiq::Logger::Formatters::JSON.new
+
     config.on(:startup) do
+      Rails.logger = Sidekiq.logger
+      ActiveRecord::Base.logger = nil
+
       schedule_file = Rails.root.join('config', 'sidekiq.yml')
       if File.exist?(schedule_file)
         schedule = YAML.load_file(schedule_file)
@@ -56,8 +62,8 @@ if configure_sidekiq_with_retry
     }
   end
 
-  Rails.logger.info "✓ Sidekiq configured successfully"
+  Rails.logger.info '✓ Sidekiq configured successfully'
 else
-  Rails.logger.warn "⚠ Redis not available - Sidekiq disabled. Background jobs will not run."
-  Rails.logger.warn "  Check REDIS_URL environment variable and Redis service status"
+  Rails.logger.warn '⚠ Redis not available - Sidekiq disabled. Background jobs will not run.'
+  Rails.logger.warn '  Check REDIS_URL environment variable and Redis service status'
 end

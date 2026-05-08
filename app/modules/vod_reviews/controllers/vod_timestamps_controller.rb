@@ -2,6 +2,7 @@
 
 module VodReviews
   module Controllers
+    # CRUD API for timestamped annotations within a VOD review session.
     class VodTimestampsController < Api::V1::BaseController
       before_action :set_vod_review, only: %i[index create]
       before_action :set_vod_timestamp, only: %i[update destroy]

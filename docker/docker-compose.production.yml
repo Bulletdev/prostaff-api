@@ -1,0 +1,323 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - coolify
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: '${POSTGRES_DB:-prostaff_production}'
+      POSTGRES_USER: '${POSTGRES_USER:-prostaff}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prostaff} -d ${POSTGRES_DB:-prostaff_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    networks:
+      - coolify
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+  # ── Meilisearch (self-hosted) ─────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    networks:
+      - coolify
+    volumes:
+      - meilisearch-data:/meili_data
+    environment:
+      MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      MEILI_ENV: production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    restart: unless-stopped
+    networks:
+      - coolify
+    expose:
+      - "3000"
+    labels:
+      # Coolify Meta
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+      # Traefik Configuration - Main Router (HTTPS)
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-api.rule=Host(`api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api.entrypoints=https
+      - traefik.http.routers.prostaff-api.tls=true
+      - traefik.http.routers.prostaff-api.tls.certresolver=letsencrypt
+      # Apply CORS middleware to the main router
+      - traefik.http.routers.prostaff-api.middlewares=prostaff-cors
+
+      # Service Configuration (Port 3000)
+      - traefik.http.services.prostaff-api.loadbalancer.server.port=3000
+
+      # HTTP to HTTPS Redirect
+      - traefik.http.routers.prostaff-api-http.rule=Host(`api.prostaff.gg`)
+      - traefik.http.routers.prostaff-api-http.entrypoints=http
+      - traefik.http.routers.prostaff-api-http.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+
+      # CORS Middleware Definition
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg,https://docs.prostaff.gg,https://status.prostaff.gg,https://scrims.lol,https://www.scrims.lol,https://arena-br.vercel.app
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
+
+      # Network configuration for Traefik
+      - traefik.docker.network=coolify
+
+      # Explicitly set service name for Traefik
+      - traefik.http.services.prostaff-api.loadbalancer.server.scheme=http
+
+    environment:
+      RAILS_ENV: production
+      WEB_CONCURRENCY: '4'
+      RAILS_MAX_THREADS: '5'
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-prostaff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prostaff_production}'
+      # Connect to Redis via Docker network hostname
+      REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
+      ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
+      RAILS_LOG_TO_STDOUT: 'true'
+      PORT: 3000
+      RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
+      RIOT_API_KEY: '${RIOT_API_KEY}'
+      RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
+      INTERNAL_JWT_SECRET: '${INTERNAL_JWT_SECRET}'
+      PANDASCORE_API_KEY: '${PANDASCORE_API_KEY}'
+      SCRAPER_API_URL: 'http://scraper-api:8000'
+      SCRAPER_API_KEY: '${SCRAPER_API_KEY}'
+      CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg,https://status.prostaff.gg,https://docs.prostaff.gg}'
+      JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
+      SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
+      # HashID Configuration
+      HASHID_SALT: '${HASHID_SALT}'
+      HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
+      FRONTEND_URL: '${FRONTEND_URL}'
+      PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
+      SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
+      ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
+      APP_HOST: '${APP_HOST:-api.prostaff.gg}'
+      # Meilisearch (self-hosted — same Docker network)
+      MEILISEARCH_URL: 'http://meilisearch:7700'
+      MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      # SMTP (email delivery)
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
+      # prostaff-events integration (set PHOENIX_EVENTS_ENABLED=true in Coolify panel when deploying events service)
+      PHOENIX_EVENTS_ENABLED: '${PHOENIX_EVENTS_ENABLED:-false}'
+      PHOENIX_EVENTS_URL: '${PHOENIX_EVENTS_URL:-http://events:4000}'
+      SIDEKIQ_WEB_USER: '${SIDEKIQ_WEB_USER}'
+      SIDEKIQ_WEB_PASSWORD: '${SIDEKIQ_WEB_PASSWORD}'
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -f http://localhost:3000/up || exit 1'
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    command: 'bundle exec sidekiq -C config/sidekiq.yml'
+    restart: unless-stopped
+    networks:
+      - coolify
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-prostaff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prostaff_production}'
+      REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
+      ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
+      RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
+      RIOT_API_KEY: '${RIOT_API_KEY}'
+      RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
+      INTERNAL_JWT_SECRET: '${INTERNAL_JWT_SECRET}'
+      PANDASCORE_API_KEY: '${PANDASCORE_API_KEY}'
+      SCRAPER_API_URL: 'http://scraper-api:8000'
+      SCRAPER_API_KEY: '${SCRAPER_API_KEY}'
+      JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
+      SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
+      # HashID Configuration
+      HASHID_SALT: '${HASHID_SALT}'
+      HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
+      FRONTEND_URL: '${FRONTEND_URL}'
+      PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
+      SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
+      ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
+      # Meilisearch (self-hosted — same Docker network)
+      MEILISEARCH_URL: 'http://meilisearch:7700'
+      MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      # SMTP (email delivery)
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q sidekiq /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+  # ── status.prostaff.gg ────────────────────────────────────────────────────
+  status:
+    build:
+      context: ./status-page
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - coolify
+    expose:
+      - "8080"
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+      # Traefik — HTTPS router
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-status.rule=Host(`status.prostaff.gg`)
+      - traefik.http.routers.prostaff-status.entrypoints=https
+      - traefik.http.routers.prostaff-status.tls=true
+      - traefik.http.routers.prostaff-status.tls.certresolver=letsencrypt
+
+      # Service
+      - traefik.http.services.prostaff-status.loadbalancer.server.port=8080
+      - traefik.http.services.prostaff-status.loadbalancer.server.scheme=http
+
+      # HTTP → HTTPS redirect (middleware próprio, independente do api)
+      - traefik.http.middlewares.status-redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.status-redirect-https.redirectscheme.permanent=true
+      - traefik.http.routers.prostaff-status-http.rule=Host(`status.prostaff.gg`)
+      - traefik.http.routers.prostaff-status-http.entrypoints=http
+      - traefik.http.routers.prostaff-status-http.middlewares=status-redirect-https
+      - traefik.http.routers.prostaff-status-http.service=prostaff-status
+
+      # Network
+      - traefik.docker.network=coolify
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── docs.prostaff.gg ──────────────────────────────────────────────────────
+  docs:
+    build:
+      context: ./docs-page
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - coolify
+    expose:
+      - "8080"
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
+      # Traefik — HTTPS router
+      - traefik.enable=true
+      - traefik.http.routers.prostaff-docs.rule=Host(`docs.prostaff.gg`)
+      - traefik.http.routers.prostaff-docs.entrypoints=https
+      - traefik.http.routers.prostaff-docs.tls=true
+      - traefik.http.routers.prostaff-docs.tls.certresolver=letsencrypt
+
+      # Service
+      - traefik.http.services.prostaff-docs.loadbalancer.server.port=8080
+      - traefik.http.services.prostaff-docs.loadbalancer.server.scheme=http
+
+      # HTTP → HTTPS redirect (middleware próprio, independente do api)
+      - traefik.http.middlewares.docs-redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.docs-redirect-https.redirectscheme.permanent=true
+      - traefik.http.routers.prostaff-docs-http.rule=Host(`docs.prostaff.gg`)
+      - traefik.http.routers.prostaff-docs-http.entrypoints=http
+      - traefik.http.routers.prostaff-docs-http.middlewares=docs-redirect-https
+      - traefik.http.routers.prostaff-docs-http.service=prostaff-docs
+
+      # Network
+      - traefik.docker.network=coolify
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  meilisearch-data:
+    driver: local
+
+networks:
+  coolify:
+    external: true

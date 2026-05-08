@@ -1,0 +1,22 @@
+name: ProStaff API — CodeQL Config
+
+# Queries beyond the default security suite
+# security-extended adds: path traversal, SSRF, code injection, regex DoS
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+
+# Focus analysis on application code only
+paths-ignore:
+  - vendor/**
+  - node_modules/**
+  - load_tests/**
+  - security_tests/**
+  - .pentest/**
+  - db/migrate/**
+  - db/schema.rb
+  - db/seeds.rb
+  - scripts/**
+  - '**/*.min.js'
+  - '**/*_spec.rb'
+  - spec/**

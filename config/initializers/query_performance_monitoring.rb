@@ -10,7 +10,7 @@ module QueryPerformanceMonitoring
     def enable!
       return if @enabled
 
-      ActiveSupport::Notifications.subscribe('sql.active_record') do |name, start, finish, id, payload|
+      ActiveSupport::Notifications.subscribe('sql.active_record') do |_name, start, finish, _id, payload|
         duration = (finish - start) * 1000 # Convert to milliseconds
 
         next if should_ignore?(payload)
@@ -64,7 +64,7 @@ module QueryPerformanceMonitoring
       report_to_monitoring_service(payload, duration) if monitoring_configured?
     end
 
-    def track_query_stats(payload, duration)
+    def track_query_stats(payload, duration) # rubocop:disable Metrics/AbcSize
       return unless redis_available?
 
       # Normalize query for grouping (remove values)
@@ -82,7 +82,7 @@ module QueryPerformanceMonitoring
       # Update max_time separately (can't read inside pipeline)
       current_max = Rails.cache.redis.hget(stats_key, 'max_time').to_f
       Rails.cache.redis.hset(stats_key, 'max_time', duration) if duration > current_max
-    rescue => e
+    rescue StandardError => e
       Rails.logger.debug "Failed to track query stats: #{e.message}"
     end
 
@@ -104,7 +104,7 @@ module QueryPerformanceMonitoring
       # Thread-safe check
       Thread.current[:qpm_redis_available] ||= begin
         Rails.cache.respond_to?(:redis) && Rails.cache.redis.ping == 'PONG'
-      rescue
+      rescue StandardError
         false
       end
     end

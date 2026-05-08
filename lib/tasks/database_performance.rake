@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :db do
   namespace :performance do
     desc 'Refresh all database metadata materialized views'
@@ -136,12 +137,13 @@ namespace :db do
       end
 
       puts "\n=== RECOMMENDATIONS ===\n"
-      puts "1. Review queries with >100ms average time for missing indexes"
-      puts "2. Consider caching results for high-frequency queries"
-      puts "3. Check if high total time queries can be batched or optimized"
-      puts "4. Use EXPLAIN ANALYZE on slow queries to identify bottlenecks"
+      puts '1. Review queries with >100ms average time for missing indexes'
+      puts '2. Consider caching results for high-frequency queries'
+      puts '3. Check if high total time queries can be batched or optimized'
+      puts '4. Use EXPLAIN ANALYZE on slow queries to identify bottlenecks'
     end
 
+    # rubocop:disable Metrics/MethodLength
     def analyze_from_pg_stat_statements
       puts "\nAttempting to use pg_stat_statements..."
 
@@ -178,9 +180,10 @@ namespace :db do
         puts table
       rescue ActiveRecord::StatementInvalid => e
         puts " pg_stat_statements not available: #{e.message}"
-        puts "  Install it with: CREATE EXTENSION pg_stat_statements;"
+        puts '  Install it with: CREATE EXTENSION pg_stat_statements;'
       end
     end
+    # rubocop:enable Metrics/MethodLength
 
     desc 'Invalidate all performance caches'
     task invalidate_caches: :environment do
@@ -215,3 +218,4 @@ namespace :db do
     end
   end
 end
+# rubocop:enable Metrics/BlockLength

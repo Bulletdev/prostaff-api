@@ -1,5 +1,5 @@
 # RuboCop Configuration for ProStaff API
-# Ruby on Rails 7.2+ API with Ruby 3.4.5
+# Ruby on Rails 7.2+ API with Ruby 3.4.8
 #
 # This configuration balances code quality with pragmatic Rails development.
 # Generated: 2025-10-23
@@ -29,6 +29,7 @@ Metrics/BlockLength:
     - 'config/routes/**/*'
     - 'db/migrate/*'
     - 'db/seeds.rb'
+    - 'spec/factories/**/*'
   Max: 50
 
 Metrics/MethodLength:
@@ -36,21 +37,27 @@ Metrics/MethodLength:
   Exclude:
     - 'db/migrate/*'
     - 'app/**/services/*_service.rb'  # Complex business logic services
-    - 'app/**/controllers/*_controller.rb'  # Controllers with multiple actions
+    - 'app/**/controllers/**/*_controller.rb'  # Controllers with multiple actions (all nesting levels)
+    - 'app/**/jobs/*_job.rb'  # Background jobs with sequential Riot API calls
+    - 'scripts/**/*'  # Dev utility scripts
 
 Metrics/ClassLength:
   Max: 150
   Exclude:
     - 'app/**/services/*_service.rb'  # Allow larger service classes
-    - 'app/**/controllers/*_controller.rb'  # Controllers with many actions
+    - 'app/**/controllers/**/*_controller.rb'  # Controllers with many actions (all nesting levels)
+    - 'app/**/jobs/*_job.rb'  # Background jobs with multiple helper methods
     - 'config/initializers/**/*'
+    - 'scripts/**/*'  # Dev utility scripts
 
 Metrics/AbcSize:
   Max: 20
   Exclude:
     - 'db/migrate/*'
     - 'app/**/services/*_service.rb'  # Complex business logic
-    - 'app/**/controllers/*_controller.rb'  # Controller actions
+    - 'app/**/controllers/**/*_controller.rb'  # Controller actions (all nesting levels)
+    - 'app/**/jobs/*_job.rb'  # Background jobs
+    - 'scripts/**/*'  # Dev utility scripts
 
 Metrics/CyclomaticComplexity:
   Max: 10

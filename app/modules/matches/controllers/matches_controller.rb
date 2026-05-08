@@ -2,38 +2,50 @@
 
 module Matches
   module Controllers
+    # API controller for organization-scoped matches.
+    # Supports CRUD operations, filtering, sorting, and per-match player stats.
     class MatchesController < Api::V1::BaseController
       include Analytics::Concerns::AnalyticsCalculations
       include ParameterValidation
+      include Cacheable
 
       before_action :set_match, only: %i[show update destroy stats]
 
+      after_action -> { invalidate_cache('matches') }, only: %i[update destroy]
+      after_action -> { invalidate_cache("matches/#{@match&.id}") }, only: %i[update destroy]
+
       def index
         matches = organization_scoped(Match).includes(:player_match_stats, :players)
-        matches = apply_match_filters(matches)
-        matches = apply_match_sorting(matches)
+        matches = MatchFilterQuery.new(matches, params).call
 
-        result = paginate(matches)
+        data = cache_response('matches', expires_in: 5.minutes) do
+          result = paginate(matches)
+          {
+            matches: MatchSerializer.render_as_hash(result[:data]),
+            pagination: result[:pagination],
+            summary: calculate_matches_summary(matches)
+          }
+        end
 
-        render_success({
-                         matches: MatchSerializer.render_as_hash(result[:data]),
-                         pagination: result[:pagination],
-                         summary: calculate_matches_summary(matches)
-                       })
+        render_success(data)
       end
 
       def show
-        match_data = MatchSerializer.render_as_hash(@match)
-        player_stats = PlayerMatchStatSerializer.render_as_hash(
-          @match.player_match_stats.includes(:player)
-        )
+        data = cache_response("matches/#{@match.id}", expires_in: 5.minutes) do
+          match_data = MatchSerializer.render_as_hash(@match)
+          player_stats = PlayerMatchStatSerializer.render_as_hash(
+            @match.player_match_stats.includes(:player)
+          )
 
-        render_success({
-                         match: match_data,
-                         player_stats: player_stats,
-                         team_composition: @match.team_composition,
-                         mvp: @match.mvp_player ? PlayerSerializer.render_as_hash(@match.mvp_player) : nil
-                       })
+          {
+            match: match_data,
+            player_stats: player_stats,
+            team_composition: @match.team_composition,
+            mvp: @match.mvp_player ? PlayerSerializer.render_as_hash(@match.mvp_player) : nil
+          }
+        end
+
+        render_success(data)
       end
 
       def create
@@ -118,7 +130,7 @@ module Matches
           end,
           comparison: {
             total_gold: stats.sum(:gold_earned),
-            total_damage: stats.sum(:total_damage_dealt),
+            total_damage: stats.sum(:damage_dealt_total),
             total_vision_score: stats.sum(:vision_score),
             avg_kda: calculate_avg_kda(stats)
           }
@@ -128,118 +140,37 @@ module Matches
       end
 
       def import
-        player_id = validate_required_param!(:player_id)
-        count = integer_param(:count, default: 20, min: 1, max: 100)
+        player_id    = validate_required_param!(:player_id)
+        count        = integer_param(:count, default: 20, min: 1, max: 100)
+        force_update = params[:force_update].in?([true, 'true', '1'])
 
         player = organization_scoped(Player).find(player_id)
 
         unless player.riot_puuid.present?
           return render_error(
             message: 'Player does not have a Riot PUUID. Please sync player from Riot first.',
-            code: 'VALIDATION_ERROR',
-            status: :unprocessable_entity
+            code: 'MISSING_PUUID',
+            status: :bad_request
           )
         end
 
-        begin
-          riot_service = RiotApiService.new
-          region = player.region || 'BR'
+        result = ImportMatchesService.new(
+          player: player,
+          organization: current_organization,
+          count: count,
+          force_update: force_update
+        ).call
 
-          match_ids = riot_service.get_match_history(
-            puuid: player.riot_puuid,
-            region: region,
-            count: count
-          )
-
-          imported_count = 0
-          match_ids.each do |match_id|
-            next if Match.exists?(riot_match_id: match_id)
-
-            SyncMatchJob.perform_later(match_id, current_organization.id, region)
-            imported_count += 1
-          end
-
-          render_success({
-                           message: "Queued #{imported_count} matches for import",
-                           total_matches_found: match_ids.count,
-                           already_imported: match_ids.count - imported_count,
-                           player: PlayerSerializer.render_as_hash(player)
-                         })
-        rescue RedisClient::CannotConnectError, Redis::CannotConnectError => e
-          Rails.logger.error "Redis connection failed during match import: #{e.message}"
-
-          render_error(
-            message: 'Background job service is temporarily unavailable. Please try again later.',
-            code: 'BACKGROUND_SERVICE_UNAVAILABLE',
-            status: :service_unavailable,
-            details: {
-              hint: 'The import service is currently down. Contact your administrator if this persists.',
-              player_id: player.id
-            }
-          )
-        rescue RiotApiService::RiotApiError => e
-          render_error(
-            message: "Failed to fetch matches from Riot API: #{e.message}",
-            code: 'RIOT_API_ERROR',
-            status: :bad_gateway
-          )
-        rescue StandardError => e
-          Rails.logger.error "Unexpected error during match import: #{e.class} - #{e.message}"
-          Rails.logger.error e.backtrace.first(5).join("\n")
-
-          render_error(
-            message: "Failed to import matches: #{e.message}",
-            code: 'IMPORT_ERROR',
-            status: :internal_server_error
-          )
-        end
+        render_success(result, message: 'Matches import started successfully')
+      rescue RiotApiService::RiotApiError => e
+        render_error(
+          message: "Riot API error: #{e.message}",
+          code: 'RIOT_API_ERROR',
+          status: :service_unavailable
+        )
       end
 
       private
-
-      def apply_match_filters(matches)
-        matches = apply_basic_match_filters(matches)
-        matches = apply_date_filters_to_matches(matches)
-        matches = apply_opponent_filter(matches)
-        apply_tournament_filter(matches)
-      end
-
-      def apply_basic_match_filters(matches)
-        matches = matches.by_type(params[:match_type]) if params[:match_type].present?
-        matches = matches.victories if params[:result] == 'victory'
-        matches = matches.defeats if params[:result] == 'defeat'
-        matches
-      end
-
-      def apply_date_filters_to_matches(matches)
-        if params[:start_date].present? && params[:end_date].present?
-          matches.in_date_range(params[:start_date], params[:end_date])
-        elsif params[:days].present?
-          matches.recent(params[:days].to_i)
-        else
-          matches
-        end
-      end
-
-      def apply_opponent_filter(matches)
-        params[:opponent].present? ? matches.with_opponent(params[:opponent]) : matches
-      end
-
-      def apply_tournament_filter(matches)
-        return matches unless params[:tournament].present?
-
-        matches.where('tournament_name ILIKE ?', "%#{params[:tournament]}%")
-      end
-
-      def apply_match_sorting(matches)
-        allowed_sort_fields = %w[game_start game_duration match_type victory created_at]
-        allowed_sort_orders = %w[asc desc]
-
-        sort_by = allowed_sort_fields.include?(params[:sort_by]) ? params[:sort_by] : 'game_start'
-        sort_order = allowed_sort_orders.include?(params[:sort_order]) ? params[:sort_order] : 'desc'
-
-        matches.order(sort_by => sort_order)
-      end
 
       def set_match
         @match = organization_scoped(Match).find(params[:id])
@@ -263,7 +194,7 @@ module Matches
           victories: matches.victories.count,
           defeats: matches.defeats.count,
           win_rate: calculate_win_rate(matches),
-          by_type: matches.group(:match_type).count,
+          by_type: matches.unscope(:order).group(:match_type).count,
           avg_duration: matches.average(:game_duration)&.round(0)
         }
       end
@@ -274,8 +205,8 @@ module Matches
           total_deaths: stats.sum(:deaths),
           total_assists: stats.sum(:assists),
           total_gold: stats.sum(:gold_earned),
-          total_damage: stats.sum(:total_damage_dealt),
-          total_cs: stats.sum(:minions_killed),
+          total_damage: stats.sum(:damage_dealt_total),
+          total_cs: stats.sum(:cs),
           total_vision_score: stats.sum(:vision_score)
         }
       end

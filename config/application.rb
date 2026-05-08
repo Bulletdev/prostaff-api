@@ -30,8 +30,26 @@ module ProstaffApi
     # Common ones are `templates`, `generators`, or `middleware`.
     config.autoload_lib(ignore: %w[assets tasks])
 
-    # Add strategy module to autoload paths
-    config.autoload_paths << Rails.root.join('app/modules')
+    # Modules: controllers, services, concerns (namespaced by module)
+    config.autoload_paths += %W[#{config.root}/app/modules]
+    config.eager_load_paths += %W[#{config.root}/app/modules]
+
+    # Models inside modules: added as roots so class names stay flat
+    # e.g. app/modules/players/models/player.rb => Player (not Players::Player)
+    Dir[root.join('app/modules/*/models')].each do |path|
+      config.autoload_paths << path
+      config.eager_load_paths << path
+    end
+
+    # Serializers, policies, channels, and services keep their original flat class names.
+    # Adding their dirs as roots (same pattern as models) avoids renaming every
+    # constant: PlayerSerializer, PlayerPolicy, RiotApiService, etc. stay as-is.
+    %w[serializers policies channels services].each do |layer|
+      Dir[root.join("app/modules/*/#{layer}")].each do |path|
+        config.autoload_paths << path
+        config.eager_load_paths << path
+      end
+    end
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -43,21 +61,28 @@ module ProstaffApi
 
     # Load custom middleware
     require Rails.root.join('lib', 'bot_logger_middleware')
+    require Rails.root.join('lib', 'middleware', 'auth_failure_tracker')
+    require Rails.root.join('lib', 'middleware', 'security_headers')
 
     # Only loads a smaller set of middleware suitable for API only apps.
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
-    # Load modules directory
-    config.autoload_paths += %W[#{config.root}/app/modules]
-    config.eager_load_paths += %W[#{config.root}/app/modules]
-
     # CORS configuration - See config/initializers/cors.rb
     # Removed from here to avoid duplicate middleware registration
 
+    # Security headers — injected at Rack level to guarantee delivery through
+    # Traefik/Cloudflare proxy chain (config.action_dispatch.default_headers
+    # proved unreliable in API mode with reverse proxies in front)
+    config.middleware.use Middleware::SecurityHeaders
+
     # Rack Attack for rate limiting
     config.middleware.use Rack::Attack
+
+    # 401 rate spike tracker — alerts when unauthorized responses exceed threshold
+    # Gap 7 from FAILURE_MODE_ANALYSIS.md (JWT rotation detection)
+    config.middleware.use Middleware::AuthFailureTracker
 
     # Bot Logger Middleware for monitoring bot activity
     config.middleware.use BotLoggerMiddleware

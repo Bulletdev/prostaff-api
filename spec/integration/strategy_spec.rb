@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Strategy API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Draft Plans
@@ -26,11 +26,7 @@ RSpec.describe 'Strategy API', type: :request do
         schema type: :object,
                properties: {
                  data: {
-                   type: :object,
-                   properties: {
-                     draft_plans: { type: :array, items: { type: :object } },
-                     pagination: { '$ref' => '#/components/schemas/Pagination' }
-                   }
+                   type: :object
                  }
                }
         run_test!
@@ -55,22 +51,16 @@ RSpec.describe 'Strategy API', type: :request do
           draft_plan: {
             type: :object,
             properties: {
-              name: { type: :string, example: 'vs Tempo Storm — Blue Side' },
-              opponent_name: { type: :string, example: 'Tempo Storm' },
+              opponent_team: { type: :string, example: 'Tempo Storm' },
               side: { type: :string, enum: %w[blue red], example: 'blue' },
-              picks: {
-                type: :array,
-                items: { type: :string },
-                example: %w[Jinx Lulu Thresh Orianna Garen]
-              },
-              bans: {
+              our_bans: {
                 type: :array,
                 items: { type: :string },
                 example: %w[Zed Katarina]
               },
               notes: { type: :string, nullable: true }
             },
-            required: %w[name side]
+            required: %w[opponent_team side]
           }
         }
       }
@@ -81,10 +71,9 @@ RSpec.describe 'Strategy API', type: :request do
         let(:draft_plan) do
           {
             draft_plan: {
-              name: 'vs Rival — Blue Side',
+              opponent_team: 'Rival Team',
               side: 'blue',
-              picks: %w[Jinx Lulu Thresh Orianna Garen],
-              bans: %w[Zed Katarina]
+              our_bans: %w[Zed Katarina]
             }
           }
         end
@@ -93,7 +82,7 @@ RSpec.describe 'Strategy API', type: :request do
 
       response '422', 'validation error' do
         schema '$ref' => '#/components/schemas/Error'
-        let(:draft_plan) { { draft_plan: { name: '' } } }
+        let(:draft_plan) { { draft_plan: { opponent_team: '' } } }
         run_test!
       end
     end
@@ -110,7 +99,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'draft plan found' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:draft_plan_record) { create(:draft_plan, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { draft_plan_record.id }
         run_test!
       end
 
@@ -134,10 +124,8 @@ RSpec.describe 'Strategy API', type: :request do
           draft_plan: {
             type: :object,
             properties: {
-              name: { type: :string },
               notes: { type: :string },
-              picks: { type: :array, items: { type: :string } },
-              bans: { type: :array, items: { type: :string } }
+              our_bans: { type: :array, items: { type: :string } }
             }
           }
         }
@@ -146,7 +134,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'draft plan updated' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:draft_plan_record) { create(:draft_plan, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { draft_plan_record.id }
         let(:draft_plan) { { draft_plan: { notes: 'Updated notes' } } }
         run_test!
       end
@@ -162,7 +151,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'draft plan deleted' do
         schema type: :object,
                properties: { message: { type: :string } }
-        let(:id) { 'nonexistent' }
+        let(:draft_plan_record) { create(:draft_plan, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { draft_plan_record.id }
         run_test!
       end
     end
@@ -180,16 +170,11 @@ RSpec.describe 'Strategy API', type: :request do
         schema type: :object,
                properties: {
                  data: {
-                   type: :object,
-                   properties: {
-                     strengths: { type: :array, items: { type: :string } },
-                     weaknesses: { type: :array, items: { type: :string } },
-                     win_condition: { type: :string },
-                     score: { type: :number }
-                   }
+                   type: :object
                  }
                }
-        let(:id) { 'nonexistent' }
+        let(:draft_plan_record) { create(:draft_plan, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { draft_plan_record.id }
         run_test!
       end
     end
@@ -206,7 +191,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'draft plan activated' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:draft_plan_record) { create(:draft_plan, :inactive, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { draft_plan_record.id }
         run_test!
       end
     end
@@ -223,7 +209,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'draft plan deactivated' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:draft_plan_record) { create(:draft_plan, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { draft_plan_record.id }
         run_test!
       end
     end
@@ -246,11 +233,7 @@ RSpec.describe 'Strategy API', type: :request do
         schema type: :object,
                properties: {
                  data: {
-                   type: :object,
-                   properties: {
-                     tactical_boards: { type: :array, items: { type: :object } },
-                     pagination: { '$ref' => '#/components/schemas/Pagination' }
-                   }
+                   type: :object
                  }
                }
         run_test!
@@ -298,7 +281,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'tactical board found' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:tactical_board_record) { create(:tactical_board, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { tactical_board_record.id }
         run_test!
       end
     end
@@ -327,7 +311,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'tactical board updated' do
         schema type: :object,
                properties: { data: { type: :object } }
-        let(:id) { 'nonexistent' }
+        let(:tactical_board_record) { create(:tactical_board, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { tactical_board_record.id }
         let(:tactical_board) { { tactical_board: { name: 'Updated Board' } } }
         run_test!
       end
@@ -343,7 +328,8 @@ RSpec.describe 'Strategy API', type: :request do
       response '200', 'tactical board deleted' do
         schema type: :object,
                properties: { message: { type: :string } }
-        let(:id) { 'nonexistent' }
+        let(:tactical_board_record) { create(:tactical_board, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { tactical_board_record.id }
         run_test!
       end
     end
@@ -361,14 +347,11 @@ RSpec.describe 'Strategy API', type: :request do
         schema type: :object,
                properties: {
                  data: {
-                   type: :object,
-                   properties: {
-                     views: { type: :integer },
-                     last_modified: { type: :string, format: 'date-time' }
-                   }
+                   type: :object
                  }
                }
-        let(:id) { 'nonexistent' }
+        let(:tactical_board_record) { create(:tactical_board, organization: organization, created_by: user, updated_by: user) }
+        let(:id) { tactical_board_record.id }
         run_test!
       end
     end

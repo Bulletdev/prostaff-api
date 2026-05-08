@@ -11,7 +11,8 @@ RSpec.describe 'VOD Timestamps API', type: :request do
   let(:other_vod_review) { create(:vod_review, organization: other_organization) }
 
   describe 'GET /api/v1/vod-reviews/:vod_review_id/timestamps' do
-    let!(:timestamps) { create_list(:vod_timestamp, 3, vod_review: vod_review) }
+    # Use fixed category/importance so filter tests don't get false positives from base records
+    let!(:timestamps) { create_list(:vod_timestamp, 3, vod_review: vod_review, category: 'laning', importance: 'normal') }
 
     context 'when authenticated' do
       it 'returns all timestamps for the vod review' do
@@ -45,10 +46,11 @@ RSpec.describe 'VOD Timestamps API', type: :request do
     end
 
     context 'when accessing another organization vod review' do
-      it 'returns forbidden' do
+      # OrganizationScoped default_scope makes cross-org records invisible (404, not 403)
+      it 'returns not found' do
         get "/api/v1/vod-reviews/#{other_vod_review.id}/timestamps", headers: auth_headers(user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
       end
     end
 
@@ -103,12 +105,13 @@ RSpec.describe 'VOD Timestamps API', type: :request do
     end
 
     context 'when accessing another organization vod review' do
-      it 'returns forbidden' do
+      # OrganizationScoped default_scope makes cross-org records invisible (404, not 403)
+      it 'returns not found' do
         post "/api/v1/vod-reviews/#{other_vod_review.id}/timestamps",
              params: valid_attributes.to_json,
              headers: auth_headers(user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
@@ -138,12 +141,13 @@ RSpec.describe 'VOD Timestamps API', type: :request do
     context 'when accessing another organization timestamp' do
       let(:other_timestamp) { create(:vod_timestamp, vod_review: other_vod_review) }
 
-      it 'returns forbidden' do
+      # Timestamps are not scoped but parent vod_review is invisible (cross-org → 404)
+      it 'returns not found' do
         patch "/api/v1/vod-timestamps/#{other_timestamp.id}",
               params: { vod_timestamp: { title: 'Hacked' } }.to_json,
               headers: auth_headers(user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
@@ -164,10 +168,11 @@ RSpec.describe 'VOD Timestamps API', type: :request do
     context 'when accessing another organization timestamp' do
       let(:other_timestamp) { create(:vod_timestamp, vod_review: other_vod_review) }
 
-      it 'returns forbidden' do
+      # Timestamps are not scoped but parent vod_review is invisible (cross-org → 404)
+      it 'returns not found' do
         delete "/api/v1/vod-timestamps/#{other_timestamp.id}", headers: auth_headers(user)
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

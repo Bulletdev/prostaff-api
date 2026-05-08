@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Fetches and caches static game data from Riot Data Dragon (champion IDs, items, spells).
 class DataDragonService
   BASE_URL = 'https://ddragon.leagueoflegends.com'
 
@@ -93,8 +94,7 @@ class DataDragonService
     champion_map = {}
     data['data'].each_value do |champion|
       champion_id = champion['key'].to_i
-      champion_name = champion['id'] # This is the champion name like "Aatrox"
-      champion_map[champion_id] = champion_name
+      champion_map[champion_id] = champion['name'] # display name: "Wukong", "Lee Sin", etc.
     end
 
     champion_map

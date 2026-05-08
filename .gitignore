@@ -258,3 +258,22 @@ app/modules/players/README.md
 League-Data-Scraping-And-Analytics-master/ProStaff-Scraper/
 DOCS/ELASTICSEARCH_SETUP.md
 DOCS/deployment/QUICK_DEPLOY_VPS.md
+
+
+# aditional rules
+/DOCS/claude
+codacyissues.md
+/scripts
+/DEVDOCS
+.github/webhookgitcoolify.md
+zgo.txt
+oldsemgrep-report.json
+.pentest/raw-headers-frontend.txt
+.pentest/raw-headers-api.txt
+/.reports
+/.pentest/snapshots
+
+
+#Ignore cursor AI rules
+.cursor/rules/codacy.mdc
+.pentest/reports

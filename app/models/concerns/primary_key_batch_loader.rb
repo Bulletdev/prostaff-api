@@ -8,7 +8,7 @@ module PrimaryKeyBatchLoader
   class_methods do
     # Batch load primary keys for multiple tables at once
     # Instead of 5,785 individual queries, this does 1 query
-    def batch_load_primary_keys(table_oids)
+    def batch_load_primary_keys(table_oids) # rubocop:disable Metrics/MethodLength
       return {} if table_oids.blank?
 
       sql = <<~SQL
@@ -83,7 +83,7 @@ module PrimaryKeyBatchLoader
       # Cache in class variable to avoid repeated queries
       self.class.instance_variable_get(:@_table_oid) ||
         self.class.instance_variable_set(:@_table_oid, begin
-          sql = "SELECT $1::regclass::oid"
+          sql = 'SELECT $1::regclass::oid'
           result = ActiveRecord::Base.connection.exec_query(sql, 'SQL', [self.class.table_name])
           result.rows.first&.first
         end)

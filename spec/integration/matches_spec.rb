@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Matches API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/matches' do
     get 'List all matches' do
@@ -50,7 +50,7 @@ RSpec.describe 'Matches API', type: :request do
                          defeats: { type: :integer },
                          win_rate: { type: :number, format: :float },
                          by_type: { type: :object },
-                         avg_duration: { type: :integer }
+                         avg_duration: { type: :integer, nullable: true }
                        }
                      }
                    }
@@ -157,7 +157,7 @@ RSpec.describe 'Matches API', type: :request do
                        type: :array,
                        items: { '$ref' => '#/components/schemas/PlayerMatchStat' }
                      },
-                     team_composition: { type: :object },
+                     team_composition: { type: :array },
                      mvp: { '$ref' => '#/components/schemas/Player', nullable: true }
                    }
                  }

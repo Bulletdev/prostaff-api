@@ -8,7 +8,7 @@ FactoryBot.define do
     game_end { game_start + rand(1200..2400).seconds }
     game_duration { (game_end - game_start).to_i }
     victory { [true, false].sample }
-    patch_version { "13.#{rand(1..24)}.1" }
+    game_version { "13.#{rand(1..24)}.1" }
     opponent_name { Faker::Esport.team }
     our_side { %w[blue red].sample }
     our_score { rand(5..30) }

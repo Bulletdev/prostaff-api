@@ -6,6 +6,8 @@
 
 require 'pathname'
 
+# Generates and updates the Mermaid architecture diagram in README.md
+# by introspecting Rails modules, models, controllers, and services.
 class ArchitectureDiagramGenerator
   RAILS_ROOT = Pathname.new(__dir__).join('..')
   README_PATH = RAILS_ROOT.join('README.md')
@@ -37,12 +39,25 @@ class ArchitectureDiagramGenerator
   end
 
   def discover_models
-    models_path = RAILS_ROOT.join('app', 'models')
-    return [] unless models_path.exist?
+    models = []
 
-    Dir.glob(models_path.join('*.rb')).map do |file|
-      File.basename(file, '.rb')
-    end.reject { |m| m == 'application_record' }.sort
+    # Discover models in app/models
+    models_path = RAILS_ROOT.join('app', 'models')
+    if models_path.exist?
+      models += Dir.glob(models_path.join('*.rb')).map do |file|
+        File.basename(file, '.rb')
+      end
+    end
+
+    # Discover models in app/modules/*/models
+    modules_path = RAILS_ROOT.join('app', 'modules')
+    if modules_path.exist?
+      models += Dir.glob(modules_path.join('*', 'models', '*.rb')).map do |file|
+        File.basename(file, '.rb')
+      end
+    end
+
+    models.reject { |m| m == 'application_record' }.uniq.sort
   end
 
   def discover_controllers
@@ -122,11 +137,17 @@ class ArchitectureDiagramGenerator
           CORS --> RateLimit
           RateLimit --> Auth
           Auth --> Router
-      #{'    '}
+          #{'    '}
       #{generate_router_connections}
+
       #{generate_data_connections}
-      #{generate_external_connections}
-      #{'    '}
+
+      #{generate_redis_connections}
+
+      #{generate_riot_connections}
+
+      #{generate_background_connections}
+
           style Client fill:#e1f5ff
           style PostgreSQL fill:#336791
           style Redis fill:#d82c20
@@ -138,29 +159,39 @@ class ArchitectureDiagramGenerator
   end
 
   def generate_module_sections
-    sections = []
+    (core_module_sections + gameplay_module_sections + extended_module_sections)
+      .compact
+      .join("\n\n")
+  end
 
-    # Authentication module
-    sections << generate_auth_module if @modules.include?('authentication')
+  def core_module_sections
+    [
+      (@modules.include?('authentication') ? generate_auth_module : nil),
+      (has_dashboard_routes? ? generate_dashboard_module : nil),
+      (@models.include?('player') ? generate_players_module : nil),
+      (@models.include?('scouting_target') ? generate_scouting_module : nil)
+    ]
+  end
 
-    # Core modules based on routes and models
-    sections << generate_dashboard_module if has_dashboard_routes?
-    sections << generate_players_module if @models.include?('player')
-    sections << generate_scouting_module if @models.include?('scouting_target')
-    sections << generate_analytics_module if has_analytics_routes?
-    sections << generate_matches_module if @models.include?('match')
-    sections << generate_schedules_module if @models.include?('schedule')
-    sections << generate_vod_module if @models.include?('vod_review')
-    sections << generate_goals_module if @models.include?('team_goal')
-    sections << generate_riot_module if has_riot_integration?
+  def gameplay_module_sections
+    [
+      (has_analytics_routes? ? generate_analytics_module : nil),
+      (@models.include?('match') ? generate_matches_module : nil),
+      (@models.include?('schedule') ? generate_schedules_module : nil),
+      (@models.include?('vod_review') ? generate_vod_module : nil),
+      (@models.include?('team_goal') ? generate_goals_module : nil),
+      (has_riot_integration? ? generate_riot_module : nil)
+    ]
+  end
 
-    # New modules
-    sections << generate_competitive_module if @modules.include?('competitive')
-    sections << generate_scrims_module if @modules.include?('scrims')
-    sections << generate_strategy_module if @models.include?('draft_plan') || @models.include?('tactical_board')
-    sections << generate_support_module if @models.include?('support_ticket')
-
-    sections.compact.join("\n\n")
+  def extended_module_sections
+    strategy_module = (generate_strategy_module if @models.include?('draft_plan') || @models.include?('tactical_board'))
+    [
+      (@modules.include?('competitive') ? generate_competitive_module : nil),
+      (@modules.include?('scrims') ? generate_scrims_module : nil),
+      strategy_module,
+      (@models.include?('support_ticket') ? generate_support_module : nil)
+    ]
   end
 
   # Helper to indent module content
@@ -170,152 +201,156 @@ class ArchitectureDiagramGenerator
 
   def generate_auth_module
     indent_module(<<~MODULE.chomp)
-subgraph "Authentication Module"
-    AuthController[Auth Controller]
-    JWTService[JWT Service]
-    UserModel[User Model]
-end
+      subgraph "Authentication Module"
+          AuthController[Auth Controller]
+          JWTService[JWT Service]
+          UserModel[User Model]
+      end
     MODULE
   end
 
   def generate_generic_module(name)
     indent_module(<<~MODULE.chomp)
-subgraph "#{name.capitalize} Module"
-    #{name.capitalize}Controller[#{name.capitalize} Controller]
-end
+      subgraph "#{name.capitalize} Module"
+          #{name.capitalize}Controller[#{name.capitalize} Controller]
+      end
     MODULE
   end
 
   def generate_dashboard_module
     indent_module(<<~MODULE.chomp)
-subgraph "Dashboard Module"
-    DashboardController[Dashboard Controller]
-    DashStats[Statistics Service]
-end
+      subgraph "Dashboard Module"
+          DashboardController[Dashboard Controller]
+          DashStats[Statistics Service]
+      end
     MODULE
   end
 
   def generate_players_module
     indent_module(<<~MODULE.chomp)
-subgraph "Players Module"
-    PlayersController[Players Controller]
-    PlayerModel[Player Model]
-    ChampionPoolModel[Champion Pool Model]
-end
+      subgraph "Players Module"
+          PlayersController[Players Controller]
+          PlayerModel[Player Model]
+          ChampionPoolModel[Champion Pool Model]
+      end
     MODULE
   end
 
   def generate_scouting_module
     indent_module(<<~MODULE.chomp)
-subgraph "Scouting Module"
-    ScoutingController[Scouting Controller]
-    ScoutingTargetModel[Scouting Target Model]
-    Watchlist[Watchlist Service]
-end
+      subgraph "Scouting Module"
+          ScoutingController[Scouting Controller]
+          ScoutingTargetModel[Scouting Target Model]
+          Watchlist[Watchlist Service]
+      end
     MODULE
   end
 
   def generate_analytics_module
     indent_module(<<~MODULE.chomp)
-subgraph "Analytics Module"
-    AnalyticsController[Analytics Controller]
-    PerformanceService[Performance Service]
-    KDAService[KDA Trend Service]
-end
+      subgraph "Analytics Module"
+          AnalyticsController[Analytics Controller]
+          PerformanceService[Performance Service]
+          KDAService[KDA Trend Service]
+      end
     MODULE
   end
 
   def generate_matches_module
     indent_module(<<~MODULE.chomp)
-subgraph "Matches Module"
-    MatchesController[Matches Controller]
-    MatchModel[Match Model]
-    PlayerMatchStatModel[Player Match Stat Model]
-end
+      subgraph "Matches Module"
+          MatchesController[Matches Controller]
+          MatchModel[Match Model]
+          PlayerMatchStatModel[Player Match Stat Model]
+      end
     MODULE
   end
 
   def generate_schedules_module
     indent_module(<<~MODULE.chomp)
-subgraph "Schedules Module"
-    SchedulesController[Schedules Controller]
-    ScheduleModel[Schedule Model]
-end
+      subgraph "Schedules Module"
+          SchedulesController[Schedules Controller]
+          ScheduleModel[Schedule Model]
+      end
     MODULE
   end
 
   def generate_vod_module
     indent_module(<<~MODULE.chomp)
-subgraph "VOD Reviews Module"
-    VODController[VOD Reviews Controller]
-    VodReviewModel[VOD Review Model]
-    VodTimestampModel[VOD Timestamp Model]
-end
+      subgraph "VOD Reviews Module"
+          VODController[VOD Reviews Controller]
+          VodReviewModel[VOD Review Model]
+          VodTimestampModel[VOD Timestamp Model]
+      end
     MODULE
   end
 
   def generate_goals_module
     indent_module(<<~MODULE.chomp)
-subgraph "Team Goals Module"
-    GoalsController[Team Goals Controller]
-    TeamGoalModel[Team Goal Model]
-end
+      subgraph "Team Goals Module"
+          GoalsController[Team Goals Controller]
+          TeamGoalModel[Team Goal Model]
+      end
     MODULE
   end
 
   def generate_riot_module
     indent_module(<<~MODULE.chomp)
-subgraph "Riot Integration Module"
-    RiotService[Riot API Service]
-    RiotSync[Sync Service]
-end
+      subgraph "Riot Integration Module"
+          RiotService[Riot API Service]
+          RiotSync[Sync Service]
+      end
     MODULE
   end
 
   def generate_competitive_module
     indent_module(<<~MODULE.chomp)
-subgraph "Competitive Module"
-    CompetitiveController[Competitive Controller]
-    ProMatchesController[Pro Matches Controller]
-    PandaScoreService[PandaScore Service]
-    DraftAnalyzer[Draft Analyzer]
-end
+      subgraph "Competitive Module"
+          CompetitiveController[Competitive Controller]
+          ProMatchesController[Pro Matches Controller]
+          PandaScoreService[PandaScore Service]
+          DraftAnalyzer[Draft Analyzer]
+      end
     MODULE
   end
 
   def generate_scrims_module
     indent_module(<<~MODULE.chomp)
-subgraph "Scrims Module"
-    ScrimsController[Scrims Controller]
-    OpponentTeamsController[Opponent Teams Controller]
-    ScrimAnalytics[Scrim Analytics Service]
-end
+      subgraph "Scrims Module"
+          ScrimsController[Scrims Controller]
+          OpponentTeamsController[Opponent Teams Controller]
+          ScrimAnalytics[Scrim Analytics Service]
+      end
     MODULE
   end
 
   def generate_strategy_module
     indent_module(<<~MODULE.chomp)
-subgraph "Strategy Module"
-    DraftPlansController[Draft Plans Controller]
-    TacticalBoardsController[Tactical Boards Controller]
-    DraftAnalysisService[Draft Analysis Service]
-end
+      subgraph "Strategy Module"
+          DraftPlansController[Draft Plans Controller]
+          TacticalBoardsController[Tactical Boards Controller]
+          DraftAnalysisService[Draft Analysis Service]
+      end
     MODULE
   end
 
   def generate_support_module
     indent_module(<<~MODULE.chomp)
-subgraph "Support Module"
-    SupportTicketsController[Support Tickets Controller]
-    SupportFaqsController[Support FAQs Controller]
-    SupportStaffController[Support Staff Controller]
-    SupportTicketModel[Support Ticket Model]
-    SupportFaqModel[Support FAQ Model]
-end
+      subgraph "Support Module"
+          SupportTicketsController[Support Tickets Controller]
+          SupportFaqsController[Support FAQs Controller]
+          SupportStaffController[Support Staff Controller]
+          SupportTicketModel[Support Ticket Model]
+          SupportFaqModel[Support FAQ Model]
+      end
     MODULE
   end
 
   def generate_router_connections
+    (basic_router_connections + module_router_connections).join("\n")
+  end
+
+  def basic_router_connections
     connections = []
     connections << '    Router --> AuthController' if @modules.include?('authentication')
     connections << '    Router --> DashboardController' if has_dashboard_routes?
@@ -326,142 +361,153 @@ end
     connections << '    Router --> SchedulesController' if @models.include?('schedule')
     connections << '    Router --> VODController' if @models.include?('vod_review')
     connections << '    Router --> GoalsController' if @models.include?('team_goal')
+    connections
+  end
 
-    # Competitive module routes
-    if @modules.include?('competitive')
-      connections << '    Router --> CompetitiveController'
-      connections << '    Router --> ProMatchesController'
-    end
+  def module_router_connections
+    connections = []
+    connections += competitive_router_connections
+    connections += scrims_router_connections
+    connections += strategy_router_connections
+    connections += support_router_connections
+    connections
+  end
 
-    # Scrims module routes
-    if @modules.include?('scrims')
-      connections << '    Router --> ScrimsController'
-      connections << '    Router --> OpponentTeamsController'
-    end
+  def competitive_router_connections
+    return [] unless @modules.include?('competitive')
 
-    # Strategy module routes
-    if @models.include?('draft_plan') || @models.include?('tactical_board')
-      connections << '    Router --> DraftPlansController' if @models.include?('draft_plan')
-      connections << '    Router --> TacticalBoardsController' if @models.include?('tactical_board')
-    end
+    ['    Router --> CompetitiveController', '    Router --> ProMatchesController']
+  end
 
-    # Support module routes
-    if @models.include?('support_ticket')
-      connections << '    Router --> SupportTicketsController'
-      connections << '    Router --> SupportFaqsController'
-      connections << '    Router --> SupportStaffController'
-    end
+  def scrims_router_connections
+    return [] unless @modules.include?('scrims')
 
-    connections.join("\n")
+    ['    Router --> ScrimsController', '    Router --> OpponentTeamsController']
+  end
+
+  def strategy_router_connections
+    connections = []
+    connections << '    Router --> DraftPlansController' if @models.include?('draft_plan')
+    connections << '    Router --> TacticalBoardsController' if @models.include?('tactical_board')
+    connections
+  end
+
+  def support_router_connections
+    return [] unless @models.include?('support_ticket')
+
+    [
+      '    Router --> SupportTicketsController',
+      '    Router --> SupportFaqsController',
+      '    Router --> SupportStaffController'
+    ]
   end
 
   def generate_data_connections
-    connections = []
+    connections = auth_and_player_data_connections +
+                  scouting_and_match_data_connections +
+                  module_data_connections
+    connections.join("\n")
+  end
 
-    # Auth connections
+  def generate_redis_connections
+    connections = []
+    connections << '    JWTService --> Redis' if @modules.include?('authentication')
+    connections << '    DashStats --> Redis' if has_dashboard_routes?
+    connections << '    PerformanceService --> Redis' if has_analytics_routes?
+    connections.join("\n")
+  end
+
+  def generate_riot_connections
+    return '' unless has_riot_integration?
+
+    connections = []
+    connections << '    PlayersController --> RiotService'
+    connections << '    MatchesController --> RiotService'
+    connections << '    ScoutingController --> RiotService'
+    connections << '    RiotService --> RiotSync'
+    connections << '    RiotService --> RiotAPI'
+    connections.join("\n")
+  end
+
+  def generate_background_connections
+    connections = []
+    if has_riot_integration?
+      connections << '    RiotService --> Sidekiq'
+      connections << ''
+    end
+    connections << '    PandaScoreService --> PandaScoreAPI' if @modules.include?('competitive')
+    connections << '    Sidekiq -- Uses --> Redis' if has_riot_integration?
+    connections.join("\n")
+  end
+
+  def auth_and_player_data_connections
+    connections = []
     if @modules.include?('authentication')
       connections << '    AuthController --> JWTService'
       connections << '    AuthController --> UserModel'
     end
-
-    # Players connections
     if @models.include?('player')
       connections << '    PlayersController --> PlayerModel'
       connections << '    PlayerModel --> ChampionPoolModel' if @models.include?('champion_pool')
     end
+    connections
+  end
 
-    # Scouting connections
+  def scouting_and_match_data_connections
+    connections = []
     if @models.include?('scouting_target')
-      connections << '    ScoutingController --> ScoutingTargetModel'
-      connections << '    ScoutingController --> Watchlist'
-      connections << '    Watchlist --> PostgreSQL'
+      connections += ['    ScoutingController --> ScoutingTargetModel',
+                      '    ScoutingController --> Watchlist',
+                      '    Watchlist --> PostgreSQL']
     end
-
-    # Matches connections
     if @models.include?('match')
       connections << '    MatchesController --> MatchModel'
       connections << '    MatchModel --> PlayerMatchStatModel' if @models.include?('player_match_stat')
     end
-
-    # Other model connections
     connections << '    SchedulesController --> ScheduleModel' if @models.include?('schedule')
-
     if @models.include?('vod_review')
       connections << '    VODController --> VodReviewModel'
       connections << '    VodReviewModel --> VodTimestampModel' if @models.include?('vod_timestamp')
     end
-
     connections << '    GoalsController --> TeamGoalModel' if @models.include?('team_goal')
-
-    # Analytics connections
-    if has_analytics_routes?
-      connections << '    AnalyticsController --> PerformanceService'
-      connections << '    AnalyticsController --> KDAService'
-    end
-
-    # Competitive connections
-    if @modules.include?('competitive')
-      connections << '    CompetitiveController --> PandaScoreService'
-      connections << '    CompetitiveController --> DraftAnalyzer'
-    end
-
-    # Scrims connections
-    if @modules.include?('scrims')
-      connections << '    ScrimsController --> ScrimAnalytics'
-      connections << '    ScrimAnalytics --> PostgreSQL'
-    end
-
-    # Strategy connections
-    if @models.include?('draft_plan')
-      connections << '    DraftPlansController --> DraftAnalysisService'
-    end
-
-    # Support connections
-    if @models.include?('support_ticket')
-      connections << '    SupportTicketsController --> SupportTicketModel'
-      connections << '    SupportFaqsController --> SupportFaqModel'
-      connections << '    SupportStaffController --> UserModel'
-    end
-
-    # Database connections
-    @models.each do |model|
-      model_name = model.split('_').map(&:capitalize).join
-      connections << "    #{model_name}Model[#{model_name} Model] --> PostgreSQL"
-    end
-
-    # Redis connections
-    connections << '    JWTService --> Redis' if @modules.include?('authentication')
-    connections << '    DashStats --> Redis' if has_dashboard_routes?
-    connections << '    PerformanceService --> Redis' if has_analytics_routes?
-
-    connections.join("\n")
+    connections
   end
 
-  def generate_external_connections
+  def module_data_connections
     connections = []
-
-    # Riot API connections
-    if has_riot_integration?
-      connections << '    PlayersController --> RiotService'
-      connections << '    MatchesController --> RiotService'
-      connections << '    ScoutingController --> RiotService'
-      connections << '    RiotService --> RiotSync'
-      connections << '    RiotService --> RiotAPI'
-      connections << ''
-      connections << '    RiotService --> Sidekiq'
+    if has_analytics_routes?
+      connections += ['    AnalyticsController --> PerformanceService',
+                      '    AnalyticsController --> KDAService']
     end
-
-    # PandaScore connections
     if @modules.include?('competitive')
-      connections << '    PandaScoreService --> PandaScoreAPI[PandaScore API]'
+      connections += ['    CompetitiveController --> PandaScoreService',
+                      '    CompetitiveController --> DraftAnalyzer']
     end
-
-    # Sidekiq connections (simplified)
-    if has_riot_integration?
-      connections << '    Sidekiq -- Uses --> Redis'
+    if @modules.include?('scrims')
+      connections += ['    ScrimsController --> ScrimAnalytics',
+                      '    ScrimAnalytics --> PostgreSQL']
     end
+    connections << '    DraftPlansController --> DraftAnalysisService' if @models.include?('draft_plan')
+    if @models.include?('support_ticket')
+      connections += ['    SupportTicketsController --> SupportTicketModel',
+                      '    SupportFaqsController --> SupportFaqModel',
+                      '    SupportStaffController --> UserModel']
+    end
+    connections
+  end
 
-    connections.compact.join("\n")
+  def database_model_connections
+    # Models already defined in subgraphs should not be redefined
+    models_in_modules = %w[
+      user player champion_pool scouting_target match player_match_stat
+      schedule vod_review vod_timestamp team_goal support_ticket support_faq
+      draft_plan tactical_board scrim opponent_team support_ticket_message
+    ]
+
+    @models.reject { |model| models_in_modules.include?(model) }.map do |model|
+      model_name = model.split('_').map(&:capitalize).join
+      "    #{model_name}Model[#{model_name} Model] --> PostgreSQL"
+    end
   end
 
   def has_dashboard_routes?
@@ -487,31 +533,26 @@ end
 
   def validate_path_within_project(path)
     rails_root_realpath = RAILS_ROOT.realpath
-    unless path.to_s.start_with?(rails_root_realpath.to_s)
-      raise SecurityError, "Path is outside project root: #{path}"
-    end
+    return if path.to_s.start_with?(rails_root_realpath.to_s)
+
+    raise SecurityError, "Path is outside project root: #{path}"
   end
 
   def update_readme(diagram)
-    # Validate README_PATH is within project root
     readme_realpath = README_PATH.realpath
     validate_path_within_project(readme_realpath)
 
     content = File.read(readme_realpath)
-
-    # Find the architecture section
     arch_start = content.index('## Architecture')
     return unless arch_start
 
-    # Find the end of architecture section (next ## heading or end of file)
     arch_end = content.index(/^## /, arch_start + 1) || content.length
+    new_content = content[0...arch_start] + architecture_section_text(diagram) + content[arch_end..]
+    File.write(readme_realpath, new_content)
+  end
 
-    # Extract before and after sections
-    before_arch = content[0...arch_start]
-    after_arch = content[arch_end..]
-
-    # Build new architecture section
-    new_arch_section = <<~ARCH
+  def architecture_section_text(diagram)
+    <<~ARCH
       ## Architecture
 
       This API follows a modular monolith architecture with the following modules:
@@ -556,9 +597,6 @@ end
       8. **CORS**: Configured for cross-origin requests from frontend
 
     ARCH
-
-    # Write back to file with validated path
-    File.write(readme_realpath, before_arch + new_arch_section + after_arch)
   end
 
   def export_mermaid_file(diagram)

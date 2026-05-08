@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :sitemap do
   desc 'Generate sitemap.xml file'
   task generate: :environment do
@@ -89,7 +90,7 @@ namespace :sitemap do
     File.write(file_path, sitemap_content)
 
     puts " Sitemap generated successfully at: #{file_path}"
-    puts "   Total URLs: #{sitemap_content.scan(/<url>/).count}"
+    puts "   Total URLs: #{sitemap_content.scan('<url>').count}"
   end
 
   desc 'Ping search engines with sitemap'
@@ -105,22 +106,21 @@ namespace :sitemap do
     ]
 
     search_engines.each do |ping_url|
-      begin
-        response = Net::HTTP.get_response(URI(ping_url))
-        engine = ping_url.match(/https:\/\/www\.(\w+)\.com/)[1].capitalize
-        if response.is_a?(Net::HTTPSuccess)
-          puts "   #{engine} pinged successfully"
-        else
-          puts "   Error pinging #{engine}: #{response.code}"
-        end
-      rescue StandardError => e
-        puts "   Error pinging #{ping_url.match(/https:\/\/www\.(\w+)\.com/)[1].capitalize}: #{e.message}"
+      response = Net::HTTP.get_response(URI(ping_url))
+      engine = ping_url.match(%r{https://www\.(\w+)\.com})[1].capitalize
+      if response.is_a?(Net::HTTPSuccess)
+        puts "   #{engine} pinged successfully"
+      else
+        puts "   Error pinging #{engine}: #{response.code}"
       end
+    rescue StandardError => e
+      puts "   Error pinging #{ping_url.match(%r{https://www\.(\w+)\.com})[1].capitalize}: #{e.message}"
     end
 
-    puts " Done!"
+    puts ' Done!'
   end
 
   desc 'Generate and ping sitemap'
   task update: %i[generate ping]
 end
+# rubocop:enable Metrics/BlockLength

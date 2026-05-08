@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Schedules API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   path '/api/v1/schedules' do
     get 'List all schedules' do

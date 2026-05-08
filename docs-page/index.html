@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProStaff API Docs</title>
+  <meta name="description" content="ProStaff API V1 reference documentation. Esports Team Management Platform.">
+  <link rel="icon" href="logo.png" type="image/png">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── ProStaff Retro Design Tokens ─────────────────────────────── */
+    :root {
+      --gold:        #C89B3C;
+      --gold-dim:    rgba(200,155,60,0.5);
+      --gold-faint:  rgba(200,155,60,0.12);
+      --blue:        #0C223F;
+      --blue-dark:   #0A1929;
+      --bg:          #0A0E1A;
+      --card:        #0F1823;
+      --teal:        #0596AA;
+      --text:        rgba(255,255,255,0.85);
+      --text-dim:    rgba(255,255,255,0.45);
+      --green:       #00D364;
+      --red:         #FF4444;
+      --border:      1px solid #C89B3C;
+      --font:        Verdana, Geneva, Tahoma, sans-serif;
+    }
+
+    /* ── Patterns ─────────────────────────────────────────────────── */
+    .pat-scanline {
+      background-image: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(200,155,60,0.04) 3px, rgba(200,155,60,0.04) 4px
+      );
+    }
+    .pat-diagonal {
+      background-image: repeating-linear-gradient(
+        45deg, transparent, transparent 6px,
+        rgba(200,155,60,0.03) 6px, rgba(200,155,60,0.03) 7px
+      );
+    }
+
+    /* ── Base ─────────────────────────────────────────────────────── */
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(200,155,60,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,155,60,0.035) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* ── RetroPanel ───────────────────────────────────────────────── */
+    .retro-panel { width: 100%; position: relative; }
+
+    .retro-panel-header {
+      display: flex;
+      border-top: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-header-left {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-header-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8px 12px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-category {
+      font-size: 8px;
+      color: var(--teal);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .retro-panel-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.5);
+      position: relative;
+      z-index: 1;
+    }
+
+    .retro-panel-subtitle {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.05em;
+      position: relative;
+      z-index: 1;
+      margin-top: 2px;
+    }
+
+    .retro-panel-divider {
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+    }
+
+    .retro-panel-body {
+      background: var(--card);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+    }
+
+    .retro-panel-body-stripe {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .retro-panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      height: 18px;
+      background: linear-gradient(to right, var(--blue), var(--bg));
+      border-bottom: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
+    }
+
+    .retro-panel-footer-label {
+      font-size: 8px;
+      color: var(--gold-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── RetroCorners ─────────────────────────────────────────────── */
+    .retro-corners { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+    .rc { position: absolute; width: 10px; height: 10px; }
+    .rc-tl { top: 0; left: 0; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-tr { top: 0; right: 0; border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+    .rc-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-br { bottom: 0; right: 0; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+
+    /* ── RetroDiamond ─────────────────────────────────────────────── */
+    .diamond {
+      width: 5px; height: 5px;
+      background: var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .diamond-sm { width: 4px; height: 4px; }
+
+    /* ── Footer diamonds ──────────────────────────────────────────── */
+    .footer-diamonds { display: flex; align-items: center; gap: 6px; }
+    .footer-line { height: 1px; width: 20px; background: linear-gradient(to right, var(--gold), transparent); }
+    .footer-line-r { background: linear-gradient(to left, var(--gold), transparent); }
+
+    /* ── Site Header ──────────────────────────────────────────────── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: linear-gradient(to right, var(--blue-dark), var(--bg));
+      position: relative;
+    }
+    .site-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), var(--gold-faint) 60%, transparent);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
+    }
+    .logo img { width: 28px; height: 28px; object-fit: contain; }
+
+    .site-nav { display: flex; gap: 16px; align-items: center; }
+    .site-nav a {
+      text-decoration: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .site-nav a:hover { color: var(--gold); }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      font-size: 9px;
+      font-weight: bold;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      border: 1px solid rgba(5,150,170,0.4);
+      background: rgba(5,150,170,0.08);
+    }
+
+    /* ── Main container ───────────────────────────────────────────── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* ── Scalar theme — map ProStaff tokens into Scalar CSS variables ─ */
+    .scalar-app,
+    .dark-mode,
+    :root {
+      --scalar-color-1:             rgba(255,255,255,0.85);
+      --scalar-color-2:             rgba(255,255,255,0.55);
+      --scalar-color-3:             rgba(255,255,255,0.35);
+      --scalar-color-accent:        #C89B3C;
+      --scalar-background-1:        #0A0E1A;
+      --scalar-background-2:        #0F1823;
+      --scalar-background-3:        #0C223F;
+      --scalar-background-accent:   rgba(200,155,60,0.08);
+      --scalar-border-color:        rgba(200,155,60,0.2);
+      --scalar-scrollbar-color:     rgba(200,155,60,0.25);
+      --scalar-scrollbar-color-active: rgba(200,155,60,0.5);
+      --scalar-color-green:         #00D364;
+      --scalar-color-red:           #FF4444;
+      --scalar-color-yellow:        #F59E0B;
+      --scalar-color-blue:          #0596AA;
+      --scalar-font:                Verdana, Geneva, Tahoma, sans-serif;
+      --scalar-font-code:           'Courier New', Courier, monospace;
+    }
+
+    /* ── Full Footer ──────────────────────────────────────────────── */
+    .site-footer-full {
+      background: var(--bg);
+      border-top: 1px solid var(--gold);
+      font-family: var(--font);
+      margin-top: 24px;
+    }
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 24px;
+    }
+    .footer-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .footer-top-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), transparent);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 36px;
+    }
+    .footer-col-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .footer-col-logo img { width: 28px; height: 28px; object-fit: contain; }
+    .footer-col-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+    .footer-col-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .footer-links-col {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .footer-links-col a {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links-col a:hover { color: var(--gold); }
+    .footer-bottom-bar {
+      border-top: 1px solid var(--gold-faint);
+      padding-top: 20px;
+    }
+    .footer-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .footer-sep-line { flex: 1; height: 1px; }
+    .footer-sep-line-l { background: linear-gradient(to right, transparent, var(--gold)); }
+    .footer-sep-line-r { background: linear-gradient(to left, transparent, var(--gold)); }
+    .footer-sep-label {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .footer-riot {
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-dim);
+      line-height: 1.8;
+      max-width: 620px;
+      margin: 14px auto 0;
+    }
+    @media (max-width: 860px) {
+      .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .footer-brand-col { grid-column: 1 / -1; }
+    }
+    @media (max-width: 540px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--gold-faint); border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .site-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SITE HEADER ──────────────────────────────────────────────────── -->
+<header class="site-header pat-scanline">
+  <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+    <img src="logo.png" alt="ProStaff">
+    ProStaff API
+  </a>
+
+  <nav class="site-nav">
+    <a href="https://status.prostaff.gg" target="_blank" rel="noopener">Status</a>
+    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
+    <a href="mailto:support@prostaff.gg">Support</a>
+  </nav>
+
+  <div class="header-badge">
+    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
+      <circle cx="4" cy="4" r="3"/>
+    </svg>
+    v1
+  </div>
+</header>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────────── -->
+<main class="container">
+
+  <!-- DOCS PANEL -->
+  <div class="retro-panel" style="margin-top: 0;">
+    <div class="retro-panel-header pat-diagonal">
+      <div class="retro-panel-header-left pat-scanline">
+        <div class="retro-corners">
+          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
+          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
+        </div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <div class="retro-panel-header-right">
+        <span class="retro-panel-category">REST API Reference</span>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;position:relative;z-index:1">
+          <span class="retro-panel-title">ProStaff API v1</span>
+          <span class="retro-panel-subtitle">Use Authorize to authenticate with a Bearer JWT token</span>
+        </div>
+      </div>
+    </div>
+    <div class="retro-panel-divider"></div>
+    <div class="retro-panel-body">
+      <div class="retro-panel-body-stripe"></div>
+      <script
+        id="api-reference"
+        data-url="https://api.prostaff.gg/api-docs/v1/swagger.yaml"
+      ></script>
+    </div>
+    <div class="retro-panel-footer">
+      <div class="footer-diamonds">
+        <span class="diamond diamond-sm"></span>
+        <div class="footer-line"></div>
+      </div>
+      <span class="retro-panel-footer-label">ProStaff Analytics</span>
+      <div class="footer-diamonds">
+        <div class="footer-line footer-line-r"></div>
+        <span class="diamond diamond-sm"></span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── SITE FOOTER ───────────────────────────────────────────────────── -->
+<footer class="site-footer-full pat-scanline">
+  <div class="footer-container">
+
+    <!-- Top bar -->
+    <div class="footer-top-bar">
+      <span class="diamond diamond-sm"></span>
+      <div class="footer-top-line"></div>
+    </div>
+
+    <!-- Grid -->
+    <div class="footer-grid">
+
+      <!-- Brand -->
+      <div class="footer-brand-col">
+        <a class="footer-col-logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+          <img src="logo.png" alt="ProStaff">
+          ProStaff
+        </a>
+        <p class="footer-col-desc">Esports Team Management Platform. Advanced analytics, scouting, and performance tracking for professional organizations.</p>
+      </div>
+
+      <!-- Product -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Product
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/features" target="_blank" rel="noopener">Features</a>
+          <a href="https://prostaff.gg/pricing" target="_blank" rel="noopener">Pricing</a>
+          <a href="https://prostaff.gg/comparison" target="_blank" rel="noopener">Comparison</a>
+        </div>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Company
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/about" target="_blank" rel="noopener">About</a>
+          <a href="https://prostaff.gg/contact" target="_blank" rel="noopener">Contact</a>
+        </div>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Legal
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+          <a href="https://prostaff.gg/tos" target="_blank" rel="noopener">Terms of Service</a>
+          <a href="https://developer.riotgames.com/policies/general" target="_blank" rel="noopener">Riot API Policies</a>
+        </div>
+      </div>
+
+      <!-- Resources -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Resources
+        </div>
+        <div class="footer-links-col">
+          <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
+          <a href="https://status.prostaff.gg" target="_blank" rel="noopener">System Status</a>
+          <a href="mailto:support@prostaff.gg">Support</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom -->
+    <div class="footer-bottom-bar">
+      <div class="footer-sep">
+        <div class="footer-sep-line footer-sep-line-l"></div>
+        <span class="footer-sep-label">ProStaff.gg</span>
+        <div class="footer-sep-line footer-sep-line-r"></div>
+      </div>
+      <p class="footer-riot">
+        ProStaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+      </p>
+    </div>
+
+  </div>
+</footer>
+
+<script>
+  document.getElementById('api-reference').dataset.configuration = JSON.stringify({
+    theme: 'none',
+    darkMode: true,
+    layout: 'modern',
+    showSidebar: true,
+    defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' },
+    servers: [
+      { url: 'https://api.prostaff.gg', description: 'Production' },
+      { url: 'http://localhost:3333',    description: 'Local development' }
+    ],
+    searchHotKey: 'k',
+    hideDarkModeToggle: true,
+    defaultOpenAllTags: false,
+    customCss: '.scalar-card--intro { display: none !important; } .t-doc__header { display: none !important; }'
+  });
+</script>
+<!-- nosemgrep: html.security.audit.missing-integrity -->
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference" crossorigin="anonymous"></script>
+
+</body>
+</html>

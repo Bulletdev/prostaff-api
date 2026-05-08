@@ -5,19 +5,22 @@ module Players
     # Controller for managing players within an organization
     # Business logic extracted to Services for better organization
     class PlayersController < Api::V1::BaseController
+      include Cacheable
+
       before_action :set_player, only: %i[show update destroy stats matches sync_from_riot]
+
+      after_action -> { invalidate_cache('players') }, only: %i[update destroy]
+      after_action -> { invalidate_cache("players/#{@player&.id}") }, only: %i[update destroy]
 
       # GET /api/v1/players
       def index
-        # Optimized query to prevent timeout during bulk sync operations
-        # PostgreSQL will allow concurrent reads even during updates (MVCC)
-        # Set a reasonable timeout to prevent 504s
-        ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '5000'") # 5 seconds
+        ActiveRecord::Base.connection.execute("SET statement_timeout = '5000'")
 
-        players = organization_scoped(Player).includes(:champion_pools)
+        players = organization_scoped(Player).includes(:organization)
 
         players = players.by_role(params[:role]) if params[:role].present?
         players = players.by_status(params[:status]) if params[:status].present?
+        players = players.by_line(params[:line]) if params[:line].present?
 
         if params[:search].present?
           search_term = "%#{params[:search]}%"
@@ -26,10 +29,14 @@ module Players
 
         result = paginate(players.ordered_by_role.order(:summoner_name))
 
-        render_success({
-                         players: PlayerSerializer.render_as_hash(result[:data]),
-                         pagination: result[:pagination]
-                       })
+        data = cache_response('players', expires_in: 5.minutes) do
+          {
+            players: PlayerSerializer.render_as_hash(result[:data]),
+            pagination: result[:pagination]
+          }
+        end
+
+        render_success(data)
       rescue ActiveRecord::QueryCanceled => e
         Rails.logger.error "Players index query timeout: #{e.message}"
         render_error(
@@ -37,17 +44,26 @@ module Players
           code: 'QUERY_TIMEOUT',
           status: :request_timeout
         )
+      ensure
+        begin
+          ActiveRecord::Base.connection.execute('RESET statement_timeout')
+        rescue StandardError
+          nil
+        end
       end
 
       # GET /api/v1/players/:id
       def show
-        render_success({
-                         player: PlayerSerializer.render_as_hash(@player)
-                       })
+        data = cache_response("players/#{@player.id}", expires_in: 5.minutes) do
+          { player: PlayerSerializer.render_as_hash(@player) }
+        end
+        render_success(data)
       end
 
       # POST /api/v1/players
       def create
+        authorize Player, :create?
+
         player = organization_scoped(Player).new(player_params)
         player.organization = current_organization
 
@@ -74,6 +90,8 @@ module Players
 
       # PATCH/PUT /api/v1/players/:id
       def update
+        authorize @player
+
         old_values = @player.attributes.dup
 
         if @player.update(player_params)
@@ -100,6 +118,8 @@ module Players
 
       # DELETE /api/v1/players/:id
       def destroy
+        authorize @player
+
         if @player.destroy
           log_user_action(
             action: 'delete',
@@ -120,7 +140,7 @@ module Players
 
       # GET /api/v1/players/:id/stats
       def stats
-        stats_service = Players::Services::StatsService.new(@player)
+        stats_service = StatsService.new(@player)
         stats_data = stats_service.calculate_stats
 
         render_success({
@@ -160,16 +180,19 @@ module Players
 
       # POST /api/v1/players/import
       def import
+        authorize Player, :import?
+
         summoner_name = params[:summoner_name]&.strip
         role = params[:role]
         region = params[:region] || 'br1'
+        line = params[:line].presence_in(Constants::Player::LINES) || 'main'
 
         # Validations
         return unless validate_import_params(summoner_name, role)
         return unless validate_player_uniqueness(summoner_name)
 
         # Import from Riot API
-        result = import_player_from_riot(summoner_name, role, region)
+        result = import_player_from_riot(summoner_name, role, region, line)
 
         # Handle result
         result[:success] ? handle_import_success(result) : handle_import_error(result)
@@ -177,8 +200,10 @@ module Players
 
       # POST /api/v1/players/:id/sync_from_riot
       def sync_from_riot
+        authorize @player, :sync_from_riot?
+
         region = params[:region] || @player.region || 'br1'
-        service = Players::Services::RiotSyncService.new(current_organization, region)
+        service = RiotSyncService.new(current_organization, region)
         result = service.sync_player(@player, import_matches: true)
 
         if result[:success]
@@ -215,7 +240,7 @@ module Players
           )
         end
 
-        result = Players::Services::RiotSyncService.search_riot_id(summoner_name, region: region)
+        result = RiotSyncService.search_riot_id(summoner_name, region: region)
 
         if result[:success] && result[:found]
           render_success(result.except(:success))
@@ -241,6 +266,8 @@ module Players
 
       # POST /api/v1/players/bulk_sync
       def bulk_sync
+        authorize Player, :bulk_sync?
+
         status = params[:status] || 'active'
 
         players = organization_scoped(Player).where(status: status)
@@ -266,7 +293,7 @@ module Players
 
         begin
           players.each do |player|
-            SyncPlayerFromRiotJob.perform_later(player.id)
+            SyncPlayerFromRiotJob.perform_later(player.id, current_organization.id)
           end
 
           render_success({
@@ -299,6 +326,50 @@ module Players
         end
       end
 
+      # POST /api/v1/players/:id/link_discord
+      # Links a player to a Discord account.
+      # Called by the Discord bot after a user runs /link.
+      # Body: { discord_user_id: "123456789" }
+      def link_discord
+        @player = organization_scoped(Player).find(params[:id])
+        authorize @player, :update?
+
+        discord_id = params[:discord_user_id].to_s.strip
+        if discord_id.blank?
+          return render_error(message: 'discord_user_id is required', code: 'MISSING_PARAMS',
+                              status: :unprocessable_entity)
+        end
+
+        # Unlink any other player in the same org that had this discord id
+        organization_scoped(Player)
+          .where(discord_user_id: discord_id)
+          .where.not(id: @player.id)
+          .update_all(discord_user_id: nil)
+
+        if @player.update(discord_user_id: discord_id)
+          render_success(
+            { player: PlayerSerializer.render_as_hash(@player) },
+            message: 'Discord account linked'
+          )
+        else
+          render_error(message: 'Failed to link Discord account', code: 'VALIDATION_ERROR',
+                       status: :unprocessable_entity, details: @player.errors.as_json)
+        end
+      rescue ActiveRecord::RecordNotFound
+        render_not_found
+      end
+
+      # GET /api/v1/players/by_discord/:discord_user_id
+      # Looks up a player by Discord user ID. Used by the bot to resolve player_id.
+      def by_discord
+        discord_id = params[:discord_user_id].to_s.strip
+        player = organization_scoped(Player).find_by(discord_user_id: discord_id)
+
+        return render_not_found unless player
+
+        render_success({ player: PlayerSerializer.render_as_hash(player) })
+      end
+
       private
 
       def set_player
@@ -309,14 +380,15 @@ module Players
         # :role refers to in-game position (top/jungle/mid/adc/support), not user role
         # nosemgrep
         params.require(:player).permit(
-          :summoner_name, :real_name, :role, :region, :status, :jersey_number,
+          :summoner_name, :real_name, :professional_name, :role, :region, :status, :jersey_number,
           :birth_date, :country, :nationality,
           :contract_start_date, :contract_end_date,
           :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
           :solo_queue_wins, :solo_queue_losses,
           :flex_queue_tier, :flex_queue_rank, :flex_queue_lp,
           :peak_tier, :peak_rank, :peak_season,
-          :riot_puuid, :riot_summoner_id,
+          # riot_puuid and riot_summoner_id are intentionally excluded —
+          # these fields must only be updated via the Riot sync service, never by user input.
           :twitter_handle, :twitch_channel, :instagram_handle,
           :notes
         )
@@ -362,12 +434,13 @@ module Players
       end
 
       # Import player from Riot API
-      def import_player_from_riot(summoner_name, role, region)
-        Players::Services::RiotSyncService.import(
+      def import_player_from_riot(summoner_name, role, region, line = 'main')
+        RiotSyncService.import(
           summoner_name: summoner_name,
           role: role,
           region: region,
-          organization: current_organization
+          organization: current_organization,
+          line: line
         )
       end
 

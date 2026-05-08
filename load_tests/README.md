@@ -1,196 +1,158 @@
 # ProStaff API - Load & Stress Testing
 
-Comprehensive load testing suite using k6 to measure API performance, identify bottlenecks, and determine if GraphQL is needed.
+Suite de testes de carga usando k6 para medir performance da API, identificar gargalos e validar estabilidade sob carga.
 
-## 🎯 Objectives
+## Objetivos
 
-1. **Baseline Performance**: Establish current API performance metrics
-2. **Identify Bottlenecks**: Find slow endpoints and N+1 query issues
-3. **Breaking Points**: Determine max capacity before degradation
-4. **GraphQL Decision**: Data to support REST vs GraphQL decision
+1. **Baseline de Performance**: Estabelecer metricas base da API REST atual
+2. **Identificar Gargalos**: Encontrar endpoints lentos e problemas de N+1 query
+3. **Breaking Points**: Determinar capacidade maxima antes de degradacao
+4. **Pre-deploy Validation**: Garantir que mudancas nao regridam performance
 
-## 📦 Setup
+## Setup
 
-### Install k6
+### Instalar k6
 
 ```bash
 ./load_tests/k6-setup.sh
 ```
 
-Or manually:
+Ou manualmente:
 - **Linux**: `sudo apt-get install k6`
 - **macOS**: `brew install k6`
 - **Windows**: `choco install k6`
 
-### Configure Test User
+### Configurar Usuario de Teste
 
-Create test user in your database or use existing credentials:
+Crie o usuario de teste no banco ou use credenciais existentes:
 
 ```bash
-# In .env file
+# No arquivo .env
 TEST_EMAIL=test@prostaff.gg
 TEST_PASSWORD=Test123!@#
 ```
 
-## 🧪 Test Scenarios
+## Cenarios de Teste
 
 ### 1. Smoke Test (1 min)
-**Purpose**: Quick sanity check, minimal load
+
+**Objetivo**: Verificacao rapida de sanidade, carga minima
 
 ```bash
 ./load_tests/run-tests.sh smoke local
 ```
 
-**Profile**:
+**Perfil**:
 - 1 virtual user
-- Tests basic endpoints
-- Validates setup
+- Testa endpoints basicos
+- Valida setup e autenticacao
 
 ### 2. Load Test (16 min)
-**Purpose**: Normal traffic simulation
+
+**Objetivo**: Simulacao de trafego normal
 
 ```bash
 ./load_tests/run-tests.sh load local
 ```
 
-**Profile**:
-- Ramps 0 → 10 → 50 users
-- Realistic user workflows
-- 95th percentile < 1s
+**Perfil**:
+- Rampa 0 -> 10 -> 50 usuarios
+- Workflows realistas de usuario
+- p(95) < 1000ms
 
-**Use Cases**:
+**Casos de Uso**:
 - Dashboard browsing (60%)
 - Analytics review (30%)
-- Player management (10%)
+- Gestao de players (10%)
 
 ### 3. Stress Test (28 min)
-**Purpose**: Find breaking point
+
+**Objetivo**: Encontrar ponto de quebra
 
 ```bash
 ./load_tests/run-tests.sh stress local
 ```
 
-**Profile**:
-- Ramps 0 → 50 → 100 → 200 → 300 users
-- Aggressive querying
-- Tests DB connection pool, Redis, memory
+**Perfil**:
+- Rampa 0 -> 50 -> 100 -> 200 -> 300 usuarios
+- Queries agressivas
+- Testa DB connection pool, Redis, memoria
 
 ### 4. Spike Test (7.5 min)
-**Purpose**: Sudden traffic surge (e.g., tournament announcement)
+
+**Objetivo**: Pico subito de trafego (ex: anuncio de torneio)
 
 ```bash
 ./load_tests/run-tests.sh spike local
 ```
 
-**Profile**:
-- Instant jump: 10 → 500 users
-- Tests auto-scaling, caching
-- Measures recovery time
+**Perfil**:
+- Salto instantaneo: 10 -> 500 usuarios
+- Testa caching e recuperacao
+- Mede tempo de estabilizacao
 
-### 5. Soak Test (3+ hours)
-**Purpose**: Long-term stability, memory leaks
+### 5. Soak Test (3+ horas)
+
+**Objetivo**: Estabilidade de longa duracao, deteccao de memory leaks
 
 ```bash
 ./load_tests/run-tests.sh soak local
 ```
 
-**Profile**:
-- 50 concurrent users for 3 hours
-- Monitors degradation over time
-- Detects memory leaks, connection pool issues
+**Perfil**:
+- 50 usuarios concorrentes por 3 horas
+- Monitora degradacao ao longo do tempo
+- Detecta memory leaks e problemas de connection pool
 
-## 📊 Interpreting Results
+## Interpretando Resultados
 
-### Key Metrics
+### Metricas Principais
 
-**Response Times**:
-- `http_req_duration`: Total request time
-- `http_req_waiting`: Time to first byte (TTFB)
-- p(95) < 1000ms ✅ Good
-- p(95) > 2000ms ⚠️ Issue
+**Tempos de Resposta**:
+- `http_req_duration`: Tempo total da requisicao
+- `http_req_waiting`: Tempo ate o primeiro byte (TTFB)
+- p(95) < 1000ms - Aceitavel
+- p(95) > 2000ms - Problema
 
 **Throughput**:
-- `http_reqs`: Total requests
-- `iterations`: Complete user workflows
-- Higher is better
+- `http_reqs`: Total de requisicoes
+- `iterations`: Workflows completos de usuario
+- Maior e melhor
 
-**Errors**:
-- `http_req_failed`: Failed requests
-- < 1% ✅ Acceptable
-- > 5% ❌ Critical issue
+**Erros**:
+- `http_req_failed`: Requisicoes com falha
+- < 1% - Aceitavel
+- > 5% - Problema critico
 
-**Custom Metrics**:
-- `dashboard_duration`: Dashboard load time
-- `analytics_duration`: Analytics query time
-- `errors`: Error rate
+**Metricas Customizadas**:
+- `dashboard_duration`: Tempo de carregamento do dashboard
+- `analytics_duration`: Tempo de query de analytics
+- `errors`: Taxa de erros
 
-### Results Location
+### Localizacao dos Resultados
 
 ```
 load_tests/results/
-├── smoke_20250107_120000/
-│   ├── results.json       # Full metrics
-│   ├── summary.json       # Aggregated stats
-│   └── output.log         # Console output
+├── smoke_20260225_120000/
+│   ├── results.json       # Metricas completas
+│   ├── summary.json       # Stats agregados
+│   └── output.log         # Saida do console
 ```
 
-### Reading Summary
+### Lendo o Summary
 
 ```bash
-# View key metrics
+# Ver metricas principais
 jq '.metrics.http_req_duration' results/smoke_*/summary.json
 
-# Check error rate
+# Verificar taxa de erros
 jq '.metrics.http_req_failed.values.rate' results/smoke_*/summary.json
 
-# Response time percentiles
+# Percentis de tempo de resposta
 jq '.metrics.http_req_duration.values' results/smoke_*/summary.json
 ```
 
-## 🎯 GraphQL Decision Framework
-
-Run all tests and analyze:
-
-### ✅ GraphQL Makes Sense If:
-
-1. **Multiple Roundtrips**
-   - Load test shows many sequential API calls
-   - Frontend makes 5+ requests per page
-   - High `http_reqs` count for simple workflows
-
-2. **Overfetching**
-   - Large payload sizes (> 100KB for simple data)
-   - Unused fields in responses
-   - Bandwidth issues in metrics
-
-3. **Complex Queries**
-   - Dashboard/analytics endpoints timeout
-   - N+1 query issues visible in logs
-   - High `http_req_waiting` times
-
-4. **Multiple Clients**
-   - Different needs (web/mobile/partners)
-   - Custom views per client
-   - Version management pain
-
-### ❌ Stick with REST If:
-
-1. **Good Performance**
-   - All p(95) < 500ms
-   - Error rate < 1%
-   - No timeout issues
-
-2. **Simple Data Needs**
-   - 1-2 API calls per workflow
-   - Payloads reasonable (< 50KB)
-   - No overfetching
-
-3. **Small Team**
-   - Learning curve not worth it
-   - Complexity > benefit
-   - Current system maintainable
-
-## 🚀 Running Against Environments
+## Executando por Ambiente
 
 ### Local
 ```bash
@@ -202,94 +164,94 @@ Run all tests and analyze:
 ./load_tests/run-tests.sh load staging
 ```
 
-### Production (⚠️ CAREFUL!)
+### Producao (CUIDADO!)
 ```bash
-# Only run smoke/load tests, NOT stress
+# Execute apenas smoke/load, NUNCA stress contra producao
 ./load_tests/run-tests.sh smoke production
 ./load_tests/run-tests.sh load production
 ```
 
-**Never run stress/spike/soak against production!**
+**Nunca execute stress/spike/soak contra producao.**
 
-## 🔍 Analyzing Bottlenecks
+## Analisando Gargalos
 
-### Slow Endpoints
+### Endpoints Lentos
 
-Look for high `http_req_duration` on specific endpoints:
+Procure por `http_req_duration` alto em endpoints especificos:
 
-```javascript
-// In k6 output
-✓ dashboard loaded
-  ├─ avg=1250ms  // ⚠️ Slow!
-  ├─ p(95)=2500ms
+```
+# Saida do k6
+dashboard loaded
+  avg=1250ms  -- Lento!
+  p(95)=2500ms
 
-✓ players list loaded
-  ├─ avg=150ms   // ✅ Fast
-  ├─ p(95)=300ms
+players list loaded
+  avg=150ms   -- Rapido
+  p(95)=300ms
 ```
 
-**Actions**:
-1. Check Rails logs for N+1 queries
-2. Add database indexes
-3. Implement caching
-4. Consider pagination
+**Acoes**:
+1. Verificar Rails logs para N+1 queries
+2. Adicionar indexes no banco
+3. Implementar caching
+4. Considerar paginacao
 
-### Database Issues
+### Problemas de Banco
 
-Symptoms:
-- Errors during stress test
-- `http_req_failed` increases with load
-- 500/503 errors in logs
+Sintomas:
+- Erros durante stress test
+- `http_req_failed` aumenta com a carga
+- Erros 500/503 nos logs
 
-**Check**:
+**Verificacao**:
 ```bash
-# In Rails logs during test
+# Nos logs do Rails durante o teste
 tail -f log/development.log | grep -E '(timeout|connection|pool)'
 ```
 
-**Solutions**:
-- Increase DB connection pool
-- Add read replicas
-- Optimize slow queries
+**Solucoes**:
+- Aumentar DB connection pool
+- Adicionar read replicas
+- Otimizar queries lentas
 
 ### Memory Leaks
 
-Run soak test and monitor:
+Execute o soak test e monitore:
 
 ```bash
-# During soak test
-docker stats prostaff-api  # If using Docker
-# Or
+# Durante o soak test
+docker stats prostaff-api
+# Ou localmente
 top -p $(pgrep -f puma)
 ```
 
-**Red flags**:
-- Memory usage climbing over time
-- OOM errors after hours
-- Response time degradation
+**Sinais de alerta**:
+- Uso de memoria crescendo ao longo do tempo
+- Erros OOM apos horas
+- Degradacao do tempo de resposta
 
-## 📈 Continuous Testing
+## Testes Continuos
 
-### Pre-deployment Checklist
+### Checklist Pre-deploy
 
 ```bash
-# Before each release
+# Antes de cada release
 ./load_tests/run-tests.sh smoke staging
 ./load_tests/run-tests.sh load staging
 
-# If performance-critical changes
+# Para mudancas criticas de performance
 ./load_tests/run-tests.sh stress staging
 ```
 
-### CI/CD Integration
+### Integracao CI/CD
 
-See `.github/workflows/load-test.yml` (if configured)
+Ver `.github/workflows/load-test.yml` (se configurado).
 
-## 🔧 Advanced Usage
+## Uso Avancado
 
-### Custom Scenarios
+### Cenarios Customizados
 
-Create your own test in `scenarios/`:
+Crie seu proprio teste em `scenarios/`:
 
 ```javascript
 import { config } from '../config.js';
@@ -301,40 +263,53 @@ export const options = {
 };
 
 export default function() {
-  // Your test logic
+  // Logica do teste
 }
 ```
 
-### Environment Variables
+### Variaveis de Ambiente
 
 ```bash
-# Custom configuration
-BASE_URL=http://localhost:3000 \
+# Configuracao customizada
+BASE_URL=http://localhost:3333 \
 TEST_EMAIL=custom@email.com \
 ./load_tests/run-tests.sh load local
 ```
 
-### Output Formats
+### Formatos de Output
 
 ```bash
-# CSV output
+# CSV
 k6 run --out csv=results.csv scenarios/load-test.js
 
-# InfluxDB (time-series analysis)
+# InfluxDB (analise de series temporais)
 k6 run --out influxdb=http://localhost:8086/k6 scenarios/load-test.js
 ```
 
-## 📚 Resources
+## Endpoints Testados
+
+Baseado nas rotas atuais da API (`config/routes.rb`):
+
+| Grupo | Endpoints |
+|-------|-----------|
+| Auth | `POST /api/v1/auth/login`, `GET /api/v1/auth/me` |
+| Dashboard | `GET /api/v1/dashboard/stats`, `GET /api/v1/dashboard/activities` |
+| Players | `GET /api/v1/players`, `GET /api/v1/players/:id` |
+| Analytics | `GET /api/v1/analytics/performance`, `GET /api/v1/analytics/kda-trend/:id` |
+| Matches | `GET /api/v1/matches`, `GET /api/v1/matches/:id` |
+
+Configuracao completa em `load_tests/config.js`.
+
+## Recursos
 
 - [k6 Documentation](https://k6.io/docs/)
 - [Load Testing Best Practices](https://k6.io/docs/testing-guides/test-types/)
 - [Interpreting Results](https://k6.io/docs/using-k6/metrics/)
 
-## 🎓 Next Steps
+## Proximos Passos
 
-1. ✅ Run smoke test to validate setup
-2. ✅ Run load test to baseline performance
-3. ✅ Identify slow endpoints from results
-4. ✅ Optimize bottlenecks
-5. ✅ Re-run tests to measure improvement
-6. ✅ Make REST vs GraphQL decision based on data
+1. Executar smoke test para validar setup
+2. Executar load test para baseline de performance
+3. Identificar endpoints lentos nos resultados
+4. Otimizar gargalos encontrados
+5. Re-executar testes para medir melhoria

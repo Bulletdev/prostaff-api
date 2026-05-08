@@ -1,0 +1,21 @@
+# GitHub linguist configuration
+# Hide certain directories from language statistics
+
+# Documentation
+/DOCS/** linguist-documentation
+/docs-page/** linguist-documentation
+/status-page/** linguist-documentation
+
+# Testing
+/load_tests/** linguist-documentation
+/security_tests/** linguist-documentation
+/coverage/** linguist-generated
+
+# Deployment configs
+/deploy/** linguist-documentation
+/docker/** linguist-documentation
+
+# Generated files
+brakeman-report.json linguist-generated
+codacyissues.md linguist-generated
+diagram.mmd linguist-generated

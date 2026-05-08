@@ -44,6 +44,6 @@ class AddAnalyticsPerformanceIndexes < ActiveRecord::Migration[7.2]
     remove_index :player_match_stats, name: 'idx_pms_player_performance_score', if_exists: true
     remove_index :player_match_stats, name: 'idx_pms_player_vision_score',       if_exists: true
     remove_index :player_match_stats, name: 'idx_pms_player_cs_per_min',         if_exists: true
-    remove_index :matches,            name: 'idx_matches_org_match_type',         if_exists: true
+    remove_index :matches,            name: 'idx_matches_org_match_type', if_exists: true
   end
 end

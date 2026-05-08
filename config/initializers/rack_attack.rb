@@ -7,26 +7,28 @@ module Rack
     # Production: Redis DB 0 (persistente, compartilhado entre replicas)
     # Falls back to MemoryStore if Redis is unavailable
     Rack::Attack.cache.store = if Rails.env.production? && ENV['REDIS_URL'].present?
-                                  begin
-                                    ActiveSupport::Cache::RedisCacheStore.new(
-                                      url: ENV['REDIS_URL'],
-                                      reconnect_attempts: 3,
-                                      error_handler: ->(method:, returning:, exception:) {
-                                        Rails.logger.warn "Rack::Attack Redis error: #{exception.message}"
-                                      },
-                                      namespace: 'rack_attack'
-                                    )
-                                  rescue => e
-                                    Rails.logger.warn "Failed to connect to Redis for Rack::Attack, falling back to MemoryStore: #{e.message}"
-                                    ActiveSupport::Cache::MemoryStore.new
-                                  end
-                                else
-                                  ActiveSupport::Cache::MemoryStore.new
-                                end
+                                 begin
+                                   ActiveSupport::Cache::RedisCacheStore.new(
+                                     url: ENV['REDIS_URL'],
+                                     reconnect_attempts: 3,
+                                     error_handler: lambda { |_method:, _returning:, exception:|
+                                       Rails.logger.warn "Rack::Attack Redis error: #{exception.message}"
+                                     },
+                                     namespace: 'rack_attack'
+                                   )
+                                 rescue StandardError => e
+                                   Rails.logger.warn "Failed to connect to Redis for Rack::Attack, falling back to MemoryStore: #{e.message}"
+                                   ActiveSupport::Cache::MemoryStore.new
+                                 end
+                               else
+                                 ActiveSupport::Cache::MemoryStore.new
+                               end
 
-    # Allow health check endpoints (Docker healthchecks, monitoring, etc.)
+    # Allow health check endpoints (Docker healthchecks, monitoring, load balancers)
+    HEALTH_PATHS = %w[/health /health/live /health/ready /health/detailed /up /api/health].freeze
+
     safelist('allow health checks') do |req|
-      ['/health', '/up', '/api/health'].include?(req.path)
+      HEALTH_PATHS.any? { |p| req.path == p }
     end
 
     # Allow SEO-friendly endpoints (sitemap, robots.txt)
@@ -34,21 +36,19 @@ module Rack
       ['/sitemap.xml', '/robots.txt'].include?(req.path)
     end
 
-    # Allow localhost in development
+    # Allow localhost and Docker bridge in development and test environments
+    # Docker uses 172.16.0.0/12 range for bridge networks (172.16–172.31)
     safelist('allow from localhost') do |req|
-      Rails.env.development? && ['127.0.0.1', '::1'].include?(req.ip)
+      next false unless Rails.env.development? || Rails.env.test?
+
+      ip = req.ip.to_s
+      ip == '127.0.0.1' || ip == '::1' ||
+        (ip.start_with?('172.') && ip.split('.')[1].to_i >= 16 && ip.split('.')[1].to_i <= 31)
     end
 
     # Block known malicious bots and scrapers
-    MALICIOUS_BOTS = %w[
-      AhrefsBot SemrushBot MJ12bot DotBot rogerBot SiteExplorer
-      OpenLinkProfiler SEOkicks Lipperhey Exabot BLEXBot
-      MegaIndex.ru Cliqzbot PetalBot AspiegelBot ZoominfoBot
-      DataForSeoBot Bytespider GPTBot ChatGPT-User CCBot
-      anthropic-ai Claude-Web cohere-ai PerplexityBot
-      EmailCollector EmailSiphon EmailWolf HTTrack WebCopier
-      Teleport TeleportPro WebReaper WebStripper WebZip
-      BackDoorBot Screaming\ Frog\ SEO\ Spider
+    MALICIOUS_BOTS = [
+      'AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'rogerBot', 'SiteExplorer', 'OpenLinkProfiler', 'SEOkicks', 'Lipperhey', 'Exabot', 'BLEXBot', 'MegaIndex.ru', 'Cliqzbot', 'PetalBot', 'AspiegelBot', 'ZoominfoBot', 'DataForSeoBot', 'Bytespider', 'GPTBot', 'ChatGPT-User', 'CCBot', 'anthropic-ai', 'Claude-Web', 'cohere-ai', 'PerplexityBot', 'EmailCollector', 'EmailSiphon', 'EmailWolf', 'HTTrack', 'WebCopier', 'Teleport', 'TeleportPro', 'WebReaper', 'WebStripper', 'WebZip', 'BackDoorBot', 'Screaming Frog SEO Spider'
     ].freeze
 
     blocklist('block malicious bots') do |req|
@@ -57,11 +57,11 @@ module Rack
     end
 
     # Block suspicious requests (no user agent)
-    # Allow OPTIONS requests (CORS preflight) even without user agent
+    # Allow OPTIONS requests (CORS preflight) and health probes even without user agent
     blocklist('block requests without user agent') do |req|
       req.user_agent.blank? &&
-      !['/health', '/up'].include?(req.path) &&
-      req.request_method != 'OPTIONS'
+        HEALTH_PATHS.none? { |p| req.path == p } &&
+        req.request_method != 'OPTIONS'
     end
 
     # Block requests with suspicious patterns
@@ -78,9 +78,29 @@ module Rack
       req.ip if req.path == '/api/v1/auth/login' && req.post?
     end
 
-    # Throttle registration
-    throttle('register/ip', limit: 3, period: 1.hour) do |req|
-      req.ip if req.path == '/api/v1/auth/register' && req.post?
+    # Throttle registration — 10/hour per IP to allow shared NAT (office, household)
+    # Uses X-Forwarded-For when present (Next.js proxy repassa o IP real do cliente)
+    throttle('register/ip', limit: 10, period: 1.hour) do |req|
+      next unless req.path == '/api/v1/auth/register' && req.post?
+
+      forwarded = req.env['HTTP_X_FORWARDED_FOR']
+      first_ip = forwarded&.split(',')&.first
+      first_ip ? first_ip.strip : req.ip
+    end
+
+    # Throttle player self-registration (ArenaBR) — 5/hour por IP real do cliente
+    # Uses X-Forwarded-For when present (Next.js proxy repassa o IP real do cliente)
+    throttle('player-register/ip', limit: 5, period: 1.hour) do |req|
+      next unless req.path == '/api/v1/auth/player-register' && req.post?
+
+      forwarded = req.env['HTTP_X_FORWARDED_FOR']
+      first_ip = forwarded&.split(',')&.first
+      first_ip ? first_ip.strip : req.ip
+    end
+
+    # Throttle player login — mesma política que login de staff
+    throttle('player-logins/ip', limit: 5, period: 20.seconds) do |req|
+      req.ip if req.path == '/api/v1/auth/player-login' && req.post?
     end
 
     # Throttle password reset requests
@@ -88,9 +108,29 @@ module Rack
       req.ip if req.path == '/api/v1/auth/forgot-password' && req.post?
     end
 
+    # Throttle public lobby endpoint — unauthenticated, runs heavy joins
+    throttle('lobby/ip', limit: 60, period: 1.minute) do |req|
+      req.ip if req.path == '/api/v1/scrims/lobby' && req.get?
+    end
+
     # Throttle API requests per authenticated user
     throttle('req/authenticated_user', limit: 1000, period: 1.hour) do |req|
       req.env['rack.jwt.payload']['user_id'] if req.env['rack.jwt.payload']
+    end
+
+    # Add Retry-After header to throttled responses so clients can self-throttle
+    Rack::Attack.throttled_responder = lambda do |req|
+      match_data  = req.env['rack.attack.match_data']
+      period      = match_data[:period].to_i
+      epoch_time  = match_data[:epoch_time].to_i
+      retry_after = period - (epoch_time % period)
+
+      headers = {
+        'Content-Type' => 'application/json',
+        'Retry-After' => retry_after.to_s
+      }
+      body = { error: { code: 'RATE_LIMITED', message: 'Too many requests. Please retry later.' } }.to_json
+      [429, headers, [body]]
     end
 
     # Log blocked and throttled requests

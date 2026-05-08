@@ -2,25 +2,32 @@
 
 require 'active_support/core_ext/integer/time'
 
-Rails.application.configure do
-  config.cache_classes = true
+Rails.application.configure do # rubocop:disable Metrics/BlockLength
+  config.enable_reloading = false
 
   config.eager_load = true
 
   config.consider_all_requests_local = false
 
-# Disable Rails Host Authorization. 
-  # Traefik already filters traffic by domain (prostaff.gg), and this 
-  # prevents health checks on internal IPs (like 10.0.x.x) from being blocked.
-  config.hosts = nil
-
-  # REMOVE OR COMMENT OUT THESE OLD LINES:
-  # config.hosts << 'prostaff.gg'
-  # config.hosts << 'www.prostaff.gg'
-  # config.hosts << 'api.prostaff.gg'
-  # config.hosts << 'prostaff-api-production.up.railway.app'
-  # config.hosts << 'localhost'
-  # config.hosts << '127.0.0.1'
+  # Rails Host Authorization allowlist.
+  #
+  # Traefik terminates external traffic and forwards with the correct Host header.
+  # Docker/Coolify health checks originate from internal IPs (10.x.x.x, 172.16-31.x.x),
+  # so those ranges are allowed via regex to prevent blocking liveness/readiness probes.
+  #
+  # Gap 9 fix (FAILURE_MODE_ANALYSIS.md): replaces config.hosts = nil so that
+  # Host header injection is rejected if traffic bypasses Traefik.
+  config.hosts = [
+    'api.prostaff.gg',
+    'prostaff.gg',
+    'www.prostaff.gg',
+    ENV.fetch('APP_HOST', nil),
+    # Internal service names: prostaff-events Reconciler calls the API using the
+    # Docker Compose service hostname (e.g. "api" or "api:3000") at boot time.
+    /\Aapi(:\d+)?\z/,
+    # Internal IPs: Docker bridge, Coolify overlay, localhost — used by health check probes
+    /\A(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?\z/
+  ].compact
 
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
 
@@ -33,17 +40,16 @@ Rails.application.configure do
   # Setting force_ssl = true would cause redirect loops.
   #
   # Security: We trust X-Forwarded-Proto header from Traefik to detect HTTPS
-  config.force_ssl = false
+  config.force_ssl = false # nosemgrep: ruby.lang.security.force-ssl-false.force-ssl-false
   config.ssl_options = { redirect: { exclude: ->(request) { request.path.start_with?('/health') } } }
-
 
   # Trust all proxies (Traefik, Cloudflare)
   require 'ipaddr'
   config.action_dispatch.trusted_proxies = [
-    IPAddr.new("10.0.0.0/8"),
-    IPAddr.new("172.16.0.0/12"),
-    IPAddr.new("172.16.0.0/16"),
-    IPAddr.new("127.0.0.1"),
+    IPAddr.new('10.0.0.0/8'),
+    IPAddr.new('172.16.0.0/12'),
+    IPAddr.new('172.16.0.0/16'),
+    IPAddr.new('127.0.0.1')
   ]
 
   config.log_level = :info
@@ -57,7 +63,7 @@ Rails.application.configure do
                            {
                              url: ENV['REDIS_URL'],
                              reconnect_attempts: 3,
-                             error_handler: lambda { |method:, returning:, exception:|
+                             error_handler: lambda { |_method:, _returning:, exception:|
                                Rails.logger.warn "Rails cache Redis error: #{exception.message}"
                              }
                            }
@@ -72,14 +78,15 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
 
   # Action Mailer configuration
-  config.action_mailer.delivery_method = ENV.fetch('MAILER_DELIVERY_METHOD', 'smtp').to_sym
   config.action_mailer.default_url_options = {
-    host: ENV.fetch('APP_HOST', 'prostaff-api-production.up.railway.app'),
+    host: ENV.fetch('APP_HOST', 'api.prostaff.gg'),
     protocol: 'https'
   }
 
-  # Only configure SMTP if credentials are provided
+  # Only configure SMTP if credentials are provided; fall back to :test to avoid
+  # "SMTP-AUTH requested but missing user name" errors when vars are absent.
   if ENV['SMTP_USERNAME'].present? && ENV['SMTP_PASSWORD'].present?
+    config.action_mailer.delivery_method = ENV.fetch('MAILER_DELIVERY_METHOD', 'smtp').to_sym
     config.action_mailer.smtp_settings = {
       address: ENV.fetch('SMTP_ADDRESS', 'smtp.gmail.com'),
       port: ENV.fetch('SMTP_PORT', 587).to_i,
@@ -87,8 +94,12 @@ Rails.application.configure do
       password: ENV['SMTP_PASSWORD'],
       authentication: ENV.fetch('SMTP_AUTHENTICATION', 'plain').to_sym,
       enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
+      ssl: ENV.fetch('SMTP_PORT', '587') == '465',
       domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
     }
+  else
+    config.action_mailer.delivery_method = :test
+    warn '[Mailer] SMTP_USERNAME/SMTP_PASSWORD not set — mail delivery disabled (using :test adapter)'
   end
 
   config.i18n.fallbacks = true
@@ -104,4 +115,23 @@ Rails.application.configure do
   end
 
   config.active_record.dump_schema_after_migration = false
+
+  # ActionCable — allow WebSocket connections from the frontend origin.
+  # FRONTEND_URL must be set in the environment (e.g. https://app.prostaff.gg).
+  config.action_cable.allowed_request_origins = [
+    ENV.fetch('FRONTEND_URL', 'https://scrims.lol'),
+    'https://scrims.lol',
+    'https://www.scrims.lol'
+  ].compact
+
+  # Remove X-Runtime header — vaza tempo de processamento, facilita timing attacks
+  config.middleware.delete(Rack::Runtime)
+
+  # Security headers
+  config.action_dispatch.default_headers.merge!(
+    'X-Frame-Options' => 'DENY',
+    'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
+    'Content-Security-Policy' => "default-src 'none'; frame-ancestors 'none'",
+    'Permissions-Policy' => 'geolocation=(), camera=(), microphone=(), payment=()'
+  )
 end

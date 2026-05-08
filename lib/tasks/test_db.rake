@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :db do
   desc 'Test database connection and RLS status'
   task test_connection: :environment do
@@ -22,7 +23,7 @@ namespace :db do
     puts ''
     puts '2. Database info:'
     result = ActiveRecord::Base.connection.execute(
-      "SELECT current_database(), current_user, version()"
+      'SELECT current_database(), current_user, version()'
     ).first
     puts "   Database: #{result['current_database']}"
     puts "   User: #{result['current_user']}"
@@ -53,7 +54,7 @@ namespace :db do
       puts "    Success! Found #{count} users"
     rescue StandardError => e
       puts "    FAILED: #{e.message}"
-      puts "   This usually means RLS is blocking the query"
+      puts '   This usually means RLS is blocking the query'
     end
 
     # Test User.unscoped
@@ -86,3 +87,4 @@ namespace :db do
     puts '=' * 80
   end
 end
+# rubocop:enable Metrics/BlockLength

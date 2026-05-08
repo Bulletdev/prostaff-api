@@ -12,12 +12,10 @@ require 'hashid/rails'
 Hashid::Rails.configure do |config|
   # Salt: MUST be set via ENV for security
   salt = ENV.fetch('HASHID_SALT') do
-    if Rails.env.production?
-      raise 'HASHID_SALT environment variable must be set in production!'
-    else
-      Rails.logger.warn '[HASHID] Using fallback salt in development. Set HASHID_SALT for production!'
-      'development_fallback_salt'
-    end
+    raise 'HASHID_SALT environment variable must be set in production!' if Rails.env.production?
+
+    Rails.logger.warn '[HASHID] Using fallback salt in development. Set HASHID_SALT for production!'
+    'development_fallback_salt'
   end
   config.salt = salt
 
@@ -25,12 +23,8 @@ Hashid::Rails.configure do |config|
   # Lower = shorter URLs (e.g., 6 = "aBcD3f")
   # Higher = more obfuscation (e.g., 12 = "aBcD3fGhIjKl")
   min_length = ENV.fetch('HASHID_MIN_LENGTH') do
-    if Rails.env.production?
-      Rails.logger.warn '[HASHID] HASHID_MIN_LENGTH not set, using default: 6'
-      '6'
-    else
-      '6'
-    end
+    Rails.logger.warn '[HASHID] HASHID_MIN_LENGTH not set, using default: 6' if Rails.env.production?
+    '6'
   end
   config.min_hash_length = min_length.to_i
 
@@ -45,5 +39,5 @@ Rails.application.config.after_initialize do
   Rails.logger.info '[HASHID] Initialized with:'
   Rails.logger.info "  - Salt: #{salt[0..2]}*** (hidden)"
   Rails.logger.info "  - Min Length: #{min_length}"
-  Rails.logger.info "  - Alphabet: Base62 (a-z, A-Z, 0-9)"
+  Rails.logger.info '  - Alphabet: Base62 (a-z, A-Z, 0-9)'
 end

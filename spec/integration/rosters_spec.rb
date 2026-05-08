@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Rosters API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{Authentication::Services::JwtService.encode(user_id: user.id)}" }
+  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
 
   # ---------------------------------------------------------------------------
   # Roster Actions
@@ -111,22 +111,27 @@ RSpec.describe 'Rosters API', type: :request do
                    }
                  }
                }
-        let(:scouting_target_id) { 'nonexistent' }
-        let(:body) { { status: 'trial' } }
+        let(:scouting_target_id) { create(:scouting_target).id }
+        let(:body) do
+          {
+            contract_start: Date.today.to_s,
+            contract_end: (Date.today + 6.months).to_s
+          }
+        end
         run_test!
       end
 
       response '404', 'scouting target not found' do
         schema '$ref' => '#/components/schemas/Error'
         let(:scouting_target_id) { 'nonexistent' }
-        let(:body) { { status: 'trial' } }
+        let(:body) { { contract_start: Date.today.to_s, contract_end: (Date.today + 6.months).to_s } }
         run_test!
       end
 
       response '422', 'validation error' do
         schema '$ref' => '#/components/schemas/Error'
-        let(:scouting_target_id) { 'nonexistent' }
-        let(:body) { { status: 'invalid_status' } }
+        let(:scouting_target_id) { create(:scouting_target).id }
+        let(:body) { {} }
         run_test!
       end
     end

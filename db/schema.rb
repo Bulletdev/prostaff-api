@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_07_200001) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -28,6 +28,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
   enable_extension "plpgsql"
   enable_extension "supabase_vault"
   enable_extension "uuid-ossp"
+
+  create_table "ai_champion_matrices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "champion_a", null: false
+    t.string "champion_b", null: false
+    t.integer "wins_a", default: 0, null: false
+    t.integer "total_games", default: 0, null: false
+    t.string "patch"
+    t.string "league"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["champion_a", "champion_b", "patch", "league"], name: "index_ai_champion_matrices_unique", unique: true, where: "((patch IS NOT NULL) AND (league IS NOT NULL))"
+    t.index ["champion_a", "champion_b"], name: "index_ai_champion_matrices_on_pair"
+  end
+
+  create_table "ai_champion_vectors", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "champion_name", null: false
+    t.jsonb "vector_data", default: [], null: false
+    t.integer "games_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["champion_name"], name: "index_ai_champion_vectors_on_champion_name", unique: true
+  end
 
   create_table "audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
@@ -48,6 +70,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.index ["organization_id", "created_at"], name: "index_audit_logs_on_org_and_created"
     t.index ["organization_id"], name: "index_audit_logs_on_organization_id"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "availability_windows", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.integer "day_of_week", null: false
+    t.integer "start_hour", null: false
+    t.integer "end_hour", null: false
+    t.string "timezone", default: "UTC", null: false
+    t.string "game", default: "league_of_legends", null: false
+    t.string "region"
+    t.string "tier_preference", default: "any"
+    t.boolean "active", default: true, null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "focus_area"
+    t.string "draft_type"
+    t.index ["day_of_week"], name: "index_availability_windows_on_day_of_week"
+    t.index ["game", "region", "active"], name: "index_availability_windows_on_game_and_region_and_active"
+    t.index ["organization_id", "active"], name: "index_availability_windows_on_organization_id_and_active"
+    t.index ["organization_id"], name: "index_availability_windows_on_organization_id"
   end
 
   create_table "champion_pools", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -100,9 +143,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.string "external_stats_url"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["external_match_id"], name: "index_competitive_matches_on_external_match_id", unique: true
     t.index ["match_date"], name: "index_competitive_matches_on_match_date"
     t.index ["opponent_team_id"], name: "index_competitive_matches_on_opponent_team_id"
+    t.index ["organization_id", "external_match_id"], name: "index_competitive_matches_on_org_and_external_match_id", unique: true
     t.index ["organization_id", "tournament_name"], name: "idx_comp_matches_org_tournament"
     t.index ["organization_id"], name: "index_competitive_matches_on_organization_id"
     t.index ["patch_version"], name: "index_competitive_matches_on_patch_version"
@@ -141,6 +184,95 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_fantasy_waitlists_on_email", unique: true
     t.index ["organization_id"], name: "index_fantasy_waitlists_on_organization_id"
+  end
+
+  create_table "feedback_votes", force: :cascade do |t|
+    t.bigint "feedback_id", null: false
+    t.uuid "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feedback_id", "user_id"], name: "index_feedback_votes_on_feedback_id_and_user_id", unique: true
+    t.index ["feedback_id"], name: "index_feedback_votes_on_feedback_id"
+    t.index ["user_id"], name: "index_feedback_votes_on_user_id"
+  end
+
+  create_table "feedbacks", force: :cascade do |t|
+    t.uuid "user_id"
+    t.uuid "organization_id"
+    t.string "category", null: false
+    t.string "title", null: false
+    t.text "description", null: false
+    t.integer "rating"
+    t.string "status", default: "open", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "votes_count", default: 0, null: false
+    t.string "source", default: "prostaff", null: false
+    t.index ["category"], name: "index_feedbacks_on_category"
+    t.index ["organization_id"], name: "index_feedbacks_on_organization_id"
+    t.index ["source"], name: "index_feedbacks_on_source"
+    t.index ["status"], name: "index_feedbacks_on_status"
+    t.index ["user_id"], name: "index_feedbacks_on_user_id"
+  end
+
+  create_table "inhouse_participations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "inhouse_id", null: false
+    t.uuid "player_id", null: false
+    t.string "team", default: "none", null: false
+    t.string "tier_snapshot"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "wins", default: 0, null: false
+    t.integer "losses", default: 0, null: false
+    t.boolean "is_captain", default: false, null: false
+    t.string "role"
+    t.float "mu_snapshot"
+    t.float "sigma_snapshot"
+    t.integer "mmr_delta"
+    t.index ["inhouse_id", "player_id"], name: "index_inhouse_participations_on_inhouse_id_and_player_id", unique: true
+    t.index ["inhouse_id"], name: "index_inhouse_participations_on_inhouse_id"
+    t.index ["player_id"], name: "index_inhouse_participations_on_player_id"
+  end
+
+  create_table "inhouse_queue_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "inhouse_queue_id", null: false
+    t.uuid "player_id", null: false
+    t.string "role", null: false
+    t.string "tier_snapshot"
+    t.boolean "checked_in", default: false, null: false
+    t.datetime "checked_in_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["inhouse_queue_id", "player_id"], name: "index_inhouse_queue_entries_on_inhouse_queue_id_and_player_id", unique: true
+    t.index ["inhouse_queue_id", "role"], name: "index_inhouse_queue_entries_on_inhouse_queue_id_and_role"
+    t.index ["inhouse_queue_id"], name: "index_inhouse_queue_entries_on_inhouse_queue_id"
+    t.index ["player_id"], name: "index_inhouse_queue_entries_on_player_id"
+  end
+
+  create_table "inhouse_queues", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "check_in_deadline"
+    t.uuid "created_by_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_inhouse_queues_on_organization_id"
+  end
+
+  create_table "inhouses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "status", default: "waiting", null: false
+    t.uuid "created_by_user_id", null: false
+    t.integer "games_played", default: 0, null: false
+    t.integer "blue_wins", default: 0, null: false
+    t.integer "red_wins", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "blue_captain_id"
+    t.uuid "red_captain_id"
+    t.integer "draft_pick_number"
+    t.string "formation_mode"
+    t.index ["organization_id"], name: "index_inhouses_on_organization_id"
   end
 
   create_table "matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -195,10 +327,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "recipient_id"
     t.index ["organization_id", "created_at"], name: "idx_messages_active_by_org", where: "(deleted = false)"
     t.index ["organization_id", "created_at"], name: "idx_messages_org_created_at"
+    t.index ["organization_id", "recipient_id", "user_id", "created_at"], name: "idx_messages_dm_reverse"
     t.index ["organization_id", "user_id", "created_at"], name: "idx_messages_org_user_created_at"
+    t.index ["organization_id", "user_id", "recipient_id", "created_at"], name: "idx_messages_active_dm", where: "(deleted = false)"
+    t.index ["organization_id", "user_id", "recipient_id", "created_at"], name: "idx_messages_dm_created_at"
     t.index ["organization_id"], name: "index_messages_on_organization_id"
+    t.index ["recipient_id"], name: "index_messages_on_recipient_id"
     t.index ["user_id"], name: "index_messages_on_user_id"
   end
 
@@ -263,6 +400,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.datetime "updated_at", null: false
     t.datetime "trial_expires_at"
     t.datetime "trial_started_at"
+    t.boolean "is_public", default: false, null: false
+    t.string "public_tagline", limit: 200
+    t.string "discord_invite_url"
+    t.index ["is_public"], name: "index_organizations_on_is_public", where: "(is_public = true)"
     t.index ["region"], name: "index_organizations_on_region"
     t.index ["slug"], name: "index_organizations_on_slug", unique: true
     t.index ["subscription_plan"], name: "index_organizations_on_subscription_plan"
@@ -283,6 +424,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.index ["token"], name: "index_password_reset_tokens_on_token", unique: true
     t.index ["user_id", "used_at"], name: "index_password_reset_tokens_on_user_id_and_used_at"
     t.index ["user_id"], name: "index_password_reset_tokens_on_user_id"
+  end
+
+  create_table "player_inhouse_ratings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "player_id", null: false
+    t.uuid "organization_id", null: false
+    t.string "role", null: false
+    t.float "mu", default: 25.0, null: false
+    t.float "sigma", default: 8.333333333333334, null: false
+    t.integer "games_played", default: 0, null: false
+    t.integer "wins", default: 0, null: false
+    t.integer "losses", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "role"], name: "index_player_inhouse_ratings_on_organization_id_and_role"
+    t.index ["organization_id"], name: "index_player_inhouse_ratings_on_organization_id"
+    t.index ["player_id", "role"], name: "index_player_inhouse_ratings_on_player_id_and_role", unique: true
+    t.index ["player_id"], name: "index_player_inhouse_ratings_on_player_id"
   end
 
   create_table "player_match_stats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -331,9 +489,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "neutral_minions_killed"
+    t.integer "objectives_stolen", default: 0
+    t.integer "turret_plates_destroyed"
+    t.integer "crowd_control_score"
+    t.integer "total_time_dead"
+    t.integer "damage_to_turrets"
+    t.integer "damage_shielded_teammates"
+    t.integer "healing_to_teammates"
+    t.integer "cs_at_10"
+    t.integer "spell_q_casts"
+    t.integer "spell_w_casts"
+    t.integer "spell_e_casts"
+    t.integer "spell_r_casts"
+    t.integer "summoner_spell_1_casts"
+    t.integer "summoner_spell_2_casts"
+    t.jsonb "pings", default: {}
     t.index ["champion"], name: "index_player_match_stats_on_champion"
+    t.index ["crowd_control_score"], name: "idx_pms_cc_score"
     t.index ["match_id", "player_id"], name: "idx_player_stats_match_player_agg", comment: "Otimiza agregações de estatísticas (SUM kills/deaths/assists)"
     t.index ["match_id"], name: "idx_player_stats_match"
+    t.index ["objectives_stolen"], name: "idx_pms_objectives_stolen", where: "(objectives_stolen > 0)"
     t.index ["player_id", "champion"], name: "idx_pms_player_champion"
     t.index ["player_id", "cs_per_min"], name: "idx_pms_player_cs_per_min"
     t.index ["player_id", "match_id"], name: "index_player_match_stats_on_player_id_and_match_id", unique: true
@@ -394,7 +570,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.datetime "last_login_at", comment: "Last login timestamp for player access"
     t.boolean "player_access_enabled", default: false, comment: "Enable/disable individual player access"
     t.string "access_token_jti", comment: "JWT token identifier for player session"
+    t.string "discord_user_id"
+    t.string "alias"
     t.index ["deleted_at"], name: "index_players_on_deleted_at", comment: "Index for soft delete queries"
+    t.index ["discord_user_id"], name: "index_players_on_discord_user_id", unique: true, where: "(discord_user_id IS NOT NULL)"
     t.index ["organization_id", "contract_end_date"], name: "idx_players_org_contract_end"
     t.index ["organization_id", "deleted_at", "status"], name: "idx_players_org_deleted_status"
     t.index ["organization_id", "deleted_at"], name: "idx_players_org_deleted"
@@ -412,6 +591,41 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.index ["role"], name: "index_players_on_role"
     t.index ["status"], name: "index_players_on_status"
     t.index ["summoner_name"], name: "index_players_on_summoner_name"
+  end
+
+  create_table "saved_builds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "created_by_id"
+    t.string "champion", null: false
+    t.string "role"
+    t.string "patch_version"
+    t.integer "items", default: [], array: true
+    t.integer "item_build_order", default: [], array: true
+    t.integer "trinket"
+    t.integer "runes", default: [], array: true
+    t.string "primary_rune_tree"
+    t.string "secondary_rune_tree"
+    t.string "summoner_spell_1"
+    t.string "summoner_spell_2"
+    t.decimal "win_rate", precision: 5, scale: 2, default: "0.0"
+    t.integer "games_played", default: 0, null: false
+    t.decimal "average_kda", precision: 5, scale: 2, default: "0.0"
+    t.decimal "average_cs_per_min", precision: 5, scale: 2, default: "0.0"
+    t.decimal "average_damage_share", precision: 5, scale: 2, default: "0.0"
+    t.string "title"
+    t.text "notes"
+    t.boolean "is_public", default: false, null: false
+    t.string "data_source", default: "manual", null: false
+    t.string "items_fingerprint"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_saved_builds_on_created_by_id"
+    t.index ["organization_id", "champion", "role", "items_fingerprint"], name: "idx_saved_builds_aggregated_unique", unique: true, where: "((data_source)::text = 'aggregated'::text)"
+    t.index ["organization_id", "champion", "role"], name: "idx_saved_builds_org_champion_role"
+    t.index ["organization_id", "is_public"], name: "idx_saved_builds_org_public"
+    t.index ["organization_id", "patch_version"], name: "idx_saved_builds_org_patch"
+    t.index ["organization_id", "win_rate"], name: "idx_saved_builds_win_rate"
+    t.index ["organization_id"], name: "index_saved_builds_on_organization_id"
   end
 
   create_table "schedules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -513,6 +727,60 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.index ["status"], name: "index_scouting_watchlists_on_status"
   end
 
+  create_table "scrim_messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "scrim_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "organization_id", null: false
+    t.text "content", null: false
+    t.boolean "deleted", default: false, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_scrim_messages_on_organization_id"
+    t.index ["scrim_id", "created_at"], name: "index_scrim_messages_on_scrim_id_and_created_at"
+    t.index ["scrim_id"], name: "index_scrim_messages_on_scrim_id"
+    t.index ["user_id"], name: "index_scrim_messages_on_user_id"
+  end
+
+  create_table "scrim_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "requesting_organization_id", null: false
+    t.uuid "target_organization_id", null: false
+    t.uuid "requesting_scrim_id"
+    t.uuid "target_scrim_id"
+    t.uuid "availability_window_id"
+    t.string "status", default: "pending", null: false
+    t.string "game", default: "league_of_legends", null: false
+    t.text "message"
+    t.datetime "proposed_at"
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "games_planned", default: 3
+    t.string "draft_type"
+    t.index ["expires_at"], name: "index_scrim_requests_on_expires_at"
+    t.index ["requesting_organization_id", "status"], name: "index_scrim_requests_on_requesting_organization_id_and_status"
+    t.index ["requesting_organization_id"], name: "index_scrim_requests_on_requesting_organization_id"
+    t.index ["status"], name: "index_scrim_requests_on_status"
+    t.index ["target_organization_id", "status"], name: "index_scrim_requests_on_target_organization_id_and_status"
+    t.index ["target_organization_id"], name: "index_scrim_requests_on_target_organization_id"
+  end
+
+  create_table "scrim_result_reports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "scrim_request_id", null: false
+    t.uuid "organization_id", null: false
+    t.string "game_outcomes", default: [], array: true
+    t.string "status", default: "pending", null: false
+    t.integer "attempt_count", default: 0, null: false
+    t.datetime "reported_at"
+    t.datetime "deadline_at", null: false
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_scrim_result_reports_on_organization_id"
+    t.index ["scrim_request_id", "organization_id"], name: "idx_scrim_result_reports_unique_per_org", unique: true
+    t.index ["scrim_request_id"], name: "index_scrim_result_reports_on_scrim_request_id"
+  end
+
   create_table "scrims", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "match_id"
@@ -531,12 +799,54 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.jsonb "outcomes", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source", default: "internal"
+    t.uuid "scrim_request_id"
+    t.string "draft_type"
     t.index ["match_id"], name: "index_scrims_on_match_id"
     t.index ["opponent_team_id"], name: "index_scrims_on_opponent_team_id"
     t.index ["organization_id", "scheduled_at"], name: "idx_scrims_org_scheduled"
     t.index ["organization_id"], name: "index_scrims_on_organization_id"
     t.index ["scheduled_at"], name: "index_scrims_on_scheduled_at"
+    t.index ["scrim_request_id"], name: "index_scrims_on_scrim_request_id"
     t.index ["scrim_type"], name: "index_scrims_on_scrim_type"
+    t.index ["source"], name: "index_scrims_on_source"
+  end
+
+  create_table "status_incident_updates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "status_incident_id", null: false
+    t.string "status", null: false
+    t.text "body", null: false
+    t.uuid "created_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status_incident_id"], name: "index_status_incident_updates_on_status_incident_id"
+  end
+
+  create_table "status_incidents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "title", null: false
+    t.text "body", null: false
+    t.string "severity", default: "minor", null: false
+    t.string "status", default: "investigating", null: false
+    t.string "affected_components", default: [], null: false, array: true
+    t.datetime "started_at", null: false
+    t.datetime "resolved_at"
+    t.text "postmortem"
+    t.uuid "created_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["severity"], name: "index_status_incidents_on_severity"
+    t.index ["started_at"], name: "index_status_incidents_on_started_at"
+    t.index ["status"], name: "index_status_incidents_on_status"
+  end
+
+  create_table "status_snapshots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "component", null: false
+    t.string "status", null: false
+    t.integer "response_time_ms"
+    t.datetime "checked_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["component", "checked_at"], name: "index_status_snapshots_on_component_and_checked_at"
   end
 
   create_table "support_faqs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -675,6 +985,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "supabase_uid"
+    t.string "discord_user_id"
+    t.index ["discord_user_id"], name: "index_users_on_discord_user_id", unique: true, where: "(discord_user_id IS NOT NULL)"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["role"], name: "index_users_on_role"
@@ -730,6 +1042,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
 
   add_foreign_key "audit_logs", "organizations"
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "availability_windows", "organizations"
   add_foreign_key "champion_pools", "players"
   add_foreign_key "competitive_matches", "matches"
   add_foreign_key "competitive_matches", "opponent_teams"
@@ -737,15 +1050,34 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
   add_foreign_key "draft_plans", "organizations"
   add_foreign_key "draft_plans", "users", column: "created_by_id"
   add_foreign_key "draft_plans", "users", column: "updated_by_id"
+  add_foreign_key "feedback_votes", "feedbacks"
+  add_foreign_key "feedback_votes", "users"
+  add_foreign_key "feedbacks", "organizations"
+  add_foreign_key "feedbacks", "users"
+  add_foreign_key "inhouse_participations", "inhouses"
+  add_foreign_key "inhouse_participations", "players"
+  add_foreign_key "inhouse_queue_entries", "inhouse_queues"
+  add_foreign_key "inhouse_queue_entries", "players"
+  add_foreign_key "inhouse_queues", "organizations"
+  add_foreign_key "inhouse_queues", "users", column: "created_by_user_id"
+  add_foreign_key "inhouses", "organizations"
+  add_foreign_key "inhouses", "players", column: "blue_captain_id"
+  add_foreign_key "inhouses", "players", column: "red_captain_id"
+  add_foreign_key "inhouses", "users", column: "created_by_user_id"
   add_foreign_key "matches", "organizations"
   add_foreign_key "messages", "organizations"
   add_foreign_key "messages", "users"
+  add_foreign_key "messages", "users", column: "recipient_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "password_reset_tokens", "users"
+  add_foreign_key "player_inhouse_ratings", "organizations"
+  add_foreign_key "player_inhouse_ratings", "players"
   add_foreign_key "player_match_stats", "matches"
   add_foreign_key "player_match_stats", "players"
   add_foreign_key "players", "organizations"
   add_foreign_key "players", "organizations", column: "previous_organization_id", on_delete: :nullify
+  add_foreign_key "saved_builds", "organizations"
+  add_foreign_key "saved_builds", "users", column: "created_by_id"
   add_foreign_key "schedules", "matches"
   add_foreign_key "schedules", "organizations"
   add_foreign_key "schedules", "scrims", on_delete: :cascade
@@ -754,9 +1086,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_18_120000) do
   add_foreign_key "scouting_watchlists", "scouting_targets"
   add_foreign_key "scouting_watchlists", "users", column: "added_by_id"
   add_foreign_key "scouting_watchlists", "users", column: "assigned_to_id"
+  add_foreign_key "scrim_messages", "organizations"
+  add_foreign_key "scrim_messages", "scrims"
+  add_foreign_key "scrim_messages", "users"
+  add_foreign_key "scrim_requests", "organizations", column: "requesting_organization_id"
+  add_foreign_key "scrim_requests", "organizations", column: "target_organization_id"
+  add_foreign_key "scrim_result_reports", "organizations"
+  add_foreign_key "scrim_result_reports", "scrim_requests"
   add_foreign_key "scrims", "matches"
   add_foreign_key "scrims", "opponent_teams"
   add_foreign_key "scrims", "organizations"
+  add_foreign_key "status_incident_updates", "status_incidents"
+  add_foreign_key "status_incident_updates", "users", column: "created_by_user_id"
+  add_foreign_key "status_incidents", "users", column: "created_by_user_id"
   add_foreign_key "support_ticket_messages", "support_tickets"
   add_foreign_key "support_ticket_messages", "users"
   add_foreign_key "support_tickets", "organizations"

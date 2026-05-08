@@ -2,12 +2,13 @@
 
 module VodReviews
   module Controllers
+    # CRUD API for VOD review sessions, with filtering by status, match, and reviewer.
     class VodReviewsController < Api::V1::BaseController
       before_action :set_vod_review, only: %i[show update destroy]
 
       def index
         authorize VodReview
-        vod_reviews = organization_scoped(VodReview).includes(:match, :reviewer)
+        vod_reviews = organization_scoped(VodReview).includes(:match, :reviewer, :vod_timestamps)
 
         vod_reviews = vod_reviews.where(status: params[:status]) if params[:status].present?
 

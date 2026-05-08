@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/BlockLength
 namespace :trial do
   desc 'Expire organizations with expired trials'
   task expire: :environment do
@@ -69,7 +70,7 @@ namespace :trial do
     puts "Expiring Soon (3 days):  #{expiring_soon}"
     puts '=' * 50
 
-    if active_trials > 0
+    if active_trials.positive?
       puts "\nActive Trials:"
       Organization.trial_active.find_each do |org|
         puts "  - #{org.name}: #{org.trial_days_remaining} days remaining"
@@ -77,3 +78,4 @@ namespace :trial do
     end
   end
 end
+# rubocop:enable Metrics/BlockLength

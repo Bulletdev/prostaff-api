@@ -33,12 +33,14 @@ class Organization < ApplicationRecord
   # Concerns
   include TierFeatures
   include Constants
+  include Searchable
 
   # Associations
   has_many :users, dependent: :destroy
   has_many :players, dependent: :destroy
   has_many :matches, dependent: :destroy
   has_many :scouting_targets, dependent: :destroy
+  has_many :scouting_watchlists, dependent: :destroy
   has_many :schedules, dependent: :destroy
   has_many :vod_reviews, dependent: :destroy
   has_many :team_goals, dependent: :destroy
@@ -46,8 +48,11 @@ class Organization < ApplicationRecord
 
   # New tier-based associations
   has_many :scrims, dependent: :destroy
+  has_many :inhouses,       dependent: :destroy
+  has_many :inhouse_queues, dependent: :destroy
   has_many :competitive_matches, dependent: :destroy
-  has_many :messages, dependent: :destroy
+  has_many :messages,     dependent: :destroy
+  has_many :saved_builds, dependent: :destroy
 
   # Validations
   validates :name, presence: true, length: { maximum: 255 }
@@ -56,6 +61,9 @@ class Organization < ApplicationRecord
   validates :tier, inclusion: { in: Constants::Organization::TIERS }, allow_blank: true
   validates :subscription_plan, inclusion: { in: Constants::Organization::SUBSCRIPTION_PLANS }, allow_blank: true
   validates :subscription_status, inclusion: { in: Constants::Organization::SUBSCRIPTION_STATUSES }, allow_blank: true
+  validates :discord_invite_url,
+            format: { with: %r{\Ahttps://discord\.(gg|com/invite)/\w+\z} },
+            allow_blank: true
 
   # Callbacks
   before_validation :generate_slug, on: :create
@@ -66,6 +74,26 @@ class Organization < ApplicationRecord
   scope :active_subscription, -> { where(subscription_status: 'active') }
   scope :trial_active, -> { where(subscription_status: 'trial').where('trial_expires_at > ?', Time.current) }
   scope :trial_expired, -> { where(subscription_status: 'trial').where('trial_expires_at <= ?', Time.current) }
+
+  # ── Meilisearch ────────────────────────────────────────────────────
+  def self.meili_searchable_attributes
+    %w[name slug region tier]
+  end
+
+  def self.meili_filterable_attributes
+    %w[region tier subscription_status]
+  end
+
+  def to_meili_document
+    {
+      id: id.to_s,
+      name: name,
+      slug: slug,
+      region: region,
+      tier: tier,
+      subscription_status: subscription_status
+    }
+  end
 
   # Callbacks for trial management
   before_create :set_trial_period, if: -> { subscription_plan.blank? || subscription_plan == 'free' }
@@ -129,9 +157,9 @@ class Organization < ApplicationRecord
 
   # Automatically expire trial if expiration date has passed
   def check_trial_expiration
-    if trial_expires_at.present? && trial_expires_at <= Time.current
-      self.subscription_status = 'expired'
-    end
+    return unless trial_expires_at.present? && trial_expires_at <= Time.current
+
+    self.subscription_status = 'expired'
   end
 
   def generate_slug

@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProStaff Status</title>
+  <meta name="description" content="ProStaff platform service status and incident history">
+  <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── ProStaff Retro Design Tokens ─────────────────────────────── */
+    :root {
+      --gold:        #C89B3C;
+      --gold-dim:    rgba(200,155,60,0.5);
+      --gold-faint:  rgba(200,155,60,0.12);
+      --blue:        #0C223F;
+      --blue-dark:   #0A1929;
+      --bg:          #0A0E1A;
+      --card:        #0F1823;
+      --teal:        #0596AA;
+      --text:        rgba(255,255,255,0.85);
+      --text-dim:    rgba(255,255,255,0.45);
+      --green:       #00D364;
+      --yellow:      #F59E0B;
+      --orange:      #F97316;
+      --red:         #FF4444;
+      --border:      1px solid #C89B3C;
+      --font:        Verdana, Geneva, Tahoma, sans-serif;
+    }
+
+    /* ── Patterns ─────────────────────────────────────────────────── */
+    .pat-scanline {
+      background-image: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(200,155,60,0.04) 3px, rgba(200,155,60,0.04) 4px
+      );
+    }
+    .pat-diagonal {
+      background-image: repeating-linear-gradient(
+        45deg, transparent, transparent 6px,
+        rgba(200,155,60,0.03) 6px, rgba(200,155,60,0.03) 7px
+      );
+    }
+    .pat-grid {
+      background-image:
+        linear-gradient(rgba(200,155,60,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,155,60,0.06) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* ── Base ─────────────────────────────────────────────────────── */
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(200,155,60,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,155,60,0.035) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* ── RetroPanel ───────────────────────────────────────────────── */
+    .retro-panel { width: 100%; position: relative; }
+
+    .retro-panel-header {
+      display: flex;
+      border-top: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-header-left {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      border-right: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-header-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8px 12px;
+      min-height: 52px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .retro-panel-category {
+      font-size: 8px;
+      color: var(--teal);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .retro-panel-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.5);
+      position: relative;
+      z-index: 1;
+    }
+
+    .retro-panel-subtitle {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.05em;
+      position: relative;
+      z-index: 1;
+      margin-top: 2px;
+    }
+
+    .retro-panel-divider {
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+    }
+
+    .retro-panel-body {
+      background: var(--card);
+      border-left: var(--border);
+      border-right: var(--border);
+      position: relative;
+    }
+
+    .retro-panel-body-stripe {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
+    }
+
+    .retro-panel-body-inner { padding: 12px 12px 12px 16px; }
+
+    .retro-panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      height: 18px;
+      background: linear-gradient(to right, var(--blue), var(--bg));
+      border-bottom: var(--border);
+      border-left: var(--border);
+      border-right: var(--border);
+    }
+
+    .retro-panel-footer-label {
+      font-size: 8px;
+      color: var(--gold-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── RetroCorners ─────────────────────────────────────────────── */
+    .retro-corners { position: absolute; inset: 0; pointer-events: none; }
+    .rc { position: absolute; width: 10px; height: 10px; }
+    .rc-tl { top: 0; left: 0; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-tr { top: 0; right: 0; border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+    .rc-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .rc-br { bottom: 0; right: 0; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+
+    /* ── RetroDiamond ─────────────────────────────────────────────── */
+    .diamond {
+      width: 5px; height: 5px;
+      background: var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .diamond-sm { width: 4px; height: 4px; }
+
+    /* ── RetroSeparator ───────────────────────────────────────────── */
+    .retro-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      margin: 10px 0;
+    }
+    .retro-sep-line-l { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold)); }
+    .retro-sep-line-r { flex: 1; height: 1px; background: linear-gradient(to left, transparent, var(--gold)); }
+    .retro-sep-label {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* ── Site Header ──────────────────────────────────────────────── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      border-bottom: 1px solid var(--gold-faint);
+      background: linear-gradient(to right, var(--blue-dark), var(--bg));
+      position: relative;
+    }
+
+    .site-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), var(--gold-faint) 60%, transparent);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
+    }
+
+    .logo img { width: 28px; height: 28px; object-fit: contain; }
+
+    .site-nav { display: flex; gap: 16px; align-items: center; }
+
+    .site-nav a {
+      text-decoration: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .site-nav a:hover { color: var(--gold); }
+
+    .btn-subscribe {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: var(--gold-faint);
+      border: 1px solid var(--gold-dim);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: var(--font);
+    }
+    .btn-subscribe:hover {
+      background: rgba(200,155,60,0.2);
+      border-color: var(--gold);
+    }
+
+    /* ── Hero Header (full-width image, githubstatus-style) ──────── */
+    .hero-header {
+      position: relative;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .hero-header img {
+      display: block;
+      width: 100%;
+      max-width: 1176px;
+      height: auto;
+      margin: 0 auto;
+    }
+
+    /* gradient: transparent on top -> page dark bg on bottom, to blend */
+    .hero-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 55%;
+      background: linear-gradient(to bottom, transparent 0%, var(--bg) 100%);
+      pointer-events: none;
+    }
+
+    /* left and right side fade into page bg */
+    .hero-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to right, var(--bg) 0%, transparent 8%, transparent 92%, var(--bg) 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ── Status Banner (status bar below the image) ───────────────── */
+    .status-banner {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid var(--gold-faint);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-banner-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      opacity: 0.5;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.operational  { background: var(--green);  box-shadow: 0 0 8px var(--green); }
+    .status-dot.minor        { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .status-dot.critical     { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+    .status-dot.major        { background: var(--red);    box-shadow: 0 0 8px var(--red); }
+
+    .status-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
+    }
+
+    .status-updated {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Main Layout ──────────────────────────────────────────────── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Component Row ────────────────────────────────────────────── */
+    .component-row {
+      padding: 12px 0 10px;
+      border-bottom: 1px solid rgba(200,155,60,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .component-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .component-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .component-name {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--text);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .component-description {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: normal;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-left: 6px;
+    }
+
+    /* ── Status Badges ────────────────────────────────────────────── */
+    .status-badge {
+      font-size: 9px;
+      font-weight: bold;
+      padding: 2px 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border: 1px solid;
+    }
+    .status-badge.operational        { color: var(--green);  border-color: rgba(0,211,100,0.4);  background: rgba(0,211,100,0.08); }
+    .status-badge.degraded_performance { color: var(--yellow); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
+    .status-badge.partial_outage     { color: var(--orange); border-color: rgba(249,115,22,0.4);  background: rgba(249,115,22,0.08); }
+    .status-badge.major_outage       { color: var(--red);    border-color: rgba(255,68,68,0.4);   background: rgba(255,68,68,0.08); }
+    .status-badge.under_maintenance  { color: var(--teal);   border-color: rgba(5,150,170,0.4);   background: rgba(5,150,170,0.08); }
+
+    /* ── Uptime Bars ──────────────────────────────────────────────── */
+    .uptime-bars {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 24px;
+    }
+
+    .uptime-bar {
+      flex: 1;
+      height: 100%;
+      min-width: 2px;
+      cursor: default;
+      opacity: 0.85;
+      transition: opacity 0.15s;
+    }
+    .uptime-bar:hover { opacity: 1; }
+    .uptime-bar.operational { background: var(--green); }
+    .uptime-bar.degraded    { background: var(--yellow); }
+    .uptime-bar.partial     { background: var(--orange); }
+    .uptime-bar.outage      { background: var(--red); }
+    .uptime-bar.no-data     { background: rgba(200,155,60,0.15); }
+
+    .uptime-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    .uptime-pct { color: var(--gold-dim); font-weight: bold; }
+
+    /* ── Legend ───────────────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 0 4px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 8px; height: 8px;
+      border: 1px solid;
+    }
+
+    /* ── Incidents ────────────────────────────────────────────────── */
+    .no-incidents {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .incident-card {
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(200,155,60,0.1);
+    }
+    .incident-card:last-child { border-bottom: none; }
+
+    .incident-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .incident-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .incident-severity {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 7px;
+      border-radius: 2px;
+      border: 1px solid;
+    }
+    .incident-severity.minor    { color: var(--yellow);  border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
+    .incident-severity.major    { color: var(--orange);  border-color: rgba(249,115,22,0.4);  background: rgba(249,115,22,0.08); }
+    .incident-severity.critical { color: var(--red);     border-color: rgba(255,68,68,0.4);   background: rgba(255,68,68,0.08); }
+
+    .incident-status-badge {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 7px;
+      border-radius: 2px;
+      border: 1px solid rgba(200,155,60,0.3);
+      color: var(--gold);
+      background: rgba(200,155,60,0.06);
+    }
+    .incident-status-badge.resolved { color: var(--green); border-color: rgba(0,211,100,0.3); background: rgba(0,211,100,0.06); }
+
+    .incident-components {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .incident-component-pill {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 1px 6px;
+      border-radius: 2px;
+      border: 1px solid rgba(5,150,170,0.3);
+      color: var(--teal);
+      background: rgba(5,150,170,0.06);
+    }
+
+    .incident-time {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .incident-body {
+      font-size: 11px;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .incident-update {
+      padding: 6px 0 6px 12px;
+      border-left: 2px solid var(--gold-faint);
+      margin-bottom: 6px;
+    }
+    .incident-update-status { font-size: 10px; font-weight: bold; color: var(--teal); text-transform: uppercase; letter-spacing: 0.08em; }
+    .incident-update-body   { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .incident-update-time   { font-size: 9px;  color: var(--text-dim); margin-top: 2px; letter-spacing: 0.04em; }
+
+    .incident-postmortem {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(200,155,60,0.2);
+      background: rgba(200,155,60,0.04);
+      border-radius: 2px;
+    }
+    .incident-postmortem-label {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .incident-postmortem-body {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    /* ── Skeleton ─────────────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg,
+        rgba(200,155,60,0.08) 25%,
+        rgba(200,155,60,0.16) 50%,
+        rgba(200,155,60,0.08) 75%
+      );
+      background-size: 200% 100%;
+      animation: sk 1.5s infinite;
+    }
+    @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Spinner ──────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid var(--gold-faint);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Full Footer ──────────────────────────────────────────────── */
+    .site-footer-full {
+      background: var(--bg);
+      border-top: 1px solid var(--gold);
+      font-family: var(--font);
+    }
+    .footer-container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px 24px;
+    }
+    .footer-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .footer-top-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--gold), transparent);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 28px;
+      margin-bottom: 36px;
+    }
+    .footer-col-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .footer-col-logo img { width: 28px; height: 28px; object-fit: contain; }
+    .footer-col-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+    .footer-col-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .footer-links-col {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .footer-links-col a {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links-col a:hover { color: var(--gold); }
+    .footer-bottom-bar {
+      border-top: 1px solid var(--gold-faint);
+      padding-top: 20px;
+    }
+    .footer-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .footer-sep-line { flex: 1; height: 1px; }
+    .footer-sep-line-l { background: linear-gradient(to right, transparent, var(--gold)); }
+    .footer-sep-line-r { background: linear-gradient(to left, transparent, var(--gold)); }
+    .footer-sep-label {
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .footer-riot {
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-dim);
+      line-height: 1.8;
+      max-width: 620px;
+      margin: 14px auto 0;
+    }
+    @media (max-width: 700px) {
+      .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .footer-brand-col { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Footer diamond row (panels) ─────────────────────────────── */
+    .footer-diamonds {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .footer-line { height: 1px; width: 32px; background: linear-gradient(to right, var(--gold), transparent); }
+    .footer-line-r { background: linear-gradient(to left, var(--gold), transparent); }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .site-nav { display: none; }
+      .uptime-bars { height: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SITE HEADER ──────────────────────────────────────────────────── -->
+<header class="site-header pat-scanline">
+  <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+    <img src="logo.png" alt="ProStaff">
+    ProStaff Status
+  </a>
+
+  <nav class="site-nav">
+    <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
+    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
+  </nav>
+
+  <a class="btn-subscribe" href="mailto:support@prostaff.gg?subject=Status%20Updates">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25v-8.5C0 2.784.784 2 1.75 2ZM1.5 12.251c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V5.809L8.38 9.397a.75.75 0 0 1-.76 0L1.5 5.809v6.442Zm13-8.181v-.32a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25v.32L8 7.88Z"/>
+    </svg>
+    Subscribe
+  </a>
+</header>
+
+<!-- ── HERO HEADER ───────────────────────────────────────────────────── -->
+<div class="hero-header">
+  <img src="https://i.ibb.co/tp7rXCSG/coverstatus.webp" alt="ProStaff platform" loading="eager">
+</div>
+
+<!-- ── STATUS BANNER ────────────────────────────────────────────────── -->
+<div class="status-banner pat-diagonal" id="statusBanner">
+  <div class="status-banner-bg"></div>
+  <div class="status-indicator">
+    <span class="spinner"></span>
+    <span class="status-label" id="statusLabel">Checking status&hellip;</span>
+  </div>
+  <span class="status-updated" id="updatedAt">—</span>
+</div>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────────── -->
+<main class="container">
+
+  <!-- COMPONENTS PANEL -->
+  <div class="retro-panel">
+    <div class="retro-panel-header pat-diagonal">
+      <div class="retro-panel-header-left pat-scanline">
+        <div class="retro-corners">
+          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
+          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
+        </div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+        </svg>
+      </div>
+      <div class="retro-panel-header-right">
+        <span class="retro-panel-category">Infrastructure</span>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;position:relative;z-index:1">
+          <span class="retro-panel-title">Components</span>
+          <span class="retro-panel-subtitle" id="componentCount"></span>
+        </div>
+      </div>
+    </div>
+    <div class="retro-panel-divider"></div>
+    <div class="retro-panel-body">
+      <div class="retro-panel-body-stripe"></div>
+      <div class="retro-panel-body-inner" id="componentList">
+        <!-- skeleton -->
+        <div class="component-row">
+          <div class="component-header">
+            <div class="skeleton" style="width:160px;height:13px;"></div>
+            <div class="skeleton" style="width:90px;height:18px;"></div>
+          </div>
+          <div class="skeleton" style="height:24px;margin-top:4px;"></div>
+        </div>
+        <div class="component-row">
+          <div class="component-header">
+            <div class="skeleton" style="width:120px;height:13px;"></div>
+            <div class="skeleton" style="width:90px;height:18px;"></div>
+          </div>
+          <div class="skeleton" style="height:24px;margin-top:4px;"></div>
+        </div>
+        <div class="component-row">
+          <div class="component-header">
+            <div class="skeleton" style="width:200px;height:13px;"></div>
+            <div class="skeleton" style="width:90px;height:18px;"></div>
+          </div>
+          <div class="skeleton" style="height:24px;margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="retro-panel-footer">
+      <div class="footer-diamonds">
+        <span class="diamond diamond-sm"></span>
+        <div class="footer-line" style="width:20px;"></div>
+      </div>
+      <span class="retro-panel-footer-label">ProStaff Analytics</span>
+      <div class="footer-diamonds">
+        <div class="footer-line footer-line-r" style="width:20px;"></div>
+        <span class="diamond diamond-sm"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:rgba(0,211,100,0.3);border-color:rgba(0,211,100,0.6);"></div>
+      Operational
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:rgba(245,158,11,0.3);border-color:rgba(245,158,11,0.6);"></div>
+      Degraded Performance
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:rgba(249,115,22,0.3);border-color:rgba(249,115,22,0.6);"></div>
+      Partial Outage
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:rgba(255,68,68,0.3);border-color:rgba(255,68,68,0.6);"></div>
+      Major Outage
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:rgba(200,155,60,0.15);border-color:rgba(200,155,60,0.3);"></div>
+      No Data
+    </div>
+  </div>
+
+  <!-- INCIDENTS PANEL -->
+  <div class="retro-panel">
+    <div class="retro-panel-header pat-diagonal">
+      <div class="retro-panel-header-left pat-scanline">
+        <div class="retro-corners">
+          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
+          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
+        </div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="retro-panel-header-right">
+        <span class="retro-panel-category">Incident History</span>
+        <span class="retro-panel-title" style="position:relative;z-index:1">Past Incidents</span>
+      </div>
+    </div>
+    <div class="retro-panel-divider"></div>
+    <div class="retro-panel-body">
+      <div class="retro-panel-body-stripe"></div>
+      <div class="retro-panel-body-inner" id="incidentList">
+        <div class="no-incidents" id="noIncidents" style="display:none;">No incidents reported.</div>
+      </div>
+    </div>
+    <div class="retro-panel-footer">
+      <div class="footer-diamonds">
+        <span class="diamond diamond-sm"></span>
+        <div class="footer-line" style="width:20px;"></div>
+      </div>
+      <span class="retro-panel-footer-label">ProStaff Analytics</span>
+      <div class="footer-diamonds">
+        <div class="footer-line footer-line-r" style="width:20px;"></div>
+        <span class="diamond diamond-sm"></span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── SITE FOOTER ───────────────────────────────────────────────────── -->
+<footer class="site-footer-full pat-scanline">
+  <div class="footer-container">
+
+    <!-- Top bar -->
+    <div class="footer-top-bar">
+      <span class="diamond diamond-sm"></span>
+      <div class="footer-top-line"></div>
+    </div>
+
+    <!-- Grid -->
+    <div class="footer-grid">
+
+      <!-- Brand -->
+      <div class="footer-brand-col">
+        <a class="footer-col-logo" href="https://prostaff.gg" target="_blank" rel="noopener">
+          <img src="logo.png" alt="ProStaff">
+          ProStaff
+        </a>
+        <p class="footer-col-desc">Esports Team Management Platform. Advanced analytics, scouting, and performance tracking for professional organizations.</p>
+      </div>
+
+      <!-- Product -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Product
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/features" target="_blank" rel="noopener">Features</a>
+          <a href="https://prostaff.gg/pricing" target="_blank" rel="noopener">Pricing</a>
+          <a href="https://prostaff.gg/comparison" target="_blank" rel="noopener">Comparison</a>
+        </div>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Company
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/about" target="_blank" rel="noopener">About</a>
+          <a href="https://prostaff.gg/contact" target="_blank" rel="noopener">Contact</a>
+        </div>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Legal
+        </div>
+        <div class="footer-links-col">
+          <a href="https://prostaff.gg/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+          <a href="https://prostaff.gg/tos" target="_blank" rel="noopener">Terms of Service</a>
+          <a href="https://developer.riotgames.com/policies/general" target="_blank" rel="noopener">Riot API Policies</a>
+        </div>
+      </div>
+
+      <!-- Resources -->
+      <div>
+        <div class="footer-col-head">
+          <span class="diamond diamond-sm"></span>
+          Resources
+        </div>
+        <div class="footer-links-col">
+          <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
+          <a href="https://status.prostaff.gg" target="_blank" rel="noopener">System Status</a>
+          <a href="mailto:support@prostaff.gg">Support</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom -->
+    <div class="footer-bottom-bar">
+      <div class="footer-sep">
+        <div class="footer-sep-line footer-sep-line-l"></div>
+        <span class="footer-sep-label">ProStaff.gg</span>
+        <div class="footer-sep-line footer-sep-line-r"></div>
+      </div>
+      <p class="footer-riot">
+        ProStaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+      </p>
+    </div>
+
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  const STATUS_API = 'https://api.prostaff.gg/status';
+  const REFRESH_INTERVAL = 60_000;
+
+  const STATUS_LABELS = {
+    operational:          'Operational',
+    degraded_performance: 'Degraded Performance',
+    partial_outage:       'Partial Outage',
+    major_outage:         'Major Outage',
+    under_maintenance:    'Under Maintenance',
+  };
+
+  const OVERALL_LABELS = {
+    none:     'All Systems Operational',
+    minor:    'Partially Degraded Service',
+    critical: 'Partial System Outage',
+    major:    'Major System Outage',
+  };
+
+  const OVERALL_CSS = {
+    none: 'operational', minor: 'minor', critical: 'critical', major: 'major',
+  };
+
+  function statusLabel(s) { return STATUS_LABELS[s] || s; }
+
+  function buildUptimeBars(historyForComponent) {
+    const byDate = {};
+    if (Array.isArray(historyForComponent)) {
+      historyForComponent.forEach(entry => { byDate[entry.date] = entry; });
+    }
+
+    const bars = [];
+    const today = new Date();
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const entry = byDate[dateStr];
+
+      let cls = 'no-data';
+      let uptime = null;
+      if (entry) {
+        uptime = entry.uptime_pct;
+        if (uptime >= 99.9)      cls = 'operational';
+        else if (uptime >= 95.0) cls = 'degraded';
+        else if (uptime >= 50.0) cls = 'partial';
+        else                     cls = 'outage';
+      }
+      bars.push({ date: d, cls, uptime });
+    }
+    return bars;
+  }
+
+  function renderBars(bars) {
+    return bars.map(b => {
+      const label = b.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const tip = b.uptime !== null ? `${label} — ${b.uptime.toFixed(2)}% uptime` : `${label} — No data`;
+      return `<div class="uptime-bar ${b.cls}" title="${tip}"></div>`;
+    }).join('');
+  }
+
+  function uptimePct(bars) {
+    const withData = bars.filter(b => b.uptime !== null);
+    if (withData.length === 0) return 'No data yet';
+    const avg = withData.reduce((sum, b) => sum + b.uptime, 0) / withData.length;
+    return avg.toFixed(2) + '% uptime';
+  }
+
+  function renderBanner(data) {
+    const indicator = data.status.indicator;
+    const desc = OVERALL_LABELS[indicator] || data.status.description;
+    const cls  = OVERALL_CSS[indicator] || 'operational';
+
+    const dot = document.createElement('span');
+    dot.className = 'status-dot ' + cls;
+
+    const banner = document.getElementById('statusBanner');
+    banner.style.borderBottom = cls === 'major' ? '1px solid rgba(255,68,68,0.3)'
+      : cls === 'critical' ? '1px solid rgba(249,115,22,0.3)'
+      : cls === 'minor' ? '1px solid rgba(245,158,11,0.3)'
+      : '1px solid rgba(0,211,100,0.2)';
+
+    const indicator_el = document.querySelector('.status-indicator');
+    indicator_el.innerHTML = '';
+    indicator_el.appendChild(dot);
+    const lbl = document.createElement('span');
+    lbl.className = 'status-label';
+    lbl.textContent = desc;
+    lbl.style.color = cls === 'major' ? 'var(--red)'
+      : cls === 'critical' ? 'var(--orange)'
+      : cls === 'minor' ? 'var(--yellow)'
+      : 'var(--green)';
+    indicator_el.appendChild(lbl);
+
+    const updatedAt = data.page && data.page.updated_at
+      ? new Date(data.page.updated_at).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        })
+      : new Date().toLocaleString();
+
+    document.getElementById('updatedAt').textContent = 'Last updated ' + updatedAt;
+  }
+
+  function renderComponents(components, uptimeHistory) {
+    document.getElementById('componentCount').textContent =
+      `${components.length} component${components.length !== 1 ? 's' : ''}`;
+
+    document.getElementById('componentList').innerHTML = components.map(c => {
+      const history = uptimeHistory && uptimeHistory[c.id] ? uptimeHistory[c.id] : [];
+      const bars = buildUptimeBars(history);
+      const rtLabel = c.response_time_ms != null ? ` \u2014 ${c.response_time_ms}ms` : '';
+      return `
+        <div class="component-row">
+          <div class="component-header">
+            <div class="component-name">
+              ${c.name}
+              ${c.description ? `<span class="component-description">${c.description}${rtLabel}</span>` : ''}
+            </div>
+            <span class="status-badge ${c.status}">${statusLabel(c.status)}</span>
+          </div>
+          <div class="uptime-bars">${renderBars(bars)}</div>
+          <div class="uptime-meta">
+            <span>90 days ago</span>
+            <span class="uptime-pct">${uptimePct(bars)}</span>
+            <span>Today</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+    });
+  }
+
+  function renderIncidents(incidents) {
+    const list = document.getElementById('incidentList');
+    const noInc = document.getElementById('noIncidents');
+
+    if (!incidents || incidents.length === 0) {
+      list.innerHTML = '';
+      list.appendChild(noInc);
+      noInc.style.display = '';
+      return;
+    }
+
+    noInc.style.display = 'none';
+    list.innerHTML = incidents.map(incident => {
+      const components = (incident.affected_components || []).map(c =>
+        `<span class="incident-component-pill">${c}</span>`
+      ).join('');
+
+      const updates = (incident.updates || []).map(u => `
+        <div class="incident-update">
+          <div class="incident-update-status">${u.status || 'Update'}</div>
+          <div class="incident-update-body">${u.body || ''}</div>
+          <div class="incident-update-time">${fmtDate(u.created_at)}</div>
+        </div>
+      `).join('');
+
+      const postmortem = incident.postmortem ? `
+        <div class="incident-postmortem">
+          <div class="incident-postmortem-label">Post-Incident Analysis</div>
+          <div class="incident-postmortem-body">${incident.postmortem}</div>
+        </div>
+      ` : '';
+
+      const resolvedLine = incident.resolved_at
+        ? `<div class="incident-time">Resolved: ${fmtDate(incident.resolved_at)}</div>`
+        : '';
+
+      return `
+        <div class="incident-card">
+          <div class="incident-title">${incident.title || 'Incident'}</div>
+          <div class="incident-meta">
+            <span class="incident-severity ${incident.severity || 'minor'}">${incident.severity || 'minor'}</span>
+            <span class="incident-status-badge ${incident.status === 'resolved' ? 'resolved' : ''}">${incident.status || ''}</span>
+          </div>
+          ${components ? `<div class="incident-components">${components}</div>` : ''}
+          <div class="incident-time">Started: ${fmtDate(incident.started_at)}</div>
+          ${resolvedLine}
+          <div class="incident-body">${incident.body || ''}</div>
+          ${updates}
+          ${postmortem}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch(STATUS_API, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderBanner(data);
+      renderComponents(data.components || [], data.uptime_history || {});
+      renderIncidents(data.incidents || []);
+    } catch (err) {
+      console.error('Failed to fetch status:', err);
+      document.querySelector('.status-indicator').innerHTML =
+        '<span class="status-dot major"></span><span class="status-label" style="color:var(--red)">Status Unavailable</span>';
+      document.getElementById('updatedAt').textContent = 'Could not connect to status API';
+    }
+  }
+
+  fetchStatus();
+  setInterval(fetchStatus, REFRESH_INTERVAL);
+})();
+</script>
+
+</body>
+</html>

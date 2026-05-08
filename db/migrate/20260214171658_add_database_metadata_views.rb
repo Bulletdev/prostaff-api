@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class AddDatabaseMetadataViews < ActiveRecord::Migration[7.2]
   def up
     # Materialized view for table privileges (72s query, 20% of total time)
@@ -193,3 +194,5 @@ class AddDatabaseMetadataViews < ActiveRecord::Migration[7.2]
     execute 'DROP MATERIALIZED VIEW IF EXISTS mv_table_privileges;'
   end
 end
+
+# rubocop:enable Metrics/ClassLength

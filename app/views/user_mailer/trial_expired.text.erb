@@ -1,0 +1,15 @@
+Seu periodo de teste ProStaff encerrou
+
+Ola, <%= @user.full_name || 'usuario' %>,
+
+O periodo de teste de 14 dias da organizacao "<%= @organization&.name %>" encerrou.
+O acesso a plataforma foi suspenso.
+
+Assine o ProStaff para continuar:
+<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/billing
+
+Os dados da sua organizacao serao mantidos por 30 dias apos o encerramento do trial.
+
+Duvidas? Entre em contato: hello@prostaff.gg
+
+Equipe ProStaff

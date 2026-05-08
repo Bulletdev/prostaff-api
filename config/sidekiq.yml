@@ -3,18 +3,23 @@
 
 # Concurrency = number of Sidekiq threads = DB pool slots consumed.
 # Supabase Nano (2 vCPU / 2 GB) + PgBouncer session mode: keep this low.
-# Puma: 2 workers × 5 threads = 10 connections.
+# Puma: 4 workers x 5 threads = 20 connections (api container).
+# Sidekiq: 10 connections (sidekiq container).
+# Total: ~30 conexoes simultaneas de banco.
 # Sidekiq: DB_POOL should match concurrency (set both in your env together).
 # Recommended production env: SIDEKIQ_CONCURRENCY=10 DB_POOL=10
 :concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10).to_i %>
 :timeout: <%= ENV.fetch('SIDEKIQ_TIMEOUT', 25).to_i %>
 :verbose: <%= ENV.fetch('SIDEKIQ_VERBOSE', 'true') == 'true' %>
 :queues:
-  - default
-  - mailers
   - critical
   - high
+  - default
+  - events
+  - search
+  - mailers
   - low
+  - meta_intelligence
   - low_priority
 
 # Sidekiq Scheduler Configuration
@@ -22,7 +27,7 @@
   # Cleanup expired tokens daily at 2 AM
   cleanup_expired_tokens:
     cron: '0 2 * * *'
-    class: CleanupExpiredTokensJob
+    class: Authentication::CleanupExpiredTokensJob
     description: 'Clean up expired password reset tokens and blacklisted JWT tokens'
 
   # Refresh database metadata materialized views every 2 hours.
@@ -30,12 +35,54 @@
   # rarely. Running every 30m was consuming ~72% of total DB time (879ms avg).
   refresh_metadata_views:
     cron: '0 */2 * * *'
-    class: RefreshMetadataViewsJob
+    class: Analytics::RefreshMetadataViewsJob
     description: 'Refresh materialized views for database metadata (table privileges, extensions, policies)'
 
-  # Additional scheduled jobs can be added here
-  # Example:
-  # sync_riot_data:
-  #   every: '30m'
-  #   class: SyncRiotDataJob
-  #   description: 'Sync player data from Riot API'
+  # Historical backfill — CBLOL main split (highest priority, runs first)
+  historical_backfill_cblol:
+    cron: '0 4 * * *'
+    class: Competitive::HistoricalBackfillJob
+    queue: low_priority
+    args:
+      - league: 'CBLOL'
+    description: 'Backfill CBLOL main split (Leaguepedia → ES → Rails DB)'
+
+  # CBLOL Academy — runs 30min after CBLOL to avoid scraper contention
+  historical_backfill_academy:
+    cron: '30 4 * * *'
+    class: Competitive::HistoricalBackfillJob
+    queue: low_priority
+    args:
+      - league: 'CBLOL Academy'
+    description: 'Backfill CBLOL Academy (Leaguepedia → ES → Rails DB)'
+
+  # Circuito Desafiante — runs 1h after CBLOL
+  historical_backfill_cd:
+    cron: '0 5 * * *'
+    class: Competitive::HistoricalBackfillJob
+    queue: low_priority
+    args:
+      - league: 'Circuito Desafiante'
+    description: 'Backfill Circuito Desafiante (Leaguepedia → ES → Rails DB)'
+
+  # Request and expire scrim result reports daily at 10 AM UTC
+  scrim_result_reminders:
+    cron: '0 10 * * *'
+    class: ScrimResultReminderJob
+    queue: default
+    description: 'Initialize pending result reports, send deadline reminders, expire overdue reports'
+
+  # Rebuild AI champion matrices and vectors nightly at 3 AM UTC
+  rebuild_ai_matrices:
+    cron: '0 3 * * *'
+    class: AiIntelligence::RebuildChampionMatrixJob
+    queue: low_priority
+    description: 'Rebuild AI champion matrices and vectors nightly'
+
+  # Record component health snapshots every 15 minutes for uptime history.
+  # Reduced from */5 to avoid excessive DB/Redis pressure from 6 checks per run.
+  status_snapshot:
+    cron: '*/15 * * * *'
+    class: StatusSnapshotJob
+    queue: default
+    description: 'Record component health snapshots for uptime history'
