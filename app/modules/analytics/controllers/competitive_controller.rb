@@ -176,7 +176,7 @@ module Analytics
           }
         end
 
-        accounted   = result['blue'][:games] + result['red'][:games]
+        accounted = result['blue'][:games] + result['red'][:games]
         result['unaccounted'] = rows.size - accounted
         result
       end

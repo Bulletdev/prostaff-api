@@ -2,7 +2,7 @@
 
 class CreateMlPredictionLogs < ActiveRecord::Migration[7.2]
   def change
-    create_table :ml_prediction_logs, id: :uuid, default: -> { "gen_random_uuid()" } do |t|
+    create_table :ml_prediction_logs, id: :uuid, default: -> { 'gen_random_uuid()' } do |t|
       t.string   :match_id
       t.jsonb    :blue_picks,         null: false, default: []
       t.jsonb    :red_picks,          null: false, default: []
@@ -12,7 +12,7 @@ class CreateMlPredictionLogs < ActiveRecord::Migration[7.2]
       t.string   :model_version
       t.string   :source
       t.boolean  :blue_won
-      t.timestamptz :predicted_at,    null: false, default: -> { "NOW()" }
+      t.timestamptz :predicted_at, null: false, default: -> { 'NOW()' }
       t.timestamptz :outcome_at
 
       t.timestamps

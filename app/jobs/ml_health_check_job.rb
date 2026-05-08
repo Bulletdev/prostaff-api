@@ -42,7 +42,7 @@ class MlHealthCheckJob < ApplicationJob
     end
 
     if body['model_loaded'] == false
-      Rails.logger.warn("[MlHealthCheckJob] ML service health: model_loaded=false")
+      Rails.logger.warn('[MlHealthCheckJob] ML service health: model_loaded=false')
     else
       Rails.logger.info("[MlHealthCheckJob] ML service healthy (model_loaded=#{body['model_loaded']})")
     end

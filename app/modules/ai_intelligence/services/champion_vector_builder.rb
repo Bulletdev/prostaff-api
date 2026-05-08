@@ -53,9 +53,9 @@ class ChampionVectorBuilder
   private
 
   def self.collect_champion_names(matches)
-    matches.flat_map { |m|
+    matches.flat_map do |m|
       ((m.our_picks || []) + (m.opponent_picks || [])).map { |p| p['champion'] }
-    }.compact.uniq
+    end.compact.uniq
   end
   private_class_method :collect_champion_names
 

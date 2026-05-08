@@ -52,17 +52,8 @@ module ApplicationCable
     end
 
     def authenticate_user_connection(payload)
-      user = User.find_by(id: payload[:user_id])
-
-      if user.nil?
-        logger.warn "[ActionCable] User not found for token user_id=#{payload[:user_id]}"
-        reject_unauthorized_connection
-      end
-
-      unless user.organization_id.present?
-        logger.warn "[ActionCable] User #{user.id} has no organization — rejected"
-        reject_unauthorized_connection
-      end
+      user = find_user(payload[:user_id])
+      validate_organization!(user.organization_id, label: "User #{user.id}")
 
       self.current_user   = user
       self.current_player = nil
@@ -71,22 +62,36 @@ module ApplicationCable
     end
 
     def authenticate_player_connection(payload)
-      player = Player.unscoped.find_by(id: payload[:player_id], player_access_enabled: true)
-
-      if player.nil?
-        logger.warn "[ActionCable] Player not found or access disabled: player_id=#{payload[:player_id]}"
-        reject_unauthorized_connection
-      end
-
-      unless player.organization_id.present?
-        logger.warn "[ActionCable] Player #{player.id} has no organization — rejected"
-        reject_unauthorized_connection
-      end
+      player = find_player(payload[:player_id])
+      validate_organization!(player.organization_id, label: "Player #{player.id}")
 
       self.current_user   = nil
       self.current_player = player
       self.current_org_id = player.organization_id
       logger.info "[ActionCable] Connected: player=#{player.id} org=#{player.organization_id}"
+    end
+
+    def find_user(user_id)
+      user = User.find_by(id: user_id)
+      return user if user
+
+      logger.warn "[ActionCable] User not found for token user_id=#{user_id}"
+      reject_unauthorized_connection
+    end
+
+    def find_player(player_id)
+      player = Player.unscoped.find_by(id: player_id, player_access_enabled: true)
+      return player if player
+
+      logger.warn "[ActionCable] Player not found or access disabled: player_id=#{player_id}"
+      reject_unauthorized_connection
+    end
+
+    def validate_organization!(org_id, label:)
+      return if org_id.present?
+
+      logger.warn "[ActionCable] #{label} has no organization — rejected"
+      reject_unauthorized_connection
     end
   end
 end

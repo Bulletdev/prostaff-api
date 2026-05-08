@@ -45,7 +45,11 @@ module Players
           status: :request_timeout
         )
       ensure
-        ActiveRecord::Base.connection.execute("RESET statement_timeout") rescue nil
+        begin
+          ActiveRecord::Base.connection.execute('RESET statement_timeout')
+        rescue StandardError
+          nil
+        end
       end
 
       # GET /api/v1/players/:id

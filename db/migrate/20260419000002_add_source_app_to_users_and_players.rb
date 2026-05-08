@@ -28,7 +28,7 @@ class AddSourceAppToUsersAndPlayers < ActiveRecord::Migration[7.2]
   end
 
   def down
-    execute "ALTER TABLE password_reset_tokens DROP CONSTRAINT IF EXISTS chk_token_owner;"
+    execute 'ALTER TABLE password_reset_tokens DROP CONSTRAINT IF EXISTS chk_token_owner;'
     remove_foreign_key :password_reset_tokens, :players
     remove_index :password_reset_tokens, :player_id
     remove_column :password_reset_tokens, :player_id

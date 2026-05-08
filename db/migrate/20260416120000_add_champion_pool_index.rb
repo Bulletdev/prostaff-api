@@ -11,7 +11,7 @@ class AddChampionPoolIndex < ActiveRecord::Migration[7.1]
 
   def change
     unless index_exists?(:player_match_stats, %i[player_id champion created_at],
-                          name: 'idx_pms_player_champion_date')
+                         name: 'idx_pms_player_champion_date')
       add_index :player_match_stats, %i[player_id champion created_at],
                 name: 'idx_pms_player_champion_date',
                 algorithm: :concurrently

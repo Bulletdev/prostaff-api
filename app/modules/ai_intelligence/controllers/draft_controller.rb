@@ -13,18 +13,21 @@ module AiIntelligence
         team_b = Array(params[:team_b]).reject(&:blank?)
         patch  = params[:patch]
 
-        return render json: { error: 'team_a or team_b required' }, status: :bad_request if team_a.empty? && team_b.empty?
+        if team_a.empty? && team_b.empty?
+          return render json: { error: 'team_a or team_b required' },
+                        status: :bad_request
+        end
 
         result = DraftAnalyzer.call(team_a: team_a, team_b: team_b, patch: patch)
 
         if result.source == 'ml_v2'
           PredictionLogger.log(
-            blue_picks:         Array(team_a),
-            red_picks:          Array(team_b),
+            blue_picks: Array(team_a),
+            red_picks: Array(team_b),
             predicted_win_prob: result.win_probability,
-            source:             result.source,
-            patch:              patch,
-            league:             params[:league]
+            source: result.source,
+            patch: patch,
+            league: params[:league]
           )
         end
 

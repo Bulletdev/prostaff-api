@@ -447,6 +447,12 @@ module Inhouses
         end
       end
 
+      TIER_SCORES = {
+        'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
+        'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
+        'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
+      }.freeze
+
       private
 
       # Snake draft: sort by tier desc, alternate teams pair by pair.
@@ -536,12 +542,6 @@ module Inhouses
       rescue ActiveRecord::RecordNotFound
         render_not_found
       end
-
-      TIER_SCORES = {
-        'CHALLENGER' => 9, 'GRANDMASTER' => 8, 'MASTER' => 7,
-        'DIAMOND' => 6, 'EMERALD' => 5, 'PLATINUM' => 4,
-        'GOLD' => 3, 'SILVER' => 2, 'BRONZE' => 1
-      }.freeze
 
       # Returns a tier score (0–9) for snake draft balancing.
       # Uses LoL solo queue tiers. Higher = stronger player.
