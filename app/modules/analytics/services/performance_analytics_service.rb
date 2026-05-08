@@ -28,8 +28,8 @@ class PerformanceAnalyticsService
   #
   # @param player_id [Integer, nil] Optional player ID for individual stats
   # @param all_players [ActiveRecord::Relation, nil] Scope to resolve the individual player
-  #   from. Defaults to @players (active only). Pass the full org scope when you want to
-  #   allow individual stats for inactive/bench/trial players too.
+  #   from. Defaults to @players. Pass a different scope when you want to restrict or
+  #   expand the set of players eligible for individual stat lookup.
   # @return [Hash] Performance analytics data
   def calculate_performance_data(player_id: nil, all_players: nil)
     if player_id
