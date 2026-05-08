@@ -21,3 +21,9 @@ exclude_paths:
   # payloads like '$MONGO_GT' and '`id`' must NOT expand. SC2034 (BASE_URL) is used
   # further down in the same script.
   - ".pentest/**"
+
+  # Monitoring infrastructure templates — credential-looking keys (smtp_auth_password,
+  # SMTP_PASSWORD) are env var references, not hardcoded secrets. KICS/credential
+  # scanners produce false positives on these files.
+  - "monitoring/alertmanager.yml"
+  - "docker-compose.monitoring.yml"
