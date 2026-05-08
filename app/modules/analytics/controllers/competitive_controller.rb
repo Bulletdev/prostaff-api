@@ -153,18 +153,32 @@ module Analytics
         end.sort_by { |s| -s[:ban_count] }
       end
 
+      # Builds blue/red side win-rate stats from in-memory rows.
+      #
+      # Side values in the DB are validated as lowercase ('blue', 'red'), but records
+      # ingested from external sources may have nil or differently-cased values (e.g.
+      # 'Blue', 'RED'). Those records are normalised via downcase before matching.
+      # Records with nil or unrecognised side values are excluded from both side
+      # buckets and reported in the `unaccounted` key. The sum
+      # blue.games + red.games may therefore be less than total_matches — this is
+      # intentional and expected when incomplete data exists.
       def build_side_performance(rows)
-        %w[blue red].each_with_object({}) do |side, result|
-          side_rows = rows.select { |m| m.side == side }
+        valid_sides = %w[blue red]
+        result = valid_sides.each_with_object({}) do |side, hash|
+          side_rows = rows.select { |m| m.side&.downcase == side }
           games     = side_rows.size
           wins      = side_rows.count(&:victory)
-          result[side] = {
+          hash[side] = {
             games: games,
             wins: wins,
             losses: games - wins,
             win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0
           }
         end
+
+        accounted   = result['blue'][:games] + result['red'][:games]
+        result['unaccounted'] = rows.size - accounted
+        result
       end
 
       def build_role_performance(rows)
@@ -303,7 +317,7 @@ module Analytics
         {
           pick_performance: [],
           ban_performance: [],
-          side_performance: { blue: side_zeros, red: side_zeros },
+          side_performance: { 'blue' => side_zeros, 'red' => side_zeros, 'unaccounted' => 0 },
           role_performance: [],
           meta_champions: [],
           total_matches: 0
