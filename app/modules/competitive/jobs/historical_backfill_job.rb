@@ -42,8 +42,8 @@ module Competitive
     # @param options [Hash] optional — supports :league key.
     #   Handles sidekiq-scheduler kwargs wrapper format for backward compat.
     def perform(options = {})
-      opts     = options[:kwargs] || options["kwargs"] || options
-      league   = (opts[:league] || opts["league"]).presence || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
+      opts     = options[:kwargs] || options['kwargs'] || options
+      league   = (opts[:league] || opts['league']).presence || ENV.fetch('BACKFILL_LEAGUE', 'CBLOL')
       min_year   = ENV.fetch('BACKFILL_MIN_YEAR', '2013').to_i
       sync_limit = ENV.fetch('BACKFILL_SYNC_LIMIT', '500').to_i
 

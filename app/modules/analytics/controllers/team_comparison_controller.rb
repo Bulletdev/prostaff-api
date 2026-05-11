@@ -68,28 +68,28 @@ module Analytics
         match_ids = matches.pluck(:id)
 
         agg_by_player_id = if match_ids.empty?
-                              {}
-                            else
-                              PlayerMatchStat
-                                .where(player_id: player_ids, match_id: match_ids)
-                                .group(:player_id)
-                                .select(
-                                  'player_id',
-                                  'COUNT(*) AS games_played',
-                                  'SUM(kills) AS total_kills',
-                                  'SUM(deaths) AS total_deaths',
-                                  'SUM(assists) AS total_assists',
-                                  'AVG(damage_dealt_total) AS avg_damage',
-                                  'AVG(gold_earned) AS avg_gold',
-                                  'AVG(cs) AS avg_cs',
-                                  'AVG(vision_score) AS avg_vision_score',
-                                  'AVG(performance_score) AS avg_performance_score',
-                                  'SUM(double_kills) AS double_kills',
-                                  'SUM(triple_kills) AS triple_kills',
-                                  'SUM(quadra_kills) AS quadra_kills',
-                                  'SUM(penta_kills) AS penta_kills'
-                                ).index_by(&:player_id)
-                            end
+                             {}
+                           else
+                             PlayerMatchStat
+                               .where(player_id: player_ids, match_id: match_ids)
+                               .group(:player_id)
+                               .select(
+                                 'player_id',
+                                 'COUNT(*) AS games_played',
+                                 'SUM(kills) AS total_kills',
+                                 'SUM(deaths) AS total_deaths',
+                                 'SUM(assists) AS total_assists',
+                                 'AVG(damage_dealt_total) AS avg_damage',
+                                 'AVG(gold_earned) AS avg_gold',
+                                 'AVG(cs) AS avg_cs',
+                                 'AVG(vision_score) AS avg_vision_score',
+                                 'AVG(performance_score) AS avg_performance_score',
+                                 'SUM(double_kills) AS double_kills',
+                                 'SUM(triple_kills) AS triple_kills',
+                                 'SUM(quadra_kills) AS quadra_kills',
+                                 'SUM(penta_kills) AS penta_kills'
+                               ).index_by(&:player_id)
+                           end
 
         players.map do |player|
           agg = agg_by_player_id[player.id]
@@ -179,20 +179,20 @@ module Analytics
         match_ids = matches.pluck(:id)
 
         agg_by_player_id = if match_ids.empty?
-                              {}
-                            else
-                              PlayerMatchStat
-                                .joins(:player)
-                                .where(player_id: player_ids, match_id: match_ids)
-                                .group('player_id, players.role, players.summoner_name')
-                                .select(
-                                  'player_id',
-                                  'players.role AS role',
-                                  'players.summoner_name AS summoner_name',
-                                  'COUNT(*) AS games',
-                                  'AVG(performance_score) AS avg_performance'
-                                ).index_by(&:player_id)
-                            end
+                             {}
+                           else
+                             PlayerMatchStat
+                               .joins(:player)
+                               .where(player_id: player_ids, match_id: match_ids)
+                               .group('player_id, players.role, players.summoner_name')
+                               .select(
+                                 'player_id',
+                                 'players.role AS role',
+                                 'players.summoner_name AS summoner_name',
+                                 'COUNT(*) AS games',
+                                 'AVG(performance_score) AS avg_performance'
+                               ).index_by(&:player_id)
+                           end
 
         players.each do |player|
           role = player.role
@@ -200,20 +200,20 @@ module Analytics
 
           agg = agg_by_player_id[player.id]
           rankings[role] << if agg
-                               {
-                                 player_id: player.id,
-                                 summoner_name: player.summoner_name,
-                                 avg_performance: agg.avg_performance.to_f.round(1),
-                                 games: agg.games.to_i
-                               }
-                             else
-                               {
-                                 player_id: player.id,
-                                 summoner_name: player.summoner_name,
-                                 avg_performance: 0.0,
-                                 games: 0
-                               }
-                             end
+                              {
+                                player_id: player.id,
+                                summoner_name: player.summoner_name,
+                                avg_performance: agg.avg_performance.to_f.round(1),
+                                games: agg.games.to_i
+                              }
+                            else
+                              {
+                                player_id: player.id,
+                                summoner_name: player.summoner_name,
+                                avg_performance: 0.0,
+                                games: 0
+                              }
+                            end
         end
 
         rankings.transform_values { |list| list.sort_by { |p| -p[:avg_performance] } }

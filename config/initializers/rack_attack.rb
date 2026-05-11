@@ -37,11 +37,13 @@ module Rack
     end
 
     # Allow localhost and Docker bridge in development and test environments
+    # Docker uses 172.16.0.0/12 range for bridge networks (172.16–172.31)
     safelist('allow from localhost') do |req|
       next false unless Rails.env.development? || Rails.env.test?
 
       ip = req.ip.to_s
-      ip == '127.0.0.1' || ip == '::1' || ip.start_with?('172.18.', '172.17.')
+      ip == '127.0.0.1' || ip == '::1' ||
+        (ip.start_with?('172.') && ip.split('.')[1].to_i >= 16 && ip.split('.')[1].to_i <= 31)
     end
 
     # Block known malicious bots and scrapers
@@ -81,7 +83,9 @@ module Rack
     throttle('register/ip', limit: 10, period: 1.hour) do |req|
       next unless req.path == '/api/v1/auth/register' && req.post?
 
-      req.env['HTTP_X_FORWARDED_FOR']&.split(',')&.first&.strip || req.ip
+      forwarded = req.env['HTTP_X_FORWARDED_FOR']
+      first_ip = forwarded&.split(',')&.first
+      first_ip ? first_ip.strip : req.ip
     end
 
     # Throttle player self-registration (ArenaBR) — 5/hour por IP real do cliente
@@ -89,7 +93,9 @@ module Rack
     throttle('player-register/ip', limit: 5, period: 1.hour) do |req|
       next unless req.path == '/api/v1/auth/player-register' && req.post?
 
-      req.env['HTTP_X_FORWARDED_FOR']&.split(',')&.first&.strip || req.ip
+      forwarded = req.env['HTTP_X_FORWARDED_FOR']
+      first_ip = forwarded&.split(',')&.first
+      first_ip ? first_ip.strip : req.ip
     end
 
     # Throttle player login — mesma política que login de staff

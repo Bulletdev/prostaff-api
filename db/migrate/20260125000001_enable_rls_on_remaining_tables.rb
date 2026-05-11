@@ -296,7 +296,6 @@ class EnableRlsOnRemainingTables < ActiveRecord::Migration[7.2]
       FOR DELETE
       USING (false);
     SQL
-
   end
 
   def down

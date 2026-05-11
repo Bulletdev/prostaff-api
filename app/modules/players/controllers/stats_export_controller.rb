@@ -28,6 +28,16 @@ module Players
         performance_score result
       ].freeze
 
+      COMPUTED_FIELDS = {
+        'match_date' => ->(stat) { stat.match&.game_start&.strftime('%Y-%m-%d') },
+        'patch_version' => ->(stat) { stat.match&.game_version },
+        'opponent' => ->(stat) { stat.match&.opponent_name },
+        'result' => ->(stat) { stat.match&.victory? ? 'W' : 'L' },
+        'kda_display' => ->(stat) { stat.kda_display },
+        'cs_per_min' => ->(stat) { stat.cs_per_min&.round(2) },
+        'gold_per_min' => ->(stat) { stat.gold_per_min&.round(0) }
+      }.freeze
+
       def show
         player = organization_scoped(Player).find(params[:id])
         stats  = filtered_stats(player)
@@ -84,16 +94,6 @@ module Players
       def build_row_array(stat)
         EXPORT_FIELDS.map { |field| export_field_value(stat, field) }
       end
-
-      COMPUTED_FIELDS = {
-        'match_date'    => ->(stat) { stat.match&.game_start&.strftime('%Y-%m-%d') },
-        'patch_version' => ->(stat) { stat.match&.game_version },
-        'opponent'      => ->(stat) { stat.match&.opponent_name },
-        'result'        => ->(stat) { stat.match&.victory? ? 'W' : 'L' },
-        'kda_display'   => ->(stat) { stat.kda_display },
-        'cs_per_min'    => ->(stat) { stat.cs_per_min&.round(2) },
-        'gold_per_min'  => ->(stat) { stat.gold_per_min&.round(0) }
-      }.freeze
 
       def export_field_value(stat, field)
         resolver = COMPUTED_FIELDS[field]

@@ -2,7 +2,7 @@
 
 class CreateTournamentMatches < ActiveRecord::Migration[7.2]
   def change
-    create_table :tournament_matches, id: :uuid, default: -> { "gen_random_uuid()" } do |t|
+    create_table :tournament_matches, id: :uuid, default: -> { 'gen_random_uuid()' } do |t|
       t.references :tournament, null: false, foreign_key: true, type: :uuid
 
       # Self-referential FKs for O(1) bracket progression (no hardcoded round maps)
@@ -33,7 +33,7 @@ class CreateTournamentMatches < ActiveRecord::Migration[7.2]
       # awaiting_confirm → confirmed → completed
       # disputed (from awaiting_confirm) → confirmed (admin resolves)
       # walkover (if team no-shows checkin)
-      t.string :status, null: false, default: "scheduled"
+      t.string :status, null: false, default: 'scheduled'
 
       t.datetime :scheduled_at
       t.datetime :checkin_opens_at

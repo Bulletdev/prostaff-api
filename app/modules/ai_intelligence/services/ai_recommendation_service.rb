@@ -48,7 +48,8 @@ class AiRecommendationService
   def call
     call_ml_service
   rescue MlServiceClient::MlServiceDisabledError, MlServiceClient::MlCircuitOpenError => e
-    Rails.logger.info("[AiRecommendationService] ML unavailable (#{e.class.name.split('::').last}), using legacy fallback: #{e.message}")
+    error_type = e.class.name.split('::').last
+    Rails.logger.info("[AiRecommendationService] ML unavailable (#{error_type}), using legacy fallback: #{e.message}")
     legacy_fallback
   rescue MlServiceError => e
     Rails.logger.warn("[AiRecommendationService] ML service error, using legacy fallback: #{e.message}")
@@ -68,13 +69,13 @@ class AiRecommendationService
     if result[:source] == 'ml_v2'
       win_prob = result[:recommendations].first&.dig(:win_probability)&.to_f || 0.5
       PredictionLogger.log(
-        blue_picks:         @our_picks,
-        red_picks:          @opponent_picks,
+        blue_picks: @our_picks,
+        red_picks: @opponent_picks,
         predicted_win_prob: win_prob,
-        source:             result[:source],
-        model_version:      result[:model_version],
-        patch:              @patch,
-        league:             @league
+        source: result[:source],
+        model_version: result[:model_version],
+        patch: @patch,
+        league: @league
       )
     end
 

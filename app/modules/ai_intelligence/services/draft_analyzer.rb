@@ -14,33 +14,12 @@ class DraftAnalyzer
     synergies   = calculate_synergies
     counters    = calculate_counters
     suggestions = DraftSuggester.call(team_a: @team_a, team_b: @team_b) if @team_a.size == 4
-
-    ml_result = MlDraftService.call(team_a: @team_a, team_b: @team_b, patch: @patch, league: nil)
+    ml_result   = MlDraftService.call(team_a: @team_a, team_b: @team_b, patch: @patch, league: nil)
 
     if ml_result
-      Result.new(
-        win_probability: ml_result[:win_probability].round(4),
-        confidence:      ml_result[:confidence].round(4),
-        synergy_scores:  synergies,
-        counter_scores:  counters,
-        suggested_picks: suggestions,
-        low_sample:      ml_result[:confidence] < 0.5,
-        source:          'ml_v2'
-      )
+      build_ml_result(ml_result, synergies, counters, suggestions)
     else
-      win_prob = WinProbabilityCalculator.call(
-        team_a: @team_a, team_b: @team_b,
-        synergies:, counters:
-      )
-      Result.new(
-        win_probability: win_prob[:score].round(4),
-        confidence:      win_prob[:confidence].round(4),
-        synergy_scores:  synergies,
-        counter_scores:  counters,
-        suggested_picks: suggestions,
-        low_sample:      win_prob[:confidence] < 0.5,
-        source:          'legacy_ruby'
-      )
+      build_legacy_result(synergies, counters, suggestions)
     end
   end
 
@@ -50,6 +29,34 @@ class DraftAnalyzer
     @team_a = team_a
     @team_b = team_b
     @patch  = patch # accepted but unused in MVP; v2 will use for patch filtering
+  end
+
+  def build_ml_result(ml_result, synergies, counters, suggestions)
+    Result.new(
+      win_probability: ml_result[:win_probability].round(4),
+      confidence: ml_result[:confidence].round(4),
+      synergy_scores: synergies,
+      counter_scores: counters,
+      suggested_picks: suggestions,
+      low_sample: ml_result[:confidence] < 0.5,
+      source: 'ml_v2'
+    )
+  end
+
+  def build_legacy_result(synergies, counters, suggestions)
+    win_prob = WinProbabilityCalculator.call(
+      team_a: @team_a, team_b: @team_b,
+      synergies:, counters:
+    )
+    Result.new(
+      win_probability: win_prob[:score].round(4),
+      confidence: win_prob[:confidence].round(4),
+      synergy_scores: synergies,
+      counter_scores: counters,
+      suggested_picks: suggestions,
+      low_sample: win_prob[:confidence] < 0.5,
+      source: 'legacy_ruby'
+    )
   end
 
   def calculate_synergies

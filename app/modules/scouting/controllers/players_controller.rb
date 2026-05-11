@@ -272,26 +272,35 @@ module Scouting
       end
 
       def apply_basic_filters(targets)
-        # role param is comma-separated lowercase: "mid,top" → ["mid", "top"]
-        if params[:role].present?
-          roles = params[:role].split(',').map(&:strip).reject(&:blank?)
-          targets = targets.by_role(roles) if roles.any?
-        end
-        if params[:status].present?
-          targets = targets.by_status(params[:status])
-        else
-          targets = targets.where.not(status: 'signed')
-        end
+        targets = apply_role_filter(targets)
+        targets = apply_status_filter(targets)
         targets = targets.by_region(params[:region]) if params[:region].present?
+        apply_watchlist_filters(targets)
+      end
 
-        # Filter by watchlist fields if in watchlist mode
-        if params[:my_watchlist] == 'true'
-          targets = targets.where(scouting_watchlists: { priority: params[:priority] }) if params[:priority].present?
-          if params[:assigned_to_id].present?
-            targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] })
-          end
+      def apply_role_filter(targets)
+        return targets unless params[:role].present?
+
+        # role param is comma-separated lowercase: "mid,top" -> ["mid", "top"]
+        roles = params[:role].split(',').map(&:strip).reject(&:blank?)
+        roles.any? ? targets.by_role(roles) : targets
+      end
+
+      def apply_status_filter(targets)
+        if params[:status].present?
+          targets.by_status(params[:status])
+        else
+          targets.where.not(status: 'signed')
         end
+      end
 
+      def apply_watchlist_filters(targets)
+        return targets unless params[:my_watchlist] == 'true'
+
+        targets = targets.where(scouting_watchlists: { priority: params[:priority] }) if params[:priority].present?
+        if params[:assigned_to_id].present?
+          targets = targets.where(scouting_watchlists: { assigned_to_id: params[:assigned_to_id] })
+        end
         targets
       end
 
@@ -466,19 +475,13 @@ module Scouting
 
         p = perf.with_indifferent_access
         t = tier_thresholds(tier)
-        weaknesses = []
-        weaknesses << 'Inconsistent performance' if p[:games_played].to_i >= 10 &&
-                                                    p[:win_rate].to_f < t[:wr_weakness]
-        weaknesses << 'Death management'         if p[:avg_kda].to_f.positive? &&
-                                                    p[:avg_kda].to_f < t[:kda_weakness]
-        weaknesses << 'CS discipline'            if non_support?(role) &&
-                                                    p[:avg_cs_per_min].to_f.positive? &&
-                                                    p[:avg_cs_per_min].to_f < t[:cs_weakness]
-        weaknesses << 'Vision control'           if vision_role?(role) &&
-                                                    p[:avg_vision_score].to_f.positive? &&
-                                                    p[:avg_vision_score].to_f < t[:vision_weakness]
-        weaknesses << 'Limited champion pool'    if pool.size < 3
-        weaknesses
+        [
+          ('Inconsistent performance' if p[:games_played].to_i >= 10 && p[:win_rate].to_f < t[:wr_weakness]),
+          ('Death management'         if p[:avg_kda].to_f.positive? && p[:avg_kda].to_f < t[:kda_weakness]),
+          ('CS discipline'            if scouting_poor_cs?(p, role, t)),
+          ('Vision control'           if scouting_poor_vision?(p, role, t)),
+          ('Limited champion pool'    if pool.size < 3)
+        ].compact
       end
 
       def non_support?(role)
@@ -487,6 +490,18 @@ module Scouting
 
       def vision_role?(role)
         %w[support jungle].include?(role.to_s)
+      end
+
+      def scouting_poor_cs?(perf, role, thresholds)
+        non_support?(role) &&
+          perf[:avg_cs_per_min].to_f.positive? &&
+          perf[:avg_cs_per_min].to_f < thresholds[:cs_weakness]
+      end
+
+      def scouting_poor_vision?(perf, role, thresholds)
+        vision_role?(role) &&
+          perf[:avg_vision_score].to_f.positive? &&
+          perf[:avg_vision_score].to_f < thresholds[:vision_weakness]
       end
 
       # Extract top champions from mastery data using DataDragonService for full champion coverage.

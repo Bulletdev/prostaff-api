@@ -71,33 +71,34 @@ module MlServiceClient
     raise MlServiceDisabledError, 'ML service is disabled (ML_SERVICE_ENABLED=false)' unless service_enabled?
 
     check_circuit!
+    execute_request(path, payload, timeout)
+  end
 
-    begin
-      response = connection(timeout: timeout).post(path) do |req|
-        req.headers['Content-Type'] = 'application/json'
-        req.body = payload.to_json
-      end
+  def self.execute_request(path, payload, timeout)
+    response = send_http_request(path, payload, timeout)
+    raise MlServiceError, "ML service returned HTTP #{response.status} from #{path}" unless response.success?
 
-      unless response.success?
-        raise MlServiceError, "ML service returned HTTP #{response.status} from #{path}"
-      end
+    result = JSON.parse(response.body, symbolize_names: true)
+    record_success
+    result
+  rescue JSON::ParserError => e
+    raise MlServiceError, "invalid JSON response from #{path}: #{e.message}"
+  end
 
-      result = JSON.parse(response.body, symbolize_names: true)
-      record_success
-      result
-
-    rescue Faraday::TimeoutError => e
-      record_failure
-      raise MlServiceError, "timeout calling #{path}: #{e.message}"
-    rescue Faraday::ConnectionFailed => e
-      record_failure
-      raise MlServiceError, "connection failed calling #{path}: #{e.message}"
-    rescue Faraday::Error => e
-      record_failure
-      raise MlServiceError, "network error calling #{path}: #{e.message}"
-    rescue JSON::ParserError => e
-      raise MlServiceError, "invalid JSON response from #{path}: #{e.message}"
+  def self.send_http_request(path, payload, timeout)
+    connection(timeout: timeout).post(path) do |req|
+      req.headers['Content-Type'] = 'application/json'
+      req.body = payload.to_json
     end
+  rescue Faraday::TimeoutError => e
+    record_failure
+    raise MlServiceError, "timeout calling #{path}: #{e.message}"
+  rescue Faraday::ConnectionFailed => e
+    record_failure
+    raise MlServiceError, "connection failed calling #{path}: #{e.message}"
+  rescue Faraday::Error => e
+    record_failure
+    raise MlServiceError, "network error calling #{path}: #{e.message}"
   end
 
   # ── Circuit breaker helpers ─────────────────────────────────────────────────
@@ -145,5 +146,6 @@ module MlServiceClient
     end
   end
 
-  private_class_method :check_circuit!, :record_success, :record_failure, :connection
+  private_class_method :check_circuit!, :execute_request, :send_http_request, :record_success, :record_failure,
+                       :connection
 end

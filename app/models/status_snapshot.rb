@@ -16,7 +16,7 @@ class StatusSnapshot < ApplicationRecord
 
   # Returns daily uptime percentage for a component over the last N days.
   def self.uptime_by_day(component:, days: 90)
-    rows    = for_component(component).recent(days).order(checked_at: :asc).pluck(:checked_at, :status)
+    rows = for_component(component).recent(days).order(checked_at: :asc).pluck(:checked_at, :status)
     rows.group_by { |checked_at, _| checked_at.to_date }
         .map { |date, entries| aggregate_day(date, entries) }
   end
@@ -24,8 +24,8 @@ class StatusSnapshot < ApplicationRecord
   # Single-query bulk version: returns { component => [{ date:, uptime_pct:, status: }] }
   def self.bulk_uptime_by_day(days: 90)
     rows = where(checked_at: days.days.ago..Time.current)
-             .order(checked_at: :asc)
-             .pluck(:component, :checked_at, :status)
+           .order(checked_at: :asc)
+           .pluck(:component, :checked_at, :status)
 
     rows
       .group_by(&:first)
