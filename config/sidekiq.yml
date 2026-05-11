@@ -79,6 +79,14 @@
     queue: low_priority
     description: 'Rebuild AI champion matrices and vectors nightly'
 
+  # Ping Riot platform status API every 6 hours to keep the job heartbeat alive.
+  # Ensures StatusSnapshotJob reports riot_api as operational without burning player-data rate limit.
+  riot_api_ping:
+    cron: '0 */6 * * *'
+    class: RiotApiPingJob
+    queue: low
+    description: 'Ping Riot status API to keep health check heartbeat alive'
+
   # Record component health snapshots every 15 minutes for uptime history.
   # Reduced from */5 to avoid excessive DB/Redis pressure from 6 checks per run.
   status_snapshot:
