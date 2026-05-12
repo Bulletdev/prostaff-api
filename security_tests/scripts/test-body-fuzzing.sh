@@ -186,9 +186,9 @@ check_field_accepted() {
   local inject_value="$4"
   local token="$5"
 
-  # Inject the field into the payload
+  # Inject the field into the payload (strip trailing } then append new field + })
   local modified_payload
-  modified_payload=$(echo "$base_payload" | sed "s/}$/,\"${inject_field}\":${inject_value}}/")
+  modified_payload="${base_payload%\}},\"${inject_field}\":${inject_value}}"
 
   local response
   response=$(curl -s -X POST "$API_URL$endpoint" \
@@ -231,14 +231,14 @@ else
       -X POST "$API_URL$PLAYERS_ENDPOINT" \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $TOKEN_A" \
-      --data-raw "$(echo "$PLAYER_BASE" | sed "s/}$/,\"${field}\":${value}}/")" \
+      --data-raw "${PLAYER_BASE%\}},\"${field}\":${value}}" \
       --max-time 10 2>/dev/null || echo 0)
 
     response=$(curl -s \
       -X POST "$API_URL$PLAYERS_ENDPOINT" \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $TOKEN_A" \
-      --data-raw "$(echo "$PLAYER_BASE" | sed "s/}$/,\"${field}\":${value}}/")" \
+      --data-raw "${PLAYER_BASE%\}},\"${field}\":${value}}" \
       --max-time 10 2>/dev/null || echo "{}")
 
     # Only flag as mass assignment if the request SUCCEEDED (2xx) AND the field appears

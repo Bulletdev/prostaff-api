@@ -88,9 +88,9 @@ class ScraperImporterService
     ext_id      = build_external_match_id(match)
     parsed_date = parse_date(match['start_time'])
     game_number = match['game_number']
-    _team1_name = match.dig('team1', 'name').to_s
-    _team2_name = match.dig('team2', 'name').to_s
-    _, opp_resolved = resolve_teams(_team1_name, _team2_name, match['win_team'].to_s, our_team)
+    team1_name  = match.dig('team1', 'name').to_s
+    team2_name  = match.dig('team2', 'name').to_s
+    _, opp_resolved = resolve_teams(team1_name, team2_name, match['win_team'].to_s, our_team)
 
     if duplicate_by_fingerprint?(@organization, parsed_date, game_number, opp_resolved)
       stats[:skipped_duplicate] += 1
