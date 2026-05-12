@@ -76,6 +76,15 @@ module Strategy
         end
       end
 
+      # DELETE /api/v1/strategy/draft-simulations/series/:series_id
+      def destroy_series
+        simulations = organization_scoped(DraftSimulation).where(series_id: params[:series_id])
+        return render_error(message: 'Series not found', code: 'NOT_FOUND', status: :not_found) if simulations.empty?
+
+        simulations.destroy_all
+        render_deleted(message: 'Series deleted successfully')
+      end
+
       private
 
       def set_draft_simulation
