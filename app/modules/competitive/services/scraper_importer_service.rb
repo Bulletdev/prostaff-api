@@ -12,7 +12,7 @@
 #   # => { imported: 5, skipped_duplicate: 3, skipped_unenriched: 2, errors: 0 }
 #
 class ScraperImporterService
-  include MatchFingerprint
+  include Competitive::Concerns::MatchFingerprint
 
   # Leaguepedia role values mapped to our internal lowercase convention
   ROLE_MAP = {

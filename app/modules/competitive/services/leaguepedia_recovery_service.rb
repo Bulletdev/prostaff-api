@@ -20,7 +20,7 @@
 #   # => { recovered: 1, already_present: 12, errors: 0, skipped_no_players: 0 }
 #
 class LeaguepediaRecoveryService
-  include MatchFingerprint
+  include Competitive::Concerns::MatchFingerprint
 
   CARGO_BASE_URL = 'https://lol.fandom.com/api.php'
   CACHE_TTL      = 30.minutes

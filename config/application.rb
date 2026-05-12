@@ -44,7 +44,7 @@ module ProstaffApi
     # Serializers, policies, channels, and services keep their original flat class names.
     # Adding their dirs as roots (same pattern as models) avoids renaming every
     # constant: PlayerSerializer, PlayerPolicy, RiotApiService, etc. stay as-is.
-    %w[serializers policies channels services concerns].each do |layer|
+    %w[serializers policies channels services].each do |layer|
       Dir[root.join("app/modules/*/#{layer}")].each do |path|
         config.autoload_paths << path
         config.eager_load_paths << path
