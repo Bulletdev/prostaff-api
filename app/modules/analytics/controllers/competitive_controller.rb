@@ -188,12 +188,13 @@ module Analytics
         valid_sides = %w[blue red]
         result = valid_sides.each_with_object({}) do |side, hash|
           side_rows = rows.select { |m| m.side&.downcase == side }
-          games     = side_rows.size
-          wins      = side_rows.count(&:victory)
+          games  = side_rows.size
+          wins   = side_rows.count { |m| m.victory == true }
+          losses = side_rows.count { |m| m.victory == false }
           hash[side] = {
             games: games,
             wins: wins,
-            losses: games - wins,
+            losses: losses,
             win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0
           }
         end
