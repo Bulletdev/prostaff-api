@@ -28,6 +28,10 @@
           {
             "context": "Security Scan",
             "integration_id": null
+          },
+          {
+            "context": "codacy/pr-quality-review",
+            "integration_id": null
           }
         ],
         "strict_required_status_checks_policy": true
