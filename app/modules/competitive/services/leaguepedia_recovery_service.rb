@@ -20,6 +20,8 @@
 #   # => { recovered: 1, already_present: 12, errors: 0, skipped_no_players: 0 }
 #
 class LeaguepediaRecoveryService
+  include MatchFingerprint
+
   CARGO_BASE_URL = 'https://lol.fandom.com/api.php'
   CACHE_TTL      = 30.minutes
   MAX_RETRIES    = 3
@@ -114,6 +116,18 @@ class LeaguepediaRecoveryService
     game_id       = game['GameId']
     game_in_match = game['GameInMatch'].to_i
     ext_id        = "#{game_id}_#{game_in_match}"
+    parsed_date   = parse_leaguepedia_date(game['DateTime UTC'])
+
+    opp_name = if teams_match?(game['Team1'].to_s, our_team)
+                 game['Team2'].to_s
+               else
+                 game['Team1'].to_s
+               end
+
+    if duplicate_by_fingerprint?(@organization, parsed_date, game_in_match, opp_name)
+      stats[:already_present] += 1
+      return
+    end
 
     if @organization.competitive_matches.exists?(external_match_id: ext_id)
       stats[:already_present] += 1
@@ -336,5 +350,13 @@ class LeaguepediaRecoveryService
       req['Accept']     = 'application/json'
       http.request(req)
     end
+  end
+
+  def parse_leaguepedia_date(raw)
+    return nil if raw.blank?
+
+    Time.zone.parse(raw)
+  rescue ArgumentError, TypeError
+    nil
   end
 end
