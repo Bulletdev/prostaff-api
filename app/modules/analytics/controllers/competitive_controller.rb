@@ -271,7 +271,8 @@ module Analytics
 
           wins    = t_matches.victories.count
           losses  = games - wins
-          patches = t_matches.where.not(patch_version: nil).distinct.pluck(:patch_version).compact.sort
+          patches = t_matches.where.not(patch_version: [nil, '']).distinct.pluck(:patch_version).compact
+                             .sort_by { |v| v.split('.').map(&:to_i) }
           t_dates = t_matches.where.not(match_date: nil)
 
           date_range = if t_dates.exists?
@@ -338,7 +339,7 @@ module Analytics
       def build_patch_meta(rows)
         rows.group_by { |m| m.patch_version.presence }
             .filter_map { |patch, patch_rows| build_patch_entry(patch, patch_rows) }
-            .sort_by { |entry| entry[:patch] }
+            .sort_by { |entry| entry[:patch].split('.').map(&:to_i) }
             .reverse
       end
 
