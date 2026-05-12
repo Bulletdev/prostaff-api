@@ -425,6 +425,7 @@ Rails.application.routes.draw do
                                       controller: '/strategy/controllers/draft_simulations',
                                       only: %i[create destroy] do
           collection do
+            get :list
             get ':series_id', action: :index, as: :series
           end
           member do
