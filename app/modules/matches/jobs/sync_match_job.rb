@@ -164,12 +164,25 @@ module Matches
     end
 
     def create_stat_for_participant(match, player, participant_data, team_totals, opponent_map = {})
-      team_stats = team_totals[participant_data[:team_id]]
-      damage_share = calc_share(participant_data[:total_damage_dealt], team_stats&.dig(:total_damage))
-      gold_share = calc_share(participant_data[:gold_earned], team_stats&.dig(:total_gold))
-      cs_total = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
-
       PlayerMatchStat.create!(
+        build_stat_attributes(match, player, participant_data, team_totals, opponent_map)
+      )
+    end
+
+    def build_stat_attributes(match, player, participant_data, team_totals, opponent_map)
+      team_stats   = team_totals[participant_data[:team_id]]
+      damage_share = calc_share(participant_data[:total_damage_dealt], team_stats&.dig(:total_damage))
+      gold_share   = calc_share(participant_data[:gold_earned], team_stats&.dig(:total_gold))
+      cs_total     = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
+
+      base_stat_fields(match, player, participant_data, opponent_map, cs_total)
+        .merge(combat_stat_fields(participant_data))
+        .merge(vision_and_objective_fields(participant_data))
+        .merge(share_and_spell_fields(participant_data, damage_share, gold_share))
+    end
+
+    def base_stat_fields(match, player, participant_data, opponent_map, cs_total)
+      {
         match: match,
         player: player,
         role: normalize_role(participant_data[:role]),
@@ -183,39 +196,54 @@ module Matches
         damage_taken: participant_data[:total_damage_taken],
         cs: cs_total,
         neutral_minions_killed: participant_data[:neutral_minions_killed],
-        vision_score: participant_data[:vision_score],
-        wards_placed: participant_data[:wards_placed],
-        wards_destroyed: participant_data[:wards_killed],
-        first_blood: participant_data[:first_blood_kill],
-        first_tower: participant_data[:first_tower_kill],
-        control_wards_purchased: participant_data[:control_wards_purchased],
+        performance_score: calculate_performance_score(participant_data),
+        items: participant_data[:items],
+        runes: participant_data[:runes]
+      }
+    end
+
+    def combat_stat_fields(participant_data)
+      {
         double_kills: participant_data[:double_kills],
         triple_kills: participant_data[:triple_kills],
         quadra_kills: participant_data[:quadra_kills],
         penta_kills: participant_data[:penta_kills],
-        performance_score: calculate_performance_score(participant_data),
-        items: participant_data[:items],
-        runes: participant_data[:runes],
-        summoner_spell_1: participant_data[:summoner_spell_1],
-        summoner_spell_2: participant_data[:summoner_spell_2],
-        damage_share: damage_share,
-        gold_share: gold_share,
+        first_blood: participant_data[:first_blood_kill],
+        first_tower: participant_data[:first_tower_kill],
         objectives_stolen: participant_data[:objectives_stolen],
         crowd_control_score: participant_data[:crowd_control_score],
         total_time_dead: participant_data[:total_time_dead],
         damage_to_turrets: participant_data[:damage_to_turrets],
         damage_shielded_teammates: participant_data[:damage_shielded_teammates],
-        healing_to_teammates: participant_data[:healing_to_teammates],
+        healing_to_teammates: participant_data[:healing_to_teammates]
+      }
+    end
+
+    def vision_and_objective_fields(participant_data)
+      {
+        vision_score: participant_data[:vision_score],
+        wards_placed: participant_data[:wards_placed],
+        wards_destroyed: participant_data[:wards_killed],
+        control_wards_purchased: participant_data[:control_wards_purchased],
+        cs_at_10: participant_data[:cs_at_10],
+        turret_plates_destroyed: participant_data[:turret_plates_destroyed],
+        pings: participant_data[:pings] || {}
+      }
+    end
+
+    def share_and_spell_fields(participant_data, damage_share, gold_share)
+      {
+        summoner_spell_1: participant_data[:summoner_spell_1],
+        summoner_spell_2: participant_data[:summoner_spell_2],
+        damage_share: damage_share,
+        gold_share: gold_share,
         spell_q_casts: participant_data[:spell_q_casts],
         spell_w_casts: participant_data[:spell_w_casts],
         spell_e_casts: participant_data[:spell_e_casts],
         spell_r_casts: participant_data[:spell_r_casts],
         summoner_spell_1_casts: participant_data[:summoner_spell_1_casts],
-        summoner_spell_2_casts: participant_data[:summoner_spell_2_casts],
-        cs_at_10: participant_data[:cs_at_10],
-        turret_plates_destroyed: participant_data[:turret_plates_destroyed],
-        pings: participant_data[:pings] || {}
-      )
+        summoner_spell_2_casts: participant_data[:summoner_spell_2_casts]
+      }
     end
 
     def calc_share(value, total)

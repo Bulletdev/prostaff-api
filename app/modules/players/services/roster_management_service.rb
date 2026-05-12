@@ -444,10 +444,10 @@ class RosterManagementService
 
     t = tier_thresholds(tier)
     strengths = []
-    strengths << 'Consistency'         if perf[:win_rate].to_f >= t[:wr_strength]
-    strengths << 'Mechanical skill'    if perf[:avg_kda].to_f >= t[:kda_strength]
-    strengths << 'CS discipline'       if non_support?(role) && perf[:avg_cs_per_min].to_f >= t[:cs_strength]
-    strengths << 'Map awareness'       if vision_role?(role) && perf[:avg_vision_score].to_f >= t[:vision_strength]
+    strengths << 'Consistency'         if strong_win_rate?(perf, t)
+    strengths << 'Mechanical skill'    if strong_kda?(perf, t)
+    strengths << 'CS discipline'       if strong_cs?(perf, role, t)
+    strengths << 'Map awareness'       if strong_vision?(perf, role, t)
     strengths << 'Team fighting'       if perf[:avg_kill_participation].to_f >= 65.0
     strengths << 'Champion pool depth' if pool.size >= 6
     strengths
@@ -493,6 +493,22 @@ class RosterManagementService
     vision_role?(role) &&
       perf[:avg_vision_score].to_f.positive? &&
       perf[:avg_vision_score].to_f < thresholds[:vision_weakness]
+  end
+
+  def strong_win_rate?(perf, thresholds)
+    perf[:win_rate].to_f >= thresholds[:wr_strength]
+  end
+
+  def strong_kda?(perf, thresholds)
+    perf[:avg_kda].to_f >= thresholds[:kda_strength]
+  end
+
+  def strong_cs?(perf, role, thresholds)
+    non_support?(role) && perf[:avg_cs_per_min].to_f >= thresholds[:cs_strength]
+  end
+
+  def strong_vision?(perf, role, thresholds)
+    vision_role?(role) && perf[:avg_vision_score].to_f >= thresholds[:vision_strength]
   end
 
   # Extract playstyle from player notes

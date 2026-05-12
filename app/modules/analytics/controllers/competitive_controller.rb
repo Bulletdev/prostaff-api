@@ -336,29 +336,38 @@ module Analytics
       # ── patch_meta helpers ─────────────────────────────────────────
 
       def build_patch_meta(rows)
-        rows.group_by { |m| m.patch_version.presence }.filter_map do |patch, patch_rows|
-          next if patch.nil?
-
-          games = patch_rows.size
-          wins  = patch_rows.count(&:victory)
-
-          {
-            patch: patch,
-            games: games,
-            wins: wins,
-            losses: games - wins,
-            win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0,
-            blue_games: patch_rows.count { |m| m.side&.downcase == 'blue' },
-            red_games: patch_rows.count { |m| m.side&.downcase == 'red' },
-            top_picks: top_n_from_jsonb(patch_rows, :our_picks, 5),
-            top_bans: top_n_from_jsonb(patch_rows, :our_bans, 5)
-          }
-        end.sort_by { |p| p[:patch] }.reverse
+        rows.group_by { |m| m.patch_version.presence }
+            .filter_map { |patch, patch_rows| build_patch_entry(patch, patch_rows) }
+            .sort_by { |entry| entry[:patch] }
+            .reverse
       end
 
-      def top_n_from_jsonb(rows, field, n)
+      def build_patch_entry(patch, patch_rows)
+        return nil if patch.nil?
+
+        games = patch_rows.size
+        wins  = patch_rows.count(&:victory)
+
+        {
+          patch: patch,
+          games: games,
+          wins: wins,
+          losses: games - wins,
+          win_rate: patch_win_rate(wins, games),
+          blue_games: patch_rows.count { |m| m.side&.downcase == 'blue' },
+          red_games: patch_rows.count { |m| m.side&.downcase == 'red' },
+          top_picks: top_n_from_jsonb(patch_rows, :our_picks, 5),
+          top_bans: top_n_from_jsonb(patch_rows, :our_bans, 5)
+        }
+      end
+
+      def patch_win_rate(wins, games)
+        games.positive? ? (wins.to_f / games * 100).round(1) : 0
+      end
+
+      def top_n_from_jsonb(rows, field, limit)
         tally = rows.flat_map { |m| Array(m.public_send(field)).filter_map { |e| e['champion'] } }.tally
-        tally.sort_by { |_, count| -count }.first(n).map { |champion, count| { champion: champion, count: count } }
+        tally.sort_by { |_, count| -count }.first(limit).map { |champion, count| { champion: champion, count: count } }
       end
 
       # ── empty state helpers ────────────────────────────────────────

@@ -461,10 +461,10 @@ module Scouting
         p = perf.with_indifferent_access
         t = tier_thresholds(tier)
         strengths = []
-        strengths << 'Consistency'         if p[:win_rate].to_f >= t[:wr_strength]
-        strengths << 'Mechanical skill'    if p[:avg_kda].to_f >= t[:kda_strength]
-        strengths << 'CS discipline'       if non_support?(role) && p[:avg_cs_per_min].to_f >= t[:cs_strength]
-        strengths << 'Map awareness'       if vision_role?(role) && p[:avg_vision_score].to_f >= t[:vision_strength]
+        strengths << 'Consistency'         if scouting_consistent?(p, t)
+        strengths << 'Mechanical skill'    if scouting_skilled?(p, t)
+        strengths << 'CS discipline'       if scouting_good_cs?(p, role, t)
+        strengths << 'Map awareness'       if scouting_good_vision?(p, role, t)
         strengths << 'Team fighting'       if p[:avg_kill_participation].to_f >= 65.0
         strengths << 'Champion pool depth' if pool.size >= 6
         strengths
@@ -476,8 +476,8 @@ module Scouting
         p = perf.with_indifferent_access
         t = tier_thresholds(tier)
         [
-          ('Inconsistent performance' if p[:games_played].to_i >= 10 && p[:win_rate].to_f < t[:wr_weakness]),
-          ('Death management'         if p[:avg_kda].to_f.positive? && p[:avg_kda].to_f < t[:kda_weakness]),
+          ('Inconsistent performance' if scouting_inconsistent?(p, t)),
+          ('Death management'         if scouting_poor_kda?(p, t)),
           ('CS discipline'            if scouting_poor_cs?(p, role, t)),
           ('Vision control'           if scouting_poor_vision?(p, role, t)),
           ('Limited champion pool'    if pool.size < 3)
@@ -502,6 +502,30 @@ module Scouting
         vision_role?(role) &&
           perf[:avg_vision_score].to_f.positive? &&
           perf[:avg_vision_score].to_f < thresholds[:vision_weakness]
+      end
+
+      def scouting_consistent?(perf, thresholds)
+        perf[:win_rate].to_f >= thresholds[:wr_strength]
+      end
+
+      def scouting_skilled?(perf, thresholds)
+        perf[:avg_kda].to_f >= thresholds[:kda_strength]
+      end
+
+      def scouting_good_cs?(perf, role, thresholds)
+        non_support?(role) && perf[:avg_cs_per_min].to_f >= thresholds[:cs_strength]
+      end
+
+      def scouting_good_vision?(perf, role, thresholds)
+        vision_role?(role) && perf[:avg_vision_score].to_f >= thresholds[:vision_strength]
+      end
+
+      def scouting_inconsistent?(perf, thresholds)
+        perf[:games_played].to_i >= 10 && perf[:win_rate].to_f < thresholds[:wr_weakness]
+      end
+
+      def scouting_poor_kda?(perf, thresholds)
+        perf[:avg_kda].to_f.positive? && perf[:avg_kda].to_f < thresholds[:kda_weakness]
       end
 
       # Extract top champions from mastery data using DataDragonService for full champion coverage.
