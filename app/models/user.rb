@@ -41,7 +41,7 @@ class User < ApplicationRecord
             if: -> { password.present? }
 
   # Callbacks
-  before_save :downcase_email
+  before_validation :downcase_email
   after_update :log_audit_trail, if: :saved_changes?
 
   # Scopes
