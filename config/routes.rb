@@ -253,6 +253,7 @@ Rails.application.routes.draw do
         get 'competitive/draft-performance', to: '/analytics/controllers/competitive#draft_performance'
         get 'competitive/tournament-stats',  to: '/analytics/controllers/competitive#tournament_stats'
         get 'competitive/opponents',         to: '/analytics/controllers/competitive#opponents'
+        get 'competitive/patch-meta',        to: '/analytics/controllers/competitive#patch_meta'
         get 'competitive/player-stats',      to: '/analytics/controllers/competitive_player#player_stats'
       end
 
