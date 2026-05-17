@@ -41,6 +41,7 @@ module Api
       #
       # @return [JSON] Proxied response from ProPay
       def deposit
+        ensure_propay_customer!
         proxy_to_propay(
           :post,
           '/v1/wallet/deposit',
@@ -78,6 +79,30 @@ module Api
       end
 
       private
+
+      # Registers the current user as a ProPay customer (find-or-create).
+      # Called before any action that requires a Customer record in ProPay.
+      # Errors are logged but not raised — the downstream call surfaces them.
+      #
+      # @return [void]
+      def ensure_propay_customer!
+        propay_url = ENV.fetch('PROPAY_URL', 'http://propay:5555')
+        uri = URI("#{propay_url}/v1/customers")
+
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.open_timeout = 5
+        http.read_timeout = 10
+
+        headers = {
+          'Content-Type' => 'application/json',
+          'Authorization' => request.headers['Authorization']
+        }
+        req = Net::HTTP::Post.new(uri.request_uri, headers)
+        req.body = { full_name: current_user.full_name, email: current_user.email }.to_json
+        http.request(req)
+      rescue StandardError => e
+        Rails.logger.warn("[WALLET] ensure_propay_customer! failed: #{e.message}")
+      end
 
       # Forwards the request to ProPay and renders the response verbatim.
       #
