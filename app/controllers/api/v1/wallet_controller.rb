@@ -119,12 +119,24 @@ module Api
         http_request = build_http_request(method, uri, body, idempotency_key)
 
         response = http.request(http_request)
-        render json: JSON.parse(response.body), status: response.code.to_i
+        parsed = parse_propay_body(response.body)
+        render json: parsed, status: response.code.to_i
       rescue Net::OpenTimeout, Net::ReadTimeout
         render json: { error: { message: 'ProPay timeout' } }, status: :gateway_timeout
       rescue StandardError => e
         Rails.logger.error("[WALLET] ProPay proxy error for #{path}: #{e.message}")
         render json: { error: { message: e.message } }, status: :bad_gateway
+      end
+
+      # Parses a ProPay response body, returning a fallback hash on invalid JSON.
+      #
+      # @param body [String] Raw response body
+      # @return [Hash]
+      def parse_propay_body(body)
+        JSON.parse(body)
+      rescue JSON::ParserError
+        Rails.logger.error("[WALLET] ProPay returned non-JSON body: #{body.to_s.truncate(200)}")
+        { 'error' => 'ProPay returned an invalid response' }
       end
 
       # Builds a configured Net::HTTP instance.
