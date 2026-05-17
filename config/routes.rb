@@ -483,6 +483,16 @@ Rails.application.routes.draw do
         get  'champion-analytics',   to: '/ai_intelligence/controllers/champion_analytics#index'
       end
 
+      # Wallet Module — proxy to ProPay service
+      scope '/wallet', as: 'wallet' do
+        get  '/',            to: 'wallet#show',          as: 'root'
+        get  'transactions', to: 'wallet#transactions',  as: 'transactions'
+        post 'deposit',      to: 'wallet#deposit',       as: 'deposit'
+        post 'payouts',      to: 'wallet#create_payout', as: 'payouts'
+        get  'payouts/:id',  to: 'wallet#payout_status', as: 'payout_status'
+      end
+      get 'wallet/charges/:txid', to: 'wallet#charge_status', as: 'wallet_charge_status'
+
       # Tournaments Module — ArenaBR double elimination
       resources :tournaments, controller: '/tournaments/controllers/tournaments',
                               only: %i[index show create update] do
