@@ -45,8 +45,8 @@ gem 'bootsnap', require: false
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 gem 'rack-cors'
 
-# JWT for authentication
-gem 'jwt'
+# JWT for authentication — >= 3.2.0 fixes inadequate authentication CVE
+gem 'jwt', '>= 3.2.0'
 
 # Serializers for API responses
 gem 'blueprinter'
@@ -58,8 +58,8 @@ gem 'sidekiq-scheduler'
 # Environment variables
 gem 'dotenv-rails'
 
-# HTTP client for Riot API
-gem 'faraday'
+# HTTP client for Riot API — >= 2.14.2 fixes SSRF CVE
+gem 'faraday', '>= 2.14.2'
 gem 'faraday-retry'
 
 # Authorization
