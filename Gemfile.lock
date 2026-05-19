@@ -79,6 +79,9 @@ GEM
     annotate (3.2.0)
       activerecord (>= 3.2, < 8.0)
       rake (>= 10.4, < 14.0)
+    argon2 (2.3.3)
+      ffi (~> 1.15)
+      ffi-compiler (~> 1.0)
     ast (2.4.3)
     aws-eventstream (1.4.0)
     aws-partitions (1.1229.0)
@@ -171,6 +174,10 @@ GEM
       net-http (~> 0.5)
     faraday-retry (2.3.2)
       faraday (~> 2.0)
+    ffi (1.17.4-x86_64-linux-gnu)
+    ffi-compiler (1.4.2)
+      ffi (>= 1.15.5)
+      rake
     fugit (1.12.1)
       et-orbi (~> 1.4)
       raabro (~> 1.4)
@@ -471,6 +478,7 @@ PLATFORMS
 
 DEPENDENCIES
   annotate
+  argon2 (~> 2.3)
   aws-sdk-s3 (~> 1.0)
   bcrypt (~> 3.1.7)
   blueprinter
