@@ -58,9 +58,9 @@ gem 'sidekiq-scheduler'
 # Environment variables
 gem 'dotenv-rails'
 
-# HTTP client for Riot API — >= 2.14.2 fixes SSRF CVE
+# HTTP client for Riot API
 gem 'faraday', '>= 2.14.2'
-gem 'faraday-retry'
+gem 'faraday-retry', '>= 2.4.0'
 
 # Authorization
 gem 'pundit'
@@ -80,13 +80,13 @@ gem 'rswag-api'
 gem 'rswag-ui'
 
 # Elasticsearch client (for analytics queries)
-gem 'elasticsearch', '~> 8.19'
+gem 'elasticsearch', '~> 9.0', '>= 9.0.0'
 
 # Meilisearch — full-text search for players, organizations, scouting targets, etc.
 gem 'meilisearch', '~> 0.33'
 
 # LLM Integration for Support Chatbot
-gem 'ruby-openai', '~> 7.0'
+gem 'ruby-openai', '~> 8.0', '>= 8.0.0'
 
 # S3-compatible storage for file uploads (Supabase Storage)
 gem 'aws-sdk-s3', '~> 1.0'
