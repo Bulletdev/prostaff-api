@@ -146,11 +146,11 @@ GEM
     elastic-transport (8.5.1)
       faraday (< 3)
       multi_json
-    elasticsearch (8.19.3)
+    elasticsearch (9.4.0)
       elastic-transport (~> 8.3)
-      elasticsearch-api (= 8.19.3)
-      ostruct
-    elasticsearch-api (8.19.3)
+      elasticsearch-api (= 9.4.0)
+    elasticsearch-api (9.4.0)
+      base64
       multi_json
     erb (6.0.4)
     erubi (1.13.1)
@@ -164,7 +164,7 @@ GEM
       railties (>= 6.1.0)
     faker (3.5.2)
       i18n (>= 1.8.11, < 2)
-    faraday (2.14.1)
+    faraday (2.14.2)
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
@@ -172,7 +172,7 @@ GEM
       multipart-post (~> 2.0)
     faraday-net_http (3.4.2)
       net-http (~> 0.5)
-    faraday-retry (2.3.2)
+    faraday-retry (2.4.0)
       faraday (~> 2.0)
     ffi (1.17.4-x86_64-linux-gnu)
     ffi-compiler (1.4.2)
@@ -201,11 +201,11 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     jmespath (1.6.2)
-    json (2.19.2)
+    json (2.19.5)
     json-schema (5.2.2)
       addressable (~> 2.8)
       bigdecimal (~> 3.1)
-    jwt (3.1.2)
+    jwt (3.2.0)
       base64
     kamal (2.11.0)
       activesupport (>= 7.0)
@@ -253,7 +253,7 @@ GEM
     mini_mime (1.1.5)
     minitest (5.27.0)
     msgpack (1.8.0)
-    multi_json (1.20.1)
+    multi_json (1.21.1)
     multi_xml (0.8.1)
       bigdecimal (>= 3.1, < 5)
     multipart-post (2.4.1)
@@ -417,7 +417,7 @@ GEM
     rubocop-rspec (3.7.0)
       lint_roller (~> 1.1)
       rubocop (~> 1.72, >= 1.72.1)
-    ruby-openai (7.4.0)
+    ruby-openai (8.3.0)
       event_stream_parser (>= 0.3.0, < 2.0.0)
       faraday (>= 1)
       faraday-multipart (>= 1)
@@ -490,13 +490,13 @@ DEPENDENCIES
   database_cleaner-active_record
   debug
   dotenv-rails
-  elasticsearch (~> 8.19)
+  elasticsearch (~> 9.0, >= 9.0.0)
   factory_bot_rails
   faker
-  faraday
-  faraday-retry
+  faraday (>= 2.14.2)
+  faraday-retry (>= 2.4.0)
   hashid-rails (~> 1.0)
-  jwt
+  jwt (>= 3.2.0)
   kamal (~> 2.0)
   kaminari
   lograge
@@ -519,7 +519,7 @@ DEPENDENCIES
   rubocop
   rubocop-rails
   rubocop-rspec
-  ruby-openai (~> 7.0)
+  ruby-openai (~> 8.0, >= 8.0.0)
   securerandom
   shoulda-matchers
   sidekiq (~> 7.0)
@@ -533,4 +533,4 @@ RUBY VERSION
    ruby 3.4.8p72
 
 BUNDLED WITH
-   2.3.27
+   2.6.9
