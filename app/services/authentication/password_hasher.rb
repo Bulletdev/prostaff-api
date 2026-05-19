@@ -7,10 +7,13 @@ module Authentication
   class PasswordHasher
     # Ultra-fast params in test to avoid adding 150-250ms per RSpec example
     # that touches authentication. Production values follow OWASP preferred profile.
+    # m_cost is an exponent: memory = 2^m_cost KiB. Valid range: 3..31.
+    # m_cost: 16 => 2^16 KiB = 64 MiB (OWASP preferred profile).
+    # m_cost: 3  => 2^3  KiB = 8 KiB  (fast for test suite).
     ARGON2_PARAMS = if Rails.env.test?
-                      { m_cost: 16, t_cost: 1, p_cost: 1 }.freeze
+                      { m_cost: 3, t_cost: 1, p_cost: 1 }.freeze
                     else
-                      { m_cost: 65_536, t_cost: 3, p_cost: 2 }.freeze
+                      { m_cost: 16, t_cost: 3, p_cost: 2 }.freeze
                     end
 
     # Covers $2a$ (standard), $2b$ (canonical), $2x$/$2y$ (legacy JRuby/PHP variants)
