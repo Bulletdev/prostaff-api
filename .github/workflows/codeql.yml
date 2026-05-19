@@ -30,6 +30,7 @@ on:
 
 permissions:
   security-events: write  # upload SARIF para o Security tab
+  pull-requests: write    # postar comentario de resumo no PR
   packages: read
   actions: read
   contents: read
