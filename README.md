@@ -47,6 +47,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  [■] JWT Authentication       — Refresh tokens + token blacklisting         │
+│  [■] Argon2id Password Hashing— OWASP preferred · lazy migration from bcrypt│
 │  [■] HashID URLs              — Base62 encoding for obfuscated URLs         │
 │  [■] Swagger Docs             — 200+ endpoints documented interactively     │
 │  [■] Riot Games API           — Automatic match and player import           │
@@ -182,7 +183,7 @@ open http://localhost:3333/api-docs
 ║  Language            ║  Ruby 3.4.8                                        ║
 ║  Framework           ║  Rails 7.2.3.1 (API-only mode)                     ║
 ║  Database            ║  PostgreSQL 14+                                    ║
-║  Authentication      ║  JWT (access + refresh tokens)                     ║
+║  Authentication      ║  JWT (access + refresh tokens) + Argon2id hashing  ║
 ║  URL Obfuscation     ║  HashID with Base62 encoding                       ║
 ║  Background Jobs     ║  Sidekiq                                           ║
 ║  Caching             ║  Redis (port 6380)                                 ║
@@ -1037,6 +1038,7 @@ All cached responses include `X-Cache-Hit: true/false` header.
 [✓] Timing oracle: login/register user enumeration
 [✓] Mass assignment: StrongParameters coverage
 [✓] CI/CD: security gates on every push + weekly CodeQL
+[✓] Password hashing: Argon2id (m=64MiB, t=3, p=2) — bcrypt lazy migration on login
 ```
 
 ### Security Status

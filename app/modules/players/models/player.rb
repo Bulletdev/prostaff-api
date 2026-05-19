@@ -35,6 +35,7 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   include OrganizationScoped
   include SoftDeletable
   include Searchable
+  include UpgradeablePassword
 
   # Associations
   belongs_to :organization, optional: true
@@ -46,8 +47,21 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   has_many :vod_timestamps, foreign_key: 'target_player_id', dependent: :nullify
   has_many :password_reset_tokens, dependent: :destroy
 
-  # Password authentication for individual player access
-  has_secure_password :player_password, validations: false
+  # Virtual attribute for the player password — has_secure_password is not used;
+  # hashing is handled by Authentication::PasswordHasher.
+  attr_reader :player_password
+
+  def player_password=(plain_password)
+    @player_password = plain_password.blank? ? nil : plain_password
+  end
+
+  def authenticate_player_password(plain_password)
+    authenticate_with_upgrade(
+      plain_password,
+      digest_attr: :player_password_digest,
+      digest_setter: :player_password_digest
+    )
+  end
 
   # Validations
   validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
@@ -68,6 +82,7 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   validates :player_password, length: { minimum: 8 }, if: -> { player_password.present? }
 
   # Callbacks
+  before_validation :hash_player_password, if: -> { player_password.present? }
   before_save :normalize_summoner_name
   after_update_commit :enqueue_audit_log, if: :saved_changes?
   after_commit :clear_organization_cache, on: %i[create destroy]
@@ -220,6 +235,10 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
 
   def normalize_summoner_name
     self.summoner_name = summoner_name.strip if summoner_name.present?
+  end
+
+  def hash_player_password
+    self.player_password_digest = Authentication::PasswordHasher.hash(player_password)
   end
 
   def enqueue_audit_log
