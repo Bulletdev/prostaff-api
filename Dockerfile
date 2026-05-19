@@ -8,6 +8,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libyaml-dev \
+    libargon2-dev \
     git \
     tzdata \
     curl \

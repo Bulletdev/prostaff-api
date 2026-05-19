@@ -7,7 +7,11 @@
 # - Requires TokenBlacklist model with methods: blacklisted?(jti), add_to_blacklist(jti, expires_at)
 # - Requires User model with attributes: id, organization_id, role, email
 class JwtService
-  SECRET_KEY = ENV.fetch('JWT_SECRET_KEY') { Rails.application.secret_key_base }
+  # jwt >= 3.2.0 rejects nil/empty HMAC keys (CVE-2026-45363).
+  # Raise at boot time so a missing env var is caught immediately, not at first request.
+  SECRET_KEY = ENV.fetch('JWT_SECRET_KEY') { Rails.application.secret_key_base }.tap do |key|
+    raise 'JWT_SECRET_KEY / secret_key_base must not be blank' if key.blank?
+  end
   EXPIRATION_HOURS = ENV.fetch('JWT_EXPIRATION_HOURS', 24).to_i
   REFRESH_EXPIRATION_DAYS = ENV.fetch('JWT_REFRESH_EXPIRATION_DAYS', 7).to_i
 
