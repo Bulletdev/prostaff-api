@@ -58,7 +58,9 @@ RSpec.configure do |config|
       abort('CRITICAL: Cannot run tests against production database! Use a local test database.')
     end
 
-    DatabaseCleaner.allow_remote_database_url = false
+    # Custom guard above already aborts on 'supabase'/'prod' URLs, so we can
+    # allow Docker-network hostnames (e.g. docker-postgres-1) here safely.
+    DatabaseCleaner.allow_remote_database_url = true
 
     config.before(:suite) do
       DatabaseCleaner.clean_with(:truncation)

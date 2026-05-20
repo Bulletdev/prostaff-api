@@ -79,7 +79,13 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   validates :flex_queue_tier, inclusion: { in: Constants::Player::QUEUE_TIERS }, allow_blank: true
   validates :flex_queue_rank, inclusion: { in: Constants::Player::QUEUE_RANKS }, allow_blank: true
   validates :player_email, uniqueness: true, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
-  validates :player_password, length: { minimum: 8 }, if: -> { player_password.present? }
+  validates :player_password,
+            length: { minimum: 8, message: 'must be at least 8 characters' },
+            format: {
+              with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*\z/,
+              message: 'must contain at least one uppercase letter, one lowercase letter, and one number'
+            },
+            if: -> { player_password.present? }
 
   # Callbacks
   before_validation :hash_player_password, if: -> { player_password.present? }
