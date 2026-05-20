@@ -52,14 +52,20 @@ RSpec.configure do |config|
   config.include RequestSpecHelper, type: :request
 
   unless RSWAG_GENERATE
-    # Database cleaner - SECURITY: Never allow remote database truncation
-    # This prevents accidentally wiping production data when running tests
-    if ENV['DATABASE_URL']&.include?('supabase') || ENV['DATABASE_URL']&.include?('prod')
-      abort('CRITICAL: Cannot run tests against production database! Use a local test database.')
+    # Abort if any known production URL is set — catches the most common cases.
+    # TEST_DATABASE_URL is what database.yml actually uses in test env;
+    # DATABASE_URL is checked as a fallback for misconfigured environments.
+    [ENV['TEST_DATABASE_URL'], ENV['DATABASE_URL']].compact.each do |url|
+      if url.include?('supabase') || url.include?('prod') || url.include?('pooler')
+        abort('CRITICAL: Cannot run tests against production database! Use a local test database.')
+      end
     end
 
-    # Custom guard above already aborts on 'supabase'/'prod' URLs, so we can
-    # allow Docker-network hostnames (e.g. docker-postgres-1) here safely.
+    # DatabaseCleaner's built-in remote URL safeguard only recognises
+    # localhost/127.0.0.1 as safe. Docker-network hostnames (e.g.
+    # docker-postgres-1) are flagged as remote even though they are
+    # test-only containers. The guard above is the authoritative protection;
+    # allow_remote_database_url avoids the false-positive block.
     DatabaseCleaner.allow_remote_database_url = true
 
     config.before(:suite) do
