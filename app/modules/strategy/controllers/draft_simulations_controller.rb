@@ -7,6 +7,18 @@ module Strategy
     class DraftSimulationsController < Api::V1::BaseController
       before_action :set_draft_simulation, only: %i[update destroy]
 
+      # GET /api/v1/strategy/draft-simulations
+      def list
+        series = organization_scoped(DraftSimulation)
+                 .select(:series_id, :team1_name, :team2_name, :patch, :league, :fearless, :created_at,
+                         :blue_picks, :red_picks, :blue_bans, :red_bans)
+                 .order(created_at: :desc)
+                 .group_by(&:series_id)
+                 .map { |series_id, games| build_series_summary(series_id, games) }
+
+        render_success({ series: series })
+      end
+
       # GET /api/v1/strategy/draft-simulations/:series_id
       def index
         simulations = organization_scoped(DraftSimulation).for_series(params[:series_id])
@@ -64,10 +76,38 @@ module Strategy
         end
       end
 
+      # DELETE /api/v1/strategy/draft-simulations/series/:series_id
+      def destroy_series
+        simulations = organization_scoped(DraftSimulation).where(series_id: params[:series_id])
+        return render_error(message: 'Series not found', code: 'NOT_FOUND', status: :not_found) if simulations.empty?
+
+        simulations.destroy_all
+        render_deleted(message: 'Series deleted successfully')
+      end
+
       private
 
       def set_draft_simulation
         @draft_simulation = organization_scoped(DraftSimulation).find(params[:id])
+      end
+
+      def build_series_summary(series_id, games)
+        first = games.first
+        total_picks = games.sum { |g| Array(g.blue_picks).size + Array(g.red_picks).size }
+        total_bans  = games.sum { |g| Array(g.blue_bans).size + Array(g.red_bans).size }
+
+        {
+          series_id: series_id,
+          team1_name: first.team1_name,
+          team2_name: first.team2_name,
+          patch: first.patch,
+          league: first.league,
+          fearless: first.fearless,
+          game_count: games.size,
+          total_picks: total_picks,
+          total_bans: total_bans,
+          created_at: first.created_at
+        }
       end
 
       def create_params

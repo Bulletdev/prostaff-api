@@ -191,8 +191,13 @@ class RiotApiService
   end
 
   def parse_participant(participant)
-    challenges = participant['challenges'] || {}
+    core_participant_fields(participant)
+      .merge(combat_participant_fields(participant))
+      .merge(vision_participant_fields(participant))
+      .merge(challenge_participant_fields(participant))
+  end
 
+  def core_participant_fields(participant)
     {
       puuid: participant['puuid'],
       summoner_name: participant['summonerName'],
@@ -208,39 +213,55 @@ class RiotApiService
       total_damage_taken: participant['totalDamageTaken'],
       minions_killed: participant['totalMinionsKilled'],
       neutral_minions_killed: participant['neutralMinionsKilled'],
-      vision_score: participant['visionScore'],
-      wards_placed: participant['wardsPlaced'],
-      wards_killed: participant['wardsKilled'],
       champion_level: participant['champLevel'],
-      first_blood_kill: participant['firstBloodKill'],
-      double_kills: participant['doubleKills'],
-      triple_kills: participant['tripleKills'],
-      quadra_kills: participant['quadraKills'],
-      penta_kills: participant['pentaKills'],
       win: participant['win'],
       items: extract_items(participant),
       item_build_order: extract_item_build_order(participant),
       trinket: participant['item6'],
-      summoner_spell_1: participant['summoner1Id'],
-      summoner_spell_2: participant['summoner2Id'],
-      runes: extract_runes(participant),
+      runes: extract_runes(participant)
+    }
+  end
+
+  def combat_participant_fields(participant)
+    {
+      first_blood_kill: participant['firstBloodKill'],
+      first_tower_kill: participant['firstTowerKill'],
+      double_kills: participant['doubleKills'],
+      triple_kills: participant['tripleKills'],
+      quadra_kills: participant['quadraKills'],
+      penta_kills: participant['pentaKills'],
       objectives_stolen: participant['objectivesStolen'],
       crowd_control_score: participant['timeCCingOthers'],
       total_time_dead: participant['totalTimeSpentDead'],
       damage_to_turrets: participant['totalDamageDealtToTurrets'],
       damage_shielded_teammates: participant['totalDamageShieldedOnTeammates'],
-      healing_to_teammates: participant['totalHealsOnTeammates'],
+      healing_to_teammates: participant['totalHealsOnTeammates']
+    }
+  end
+
+  def vision_participant_fields(participant)
+    {
+      vision_score: participant['visionScore'],
+      wards_placed: participant['wardsPlaced'],
+      wards_killed: participant['wardsKilled'],
+      control_wards_purchased: participant['visionWardsBoughtInGame'],
+      summoner_spell_1: participant['summoner1Id'],
+      summoner_spell_2: participant['summoner2Id'],
       spell_q_casts: participant['spell1Casts'],
       spell_w_casts: participant['spell2Casts'],
       spell_e_casts: participant['spell3Casts'],
       spell_r_casts: participant['spell4Casts'],
       summoner_spell_1_casts: participant['summoner1Casts'],
       summoner_spell_2_casts: participant['summoner2Casts'],
-      cs_at_10: challenges['laneMinionsFirst10Minutes'],
-      turret_plates_destroyed: challenges['turretPlatesTaken'],
-      first_tower_kill: participant['firstTowerKill'],
-      control_wards_purchased: participant['visionWardsBoughtInGame'],
       pings: extract_pings(participant)
+    }
+  end
+
+  def challenge_participant_fields(participant)
+    challenges = participant['challenges'] || {}
+    {
+      cs_at_10: challenges['laneMinionsFirst10Minutes'],
+      turret_plates_destroyed: challenges['turretPlatesTaken']
     }
   end
 

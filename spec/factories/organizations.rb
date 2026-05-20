@@ -3,7 +3,6 @@
 FactoryBot.define do
   factory :organization do
     sequence(:name) { |n| "#{Faker::Esport.team} #{n}" }
-    slug { name.parameterize }
     region { %w[BR NA EUW KR].sample }
     tier { %w[tier_3_amateur tier_2_semi_pro tier_1_professional].sample }
   end

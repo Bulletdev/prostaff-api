@@ -400,42 +400,10 @@ module Competitive
           }, status: :unprocessable_entity
         end
 
-        # Fetch PandaScore data in parallel
-        t1_data   = Thread.new { @pandascore_service.fetch_team(team1_id) }
-        t2_data   = Thread.new { @pandascore_service.fetch_team(team2_id) }
-        t1_recent = Thread.new { @pandascore_service.fetch_team_recent_matches(team1_id) }
-        t2_recent = Thread.new { @pandascore_service.fetch_team_recent_matches(team2_id) }
+        team1_data, team2_data, team1_recent, team2_recent =
+          fetch_pandascore_preview_data(team1_id, team2_id)
 
-        team1_data   = t1_data.value
-        team2_data   = t2_data.value
-        team1_recent = t1_recent.value
-        team2_recent = t2_recent.value
-
-        # H2H stats from Elasticsearch
-        must_clauses = [
-          {
-            bool: {
-              should: [
-                { bool: { must: [team_clause(team1_name, 'team1'), team_clause(team2_name, 'team2')] } },
-                { bool: { must: [team_clause(team2_name, 'team1'), team_clause(team1_name, 'team2')] } }
-              ],
-              minimum_should_match: 1
-            }
-          }
-        ]
-
-        es_body = {
-          query: { bool: { must: must_clauses } },
-          size: 0,
-          aggs: {
-            team1_wins: { filter: win_team_clause(team1_name) },
-            team2_wins: { filter: win_team_clause(team2_name) }
-          }
-        }
-
-        es_result    = ElasticsearchClient.new.search(index: 'lol_pro_matches', body: es_body)
-        h2h_wins_t1  = es_result.dig('aggregations', 'team1_wins', 'doc_count') || 0
-        h2h_wins_t2  = es_result.dig('aggregations', 'team2_wins', 'doc_count') || 0
+        h2h_wins_t1, h2h_wins_t2 = fetch_h2h_wins(team1_name, team2_name)
 
         render json: {
           data: {
@@ -462,32 +430,9 @@ module Competitive
 
         raise ArgumentError, 'team1 and team2 are required' if team1.blank? || team2.blank?
 
-        must_clauses = [
-          {
-            bool: {
-              should: [
-                { bool: { must: [team_clause(team1, 'team1'), team_clause(team2, 'team2')] } },
-                { bool: { must: [team_clause(team2, 'team1'), team_clause(team1, 'team2')] } }
-              ],
-              minimum_should_match: 1
-            }
-          }
-        ]
-
-        if params[:after].present? && params[:before].present?
-          must_clauses << {
-            range: { start_time: { gte: params[:after], lte: params[:before] } }
-          }
-        end
-
-        es_body = {
-          query: { bool: { must: must_clauses } },
-          sort: [{ start_time: { order: 'desc' } }],
-          size: limit
-        }
-
-        result = ElasticsearchClient.new.search(index: 'lol_pro_matches', body: es_body)
-        games  = result.dig('hits', 'hits')&.map { |h| h['_source'] } || []
+        es_body = build_series_query(team1, team2, limit)
+        result  = ElasticsearchClient.new.search(index: 'lol_pro_matches', body: es_body)
+        games   = result.dig('hits', 'hits')&.map { |h| h['_source'] } || []
 
         render json: { data: { games: games, total: games.size } }
       rescue ArgumentError => e
@@ -502,6 +447,52 @@ module Competitive
 
       def set_pandascore_service
         @pandascore_service = PandascoreService.instance
+      end
+
+      def fetch_pandascore_preview_data(team1_id, team2_id)
+        t1_data   = Thread.new { @pandascore_service.fetch_team(team1_id) }
+        t2_data   = Thread.new { @pandascore_service.fetch_team(team2_id) }
+        t1_recent = Thread.new { @pandascore_service.fetch_team_recent_matches(team1_id) }
+        t2_recent = Thread.new { @pandascore_service.fetch_team_recent_matches(team2_id) }
+        [t1_data.value, t2_data.value, t1_recent.value, t2_recent.value]
+      end
+
+      def fetch_h2h_wins(team1_name, team2_name)
+        must_clauses = [h2h_matchup_clause(team1_name, team2_name)]
+        es_body = {
+          query: { bool: { must: must_clauses } },
+          size: 0,
+          aggs: {
+            team1_wins: { filter: win_team_clause(team1_name) },
+            team2_wins: { filter: win_team_clause(team2_name) }
+          }
+        }
+        result = ElasticsearchClient.new.search(index: 'lol_pro_matches', body: es_body)
+        wins_t1 = result.dig('aggregations', 'team1_wins', 'doc_count') || 0
+        wins_t2 = result.dig('aggregations', 'team2_wins', 'doc_count') || 0
+        [wins_t1, wins_t2]
+      end
+
+      def h2h_matchup_clause(team1_name, team2_name)
+        {
+          bool: {
+            should: [
+              { bool: { must: [team_clause(team1_name, 'team1'), team_clause(team2_name, 'team2')] } },
+              { bool: { must: [team_clause(team2_name, 'team1'), team_clause(team1_name, 'team2')] } }
+            ],
+            minimum_should_match: 1
+          }
+        }
+      end
+
+      def build_series_query(team1, team2, limit)
+        must_clauses = [h2h_matchup_clause(team1, team2)]
+        must_clauses << { range: { start_time: { gte: params[:after], lte: params[:before] } } } if date_filter?
+        { query: { bool: { must: must_clauses } }, sort: [{ start_time: { order: 'desc' } }], size: limit }
+      end
+
+      def date_filter?
+        params[:after].present? && params[:before].present?
       end
 
       # Builds an ES should clause that matches a team name using:

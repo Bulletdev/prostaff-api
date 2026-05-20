@@ -12,6 +12,8 @@
 #   # => { imported: 5, skipped_duplicate: 3, skipped_unenriched: 2, errors: 0 }
 #
 class ScraperImporterService
+  include Competitive::Concerns::MatchFingerprint
+
   # Leaguepedia role values mapped to our internal lowercase convention
   ROLE_MAP = {
     'Top' => 'top',
@@ -83,7 +85,17 @@ class ScraperImporterService
       end
     end
 
-    ext_id = build_external_match_id(match)
+    ext_id      = build_external_match_id(match)
+    parsed_date = parse_date(match['start_time'])
+    game_number = match['game_number']
+    team1_name  = match.dig('team1', 'name').to_s
+    team2_name  = match.dig('team2', 'name').to_s
+    _, opp_resolved = resolve_teams(team1_name, team2_name, match['win_team'].to_s, our_team)
+
+    if duplicate_by_fingerprint?(@organization, parsed_date, game_number, opp_resolved)
+      stats[:skipped_duplicate] += 1
+      return
+    end
 
     if @organization.competitive_matches.exists?(external_match_id: ext_id)
       stats[:skipped_duplicate] += 1
@@ -107,6 +119,7 @@ class ScraperImporterService
     league     = match['league'].to_s
 
     our_resolved, opp_resolved = resolve_teams(team1_name, team2_name, win_team, our_team)
+    date = parse_date(match['start_time'])
 
     {
       organization: @organization,
@@ -114,7 +127,7 @@ class ScraperImporterService
       tournament_stage: match['stage'],
       tournament_region: LEAGUE_REGION[league],
       external_match_id: ext_id,
-      match_date: parse_date(match['start_time']),
+      match_date: date,
       game_number: match['game_number'],
       patch_version: match['patch'],
       vod_url: build_vod_url(match['vod_youtube_id']),
@@ -125,7 +138,8 @@ class ScraperImporterService
       side: derive_side(our_resolved, team1_name),
       our_picks: build_picks(match['participants'], our_resolved),
       opponent_picks: build_picks(match['participants'], opp_resolved),
-      game_stats: build_game_stats(match, team1_name, team2_name)
+      game_stats: build_game_stats(match, team1_name, team2_name),
+      game_fingerprint: generate_fingerprint(@organization.id, date, match['game_number'], opp_resolved)
     }
   end
 

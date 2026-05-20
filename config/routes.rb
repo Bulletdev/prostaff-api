@@ -253,6 +253,7 @@ Rails.application.routes.draw do
         get 'competitive/draft-performance', to: '/analytics/controllers/competitive#draft_performance'
         get 'competitive/tournament-stats',  to: '/analytics/controllers/competitive#tournament_stats'
         get 'competitive/opponents',         to: '/analytics/controllers/competitive#opponents'
+        get 'competitive/patch-meta',        to: '/analytics/controllers/competitive#patch_meta'
         get 'competitive/player-stats',      to: '/analytics/controllers/competitive_player#player_stats'
       end
 
@@ -424,7 +425,9 @@ Rails.application.routes.draw do
                                       controller: '/strategy/controllers/draft_simulations',
                                       only: %i[create destroy] do
           collection do
-            get ':series_id', action: :index, as: :series
+            get  :list
+            get  ':series_id',    action: :index,          as: :series
+            delete 'series/:series_id', action: :destroy_series, as: :destroy_series
           end
           member do
             patch :update
@@ -479,6 +482,16 @@ Rails.application.routes.draw do
         post 'recommend-pick',       to: '/ai_intelligence/controllers/recommend#recommend_pick'
         get  'champion-analytics',   to: '/ai_intelligence/controllers/champion_analytics#index'
       end
+
+      # Wallet Module — proxy to ProPay service
+      scope '/wallet', as: 'wallet' do
+        get  '/',            to: 'wallet#show',          as: 'root'
+        get  'transactions', to: 'wallet#transactions',  as: 'transactions'
+        post 'deposit',      to: 'wallet#deposit',       as: 'deposit'
+        post 'payouts',      to: 'wallet#create_payout', as: 'payouts'
+        get  'payouts/:id',  to: 'wallet#payout_status', as: 'payout_status'
+      end
+      get 'wallet/charges/:txid', to: 'wallet#charge_status', as: 'wallet_charge_status'
 
       # Tournaments Module — ArenaBR double elimination
       resources :tournaments, controller: '/tournaments/controllers/tournaments',

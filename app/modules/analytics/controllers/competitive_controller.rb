@@ -6,6 +6,7 @@ module Analytics
     #   GET /api/v1/analytics/competitive/draft-performance
     #   GET /api/v1/analytics/competitive/tournament-stats
     #   GET /api/v1/analytics/competitive/opponents
+    #   GET /api/v1/analytics/competitive/patch-meta
     #
     # All actions accept the same optional filter params:
     #   tournament  [String]  filter by tournament name
@@ -81,6 +82,27 @@ module Analytics
       rescue StandardError => e
         Rails.logger.error("[CompetitiveAnalytics] opponents: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
         render_error(message: 'Failed to load opponent analysis', code: 'INTERNAL_ERROR',
+                     status: :internal_server_error)
+      end
+
+      # ── Patch meta ────────────────────────────────────────────────
+      # Returns win rate, pick and ban trends grouped by patch version.
+      # Useful for identifying which patches correlated with strong/weak performance.
+      #
+      # @return [JSON] { data: { patches: [...], total_matches: Integer } }
+      def patch_meta
+        matches = apply_filters(organization_scoped(CompetitiveMatch))
+
+        rows = matches.select(:patch_version, :victory, :side, :our_picks, :our_bans).to_a
+        patches = build_patch_meta(rows)
+
+        render_success({
+                         patches: patches,
+                         total_matches: rows.size
+                       })
+      rescue StandardError => e
+        Rails.logger.error("[CompetitiveAnalytics] patch_meta: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
+        render_error(message: 'Failed to load patch meta', code: 'INTERNAL_ERROR',
                      status: :internal_server_error)
       end
 
@@ -166,12 +188,13 @@ module Analytics
         valid_sides = %w[blue red]
         result = valid_sides.each_with_object({}) do |side, hash|
           side_rows = rows.select { |m| m.side&.downcase == side }
-          games     = side_rows.size
-          wins      = side_rows.count(&:victory)
+          games  = side_rows.size
+          wins   = side_rows.count { |m| m.victory == true }
+          losses = side_rows.count { |m| m.victory == false }
           hash[side] = {
             games: games,
             wins: wins,
-            losses: games - wins,
+            losses: losses,
             win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0
           }
         end
@@ -249,7 +272,8 @@ module Analytics
 
           wins    = t_matches.victories.count
           losses  = games - wins
-          patches = t_matches.where.not(patch_version: nil).distinct.pluck(:patch_version).compact.sort
+          patches = t_matches.where.not(patch_version: [nil, '']).distinct.pluck(:patch_version).compact
+                             .sort_by { |v| v.split('.').map(&:to_i) }
           t_dates = t_matches.where.not(match_date: nil)
 
           date_range = if t_dates.exists?
@@ -309,6 +333,43 @@ module Analytics
             tournaments: tournaments
           }
         end.sort_by { |o| -o[:matches] }
+      end
+
+      # ── patch_meta helpers ─────────────────────────────────────────
+
+      def build_patch_meta(rows)
+        rows.group_by { |m| m.patch_version.presence }
+            .filter_map { |patch, patch_rows| build_patch_entry(patch, patch_rows) }
+            .sort_by { |entry| entry[:patch].split('.').map(&:to_i) }
+            .reverse
+      end
+
+      def build_patch_entry(patch, patch_rows)
+        return nil if patch.nil?
+
+        games = patch_rows.size
+        wins  = patch_rows.count(&:victory)
+
+        {
+          patch: patch,
+          games: games,
+          wins: wins,
+          losses: games - wins,
+          win_rate: patch_win_rate(wins, games),
+          blue_games: patch_rows.count { |m| m.side&.downcase == 'blue' },
+          red_games: patch_rows.count { |m| m.side&.downcase == 'red' },
+          top_picks: top_n_from_jsonb(patch_rows, :our_picks, 5),
+          top_bans: top_n_from_jsonb(patch_rows, :our_bans, 5)
+        }
+      end
+
+      def patch_win_rate(wins, games)
+        games.positive? ? (wins.to_f / games * 100).round(1) : 0
+      end
+
+      def top_n_from_jsonb(rows, field, limit)
+        tally = rows.flat_map { |m| Array(m.public_send(field)).filter_map { |e| e['champion'] } }.tally
+        tally.sort_by { |_, count| -count }.first(limit).map { |champion, count| { champion: champion, count: count } }
       end
 
       # ── empty state helpers ────────────────────────────────────────

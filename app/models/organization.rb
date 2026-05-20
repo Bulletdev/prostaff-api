@@ -164,6 +164,7 @@ class Organization < ApplicationRecord
 
   def generate_slug
     return if slug.present?
+    return if name.blank?
 
     base_slug = name.parameterize
     counter = 1
