@@ -47,7 +47,7 @@ module Admin
       def serialize_audit_log(log)
         {
           id: log.id,
-          user: {
+          user: log.user && {
             id: log.user.id,
             email: log.user.email,
             full_name: log.user.full_name
