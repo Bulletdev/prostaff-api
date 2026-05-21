@@ -12,6 +12,8 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     git \
     tzdata \
     curl \
+    libexpat1 \
+    libcap2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
