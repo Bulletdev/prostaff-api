@@ -1,0 +1,47 @@
+<h2 style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#1a1a2e;">Seu teste expira em <%= @days_remaining %> dia(s)</h2>
+
+<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Ola, <strong><%= @user.full_name || 'usuario' %></strong>,</p>
+
+<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">O periodo de teste da organizacao <strong><%= @organization&.name %></strong> expira em <strong><%= @days_remaining %> dia(s)</strong>. Apos o encerramento, o acesso sera suspenso.</p>
+
+<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">O que voce perdera apos a expiracao:</p>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;width:100%;background-color:#f9f9f9;border:1px solid #e4e4e4;">
+  <tr>
+    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#555555;border-bottom:1px solid #e4e4e4;">
+      &bull;&nbsp; Acesso a estatisticas de jogadores e partidas
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#555555;border-bottom:1px solid #e4e4e4;">
+      &bull;&nbsp; VOD review e analise de performance
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#555555;">
+      &bull;&nbsp; Scouting e gestao de elenco
+    </td>
+  </tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td>
+      <a href="<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/billing"
+         style="display:inline-block;padding:13px 28px;background-color:#e53e3e;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;border-radius:4px;">
+        Fazer upgrade agora
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin:0 0 24px 0;">
+  <a href="<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/pricing"
+     style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#e53e3e;text-decoration:none;">
+    Ver planos e precos
+  </a>
+</p>
+
+<p style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;">Duvidas? Entre em contato: <a href="mailto:hello@prostaff.gg" style="color:#e53e3e;text-decoration:none;">hello@prostaff.gg</a></p>
+
+<p style="margin:16px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Equipe ProStaff</p>

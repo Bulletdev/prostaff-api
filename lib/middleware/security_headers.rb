@@ -29,7 +29,19 @@ module Middleware
     end
 
     def call(env)
+      # Capture path before @app.call — Rails mutates PATH_INFO during routing
+      path = env['PATH_INFO']
       status, headers, body = @app.call(env)
+
+      if path.start_with?('/sidekiq')
+        # Rack 3 normalises header keys to lowercase; delete both variants to be safe.
+        # Sidekiq::Web already injects its own permissive CSP with nonce, so we just
+        # remove the restrictive one added by ActionDispatch / our own HEADERS hash.
+        headers.delete('Content-Security-Policy')
+        headers.delete('content-security-policy')
+        return [status, headers, body]
+      end
+
       HEADERS.each { |key, value| headers[key] ||= value }
       [status, headers, body]
     end

@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       scope 'organizations/:id', as: 'organization' do
         patch '', to: 'organizations#update', as: 'update'
         post 'logo', to: 'organizations#upload_logo', as: 'logo'
+        patch 'lines', to: 'organizations#update_lines', as: 'update_lines'
       end
 
       # Profile -- stays in api/v1
@@ -147,6 +148,9 @@ Rails.application.routes.draw do
         resources :audit_logs, only: [:index], path: 'audit-logs',
                                controller: '/admin/controllers/audit_logs'
 
+        # ML quality metrics (rolling AUC from RollingAucJob)
+        get 'ml-metrics', to: '/admin/controllers/ml_metrics#index'
+
         # Status Incidents
         resources :status_incidents, path: 'status/incidents',
                                      controller: '/admin/controllers/status_incidents' do
@@ -157,7 +161,8 @@ Rails.application.routes.draw do
       end
 
       # Monitoring (admin-only observability) -- stays in api/v1
-      get 'monitoring/sidekiq', to: 'monitoring#sidekiq'
+      get 'monitoring/sidekiq',     to: 'monitoring#sidekiq'
+      get 'monitoring/cache_stats', to: 'monitoring#cache_stats'
 
       # Support System
       scope '/support', as: 'support' do
@@ -248,6 +253,7 @@ Rails.application.routes.draw do
         get 'competitive/draft-performance', to: '/analytics/controllers/competitive#draft_performance'
         get 'competitive/tournament-stats',  to: '/analytics/controllers/competitive#tournament_stats'
         get 'competitive/opponents',         to: '/analytics/controllers/competitive#opponents'
+        get 'competitive/patch-meta',        to: '/analytics/controllers/competitive#patch_meta'
         get 'competitive/player-stats',      to: '/analytics/controllers/competitive_player#player_stats'
       end
 
@@ -374,6 +380,8 @@ Rails.application.routes.draw do
             post :import
             post 'sync-from-scraper',      action: :sync_from_scraper
             post 'sync-from-leaguepedia',  action: :sync_from_leaguepedia
+            get  'match-preview', action: :match_preview
+            get  'es-series',              action: :es_series
             get  'diagnose-missing',       action: :diagnose_missing
             post 'recover-missing',        action: :recover_missing
             post 'historical-backfill',        action: :historical_backfill
@@ -409,6 +417,20 @@ Rails.application.routes.draw do
                                     controller: '/strategy/controllers/tactical_boards' do
           member do
             get :statistics
+          end
+        end
+
+        # Draft Simulations (DS1 — live draft simulator, multi-game series)
+        resources :draft_simulations, path: 'draft-simulations',
+                                      controller: '/strategy/controllers/draft_simulations',
+                                      only: %i[create destroy] do
+          collection do
+            get  :list
+            get  ':series_id',    action: :index,          as: :series
+            delete 'series/:series_id', action: :destroy_series, as: :destroy_series
+          end
+          member do
+            patch :update
           end
         end
 
@@ -455,14 +477,83 @@ Rails.application.routes.draw do
       # AI Intelligence Module — draft analysis and win probability
       # Requires Tier 1 (Professional) subscription.
       namespace :ai do
-        post 'draft/analyze', to: '/ai_intelligence/controllers/draft#analyze'
+        post 'draft/analyze',        to: '/ai_intelligence/controllers/draft#analyze'
+        post 'draft/synergy-matrix', to: '/ai_intelligence/controllers/draft#synergy_matrix'
+        post 'recommend-pick',       to: '/ai_intelligence/controllers/recommend#recommend_pick'
+        get  'champion-analytics',   to: '/ai_intelligence/controllers/champion_analytics#index'
+      end
+
+      # Wallet Module — proxy to ProPay service
+      scope '/wallet', as: 'wallet' do
+        get  '/',            to: 'wallet#show',          as: 'root'
+        get  'transactions', to: 'wallet#transactions',  as: 'transactions'
+        post 'deposit',      to: 'wallet#deposit',       as: 'deposit'
+        post 'payouts',      to: 'wallet#create_payout', as: 'payouts'
+        get  'payouts/:id',  to: 'wallet#payout_status', as: 'payout_status'
+      end
+      get 'wallet/charges/:txid', to: 'wallet#charge_status', as: 'wallet_charge_status'
+
+      # Tournaments Module — ArenaBR double elimination
+      resources :tournaments, controller: '/tournaments/controllers/tournaments',
+                              only: %i[index show create update] do
+        member do
+          post :generate_bracket
+        end
+
+        resources :teams, only: %i[index create destroy],
+                          controller: '/tournaments/controllers/tournament_teams' do
+          member do
+            patch :approve
+            patch :reject
+          end
+        end
+
+        resources :matches, only: %i[index show],
+                            controller: '/tournaments/controllers/tournament_matches' do
+          member do
+            post :checkin
+          end
+
+          resource :report, only: %i[show create],
+                            controller: '/tournaments/controllers/match_reports' do
+            post :admin_resolve, on: :member
+          end
+        end
       end
     end
   end
 
-  # Mount Sidekiq web UI in development
-  if Rails.env.development?
-    require 'sidekiq/web'
-    mount Sidekiq::Web => '/sidekiq'
+  # Internal service-to-service routes — authenticated via INTERNAL_JWT_SECRET only.
+  # Used by prostaff-events for startup reconciliation of active InhouseQueues.
+  namespace :internal do
+    namespace :api do
+      get 'inhouse_queues/active', to: '/inhouses/controllers/internal/inhouse_queues#active'
+    end
+
+    # Called by ProPay TierSyncJob when a subscription is activated or cancelled.
+    patch 'organizations/by_user/:user_id/tier', to: 'organizations#update_tier'
   end
+
+  require 'sidekiq/web'
+  require 'rack/session'
+  Sidekiq::Web.use(Rack::Auth::Basic) do |user, password|
+    expected_user     = ENV.fetch('SIDEKIQ_WEB_USER', nil)
+    expected_password = ENV.fetch('SIDEKIQ_WEB_PASSWORD', nil)
+
+    next false if expected_user.blank? || expected_password.blank?
+
+    user_match = ActiveSupport::SecurityUtils.secure_compare(user, expected_user)
+    password_match = ActiveSupport::SecurityUtils.secure_compare(
+      Digest::SHA256.hexdigest(password),
+      Digest::SHA256.hexdigest(expected_password)
+    )
+
+    user_match && password_match
+  end
+  # Rails API mode strips session middleware — Sidekiq::Web needs it for CSRF
+  Sidekiq::Web.use Rack::Session::Cookie,
+                   secret: Rails.application.secret_key_base,
+                   same_site: true,
+                   max_age: 86_400
+  mount Sidekiq::Web => '/sidekiq'
 end

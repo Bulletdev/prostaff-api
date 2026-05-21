@@ -15,36 +15,38 @@ class StatusController < ActionController::API
   }.freeze
 
   def index
-    components    = build_component_statuses
-    incidents     = build_incidents
-    uptime        = build_uptime_history
-    indicator, description = overall_status(components)
+    cached = Rails.cache.fetch('status_page/v2', expires_in: 30.seconds) do
+      components = build_component_statuses
+      incidents  = build_incidents
+      uptime     = build_uptime_history
+      indicator, description = overall_status(components)
 
-    render json: {
+      {
+        status: { indicator: indicator, description: description },
+        components: components,
+        incidents: incidents,
+        uptime_history: uptime
+      }
+    end
+
+    render json: cached.merge(
       page: {
         id: 'prostaff',
         name: 'ProStaff',
         url: 'https://status.prostaff.gg',
         time_zone: 'UTC',
         updated_at: Time.current.iso8601
-      },
-      status: {
-        indicator: indicator,
-        description: description
-      },
-      components: components,
-      incidents: incidents,
-      uptime_history: uptime
-    }, status: :ok
+      }
+    ), status: :ok
   end
 
   private
 
   def build_component_statuses
-    StatusIncident::COMPONENTS.map do |component|
-      snapshot = StatusSnapshot.for_component(component).order(checked_at: :desc).first
+    latest = StatusSnapshot.latest_per_component
 
-      if snapshot
+    StatusIncident::COMPONENTS.map do |component|
+      if (snapshot = latest[component])
         build_component_from_snapshot(component, snapshot)
       else
         build_component_live(component)
@@ -136,8 +138,9 @@ class StatusController < ActionController::API
   end
 
   def build_uptime_history
+    bulk = StatusSnapshot.bulk_uptime_by_day(days: 90)
     StatusIncident::COMPONENTS.each_with_object({}) do |component, hash|
-      hash[component] = StatusSnapshot.uptime_by_day(component: component, days: 90)
+      hash[component] = bulk[component] || []
     end
   rescue StandardError => e
     Rails.logger.error("[STATUS] Failed to build uptime history: #{e.message}")

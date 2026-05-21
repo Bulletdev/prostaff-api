@@ -3,7 +3,7 @@
 require 'active_support/core_ext/integer/time'
 
 Rails.application.configure do # rubocop:disable Metrics/BlockLength
-  config.cache_classes = true
+  config.enable_reloading = false
 
   config.eager_load = true
 
@@ -22,6 +22,9 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
     'prostaff.gg',
     'www.prostaff.gg',
     ENV.fetch('APP_HOST', nil),
+    # Internal service names: prostaff-events Reconciler calls the API using the
+    # Docker Compose service hostname (e.g. "api" or "api:3000") at boot time.
+    /\Aapi(:\d+)?\z/,
     # Internal IPs: Docker bridge, Coolify overlay, localhost — used by health check probes
     /\A(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?\z/
   ].compact
@@ -91,6 +94,7 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
       password: ENV['SMTP_PASSWORD'],
       authentication: ENV.fetch('SMTP_AUTHENTICATION', 'plain').to_sym,
       enable_starttls_auto: ENV.fetch('SMTP_ENABLE_STARTTLS_AUTO', 'true') == 'true',
+      ssl: ENV.fetch('SMTP_PORT', '587') == '465',
       domain: ENV.fetch('SMTP_DOMAIN', 'gmail.com')
     }
   else

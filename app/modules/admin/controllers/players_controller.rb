@@ -239,46 +239,12 @@ module Admin
       # Transfers a player to another organization
       def transfer
         new_organization_id = params[:new_organization_id]
-        reason = params[:reason] || 'Player transfer'
-
-        unless new_organization_id.present?
-          return render_error(
-            message: 'New organization ID is required',
-            code: 'VALIDATION_ERROR',
-            status: :unprocessable_entity
-          )
-        end
-
-        new_organization = Organization.find_by(id: new_organization_id)
-        unless new_organization
-          return render_error(
-            message: 'Organization not found',
-            code: 'NOT_FOUND',
-            status: :not_found
-          )
-        end
+        new_organization    = resolve_transfer_target(new_organization_id)
+        return unless new_organization
 
         old_org_id = @player.organization_id
-
-        ActiveRecord::Base.transaction do
-          # Save current organization as previous
-          @player.update!(previous_organization_id: old_org_id)
-
-          # Transfer to new organization
-          @player.update!(organization: new_organization, status: 'inactive')
-
-          log_user_action(
-            action: 'transfer',
-            entity_type: 'Player',
-            entity_id: @player.id,
-            old_values: { organization_id: old_org_id },
-            new_values: {
-              organization_id: new_organization_id,
-              previous_organization_id: old_org_id,
-              transfer_reason: reason
-            }
-          )
-        end
+        execute_player_transfer(@player, new_organization, old_org_id, params[:reason])
+        publish_player_transferred(@player, old_org_id, new_organization_id)
 
         render_success({
                          message: 'Player transferred successfully',
@@ -295,6 +261,50 @@ module Admin
       end
 
       private
+
+      def resolve_transfer_target(new_organization_id)
+        unless new_organization_id.present?
+          render_error(message: 'New organization ID is required', code: 'VALIDATION_ERROR',
+                       status: :unprocessable_entity)
+          return nil
+        end
+
+        org = Organization.find_by(id: new_organization_id)
+        render_error(message: 'Organization not found', code: 'NOT_FOUND', status: :not_found) unless org
+        org
+      end
+
+      def execute_player_transfer(player, new_organization, old_org_id, reason)
+        ActiveRecord::Base.transaction do
+          player.update!(previous_organization_id: old_org_id)
+          player.update!(organization: new_organization, status: 'inactive')
+          log_user_action(
+            action: 'transfer',
+            entity_type: 'Player',
+            entity_id: player.id,
+            old_values: { organization_id: old_org_id },
+            new_values: {
+              organization_id: new_organization.id,
+              previous_organization_id: old_org_id,
+              transfer_reason: reason || 'Player transfer'
+            }
+          )
+        end
+      end
+
+      def publish_player_transferred(player, old_org_id, new_organization_id)
+        Events::EventPublisher.publish(
+          user_id: current_user.id,
+          org_id: old_org_id,
+          type: 'player.transferred',
+          payload: {
+            player_id: player.id,
+            player_name: player.summoner_name,
+            from_org_id: old_org_id,
+            to_org_id: new_organization_id
+          }
+        )
+      end
 
       def require_admin_access
         return if current_user.admin? || current_user.owner?

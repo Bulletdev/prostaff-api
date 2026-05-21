@@ -5,8 +5,8 @@
 class OrganizationSerializer < Blueprinter::Base
   identifier :id
 
-  fields :name, :slug, :region, :tier, :subscription_plan, :subscription_status,
-         :logo_url, :settings, :created_at, :updated_at,
+  fields :name, :slug, :team_tag, :region, :tier, :subscription_plan, :subscription_status,
+         :logo_url, :settings, :enabled_lines, :created_at, :updated_at,
          :trial_expires_at, :trial_started_at
 
   field :region_display do |org|

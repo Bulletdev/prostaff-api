@@ -6,6 +6,7 @@ module Analytics
     #   GET /api/v1/analytics/competitive/draft-performance
     #   GET /api/v1/analytics/competitive/tournament-stats
     #   GET /api/v1/analytics/competitive/opponents
+    #   GET /api/v1/analytics/competitive/patch-meta
     #
     # All actions accept the same optional filter params:
     #   tournament  [String]  filter by tournament name
@@ -84,6 +85,29 @@ module Analytics
                      status: :internal_server_error)
       end
 
+      # ── Patch meta ────────────────────────────────────────────────
+      # Returns win rate, pick and ban trends grouped by patch version.
+      # Useful for identifying which patches correlated with strong/weak performance.
+      #
+      # @return [JSON] { data: { patches: [...], total_matches: Integer } }
+      def patch_meta
+        matches = apply_filters(organization_scoped(CompetitiveMatch))
+
+        rows = matches.select(:patch_version, :victory, :side, :our_picks, :our_bans).to_a
+        patches = build_patch_meta(rows)
+
+        render_success({
+                         patches: patches,
+                         total_matches: rows.size
+                       })
+      rescue StandardError => e
+        Rails.logger.error("[CompetitiveAnalytics] patch_meta: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
+        render_error(message: 'Failed to load patch meta', code: 'INTERNAL_ERROR',
+                     status: :internal_server_error)
+      end
+
+      PERFORMANCE_ROLES = %w[top jungle mid adc support].freeze
+
       # ── Private helpers ────────────────────────────────────────────
       private
 
@@ -151,50 +175,68 @@ module Analytics
         end.sort_by { |s| -s[:ban_count] }
       end
 
+      # Builds blue/red side win-rate stats from in-memory rows.
+      #
+      # Side values in the DB are validated as lowercase ('blue', 'red'), but records
+      # ingested from external sources may have nil or differently-cased values (e.g.
+      # 'Blue', 'RED'). Those records are normalised via downcase before matching.
+      # Records with nil or unrecognised side values are excluded from both side
+      # buckets and reported in the `unaccounted` key. The sum
+      # blue.games + red.games may therefore be less than total_matches — this is
+      # intentional and expected when incomplete data exists.
       def build_side_performance(rows)
-        %w[blue red].each_with_object({}) do |side, result|
-          side_rows = rows.select { |m| m.side == side }
-          games     = side_rows.size
-          wins      = side_rows.count(&:victory)
-          result[side] = {
+        valid_sides = %w[blue red]
+        result = valid_sides.each_with_object({}) do |side, hash|
+          side_rows = rows.select { |m| m.side&.downcase == side }
+          games  = side_rows.size
+          wins   = side_rows.count { |m| m.victory == true }
+          losses = side_rows.count { |m| m.victory == false }
+          hash[side] = {
             games: games,
             wins: wins,
-            losses: games - wins,
+            losses: losses,
             win_rate: games.positive? ? (wins.to_f / games * 100).round(1) : 0
           }
         end
+
+        accounted = result['blue'][:games] + result['red'][:games]
+        result['unaccounted'] = rows.size - accounted
+        result
       end
 
-      def build_role_performance(rows) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
-        roles      = %w[top jungle mid adc support]
-        role_stats = roles.each_with_object({}) do |r, h|
-          h[r] = { games: 0, wins: 0, champions: Hash.new(0) }
-        end
+      def build_role_performance(rows)
+        role_stats = initial_role_stats
+        rows.each { |match| accumulate_match_picks(role_stats, match) }
+        role_stats.map { |role, stats| format_role_stat(role, stats) }
+      end
 
-        rows.each do |match|
-          won = match.victory
-          (match.our_picks || []).each do |pick|
-            role  = pick['role']&.downcase
-            champ = pick['champion']
-            next unless role_stats.key?(role) && champ.present?
+      def initial_role_stats
+        PERFORMANCE_ROLES.each_with_object({}) { |r, h| h[r] = { games: 0, wins: 0, champions: Hash.new(0) } }
+      end
 
-            role_stats[role][:games]          += 1
-            role_stats[role][:wins]           += 1 if won
-            role_stats[role][:champions][champ] += 1
-          end
-        end
+      def accumulate_match_picks(role_stats, match)
+        won = match.victory
+        (match.our_picks || []).each do |pick|
+          role  = pick['role']&.downcase
+          champ = pick['champion']
+          next unless role_stats.key?(role) && champ.present?
 
-        role_stats.map do |role, s|
-          most_played = s[:champions].max_by { |_, c| c }&.first || 'N/A'
-          {
-            role: role,
-            games: s[:games],
-            wins: s[:wins],
-            win_rate: s[:games].positive? ? (s[:wins].to_f / s[:games] * 100).round(1) : 0,
-            most_played_champion: most_played,
-            champion_pool_size: s[:champions].size
-          }
+          role_stats[role][:games]            += 1
+          role_stats[role][:wins]             += 1 if won
+          role_stats[role][:champions][champ] += 1
         end
+      end
+
+      def format_role_stat(role, stats)
+        most_played = stats[:champions].max_by { |_, c| c }&.first || 'N/A'
+        {
+          role: role,
+          games: stats[:games],
+          wins: stats[:wins],
+          win_rate: stats[:games].positive? ? (stats[:wins].to_f / stats[:games] * 100).round(1) : 0,
+          most_played_champion: most_played,
+          champion_pool_size: stats[:champions].size
+        }
       end
 
       def extract_meta_champions(matches)
@@ -230,7 +272,8 @@ module Analytics
 
           wins    = t_matches.victories.count
           losses  = games - wins
-          patches = t_matches.where.not(patch_version: nil).distinct.pluck(:patch_version).compact.sort
+          patches = t_matches.where.not(patch_version: [nil, '']).distinct.pluck(:patch_version).compact
+                             .sort_by { |v| v.split('.').map(&:to_i) }
           t_dates = t_matches.where.not(match_date: nil)
 
           date_range = if t_dates.exists?
@@ -292,13 +335,50 @@ module Analytics
         end.sort_by { |o| -o[:matches] }
       end
 
+      # ── patch_meta helpers ─────────────────────────────────────────
+
+      def build_patch_meta(rows)
+        rows.group_by { |m| m.patch_version.presence }
+            .filter_map { |patch, patch_rows| build_patch_entry(patch, patch_rows) }
+            .sort_by { |entry| entry[:patch].split('.').map(&:to_i) }
+            .reverse
+      end
+
+      def build_patch_entry(patch, patch_rows)
+        return nil if patch.nil?
+
+        games = patch_rows.size
+        wins  = patch_rows.count(&:victory)
+
+        {
+          patch: patch,
+          games: games,
+          wins: wins,
+          losses: games - wins,
+          win_rate: patch_win_rate(wins, games),
+          blue_games: patch_rows.count { |m| m.side&.downcase == 'blue' },
+          red_games: patch_rows.count { |m| m.side&.downcase == 'red' },
+          top_picks: top_n_from_jsonb(patch_rows, :our_picks, 5),
+          top_bans: top_n_from_jsonb(patch_rows, :our_bans, 5)
+        }
+      end
+
+      def patch_win_rate(wins, games)
+        games.positive? ? (wins.to_f / games * 100).round(1) : 0
+      end
+
+      def top_n_from_jsonb(rows, field, limit)
+        tally = rows.flat_map { |m| Array(m.public_send(field)).filter_map { |e| e['champion'] } }.tally
+        tally.sort_by { |_, count| -count }.first(limit).map { |champion, count| { champion: champion, count: count } }
+      end
+
       # ── empty state helpers ────────────────────────────────────────
 
       def empty_draft_performance
         {
           pick_performance: [],
           ban_performance: [],
-          side_performance: { blue: side_zeros, red: side_zeros },
+          side_performance: { 'blue' => side_zeros, 'red' => side_zeros, 'unaccounted' => 0 },
           role_performance: [],
           meta_champions: [],
           total_matches: 0

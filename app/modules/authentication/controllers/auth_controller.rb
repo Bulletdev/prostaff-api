@@ -145,19 +145,13 @@ module Authentication
       # @param player_email [String] The player's individual access email
       # @param password [String] The player's individual access password
       # @return [JSON] Player info and JWT tokens
-      def player_login # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      def player_login
         player_email = params[:player_email]&.downcase&.strip
         password     = params[:password]
 
-        if player_email.blank? || password.blank?
-          return render_error(
-            message: 'Email e senha são obrigatórios',
-            code: 'MISSING_CREDENTIALS',
-            status: :bad_request
-          )
-        end
+        return render_missing_credentials if player_email.blank? || password.blank?
 
-        player = Player.find_by(player_email: player_email)
+        player = Player.unscoped.find_by(player_email: player_email)
 
         unless player&.has_player_access? && player.authenticate_player_password(password)
           return render_error(
@@ -176,40 +170,7 @@ module Authentication
         )
 
         render_success(
-          {
-            player: {
-              id: player.id,
-              name: player.real_name.presence || player.summoner_name,
-              professional_name: player.professional_name,
-              summoner_name: player.summoner_name,
-              role: player.role,
-              status: player.status,
-              country: player.country,
-              profile_icon_id: player.profile_icon_id,
-              avatar_url: player.avatar_url.presence,
-              organization_id: player.organization_id,
-              organization_name: player.organization&.name,
-              # Rank
-              solo_queue_tier: player.solo_queue_tier,
-              solo_queue_rank: player.solo_queue_rank,
-              solo_queue_lp: player.solo_queue_lp,
-              solo_queue_wins: player.solo_queue_wins,
-              solo_queue_losses: player.solo_queue_losses,
-              flex_queue_tier: player.flex_queue_tier,
-              flex_queue_rank: player.flex_queue_rank,
-              flex_queue_lp: player.flex_queue_lp,
-              peak_tier: player.peak_tier,
-              peak_rank: player.peak_rank,
-              peak_season: player.peak_season,
-              # Performance
-              win_rate: player.win_rate,
-              # Champions
-              main_champions: player.main_champions,
-              # Social
-              twitter_handle: player.twitter_handle,
-              twitch_channel: player.twitch_channel
-            }
-          }.merge(tokens),
+          { player: serialize_player_login(player) }.merge(tokens),
           message: 'Login realizado com sucesso'
         )
       rescue StandardError => e
@@ -237,67 +198,22 @@ module Authentication
       # @param summoner_name [String] Riot summoner name (e.g. "GameName#TAG")
       # @param discord_user_id [String] Discord username (optional)
       #
-      def player_register # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      def player_register
         player_email  = params[:player_email]&.downcase&.strip
         summoner_name = params[:summoner_name]&.strip
         password      = params[:password]
-        password_conf = params[:password_confirmation]
         discord       = params[:discord_user_id]&.strip
 
-        # ── Validate required fields ─────────────────────────────────────────
-        missing = []
-        missing << 'player_email'  if player_email.blank?
-        missing << 'password'      if password.blank?
-        missing << 'summoner_name' if summoner_name.blank?
+        error = validate_player_register_params(player_email, summoner_name, password)
+        return error if error
 
-        if missing.any?
-          return render_error(
-            message: "Campos obrigatórios faltando: #{missing.join(', ')}",
-            code: 'MISSING_FIELDS',
-            status: :bad_request
-          )
-        end
+        player = build_free_agent_player(player_email, summoner_name, password, discord)
 
-        # ── Password confirmation ─────────────────────────────────────────────
-        if password != password_conf
-          return render_error(
-            message: 'Senhas não coincidem',
-            code: 'PASSWORD_MISMATCH',
-            status: :unprocessable_entity
-          )
-        end
+        Current.skip_organization_scope = true
+        saved = player.save
+        Current.skip_organization_scope = false
 
-        # ── Duplicate email check ─────────────────────────────────────────────
-        if Player.exists?(player_email: player_email)
-          return render_error(
-            message: 'Já existe uma conta de jogador com este email',
-            code: 'DUPLICATE_EMAIL',
-            status: :unprocessable_entity
-          )
-        end
-
-        # ── Duplicate summoner name check ──────────────────────────────────────
-        if Player.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
-          return render_error(
-            message: 'Summoner name já cadastrado na plataforma',
-            code: 'DUPLICATE_SUMMONER',
-            status: :unprocessable_entity
-          )
-        end
-
-        # ── Create player — SECURITY: organization_id always nil (free agent) ──
-        player = Player.new(
-          player_email: player_email,
-          player_password: password,
-          summoner_name: summoner_name,
-          discord_user_id: discord.presence,
-          player_access_enabled: true,
-          status: 'active',
-          role: 'top' # placeholder — player updates via profile
-          # organization_id intentionally omitted (nil) — free agent
-        )
-
-        unless player.save
+        unless saved
           return render_error(
             message: 'Erro ao criar conta',
             code: 'VALIDATION_ERROR',
@@ -311,24 +227,14 @@ module Authentication
         tokens = JwtService.generate_player_tokens(player)
 
         render_created(
-          {
-            player: {
-              id: player.id,
-              summoner_name: player.summoner_name,
-              player_email: player.player_email,
-              discord_user_id: player.discord_user_id,
-              role: player.role,
-              status: player.status,
-              organization_id: nil,
-              organization_name: nil,
-              is_free_agent: true,
-              solo_queue_tier: nil,
-              solo_queue_rank: nil,
-              solo_queue_lp: nil,
-              current_rank: nil
-            }
-          }.merge(tokens),
+          { player: serialize_new_free_agent(player) }.merge(tokens),
           message: 'Conta criada! Você está no pool de Free Agents do ArenaBR Season 1.'
+        )
+      rescue ActiveRecord::RecordNotUnique
+        render_error(
+          message: 'Discord já vinculado a outra conta',
+          code: 'DUPLICATE_DISCORD',
+          status: :unprocessable_entity
         )
       rescue StandardError => e
         Rails.logger.error("Player register error: #{e.class} - #{e.message}")
@@ -369,15 +275,26 @@ module Authentication
       # Logs out the current user
       #
       # Blacklists the current access token to prevent further use.
-      # The user must login again to obtain new tokens.
+      # Optionally blacklists the refresh token if sent in the request body, so that
+      # an attacker who obtained the refresh token cannot create new sessions after
+      # the user has explicitly logged out.
+      #
+      # The client SHOULD send the refresh token in the body for full session
+      # invalidation. Omitting it is not an error, but leaves the refresh token valid
+      # until its natural expiry.
       #
       # POST /api/v1/auth/logout
       #
+      # @param refresh_token [String] (optional) The refresh token to also invalidate
       # @return [JSON] Success message
       def logout
         # Blacklist the current access token
-        token = request.headers['Authorization']&.split&.last
-        JwtService.blacklist_token(token) if token
+        access_token = request.headers['Authorization']&.split&.last
+        JwtService.blacklist_token(access_token) if access_token
+
+        # Also blacklist the refresh token when the client supplies it
+        refresh_token = params[:refresh_token]
+        JwtService.blacklist_token(refresh_token) if refresh_token.present?
 
         log_user_action(
           action: 'logout',
@@ -408,25 +325,13 @@ module Authentication
           )
         end
 
-        user = User.find_by(email: email)
+        user = User.unscoped.find_by(email: email)
+        player = Player.unscoped.find_by(player_email: email) unless user
 
         if user
-          reset_token = user.password_reset_tokens.create!(
-            ip_address: request.remote_ip,
-            user_agent: request.user_agent
-          )
-
-          deliver_email(UserMailer.password_reset(user, reset_token))
-
-          AuditLog.create!(
-            organization: user.organization,
-            user: user,
-            action: 'password_reset_requested',
-            entity_type: 'User',
-            entity_id: user.id,
-            ip_address: request.remote_ip,
-            user_agent: request.user_agent
-          )
+          handle_user_password_reset(user)
+        elsif player
+          handle_player_password_reset(player)
         end
 
         render_success(
@@ -469,24 +374,11 @@ module Authentication
 
         reset_token = PasswordResetToken.valid.find_by(token: token)
 
-        if reset_token
-          user = reset_token.user
-          user.update!(password: new_password)
-
-          reset_token.mark_as_used!
-
-          deliver_email(UserMailer.password_reset_confirmation(user))
-
-          AuditLog.create!(
-            organization: user.organization,
-            user: user,
-            action: 'password_reset_completed',
-            entity_type: 'User',
-            entity_id: user.id,
-            ip_address: request.remote_ip,
-            user_agent: request.user_agent
-          )
-
+        if reset_token&.user
+          complete_user_password_reset(reset_token, new_password)
+          render_success({}, message: 'Password reset successful')
+        elsif reset_token&.player
+          complete_player_password_reset(reset_token, new_password)
           render_success({}, message: 'Password reset successful')
         else
           render_error(
@@ -529,8 +421,190 @@ module Authentication
       def create_user!(organization)
         User.create!(user_params.merge(
                        organization: organization,
-                       role: 'owner' # First user is always the owner
+                       role: 'owner',
+                       source_app: source_app_from_origin
                      ))
+      end
+
+      def render_missing_credentials
+        render_error(
+          message: 'Email e senha são obrigatórios',
+          code: 'MISSING_CREDENTIALS',
+          status: :bad_request
+        )
+      end
+
+      def serialize_player_login(player)
+        {
+          id: player.id,
+          name: player.real_name.presence || player.summoner_name,
+          professional_name: player.professional_name,
+          summoner_name: player.summoner_name,
+          role: player.role,
+          status: player.status,
+          country: player.country,
+          profile_icon_id: player.profile_icon_id,
+          avatar_url: player.avatar_url.presence,
+          organization_id: player.organization_id,
+          organization_name: player.organization&.name,
+          solo_queue_tier: player.solo_queue_tier,
+          solo_queue_rank: player.solo_queue_rank,
+          solo_queue_lp: player.solo_queue_lp,
+          solo_queue_wins: player.solo_queue_wins,
+          solo_queue_losses: player.solo_queue_losses,
+          flex_queue_tier: player.flex_queue_tier,
+          flex_queue_rank: player.flex_queue_rank,
+          flex_queue_lp: player.flex_queue_lp,
+          peak_tier: player.peak_tier,
+          peak_rank: player.peak_rank,
+          peak_season: player.peak_season,
+          win_rate: player.win_rate,
+          main_champions: player.main_champions,
+          twitter_handle: player.twitter_handle,
+          twitch_channel: player.twitch_channel
+        }
+      end
+
+      def validate_player_register_params(player_email, summoner_name, password)
+        missing = []
+        missing << 'player_email'  if player_email.blank?
+        missing << 'password'      if password.blank?
+        missing << 'summoner_name' if summoner_name.blank?
+
+        if missing.any?
+          return render_error(
+            message: "Campos obrigatórios faltando: #{missing.join(', ')}",
+            code: 'MISSING_FIELDS',
+            status: :bad_request
+          )
+        end
+
+        if params[:password] != params[:password_confirmation]
+          return render_error(
+            message: 'Senhas não coincidem',
+            code: 'PASSWORD_MISMATCH',
+            status: :unprocessable_entity
+          )
+        end
+
+        if Player.unscoped.exists?(player_email: player_email)
+          return render_error(
+            message: 'Já existe uma conta de jogador com este email',
+            code: 'DUPLICATE_EMAIL',
+            status: :unprocessable_entity
+          )
+        end
+
+        if Player.unscoped.exists?(['LOWER(summoner_name) = ?', summoner_name.downcase])
+          return render_error(
+            message: 'Summoner name já cadastrado na plataforma',
+            code: 'DUPLICATE_SUMMONER',
+            status: :unprocessable_entity
+          )
+        end
+
+        nil
+      end
+
+      def build_free_agent_player(player_email, summoner_name, password, discord)
+        Player.new(
+          player_email: player_email,
+          player_password: password,
+          summoner_name: summoner_name,
+          discord_user_id: discord.presence,
+          player_access_enabled: true,
+          status: 'active',
+          role: 'top',
+          source_app: 'arena_br'
+          # organization_id intentionally omitted (nil) — free agent
+        )
+      end
+
+      def serialize_new_free_agent(player)
+        {
+          id: player.id,
+          summoner_name: player.summoner_name,
+          player_email: player.player_email,
+          discord_user_id: player.discord_user_id,
+          role: player.role,
+          status: player.status,
+          organization_id: nil,
+          organization_name: nil,
+          is_free_agent: true,
+          solo_queue_tier: nil,
+          solo_queue_rank: nil,
+          solo_queue_lp: nil,
+          current_rank: nil
+        }
+      end
+
+      def handle_user_password_reset(user)
+        reset_token = user.password_reset_tokens.create!(
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+        frontend_url = frontend_url_from_origin || frontend_base_for(user)
+        deliver_email(UserMailer.password_reset(user, reset_token, frontend_url))
+        AuditLog.create!(
+          organization: user.organization,
+          user: user,
+          action: 'password_reset_requested',
+          entity_type: 'User',
+          entity_id: user.id,
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+      end
+
+      def handle_player_password_reset(player)
+        reset_token = player.password_reset_tokens.create!(
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+        frontend_url = frontend_url_from_origin || frontend_base_for(player)
+        deliver_email(PlayerMailer.password_reset(player, reset_token, frontend_url))
+      end
+
+      def complete_user_password_reset(reset_token, new_password)
+        user = reset_token.user
+        user.update!(password: new_password)
+        reset_token.mark_as_used!
+        deliver_email(UserMailer.password_reset_confirmation(user))
+        AuditLog.create!(
+          organization: user.organization,
+          user: user,
+          action: 'password_reset_completed',
+          entity_type: 'User',
+          entity_id: user.id,
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        )
+      end
+
+      def complete_player_password_reset(reset_token, new_password)
+        player = reset_token.player
+        player.update!(player_password: new_password)
+        reset_token.mark_as_used!
+        deliver_email(PlayerMailer.password_reset_confirmation(player))
+      end
+
+      def source_app_from_origin
+        origin = request.headers['Origin']&.strip&.chomp('/')
+        return 'prostaff' unless origin.present?
+
+        Constants::SOURCE_APP_URLS.find { |_src, url| url.chomp('/') == origin }&.first || 'prostaff'
+      end
+
+      def frontend_url_from_origin
+        origin = request.headers['Origin']&.strip&.chomp('/')
+        return nil unless origin.present?
+
+        Constants::SOURCE_APP_URLS.values.find { |url| url.chomp('/') == origin }
+      end
+
+      def frontend_base_for(record)
+        source = record.source_app.presence || 'prostaff'
+        Constants::SOURCE_APP_URLS.fetch(source, ENV.fetch('PROSTAFF_URL', 'https://prostaff.gg'))
       end
 
       def authenticate_user!

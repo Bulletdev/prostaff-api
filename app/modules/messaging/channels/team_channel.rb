@@ -2,9 +2,9 @@
 
 # TeamChannel — Real-time messaging channel for team communication.
 #
-# Each user subscribes to the stream of their own organization.
-# The stream key is derived from `current_org_id` (set in Connection),
-# so a user cannot subscribe to another organization's stream even by
+# Each member subscribes to the stream of their own organization.
+# The stream key is derived from current_org_id (set in Connection),
+# so a member cannot subscribe to another organization's stream even by
 # manually crafting a subscription request.
 #
 # Actions:
@@ -16,24 +16,23 @@
 # Broadcasting is done by the Message model's after_create callback,
 # not directly in this channel, to keep the channel thin and testable.
 class TeamChannel < ApplicationCable::Channel
-  # Maximum message length — enforced at channel level before hitting the DB
   MAX_CONTENT_LENGTH = 2000
 
   def subscribed
     if current_org_id.blank?
-      logger.warn "[TeamChannel] Rejected subscription — no org_id for user #{current_user.id}"
+      logger.warn "[TeamChannel] Rejected subscription — no org_id for sender #{current_sender_id}"
       reject
       return
     end
 
     stream_name = "team_room_#{current_org_id}"
     stream_from stream_name
-    logger.info "[TeamChannel] user=#{current_user.id} subscribed to #{stream_name}"
+    logger.info "[TeamChannel] sender=#{current_sender_id} subscribed to #{stream_name}"
   end
 
   def unsubscribed
     stop_all_streams
-    logger.info "[TeamChannel] user=#{current_user.id} disconnected"
+    logger.info "[TeamChannel] sender=#{current_sender_id} disconnected"
   end
 
   # Receives a message sent by the frontend via cable.
@@ -52,14 +51,26 @@ class TeamChannel < ApplicationCable::Channel
       return
     end
 
-    # Persist the message — broadcasting is triggered by after_create callback
     Message.create!(
-      content: content,
-      user: current_user,
-      organization_id: current_org_id
+      user_id: current_sender_id,
+      sender_type: current_sender_type,
+      organization_id: current_org_id,
+      content: content
     )
   rescue ActiveRecord::RecordInvalid => e
     logger.error "[TeamChannel] Failed to create message: #{e.message}"
     transmit({ error: 'Failed to send message' })
+  end
+
+  private
+
+  def current_sender_id
+    return current_player.id if current_player.present?
+
+    current_user.id
+  end
+
+  def current_sender_type
+    current_player.present? ? 'Player' : 'User'
   end
 end

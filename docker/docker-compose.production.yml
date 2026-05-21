@@ -1,4 +1,28 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - coolify
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: '${POSTGRES_DB:-prostaff_production}'
+      POSTGRES_USER: '${POSTGRES_USER:-prostaff}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prostaff} -d ${POSTGRES_DB:-prostaff_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=1
+      - coolify.type=application
+
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
@@ -75,7 +99,7 @@ services:
 
       # CORS Middleware Definition
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
-      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg,https://docs.prostaff.gg,https://status.prostaff.gg,https://scrims.lol,https://www.scrims.lol
+      - traefik.http.middlewares.prostaff-cors.headers.accesscontrolalloworiginlist=https://prostaff.gg,https://www.prostaff.gg,https://docs.prostaff.gg,https://status.prostaff.gg,https://scrims.lol,https://www.scrims.lol,https://arena-br.vercel.app
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowcredentials=true
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With
       - traefik.http.middlewares.prostaff-cors.headers.accesscontrolmaxage=86400
@@ -88,7 +112,9 @@ services:
 
     environment:
       RAILS_ENV: production
-      DATABASE_URL: '${DATABASE_URL}'
+      WEB_CONCURRENCY: '4'
+      RAILS_MAX_THREADS: '5'
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-prostaff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prostaff_production}'
       # Connect to Redis via Docker network hostname
       REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
@@ -96,6 +122,11 @@ services:
       PORT: 3000
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
+      RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
+      INTERNAL_JWT_SECRET: '${INTERNAL_JWT_SECRET}'
+      PANDASCORE_API_KEY: '${PANDASCORE_API_KEY}'
+      SCRAPER_API_URL: 'http://scraper-api:8000'
+      SCRAPER_API_KEY: '${SCRAPER_API_KEY}'
       CORS_ORIGINS: '${CORS_ORIGINS:-https://prostaff.gg,https://www.prostaff.gg,https://api.prostaff.gg,https://status.prostaff.gg,https://docs.prostaff.gg}'
       JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
@@ -103,10 +134,26 @@ services:
       HASHID_SALT: '${HASHID_SALT}'
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
+      PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
+      SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
+      ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
       APP_HOST: '${APP_HOST:-api.prostaff.gg}'
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      # SMTP (email delivery)
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
+      # prostaff-events integration (set PHOENIX_EVENTS_ENABLED=true in Coolify panel when deploying events service)
+      PHOENIX_EVENTS_ENABLED: '${PHOENIX_EVENTS_ENABLED:-false}'
+      PHOENIX_EVENTS_URL: '${PHOENIX_EVENTS_URL:-http://events:4000}'
+      SIDEKIQ_WEB_USER: '${SIDEKIQ_WEB_USER}'
+      SIDEKIQ_WEB_PASSWORD: '${SIDEKIQ_WEB_PASSWORD}'
+      # ProPay gateway (internal Docker network)
+      PROPAY_URL: '${PROPAY_URL:-http://propay:5555}'
 
     healthcheck:
       test:
@@ -118,6 +165,8 @@ services:
       start_period: 60s
 
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -131,20 +180,45 @@ services:
       - coolify
     environment:
       RAILS_ENV: production
-      DATABASE_URL: '${DATABASE_URL}'
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-prostaff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-prostaff_production}'
       REDIS_URL: 'redis://default:${REDIS_PASSWORD}@redis:6379/0'
       ELASTICSEARCH_URL: '${ELASTICSEARCH_URL:-http://elastic:9200}'
       RAILS_MASTER_KEY: '${RAILS_MASTER_KEY}'
       RIOT_API_KEY: '${RIOT_API_KEY}'
+      RIOT_GATEWAY_URL: '${RIOT_GATEWAY_URL}'
+      INTERNAL_JWT_SECRET: '${INTERNAL_JWT_SECRET}'
+      PANDASCORE_API_KEY: '${PANDASCORE_API_KEY}'
+      SCRAPER_API_URL: 'http://scraper-api:8000'
+      SCRAPER_API_KEY: '${SCRAPER_API_KEY}'
+      JWT_SECRET_KEY: '${JWT_SECRET_KEY}'
       SECRET_KEY_BASE: '${SECRET_KEY_BASE}'
       # HashID Configuration
       HASHID_SALT: '${HASHID_SALT}'
       HASHID_MIN_LENGTH: '${HASHID_MIN_LENGTH}'
       FRONTEND_URL: '${FRONTEND_URL}'
+      PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
+      SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
+      ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
       # Meilisearch (self-hosted — same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
+      # SMTP (email delivery)
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_ADDRESS: '${SMTP_ADDRESS:-smtp.gmail.com}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_DOMAIN: '${SMTP_DOMAIN:-gmail.com}'
+      # ProPay gateway (internal Docker network)
+      PROPAY_URL: '${PROPAY_URL:-http://propay:5555}'
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q sidekiq /proc/1/cmdline || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       api:
@@ -241,6 +315,8 @@ services:
       start_period: 10s
 
 volumes:
+  postgres-data:
+    driver: local
   redis-data:
     driver: local
   meilisearch-data:

@@ -5,19 +5,22 @@ module Players
     # Controller for managing players within an organization
     # Business logic extracted to Services for better organization
     class PlayersController < Api::V1::BaseController
+      include Cacheable
+
       before_action :set_player, only: %i[show update destroy stats matches sync_from_riot]
+
+      after_action -> { invalidate_cache('players') }, only: %i[update destroy]
+      after_action -> { invalidate_cache("players/#{@player&.id}") }, only: %i[update destroy]
 
       # GET /api/v1/players
       def index
-        # Optimized query to prevent timeout during bulk sync operations
-        # PostgreSQL will allow concurrent reads even during updates (MVCC)
-        # Set a reasonable timeout to prevent 504s
-        ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '5000'") # 5 seconds
+        ActiveRecord::Base.connection.execute("SET statement_timeout = '5000'")
 
         players = organization_scoped(Player).includes(:organization)
 
         players = players.by_role(params[:role]) if params[:role].present?
         players = players.by_status(params[:status]) if params[:status].present?
+        players = players.by_line(params[:line]) if params[:line].present?
 
         if params[:search].present?
           search_term = "%#{params[:search]}%"
@@ -26,10 +29,14 @@ module Players
 
         result = paginate(players.ordered_by_role.order(:summoner_name))
 
-        render_success({
-                         players: PlayerSerializer.render_as_hash(result[:data]),
-                         pagination: result[:pagination]
-                       })
+        data = cache_response('players', expires_in: 5.minutes) do
+          {
+            players: PlayerSerializer.render_as_hash(result[:data]),
+            pagination: result[:pagination]
+          }
+        end
+
+        render_success(data)
       rescue ActiveRecord::QueryCanceled => e
         Rails.logger.error "Players index query timeout: #{e.message}"
         render_error(
@@ -37,13 +44,20 @@ module Players
           code: 'QUERY_TIMEOUT',
           status: :request_timeout
         )
+      ensure
+        begin
+          ActiveRecord::Base.connection.execute('RESET statement_timeout')
+        rescue StandardError
+          nil
+        end
       end
 
       # GET /api/v1/players/:id
       def show
-        render_success({
-                         player: PlayerSerializer.render_as_hash(@player)
-                       })
+        data = cache_response("players/#{@player.id}", expires_in: 5.minutes) do
+          { player: PlayerSerializer.render_as_hash(@player) }
+        end
+        render_success(data)
       end
 
       # POST /api/v1/players
@@ -171,13 +185,14 @@ module Players
         summoner_name = params[:summoner_name]&.strip
         role = params[:role]
         region = params[:region] || 'br1'
+        line = params[:line].presence_in(Constants::Player::LINES) || 'main'
 
         # Validations
         return unless validate_import_params(summoner_name, role)
         return unless validate_player_uniqueness(summoner_name)
 
         # Import from Riot API
-        result = import_player_from_riot(summoner_name, role, region)
+        result = import_player_from_riot(summoner_name, role, region, line)
 
         # Handle result
         result[:success] ? handle_import_success(result) : handle_import_error(result)
@@ -419,12 +434,13 @@ module Players
       end
 
       # Import player from Riot API
-      def import_player_from_riot(summoner_name, role, region)
+      def import_player_from_riot(summoner_name, role, region, line = 'main')
         RiotSyncService.import(
           summoner_name: summoner_name,
           role: role,
           region: region,
-          organization: current_organization
+          organization: current_organization,
+          line: line
         )
       end
 

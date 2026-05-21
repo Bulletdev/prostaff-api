@@ -5,6 +5,7 @@ class DraftAnalysisBlueprint < Blueprinter::Base
   field :win_probability
   field :confidence
   field :low_sample
+  field :source
 
   field :top_synergies do |result|
     result.synergy_scores

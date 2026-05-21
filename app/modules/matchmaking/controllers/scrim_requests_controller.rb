@@ -101,6 +101,12 @@ module Matchmaking
 
         if @scrim_request.accept!(accepting_org: current_organization)
           notify_discord(:accepted, @scrim_request)
+          Events::EventPublisher.publish(
+            user_id: current_user.id,
+            org_id: current_organization.id,
+            type: 'scrim_request.accepted',
+            payload: { scrim_request_id: @scrim_request.id, scrim_id: @scrim_request.scrim_id }
+          )
           render_success({ scrim_request: ScrimRequestSerializer.render_as_hash(@scrim_request.reload) },
                          message: 'Scrim request accepted! Scrim added to your schedule.')
         else
@@ -123,6 +129,12 @@ module Matchmaking
 
         if @scrim_request.decline!(declining_org: current_organization)
           notify_discord(:declined, @scrim_request)
+          Events::EventPublisher.publish(
+            user_id: current_user.id,
+            org_id: current_organization.id,
+            type: 'scrim_request.declined',
+            payload: { scrim_request_id: @scrim_request.id }
+          )
           render_success({ scrim_request: ScrimRequestSerializer.render_as_hash(@scrim_request.reload) },
                          message: 'Scrim request declined')
         else

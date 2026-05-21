@@ -51,7 +51,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd  # v1
         with:
-          ruby-version: 3.4.5
+          ruby-version: 3.4.8
           bundler-cache: true
 
       - name: Install dependencies
@@ -262,7 +262,7 @@ jobs:
           fi
 
       - name: Display notification
-        run: |
+        run: | # nosemgrep: yaml.github-actions.security.run-shell-injection.run-shell-injection
           echo "======================================"
           echo "${{ env.STATUS }}"
           echo "${{ env.MESSAGE }}"

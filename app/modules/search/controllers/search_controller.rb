@@ -28,7 +28,12 @@ module Search
         per_page = params[:per_page].to_i.clamp(1, MAX_PER_PAGE)
         per_page = 20 if params[:per_page].blank?
 
-        results = SearchService.global(query: query, types: types, per_page: per_page)
+        results = SearchService.global(
+          query: query,
+          types: types,
+          per_page: per_page,
+          organization_id: current_organization&.id
+        )
 
         render_success({
                          query: query,

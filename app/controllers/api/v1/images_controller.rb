@@ -15,14 +15,17 @@ module Api
     #   GET /api/v1/images/proxy?url=https://upload.wikimedia.org/...
     #   Headers: { Authorization: "Bearer <token>" }
     class ImagesController < BaseController
-      # SECURITY: Removed skip_before_action - authentication now required
+      # ALLOWED_DOMAINS + HTTPS-only + SSRF protection are sufficient guards;
+      # JWT auth is skipped because browsers cannot attach Authorization headers to <img> src requests.
+      skip_before_action :authenticate_request!, only: [:proxy]
 
       ALLOWED_DOMAINS = [
         'upload.wikimedia.org',
         'ddragon.leagueoflegends.com',
         'raw.communitydragon.org',
         'static.wikia.nocookie.net',
-        'commons.wikimedia.org'
+        'commons.wikimedia.org',
+        'cdn-api.pandascore.co'
       ].freeze
 
       HTTP_TIMEOUT_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze

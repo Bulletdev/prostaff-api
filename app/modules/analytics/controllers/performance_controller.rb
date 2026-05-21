@@ -30,6 +30,7 @@ module Analytics
     #   GET /api/v1/analytics/performance?time_period=week
     class PerformanceController < Api::V1::BaseController
       include ::Analytics::Concerns::AnalyticsCalculations
+      include Cacheable
 
       # Returns performance analytics for the organization
       #
@@ -43,15 +44,12 @@ module Analytics
       # @param player_id [Integer] Player ID for individual stats (optional)
       # @return [JSON] Performance analytics data
       def index
-        matches = apply_date_filters(organization_scoped(Match))
-
-        # Use active players for team-wide stats (best performers, role breakdown, etc.)
-        # but validate player_id against ALL org players so that bench/trial/inactive
-        # players can still have their individual stats viewed.
-        active_players = organization_scoped(Player).includes(:organization).active
+        # Use all non-deleted org players for team-wide stats (best performers, role
+        # breakdown, etc.) so that bench/trial/inactive players who have match stats
+        # still appear in the leaderboard. Individual player stats use the same scope.
         all_org_players = organization_scoped(Player).includes(:organization)
-
         player_id = params[:player_id].presence
+
         if player_id.present? && !all_org_players.exists?(id: player_id)
           return render_error(
             message: 'Player not found',
@@ -60,10 +58,14 @@ module Analytics
           )
         end
 
-        service = PerformanceAnalyticsService.new(matches, active_players)
-        performance_data = service.calculate_performance_data(player_id: player_id, all_players: all_org_players)
+        cache_key = performance_cache_key(player_id)
+        data = cache_response(cache_key, expires_in: 15.minutes) do
+          matches = apply_date_filters(organization_scoped(Match))
+          service = PerformanceAnalyticsService.new(matches, all_org_players)
+          service.calculate_performance_data(player_id: player_id, all_players: all_org_players)
+        end
 
-        render_success(performance_data)
+        render_success(data)
       rescue StandardError => e
         Rails.logger.error("Error in performance#index: #{e.message}")
         Rails.logger.error(e.backtrace.join("\n"))
@@ -89,6 +91,24 @@ module Analytics
         else
           matches.recent(30) # Default to last 30 days
         end
+      end
+
+      # Builds a cache key segment that distinguishes team vs player requests
+      # and incorporates active date-filter params so that different filter
+      # combinations never share a cached result.
+      #
+      # The key is intentionally short and URL-safe; the org-scoping prefix
+      # is added by the Cacheable concern's +build_cache_key+ method.
+      #
+      # @param player_id [String, nil] player_id param value (nil for team view)
+      # @return [String] cache key segment, e.g.
+      #   "analytics/performance/team",
+      #   "analytics/performance/team/month",
+      #   "analytics/performance/player/42/2025-01-01-2025-01-31"
+      def performance_cache_key(player_id)
+        base = player_id ? "analytics/performance/player/#{player_id}" : 'analytics/performance/team'
+        suffix = [params[:time_period], params[:start_date], params[:end_date]].compact.join('-')
+        suffix.present? ? "#{base}/#{suffix}" : base
       end
 
       # Converts time period string to number of days

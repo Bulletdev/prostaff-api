@@ -1,0 +1,16 @@
+Seu teste ProStaff expira em <%= @days_remaining %> dia(s)
+
+Ola, <%= @user.full_name || 'usuario' %>,
+
+O periodo de teste da organizacao "<%= @organization&.name %>" expira em <%= @days_remaining %> dia(s).
+Apos o encerramento, o acesso sera suspenso.
+
+Faca o upgrade agora para manter acesso a todos os recursos:
+<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/billing
+
+Ver planos e precos:
+<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/pricing
+
+Duvidas? Entre em contato: hello@prostaff.gg
+
+Equipe ProStaff

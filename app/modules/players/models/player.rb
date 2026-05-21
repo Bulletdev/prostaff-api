@@ -30,31 +30,47 @@
 # @example Finding active players by role
 #   mid_laners = Player.active.by_role("mid")
 #
-class Player < ApplicationRecord
-  # Concerns
+class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   include Constants
   include OrganizationScoped
   include SoftDeletable
   include Searchable
+  include UpgradeablePassword
 
   # Associations
-  # optional: true — self-registered free agents (ArenaBR) can exist without an org
   belongs_to :organization, optional: true
+  belongs_to :scouted_from, class_name: 'ScoutingTarget', optional: true
   has_many :player_match_stats, dependent: :destroy
   has_many :matches, through: :player_match_stats
   has_many :champion_pools, dependent: :destroy
   has_many :team_goals, dependent: :destroy
   has_many :vod_timestamps, foreign_key: 'target_player_id', dependent: :nullify
+  has_many :password_reset_tokens, dependent: :destroy
 
-  # Password authentication for individual player access
-  has_secure_password :player_password, validations: false
+  # Virtual attribute for the player password — has_secure_password is not used;
+  # hashing is handled by Authentication::PasswordHasher.
+  attr_reader :player_password
+
+  def player_password=(plain_password)
+    @player_password = plain_password.blank? ? nil : plain_password
+  end
+
+  def authenticate_player_password(plain_password)
+    authenticate_with_upgrade(
+      plain_password,
+      digest_attr: :player_password_digest,
+      digest_setter: :player_password_digest
+    )
+  end
 
   # Validations
+  validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
   validates :summoner_name, presence: true, length: { maximum: 100 }
   validates :real_name, length: { maximum: 255 }
   validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
   validates :country, length: { maximum: 2 }
   validates :status, inclusion: { in: Constants::Player::STATUSES }
+  validates :line, inclusion: { in: Constants::Player::LINES }
   validates :riot_puuid, uniqueness: true, allow_blank: true
   validates :riot_summoner_id, uniqueness: true, allow_blank: true
   validates :jersey_number, uniqueness: { scope: :organization_id }, allow_blank: true
@@ -63,18 +79,25 @@ class Player < ApplicationRecord
   validates :flex_queue_tier, inclusion: { in: Constants::Player::QUEUE_TIERS }, allow_blank: true
   validates :flex_queue_rank, inclusion: { in: Constants::Player::QUEUE_RANKS }, allow_blank: true
   validates :player_email, uniqueness: true, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
-  validates :player_password, length: { minimum: 8 }, if: -> { player_password.present? }
+  validates :player_password,
+            length: { minimum: 8, message: 'must be at least 8 characters' },
+            format: {
+              with: /\A(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*\z/,
+              message: 'must contain at least one uppercase letter, one lowercase letter, and one number'
+            },
+            if: -> { player_password.present? }
 
   # Callbacks
+  before_validation :hash_player_password, if: -> { player_password.present? }
   before_save :normalize_summoner_name
-  after_update :log_audit_trail, if: :saved_changes?
-  after_create :clear_organization_cache
-  after_destroy :clear_organization_cache
+  after_update_commit :enqueue_audit_log, if: :saved_changes?
+  after_commit :clear_organization_cache, on: %i[create destroy]
   after_update :clear_organization_cache, if: :saved_change_to_deleted_at?
 
   # Scopes
   scope :by_role, ->(role) { where(role: role) }
   scope :by_status, ->(status) { where(status: status) }
+  scope :by_line, ->(line) { where(line: line) }
   scope :active, -> { where(status: 'active') }
   scope :with_contracts, -> { where.not(contract_start_date: nil) }
   scope :contracts_expiring_soon, lambda { |days = 30|
@@ -220,10 +243,13 @@ class Player < ApplicationRecord
     self.summoner_name = summoner_name.strip if summoner_name.present?
   end
 
-  def log_audit_trail
-    AuditLog.create!(
-      organization: organization,
-      action: 'update',
+  def hash_player_password
+    self.player_password_digest = Authentication::PasswordHasher.hash(player_password)
+  end
+
+  def enqueue_audit_log
+    AuditLogJob.perform_later(
+      organization_id: organization_id,
       entity_type: 'Player',
       entity_id: id,
       old_values: saved_changes.transform_values(&:first),
@@ -232,6 +258,10 @@ class Player < ApplicationRecord
   end
 
   def clear_organization_cache
-    organization.clear_players_cache if organization.present?
+    return unless organization.present?
+
+    organization.clear_players_cache
+    Rails.cache.delete("v1:#{organization_id}:players")
+    Rails.cache.delete("v1:#{organization_id}:players/#{id}")
   end
 end

@@ -2,10 +2,9 @@
 
 # Authenticated user within an organization, with role-based access and notification support.
 class User < ApplicationRecord
-  has_secure_password
-
   # Concerns
   include Constants
+  include UpgradeablePassword
 
   # Associations
   belongs_to :organization
@@ -21,10 +20,28 @@ class User < ApplicationRecord
   has_many :password_reset_tokens, dependent: :destroy
   has_many :messages, dependent: :nullify
 
+  # Virtual password attribute — set when changing password, nil otherwise.
+  # has_secure_password is not used; hashing is handled by Authentication::PasswordHasher.
+  attr_reader :password
+
+  def password=(plain_password)
+    @password = plain_password.blank? ? nil : plain_password
+  end
+
+  def authenticate(plain_password)
+    authenticate_with_upgrade(
+      plain_password,
+      digest_attr: :password_digest,
+      digest_setter: :password_digest
+    )
+  end
+
   # Validations
+  validates :password_digest, presence: true
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :full_name, presence: true, length: { maximum: 255 }
   validates :role, presence: true, inclusion: { in: Constants::User::ROLES }
+  validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
   validates :timezone, length: { maximum: 100 }
   validates :language, length: { maximum: 10 }
   validates :discord_user_id,
@@ -40,7 +57,8 @@ class User < ApplicationRecord
             if: -> { password.present? }
 
   # Callbacks
-  before_save :downcase_email
+  before_validation :downcase_email
+  before_validation :hash_password, if: -> { password.present? }
   after_update :log_audit_trail, if: :saved_changes?
 
   # Scopes
@@ -89,6 +107,10 @@ class User < ApplicationRecord
 
   def downcase_email
     self.email = email.downcase.strip if email.present?
+  end
+
+  def hash_password
+    self.password_digest = Authentication::PasswordHasher.hash(password)
   end
 
   def log_audit_trail

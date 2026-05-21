@@ -3,7 +3,7 @@
 source 'https://rubygems.org'
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby '3.4.5'
+ruby '3.4.8'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem 'rails', '~> 7.2.3', '>= 7.2.3.1'
@@ -30,6 +30,9 @@ gem 'redis', '~> 5.0'
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem 'bcrypt', '~> 3.1.7'
 
+# Argon2id password hashing (OWASP recommended, PHC winner 2015)
+gem 'argon2', '~> 2.3'
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 
@@ -42,8 +45,8 @@ gem 'bootsnap', require: false
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 gem 'rack-cors'
 
-# JWT for authentication
-gem 'jwt'
+# JWT for authentication — >= 3.2.0 fixes inadequate authentication CVE
+gem 'jwt', '>= 3.2.0'
 
 # Serializers for API responses
 gem 'blueprinter'
@@ -56,8 +59,8 @@ gem 'sidekiq-scheduler'
 gem 'dotenv-rails'
 
 # HTTP client for Riot API
-gem 'faraday'
-gem 'faraday-retry'
+gem 'faraday', '>= 2.14.2'
+gem 'faraday-retry', '>= 2.4.0'
 
 # Authorization
 gem 'pundit'
@@ -77,13 +80,13 @@ gem 'rswag-api'
 gem 'rswag-ui'
 
 # Elasticsearch client (for analytics queries)
-gem 'elasticsearch', '~> 9.1', '>= 9.1.3'
+gem 'elasticsearch', '~> 9.0', '>= 9.0.0'
 
 # Meilisearch — full-text search for players, organizations, scouting targets, etc.
 gem 'meilisearch', '~> 0.33'
 
 # LLM Integration for Support Chatbot
-gem 'ruby-openai', '~> 7.0'
+gem 'ruby-openai', '~> 8.0', '>= 8.0.0'
 
 # S3-compatible storage for file uploads (Supabase Storage)
 gem 'aws-sdk-s3', '~> 1.0'
@@ -114,6 +117,10 @@ group :development do
   gem 'rubocop'
   gem 'rubocop-rails'
   gem 'rubocop-rspec'
+
+  # Security tooling — runs locally and in CI via bundle exec
+  gem 'brakeman', require: false
+  gem 'bundler-audit', '~> 0.9'
 
   # Deploy tools (only needed for deployment operations, not runtime)
   gem 'kamal', '~> 2.0'

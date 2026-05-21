@@ -35,6 +35,7 @@ module Players
       apply_ranked_data!(update_data, ranked_data)
       player.update!(update_data)
       Rails.logger.info "Successfully synced player #{player.id} from Riot API"
+      record_job_heartbeat
     rescue StandardError => e
       Rails.logger.error "Failed to sync player #{player.id}: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")

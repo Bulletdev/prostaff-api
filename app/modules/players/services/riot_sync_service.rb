@@ -55,13 +55,13 @@ class RiotSyncService
   end
 
   # Class method to import a new player from Riot API
-  def self.import(summoner_name:, role:, region:, organization:)
+  def self.import(summoner_name:, role:, region:, organization:, line: 'main')
     service = new(organization, region)
-    service.import_player(summoner_name, role)
+    service.import_player(summoner_name, role, line: line)
   end
 
   # Import a new player from Riot API
-  def import_player(summoner_name, role)
+  def import_player(summoner_name, role, line: 'main')
     parsed_name = parse_summoner_name(summoner_name)
     return parsed_name unless parsed_name[:success]
 
@@ -85,7 +85,8 @@ class RiotSyncService
       solo_queue_losses: riot_data[:rank_data]['losses'] || 0,
       last_sync_at: Time.current,
       sync_status: 'success',
-      region: @region
+      region: @region,
+      line: line
     )
 
     {
@@ -381,14 +382,25 @@ class RiotSyncService
   end
 
   # Make HTTP request to Riot API
+  #
+  # Wrapped with CircuitBreakerService so that consecutive failures open the
+  # circuit and prevent thundering-herd pressure on the Riot API during an
+  # outage or rate-limit window.
   def make_request(url)
+    CircuitBreakerService.call('riot_api') do
+      perform_http_request(url)
+    end
+  end
+
+  # Execute the raw HTTP call (called inside the circuit breaker)
+  def perform_http_request(url)
     uri = URI(url)
     request = Net::HTTP::Get.new(uri)
     request['X-Riot-Token'] = api_key
 
     # Debug logging
-    Rails.logger.info(" Making Riot API request to: #{uri}")
-    Rails.logger.info(" API Key present: #{api_key.present?} (length: #{api_key&.length || 0})")
+    Rails.logger.info("[RIOT] Making Riot API request to: #{uri}")
+    Rails.logger.info("[RIOT] API Key present: #{api_key.present?} (length: #{api_key&.length || 0})")
 
     response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
       http.request(request)
@@ -396,7 +408,7 @@ class RiotSyncService
 
     unless response.is_a?(Net::HTTPSuccess)
       error_message = "Riot API Error: #{response.code} - #{response.body}"
-      Rails.logger.error("Riot API Error - URL: #{uri} - Status: #{response.code} - Body: #{response.body}")
+      Rails.logger.error("[RIOT] Riot API Error - URL: #{uri} - Status: #{response.code} - Body: #{response.body}")
 
       # Create custom exception with status code for better error handling
       error = RiotApiError.new(error_message)
@@ -405,7 +417,7 @@ class RiotSyncService
       raise error
     end
 
-    Rails.logger.info(" Riot API request successful: #{response.code}")
+    Rails.logger.info("[RIOT] Riot API request successful: #{response.code}")
     response
   end
 

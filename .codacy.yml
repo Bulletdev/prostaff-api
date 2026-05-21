@@ -21,3 +21,8 @@ exclude_paths:
   # payloads like '$MONGO_GT' and '`id`' must NOT expand. SC2034 (BASE_URL) is used
   # further down in the same script.
   - ".pentest/**"
+
+  # Monitoring infrastructure templates — SMTP environment variable references
+  # in docker-compose look like credentials to static scanners. alertmanager.yml
+  # is gitignored (only .example is tracked).
+  - "docker-compose.monitoring.yml"

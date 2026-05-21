@@ -39,6 +39,12 @@ class RosterManagementService
       # Log the action
       log_roster_removal(previous_org_id, reason)
 
+      Events::EventPublisher.publish(
+        user_id: current_user&.id || 'system',
+        org_id: previous_org_id,
+        type: 'roster.player_removed',
+        payload: { player_id: player.id, player_name: player.summoner_name, reason: reason }
+      )
       {
         success: true,
         player: player,
@@ -62,15 +68,14 @@ class RosterManagementService
   # @param jersey_number [Integer] Jersey number (optional)
   # @return [Hash] Result with success status and player
   def self.hire_from_scouting(scouting_target:, organization:, contract_start:, contract_end:,
-                              salary: nil, jersey_number: nil, current_user: nil)
+                              salary: nil, jersey_number: nil, line: 'main', current_user: nil)
     ActiveRecord::Base.transaction do
-      # Check if this is a free agent or needs to be restored
       player = find_or_restore_player(scouting_target, organization)
 
-      # Update player with new contract details
       player.update!(
         organization: organization,
         status: 'active',
+        line: line.presence_in(Constants::Player::LINES) || 'main',
         contract_start_date: contract_start,
         contract_end_date: contract_end,
         salary: salary,
@@ -84,12 +89,25 @@ class RosterManagementService
       watchlist = scouting_target.scouting_watchlists.find_by(organization: organization)
       watchlist&.destroy
 
-      # Clean up the global target if no other org is watching it
-      scouting_target.destroy if scouting_target.scouting_watchlists.none?
+      # Mark the global target as signed (never destroy — it is permanent scouting history)
+      scouting_target.update_columns(status: 'signed') if scouting_target.scouting_watchlists.none?
+
+      # Link the player back to the scouting record and store a snapshot of the data
+      # that informed the hiring decision, so coaches can audit it later.
+      player.update_columns(
+        scouted_from_id: scouting_target.id,
+        scouting_data_snapshot: build_scouting_snapshot(scouting_target)
+      )
 
       # Log the action
       log_roster_addition(player, scouting_target, current_user)
 
+      Events::EventPublisher.publish(
+        user_id: current_user&.id || 'system',
+        org_id: organization.id,
+        type: 'roster.player_hired',
+        payload: { player_id: player.id, player_name: player.summoner_name, org_id: organization.id }
+      )
       {
         success: true,
         player: player,
@@ -197,19 +215,23 @@ class RosterManagementService
   def assign_scouting_target_attributes(target)
     recent_perf = calculate_recent_performance(player)
     recent_perf[:champion_pool_stats] = calculate_champion_stats(player)
+    pool = calculate_champion_pool_from_stats(player)
+    tier = player.solo_queue_tier
 
     target.assign_attributes(
       summoner_name: player.summoner_name,
       region: normalize_region(player.region),
       riot_puuid: player.riot_puuid,
       role: player.role,
-      current_tier: player.solo_queue_tier,
+      current_tier: tier,
       current_rank: player.solo_queue_rank,
       current_lp: player.solo_queue_lp,
-      champion_pool: calculate_champion_pool_from_stats(player),
+      champion_pool: pool,
       recent_performance: recent_perf,
       performance_trend: calculate_performance_trend(player),
       playstyle: extract_playstyle_from_notes(player.notes),
+      strengths: derive_strengths(recent_perf, pool, player.role, tier),
+      weaknesses: derive_weaknesses(recent_perf, pool, player.role, tier),
       twitter_handle: player.twitter_handle,
       status: 'free_agent',
       real_name: player.real_name,
@@ -396,6 +418,99 @@ class RosterManagementService
     match.game_start&.to_date
   end
 
+  # Returns stat thresholds adjusted to the player's ranked tier.
+  # High elo players are held to a stricter standard — what is average
+  # at Platinum is a weakness at Challenger.
+  #
+  # @param tier [String, nil] e.g. "CHALLENGER", "DIAMOND", "GOLD"
+  # @return [Hash] threshold values for strengths and weaknesses
+  def tier_thresholds(tier)
+    case tier&.upcase
+    when 'CHALLENGER', 'GRANDMASTER', 'MASTER'
+      { wr_strength: 53, wr_weakness: 49, kda_strength: 4.5, kda_weakness: 3.0,
+        cs_strength: 9.0, cs_weakness: 7.5, vision_strength: 45, vision_weakness: 28 }
+    when 'DIAMOND', 'EMERALD'
+      { wr_strength: 54, wr_weakness: 47, kda_strength: 4.0, kda_weakness: 2.5,
+        cs_strength: 8.5, cs_weakness: 7.0, vision_strength: 42, vision_weakness: 24 }
+    else
+      { wr_strength: 55, wr_weakness: 45, kda_strength: 3.5, kda_weakness: 2.0,
+        cs_strength: 8.0, cs_weakness: 6.0, vision_strength: 40, vision_weakness: 20 }
+    end
+  end
+
+  # Derive positive traits from performance stats, calibrated to the player's tier.
+  def derive_strengths(perf, pool, role, tier = nil)
+    return [] if perf.blank?
+
+    t = tier_thresholds(tier)
+    strengths = []
+    strengths << 'Consistency'         if strong_win_rate?(perf, t)
+    strengths << 'Mechanical skill'    if strong_kda?(perf, t)
+    strengths << 'CS discipline'       if strong_cs?(perf, role, t)
+    strengths << 'Map awareness'       if strong_vision?(perf, role, t)
+    strengths << 'Team fighting'       if perf[:avg_kill_participation].to_f >= 65.0
+    strengths << 'Champion pool depth' if pool.size >= 6
+    strengths
+  end
+
+  # Derive areas for improvement, calibrated to the player's tier.
+  def derive_weaknesses(perf, pool, role, tier = nil)
+    return [] if perf.blank?
+
+    t = tier_thresholds(tier)
+    [
+      ('Inconsistent performance' if inconsistent_performance?(perf, t)),
+      ('Death management'         if poor_kda?(perf, t)),
+      ('CS discipline'            if poor_cs?(perf, role, t)),
+      ('Vision control'           if poor_vision?(perf, role, t)),
+      ('Limited champion pool'    if pool.size < 3)
+    ].compact
+  end
+
+  def non_support?(role)
+    role.to_s != 'support'
+  end
+
+  def vision_role?(role)
+    %w[support jungle].include?(role.to_s)
+  end
+
+  def inconsistent_performance?(perf, thresholds)
+    perf[:games_played].to_i >= 10 && perf[:win_rate].to_f < thresholds[:wr_weakness]
+  end
+
+  def poor_kda?(perf, thresholds)
+    perf[:avg_kda].to_f.positive? && perf[:avg_kda].to_f < thresholds[:kda_weakness]
+  end
+
+  def poor_cs?(perf, role, thresholds)
+    non_support?(role) &&
+      perf[:avg_cs_per_min].to_f.positive? &&
+      perf[:avg_cs_per_min].to_f < thresholds[:cs_weakness]
+  end
+
+  def poor_vision?(perf, role, thresholds)
+    vision_role?(role) &&
+      perf[:avg_vision_score].to_f.positive? &&
+      perf[:avg_vision_score].to_f < thresholds[:vision_weakness]
+  end
+
+  def strong_win_rate?(perf, thresholds)
+    perf[:win_rate].to_f >= thresholds[:wr_strength]
+  end
+
+  def strong_kda?(perf, thresholds)
+    perf[:avg_kda].to_f >= thresholds[:kda_strength]
+  end
+
+  def strong_cs?(perf, role, thresholds)
+    non_support?(role) && perf[:avg_cs_per_min].to_f >= thresholds[:cs_strength]
+  end
+
+  def strong_vision?(perf, role, thresholds)
+    vision_role?(role) && perf[:avg_vision_score].to_f >= thresholds[:vision_strength]
+  end
+
   # Extract playstyle from player notes
   def extract_playstyle_from_notes(notes)
     return nil if notes.blank?
@@ -501,5 +616,28 @@ class RosterManagementService
     }
   end
 
-  private_class_method :find_or_restore_player, :log_roster_addition, :addition_old_values, :addition_new_values
+  # Snapshot of the scouting target at the moment of hiring.
+  # Stored in players.scouting_data_snapshot so the record is immutable even if
+  # the ScoutingTarget is later re-synced or its status changes.
+  def self.build_scouting_snapshot(target)
+    {
+      summoner_name: target.summoner_name,
+      role: target.role,
+      region: target.region,
+      current_tier: target.current_tier,
+      current_rank: target.current_rank,
+      current_lp: target.current_lp,
+      champion_pool: target.champion_pool,
+      recent_performance: target.recent_performance,
+      performance_trend: target.performance_trend,
+      strengths: target.strengths,
+      weaknesses: target.weaknesses,
+      playstyle: target.playstyle,
+      scouting_score: target.scouting_score,
+      snapshotted_at: Time.current.iso8601
+    }
+  end
+
+  private_class_method :find_or_restore_player, :log_roster_addition, :addition_old_values,
+                       :addition_new_values, :build_scouting_snapshot
 end

@@ -31,3 +31,9 @@ DOCS/legacy/
 # in non-production environments and does not represent a real security risk.
 config/environments/development.rb
 config/environments/test.rb
+
+# Pentest scripts — test JWT tokens and payloads are intentional, not leaked secrets.
+.pentest/
+
+# Static documentation page — not served by the Rails app in production.
+docs-page/

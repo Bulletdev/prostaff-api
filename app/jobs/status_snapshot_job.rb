@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'sidekiq/api'
+
 # Records a health snapshot for every infrastructure component every 5 minutes.
 # Results are persisted in status_snapshots and consumed by the public status page.
 class StatusSnapshotJob < ApplicationJob

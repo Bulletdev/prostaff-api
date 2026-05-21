@@ -1,19 +1,17 @@
-Welcome to ProStaff!
+Bem-vindo ao ProStaff!
 
-Hi <%= @user.full_name || 'there' %>,
+Ola, <%= @user.full_name || 'usuario' %>,
 
-Welcome to ProStaff! We're excited to have you on board.
+Sua conta esta pronta. Bem-vindo a plataforma de gestao de times de esports mais completa para League of Legends.
 
-ProStaff is your all-in-one platform for managing your esports team, tracking player performance, and analyzing matches.
+Com o ProStaff voce pode:
+- Gerenciar jogadores, estatisticas e performance individual
+- Acompanhar historico de partidas e dados da Riot API
+- Revisar VODs com anotacoes em timestamps
+- Fazer scouting de talentos e acompanhar prospects
 
-Here are some things you can do with ProStaff:
-- Track player statistics and performance
-- Manage team schedules and practice sessions
-- Review VODs with timestamp annotations
-- Scout new talent and track prospects
-- Set and monitor team goals
+Acesse agora: <%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>
 
-If you have any questions or need help getting started, don't hesitate to reach out to our support team.
+Qualquer duvida: hello@prostaff.gg
 
-Best regards,
-The ProStaff Team
+Equipe ProStaff

@@ -1,0 +1,121 @@
+groups:
+  - name: host
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scrape target down: {{ $labels.job }}"
+          description: "{{ $labels.job }} ({{ $labels.instance }}) has been unreachable for more than 1 minute."
+
+      - alert: HighCPU
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU above 80%"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}% (threshold: 80%)."
+
+      - alert: HighCPUCritical
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host CPU above 95%"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}% — host may be unresponsive."
+
+      - alert: HighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host memory above 85%"
+          description: "Memory usage is {{ $value | printf \"%.1f\" }}% (threshold: 85%)."
+
+      - alert: DiskAlmostFull
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk (/) above 85%"
+          description: "Disk usage is {{ $value | printf \"%.1f\" }}%. Clean up soon."
+
+      - alert: DiskCritical
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"}) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk (/) above 95% — critical"
+          description: "Disk usage is {{ $value | printf \"%.1f\" }}%. Writes may fail."
+
+      - alert: HighIOWait
+        expr: avg(rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100 > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High I/O wait"
+          description: "IOWait is {{ $value | printf \"%.1f\" }}% — storage may be saturated."
+
+  - name: containers
+    rules:
+      - alert: APIContainerDown
+        expr: absent(container_last_seen{name=~".*x8ogsg0s4gws0840w8kksokk-api.*"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ProStaff API container is down"
+          description: "The API container has not been seen for more than 2 minutes."
+
+      - alert: SidekiqContainerDown
+        expr: absent(container_last_seen{name=~".*x8ogsg0s4gws0840w8kksokk-sidekiq.*"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sidekiq container is down"
+          description: "The Sidekiq container has not been seen for more than 2 minutes."
+
+      - alert: PostgresContainerDown
+        expr: absent(container_last_seen{name=~".*x8ogsg0s4gws0840w8kksokk-postgres.*"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Postgres container is down"
+          description: "The Postgres container has not been seen for more than 2 minutes."
+
+      - alert: RedisContainerDown
+        expr: absent(container_last_seen{name=~".*x8ogsg0s4gws0840w8kksokk-redis.*"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis container is down"
+          description: "The Redis container has not been seen for more than 2 minutes. ActionCable and Sidekiq will fail."
+
+      - alert: ContainerHighCPU
+        expr: sum by (name) (rate(container_cpu_usage_seconds_total{name!="",name!~".*pause.*"}[5m])) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container CPU above 80%: {{ $labels.name }}"
+          description: "{{ $labels.name }} CPU is {{ $value | printf \"%.1f\" }}%."
+
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds{name!="",name!~".*pause.*"}[30m]) > 2
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting: {{ $labels.name }}"
+          description: "{{ $labels.name }} has restarted {{ $value | printf \"%.0f\" }} times in the last 30 minutes."
