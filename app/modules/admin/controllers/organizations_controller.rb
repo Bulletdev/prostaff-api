@@ -46,6 +46,8 @@ module Admin
       end
 
       def serialize_org(org)
+        last_activity = org.users.map(&:last_login_at).compact.max
+
         {
           id: org.id,
           name: org.name,
@@ -55,6 +57,7 @@ module Admin
           subscription_plan: org.subscription_plan,
           subscription_status: org.subscription_status,
           users_count: org.users.size,
+          last_activity_at: last_activity&.iso8601,
           created_at: org.created_at.iso8601
         }
       end
