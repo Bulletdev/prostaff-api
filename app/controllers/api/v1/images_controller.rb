@@ -112,13 +112,14 @@ module Api
       end
 
       # Performs HTTP request to fetch image.
-      # uri is a URI::HTTPS object built in parse_and_validate_url with a host
-      # sourced from ALLOWED_DOMAINS — not from user input.
+      # host is re-derived from ALLOWED_DOMAINS in this method so the argument
+      # to Net::HTTP.start traces to our constant, not to params[:url].
       # The request path (uri.request_uri) is user-controlled by design: this
-      # is an image proxy and path varies per image. The domain allowlist
+      # is an image proxy and paths vary per image. The domain allowlist
       # ensures all requests target trusted CDNs only. # nosemgrep
       def perform_http_request(uri)
-        Net::HTTP.start(uri.host, uri.port,
+        host = ALLOWED_DOMAINS.find { |d| d == uri.host }
+        Net::HTTP.start(host, uri.port,
                         use_ssl: true,
                         **HTTP_TIMEOUT_OPTIONS) do |http|
           request = Net::HTTP::Get.new(uri.request_uri) # nosemgrep
