@@ -44,72 +44,113 @@ class ScraperImporterService
 
   # Import an array of match hashes returned by ProStaffScraperService#fetch_matches.
   #
+  # Issues exactly 3 queries regardless of batch size:
+  #   1. SELECT existing fingerprints for dedup
+  #   2. SELECT existing external_match_ids for dedup
+  #   3. INSERT all valid records with ON CONFLICT DO NOTHING
+  #
   # @param matches  [Array<Hash>]  raw match hashes from the scraper API
   # @param our_team [String, nil]  the org's team name as listed in Leaguepedia
-  #                                (e.g. 'paiN Gaming'). If nil, team1 is used as
-  #                                our_team and victory is left unknown.
   # @return [Hash] import statistics
   def import_batch(matches, our_team: nil)
-    stats = {
-      imported: 0,
-      skipped_duplicate: 0,
-      skipped_unenriched: 0,
-      skipped_not_our_game: 0,
-      errors: 0
-    }
+    stats = initial_stats
 
-    matches.each do |match|
-      import_one(match, our_team, stats)
-    end
+    candidates = prefilter_matches(matches, our_team, stats)
+    return stats if candidates.empty?
 
+    records = candidates.map { |m| build_attributes_for_batch(m, our_team) }
+    dedup_records(records, stats)
+
+    to_insert = records.select { |r| r[:_valid] }.map { |r| r.except(:_valid) }
+    return stats if to_insert.empty?
+
+    to_insert = deduplicate_by_ext_id(to_insert)
+    CompetitiveMatch.insert_all(to_insert)
+    stats[:imported] = to_insert.size
+    stats
+  rescue StandardError => e
+    Rails.logger.error "[ScraperImporter] Batch insert failed: #{e.class} #{e.message}"
+    stats[:errors] += 1
     stats
   end
 
   private
 
-  def import_one(match, our_team, stats)
-    unless match['riot_enriched']
-      stats[:skipped_unenriched] += 1
-      return
-    end
-
-    # When our_team is specified, skip matches where the org's team did not participate.
-    # Without this guard, ALL tournament games would be imported with a random team
-    # labeled as "ours" (the resolve_teams fallback to team1).
-    if our_team.present?
-      team1 = match.dig('team1', 'name').to_s
-      team2 = match.dig('team2', 'name').to_s
-      unless teams_match?(team1, our_team) || teams_match?(team2, our_team)
+  # Filter out unenriched and not-our-game matches without hitting the DB.
+  def prefilter_matches(matches, our_team, stats)
+    matches.select do |match|
+      if !match['riot_enriched']
+        stats[:skipped_unenriched] += 1
+        false
+      elsif our_team.present? && our_team_absent?(match, our_team)
         stats[:skipped_not_our_game] += 1
-        return
+        false
+      else
+        true
       end
     end
+  end
 
-    ext_id      = build_external_match_id(match)
-    parsed_date = parse_date(match['start_time'])
-    game_number = match['game_number']
-    team1_name  = match.dig('team1', 'name').to_s
-    team2_name  = match.dig('team2', 'name').to_s
-    _, opp_resolved = resolve_teams(team1_name, team2_name, match['win_team'].to_s, our_team)
+  def our_team_absent?(match, our_team)
+    team1 = match.dig('team1', 'name').to_s
+    team2 = match.dig('team2', 'name').to_s
+    !teams_match?(team1, our_team) && !teams_match?(team2, our_team)
+  end
 
-    if duplicate_by_fingerprint?(@organization, parsed_date, game_number, opp_resolved)
-      stats[:skipped_duplicate] += 1
-      return
+  # Check both fingerprint and external_match_id duplicates in two batch queries.
+  # Marks each record with _valid: false if it already exists.
+  def dedup_records(records, stats)
+    fingerprints = records.filter_map { |r| r[:game_fingerprint] }
+    ext_ids      = records.map { |r| r[:external_match_id] }
+
+    existing_fps  = fingerprint_set(fingerprints)
+    existing_eids = ext_id_set(ext_ids)
+
+    records.each do |r|
+      if existing_fps.include?(r[:game_fingerprint]) || existing_eids.include?(r[:external_match_id])
+        r[:_valid] = false
+        stats[:skipped_duplicate] += 1
+      else
+        r[:_valid] = true
+      end
     end
+  end
 
-    if @organization.competitive_matches.exists?(external_match_id: ext_id)
-      stats[:skipped_duplicate] += 1
-      return
-    end
+  # Use unscoped to bypass OrganizationScoped's default_scope (which returns where('1=0')
+  # when Current.organization_id is nil). The explicit organization_id condition provides
+  # the same security guarantee without requiring a request context.
+  def fingerprint_set(fingerprints)
+    return [] if fingerprints.empty?
 
-    CompetitiveMatch.create!(build_attributes(match, ext_id, our_team))
-    stats[:imported] += 1
-  rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.error "[ScraperImporter] Validation failed for #{ext_id}: #{e.message}"
-    stats[:errors] += 1
-  rescue StandardError => e
-    Rails.logger.error "[ScraperImporter] Unexpected error for #{ext_id}: #{e.message}"
-    stats[:errors] += 1
+    CompetitiveMatch.unscoped
+                    .where(organization_id: @organization.id, game_fingerprint: fingerprints)
+                    .pluck(:game_fingerprint)
+  end
+
+  def ext_id_set(ext_ids)
+    CompetitiveMatch.unscoped
+                    .where(organization_id: @organization.id, external_match_id: ext_ids)
+                    .pluck(:external_match_id)
+  end
+
+  # Remove intra-batch duplicates on external_match_id (last write wins — same behavior
+  # as the original per-record path where second occurrence would have been skipped).
+  def deduplicate_by_ext_id(records)
+    records.uniq { |r| r[:external_match_id] }
+  end
+
+  def initial_stats
+    { imported: 0, skipped_duplicate: 0, skipped_unenriched: 0, skipped_not_our_game: 0, errors: 0 }
+  end
+
+  # Builds the attribute hash suitable for insert_all (scalar IDs, not AR objects).
+  def build_attributes_for_batch(match, our_team)
+    build_attributes(match, build_external_match_id(match), our_team)
+      .merge(
+        organization_id: @organization.id,
+        created_at: Time.current,
+        updated_at: Time.current
+      ).except(:organization)
   end
 
   def build_attributes(match, ext_id, our_team)

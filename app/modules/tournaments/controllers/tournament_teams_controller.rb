@@ -131,21 +131,29 @@ module Tournaments
 
       # Roster Lock: snapshot all active players from the org at approval time.
       # This record is immutable — never updated after creation.
+      # Issues a single INSERT instead of one query per player.
       def lock_roster!(team)
-        org = team.organization
-        players = org.players.where(status: %w[active rostered]).order(:role, :jersey_number)
+        players = team.organization.players
+                      .where(status: %w[active rostered])
+                      .order(:role, :jersey_number)
+        now = Time.current
 
-        players.each_with_index do |player, idx|
-          position = idx < 5 ? 'starter' : 'substitute'
-          TournamentRosterSnapshot.create!(
-            tournament_team: team,
-            player: player,
+        rows = players.each_with_index.map do |player, idx|
+          {
+            tournament_team_id: team.id,
+            player_id: player.id,
             summoner_name: player.summoner_name,
             role: player.role,
-            position: position,
-            locked_at: Time.current
-          )
+            position: idx < 5 ? 'starter' : 'substitute',
+            locked_at: now,
+            created_at: now,
+            updated_at: now
+          }
         end
+
+        return if rows.empty?
+
+        TournamentRosterSnapshot.insert_all!(rows)
       end
 
       def enrollment_params

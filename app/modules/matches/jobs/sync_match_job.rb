@@ -105,24 +105,21 @@ module Matches
     end
 
     def create_player_match_stats(match, participants, organization)
-      puts "SyncMatchJob: Creating player stats for #{participants.size} participants"
+      Rails.logger.info("[SyncMatchJob] Creating player stats for #{participants.size} participants")
 
       our_player_puuids = organization.players.pluck(:riot_puuid).compact
-      our_participants = participants.select { |p| our_player_puuids.include?(p[:puuid]) }
-      is_competitive = our_participants.size >= 5
+      our_participants  = participants.select { |p| our_player_puuids.include?(p[:puuid]) }
+      is_competitive    = our_participants.size >= 5
 
-      puts "SyncMatchJob: Match type: #{is_competitive ? 'Competitive (team)' : 'Solo Queue'}"
-      puts "SyncMatchJob: Our players in match: #{our_participants.size}"
-
-      team_totals = calculate_team_totals(participants, our_participants, is_competitive)
+      team_totals  = calculate_team_totals(participants, our_participants, is_competitive)
       opponent_map = build_opponent_map(participants)
+      player_index = organization.players.where(riot_puuid: our_player_puuids).index_by(&:riot_puuid)
 
-      participants.each do |participant_data|
-        player = organization.players.find_by(riot_puuid: participant_data[:puuid])
-        next unless player
+      records = build_stat_records(match, participants, player_index, team_totals, opponent_map)
+      return if records.empty?
 
-        create_stat_for_participant(match, player, participant_data, team_totals, opponent_map)
-      end
+      records = deduplicate_stat_records(records)
+      PlayerMatchStat.insert_all(records)
     end
 
     # Builds a hash mapping each participant's puuid to the champion name of their
@@ -163,10 +160,30 @@ module Matches
       end
     end
 
-    def create_stat_for_participant(match, player, participant_data, team_totals, opponent_map = {})
-      PlayerMatchStat.create!(
-        build_stat_attributes(match, player, participant_data, team_totals, opponent_map)
-      )
+    def build_stat_records(match, participants, player_index, team_totals, opponent_map)
+      records = []
+      now = Time.current
+
+      participants.each do |participant_data|
+        player = player_index[participant_data[:puuid]]
+        next unless player
+
+        attrs = build_stat_attributes(match, player, participant_data, team_totals, opponent_map)
+        records << attrs.merge(created_at: now, updated_at: now)
+      end
+
+      records
+    end
+
+    def deduplicate_stat_records(records)
+      seen = {}
+      records.each_with_object([]) do |r, acc|
+        key = [r[:match_id], r[:player_id]]
+        next if seen[key]
+
+        seen[key] = true
+        acc << r
+      end
     end
 
     def build_stat_attributes(match, player, participant_data, team_totals, opponent_map)
@@ -183,8 +200,8 @@ module Matches
 
     def base_stat_fields(match, player, participant_data, opponent_map, cs_total)
       {
-        match: match,
-        player: player,
+        match_id: match.id,
+        player_id: player.id,
         role: normalize_role(participant_data[:role]),
         champion: participant_data[:champion_name],
         opponent_champion: opponent_map[participant_data[:puuid]],

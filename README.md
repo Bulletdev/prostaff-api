@@ -115,11 +115,11 @@
 <summary><kbd>▶ Option 1: Docker (Recommended)</kbd></summary>
 
 ```bash
-# Start all services (API, PostgreSQL, Redis, Sidekiq)
+# Start all services (API, PostgreSQL, Redis, Meilisearch, Sidekiq, riot-gateway)
 docker compose up -d
 
 # Create test user
-docker exec prostaff-api-api-1 rails runner scripts/create_test_user.rb
+docker exec prostaff-api rails runner scripts/create_test_user.rb
 
 # Get JWT token for testing
 ./scripts/get-token.sh
@@ -170,7 +170,21 @@ open http://localhost:3333/api-docs
 ```
   API:          http://localhost:3333
   Swagger Docs: http://localhost:3333/api-docs
+  Riot Gateway: http://localhost:4444
 ```
+
+Local Docker services started by `docker compose up -d`:
+
+| Container | Image | Port | Role |
+|---|---|---|---|
+| prostaff-api | docker-api | 3333 | Rails API |
+| docker-sidekiq-1 | docker-sidekiq | — | Background jobs |
+| docker-riot-gateway-1 | docker-riot-gateway | 4444 | Riot API proxy (Go) |
+| docker-redis-1 | redis:7-alpine | 6380 | Cache + Sidekiq queue |
+| docker-meilisearch-1 | meilisearch:v1.11 | 7700 | Full-text search |
+| docker-postgres-1 | postgres:17-alpine | 5432 | Local DB (offline dev) |
+
+> **Note:** `riot-gateway` is included in the local compose only. In production all services run on the same Coolify VPS and communicate via internal Docker network.
 
 ---
 

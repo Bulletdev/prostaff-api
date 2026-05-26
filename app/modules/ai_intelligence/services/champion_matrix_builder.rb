@@ -2,6 +2,10 @@
 
 # Reads CompetitiveMatch records (via unscoped) and builds the ai_champion_matrices table.
 # victory=true means our_picks won; victory=false means opponent_picks won.
+#
+# Each call to register_matchups issues exactly two SQL statements regardless of
+# how many champion pairs are present: one bulk upsert for win records (winner, loser)
+# and one bulk insert for appearance records (loser, winner).
 class ChampionMatrixBuilder
   def initialize(scope: :all, league: nil)
     @scope  = scope
@@ -28,31 +32,23 @@ class ChampionMatrixBuilder
     end
   end
 
-  RECORD_APPEARANCE_SQL = <<~SQL.squish.freeze
-    INSERT INTO ai_champion_matrices
-      (champion_a, champion_b, patch, league, wins_a, total_games, updated_at, created_at)
-    VALUES (?, ?, NULL, NULL, 0, 1, NOW(), NOW())
-    ON CONFLICT (champion_a, champion_b) WHERE patch IS NULL AND league IS NULL
-    DO UPDATE SET total_games = ai_champion_matrices.total_games + 1,
-                  updated_at  = NOW()
-  SQL
-
   private
 
   def register_matchups(winner_picks, loser_picks)
     winner_champions = winner_picks.map { |p| p['champion'] }.compact
     loser_champions  = loser_picks.map  { |p| p['champion'] }.compact
 
-    winner_champions.each do |winner|
-      loser_champions.each do |loser|
-        AiChampionMatrix.upsert_win(winner, loser)
-        record_appearance(loser, winner)
-      end
-    end
+    win_pairs        = build_pairs(winner_champions, loser_champions)
+    appearance_pairs = build_pairs(loser_champions, winner_champions)
+
+    return if win_pairs.empty?
+
+    AiChampionMatrix.bulk_upsert_wins(win_pairs)
+    AiChampionMatrix.bulk_record_appearances(appearance_pairs)
   end
 
-  def record_appearance(champion_a, champion_b)
-    sql = AiChampionMatrix.sanitize_sql_array([RECORD_APPEARANCE_SQL, champion_a, champion_b])
-    AiChampionMatrix.connection.execute(sql)
+  # Returns all ordered pairs (a, b) for every combination of champions_a x champions_b.
+  def build_pairs(champions_a, champions_b)
+    champions_a.flat_map { |a| champions_b.map { |b| [a, b] } }
   end
 end
