@@ -51,6 +51,29 @@ services:
       retries: 3
       start_period: 15s
 
+  # Riot API Gateway (local dev only — in production the gateway runs as a
+  # separate Coolify service on the same VPS and is already reachable)
+  riot-gateway:
+    build:
+      context: ../../prostaff-riot-gateway
+      dockerfile: Dockerfile
+    env_file:
+      - ../../prostaff-riot-gateway/.env
+    ports:
+      - "4444:4444"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:4444/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
   # Rails API
   api:
     build: ..
@@ -66,6 +89,8 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
+        condition: service_healthy
+      riot-gateway:
         condition: service_healthy
     networks:
       - default

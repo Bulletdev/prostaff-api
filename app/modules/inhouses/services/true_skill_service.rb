@@ -75,8 +75,8 @@ class TrueSkillService
     result = update(blue_structs, red_structs, winner: winner)
 
     ActiveRecord::Base.transaction do
-      persist_updates(blue_parts, blue_ratings_data, result[:blue], winner: winner, team: 'blue', game_winner: winner)
-      persist_updates(red_parts,  red_ratings_data,  result[:red],  winner: winner, team: 'red',  game_winner: winner)
+      persist_updates(blue_parts, blue_ratings_data, result[:blue], team: 'blue', game_winner: winner)
+      persist_updates(red_parts,  red_ratings_data,  result[:red],  team: 'red',  game_winner: winner)
     end
   end
 
@@ -151,32 +151,54 @@ class TrueSkillService
   end
   private_class_method :load_ratings
 
-  # Apply new mu/sigma values and update win/loss counts
-  def self.persist_updates(participations, ratings_data, new_values, team:, game_winner:, winner: nil)
+  # Apply new mu/sigma values and update win/loss counts.
+  # Issues exactly 2 queries regardless of team size:
+  #   1. upsert_all for PlayerInhouseRating (mu, sigma, counters)
+  #   2. upsert_all for InhouseParticipation (snapshot + mmr_delta)
+  def self.persist_updates(participations, ratings_data, new_values, team:, game_winner:)
     won = (team == game_winner)
+    now = Time.current
 
-    participations.each_with_index do |_p, i|
+    rating_rows        = []
+    participation_rows = []
+
+    participations.each_with_index do |p, i|
       data   = ratings_data[i]
       rating = data[:rating]
       new_v  = new_values[i]
 
       old_mmr = compute_mmr(rating.mu, rating.sigma)
+      new_mmr = compute_mmr(new_v[:mu], new_v[:sigma])
 
-      # Capture rating snapshot before the update
-      data[:participation].update_columns(
+      rating_rows << {
+        id: rating.id,
+        mu: new_v[:mu],
+        sigma: new_v[:sigma],
+        games_played: rating.games_played + 1,
+        wins: won ? rating.wins + 1 : rating.wins,
+        losses: won ? rating.losses : rating.losses + 1,
+        updated_at: now
+      }
+
+      participation_rows << {
+        id: p.id,
         mu_snapshot: rating.mu,
-        sigma_snapshot: rating.sigma
-      )
-
-      rating.mu = new_v[:mu]
-      rating.sigma = new_v[:sigma]
-      rating.games_played += 1
-      won ? rating.wins += 1 : rating.losses += 1
-      rating.save!
-
-      new_mmr = compute_mmr(rating.mu, rating.sigma)
-      data[:participation].update_columns(mmr_delta: new_mmr - old_mmr)
+        sigma_snapshot: rating.sigma,
+        mmr_delta: new_mmr - old_mmr,
+        updated_at: now
+      }
     end
+
+    PlayerInhouseRating.upsert_all(
+      rating_rows,
+      unique_by: :id,
+      update_only: %i[mu sigma games_played wins losses updated_at]
+    )
+    InhouseParticipation.upsert_all(
+      participation_rows,
+      unique_by: :id,
+      update_only: %i[mu_snapshot sigma_snapshot mmr_delta updated_at]
+    )
   end
   private_class_method :persist_updates
 
