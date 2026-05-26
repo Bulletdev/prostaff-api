@@ -16,8 +16,6 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Check if running in CI
-IS_CI=${CI:-false}
 
 # 1. TruffleHog - Git history secrets
 echo "[1/3] Scanning git history with TruffleHog..."
@@ -86,11 +84,11 @@ for pattern in "${PATTERNS[@]}"; do
 
   if [ -n "$MATCHES" ]; then
     echo -e "${YELLOW}Found potential secrets matching: $pattern${NC}"
-    echo "$MATCHES" | while read -r line; do
+    while IFS= read -r line; do
       echo "  $line"
       FILE=$(echo "$line" | cut -d: -f1)
       SUSPICIOUS_FILES+=("$FILE")
-    done
+    done <<< "$MATCHES"
   fi
 done
 
@@ -153,14 +151,14 @@ cat > "$REPORT_DIR/secrets-summary.json" <<EOF
       "files": $(printf '%s\n' "${EXPOSED_FILES[@]}" | jq -R . | jq -s .)
     }
   },
-  "status": "$([ ${VERIFIED_SECRETS:-0} -gt 0 ] || [ ${LEAKS_COUNT:-0} -gt 0 ] || [ ${#EXPOSED_FILES[@]} -gt 0 ] && echo "FAILED" || echo "PASSED")"
+  "status": "$([ "${VERIFIED_SECRETS:-0}" -gt 0 ] || [ "${LEAKS_COUNT:-0}" -gt 0 ] || [ "${#EXPOSED_FILES[@]}" -gt 0 ] && echo "FAILED" || echo "PASSED")"
 }
 EOF
 
 echo "======================================"
 echo "SUMMARY"
 echo "======================================"
-cat "$REPORT_DIR/secrets-summary.json" | jq .
+jq . "$REPORT_DIR/secrets-summary.json"
 echo ""
 echo "Reports saved to: $REPORT_DIR/"
 

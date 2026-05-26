@@ -471,6 +471,9 @@ module Competitive
         wins_t1 = result.dig('aggregations', 'team1_wins', 'doc_count') || 0
         wins_t2 = result.dig('aggregations', 'team2_wins', 'doc_count') || 0
         [wins_t1, wins_t2]
+      rescue StandardError => e
+        Rails.logger.warn "[ProMatches#fetch_h2h_wins] ES unavailable, returning zeroes: #{e.message}"
+        [0, 0]
       end
 
       def h2h_matchup_clause(team1_name, team2_name)

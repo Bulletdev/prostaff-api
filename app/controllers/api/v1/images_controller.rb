@@ -36,37 +36,40 @@ module Api
       # @param url [String] The external image URL to proxy
       # @return [Binary] The image data with appropriate content-type
       def proxy
-        url = params[:url]
-        return render_invalid_url unless valid_image_url?(url)
+        uri = parse_and_validate_url(params[:url])
+        return render_invalid_url unless uri
 
-        cached_data = fetch_cached_image(url)
+        cached_data = fetch_cached_image(uri)
         return render_fetch_error(cached_data[:error]) if cached_data[:error]
 
-        send_image_data(cached_data, url)
+        send_image_data(cached_data, uri)
       rescue StandardError => e
         handle_proxy_error(e)
       end
 
       private
 
-      # Validates if the URL is from an allowed domain
-      def valid_image_url?(url)
-        return false if url.blank?
+      # Parses and validates the URL, returning a URI object or nil.
+      # The returned URI is guaranteed to have a host in ALLOWED_DOMAINS,
+      # HTTPS scheme, and no private IP — callers receive a safe object,
+      # not raw user input.
+      def parse_and_validate_url(url)
+        return nil if url.blank?
 
         uri = URI.parse(url)
 
-        # SECURITY: Exact host matching, not substring
-        return false unless ALLOWED_DOMAINS.include?(uri.host)
+        # SECURITY: Exact host matching against allowlist (not substring)
+        return nil unless ALLOWED_DOMAINS.include?(uri.host)
 
         # SECURITY: Only HTTPS allowed
-        return false unless uri.scheme == 'https'
+        return nil unless uri.scheme == 'https'
 
         # SECURITY: Block private IPs
-        return false if private_ip?(uri.host)
+        return nil if private_ip?(uri.host)
 
-        true
+        uri
       rescue URI::InvalidURIError
-        false
+        nil
       end
 
       # Checks if host is a private IP address
@@ -85,25 +88,26 @@ module Api
         false
       end
 
-      # Fetches image from cache or external source
-      def fetch_cached_image(url)
-        cache_key = "image_proxy:#{Digest::SHA256.hexdigest(url)}"
+      # Fetches image from cache or external source.
+      # Receives a pre-validated URI object (never raw user input).
+      def fetch_cached_image(uri)
+        cache_key = "image_proxy:#{Digest::SHA256.hexdigest(uri.to_s)}"
         Rails.cache.fetch(cache_key, expires_in: 7.days) do
-          fetch_external_image(url)
+          fetch_external_image(uri)
         end
       end
 
-      # Fetches image from external URL
-      def fetch_external_image(url)
-        uri = URI.parse(url)
+      # Fetches image from a pre-validated URI.
+      def fetch_external_image(uri)
         response = perform_http_request(uri)
         process_http_response(response)
       rescue StandardError => e
-        Rails.logger.error("Failed to fetch image from #{url}: #{e.message}")
+        Rails.logger.error("Failed to fetch image from #{uri}: #{e.message}")
         { error: e.message }
       end
 
-      # Performs HTTP request to fetch image
+      # Performs HTTP request to fetch image.
+      # uri.host is guaranteed to be in ALLOWED_DOMAINS by parse_and_validate_url.
       def perform_http_request(uri)
         Net::HTTP.start(uri.host, uri.port,
                         use_ssl: uri.scheme == 'https',
@@ -133,12 +137,13 @@ module Api
         render json: { error: error }, status: :bad_gateway
       end
 
-      # Sends image data to client
-      def send_image_data(cached_data, url)
+      # Sends image data to client.
+      # Receives the pre-validated URI object — no re-parsing of user input.
+      def send_image_data(cached_data, uri)
         send_data cached_data[:body],
                   type: cached_data[:content_type],
                   disposition: 'inline',
-                  filename: File.basename(URI.parse(url).path)
+                  filename: File.basename(uri.path)
       end
 
       # Handles proxy errors
