@@ -60,4 +60,8 @@ Rails.application.configure do
 
   # Annotate rendered view with file names.
   # config.action_view.annotate_rendered_view_with_filenames = true
+
+  # Remove HostAuthorization from the middleware stack - RSpec request specs use
+  # www.example.com as the default host which wouldn't be in any allowlist.
+  config.middleware.delete ActionDispatch::HostAuthorization
 end

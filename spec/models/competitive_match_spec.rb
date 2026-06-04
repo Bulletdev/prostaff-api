@@ -85,6 +85,38 @@ RSpec.describe CompetitiveMatch, type: :model do
     end
   end
 
+  describe 'date-based classification (no status column)' do
+    # CompetitiveMatch has no status column. upcoming/past is determined by comparing
+    # match_date to the current time at query time.
+    let(:base_attrs) { { organization: org, side: 'blue', victory: nil } }
+
+    it 'a match with match_date in the future is considered upcoming' do
+      upcoming = create(:competitive_match, base_attrs.merge(match_date: 3.days.from_now))
+      past     = create(:competitive_match, base_attrs.merge(match_date: 3.days.ago))
+
+      upcoming_matches = CompetitiveMatch.unscoped.where(organization: org)
+                                         .where('match_date > ?', Time.current)
+      past_matches     = CompetitiveMatch.unscoped.where(organization: org)
+                                         .where('match_date <= ?', Time.current)
+
+      expect(upcoming_matches).to include(upcoming)
+      expect(upcoming_matches).not_to include(past)
+      expect(past_matches).to include(past)
+      expect(past_matches).not_to include(upcoming)
+    end
+
+    it 'recent scope returns matches within the last N days' do
+      recent_match = create(:competitive_match, base_attrs.merge(match_date: 7.days.ago))
+      old_match    = create(:competitive_match, base_attrs.merge(match_date: 45.days.ago))
+
+      recent_scope = CompetitiveMatch.unscoped.where(organization: org)
+                                     .where('match_date > ?', 30.days.ago)
+
+      expect(recent_scope).to include(recent_match)
+      expect(recent_scope).not_to include(old_match)
+    end
+  end
+
   describe 'scopes' do
     let!(:win)  { create(:competitive_match, organization: org, victory: true,  side: 'blue') }
     let!(:loss) { create(:competitive_match, organization: org, victory: false, side: 'red') }

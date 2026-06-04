@@ -59,6 +59,86 @@ RSpec.describe Organization, type: :model do
     end
   end
 
+  describe 'tier features (TierFeatures concern)' do
+    describe '#can_access?' do
+      it 'returns true for a feature available in the org tier' do
+        org = create(:organization, tier: 'tier_2_semi_pro')
+        expect(org.can_access?('scrims')).to be(true)
+      end
+
+      it 'returns false for a feature not available in the org tier' do
+        org = create(:organization, tier: 'tier_3_amateur')
+        expect(org.can_access?('scrims')).to be(false)
+      end
+    end
+
+    describe '#can_access_scrims?' do
+      it 'returns true for tier_2_semi_pro' do
+        org = build(:organization, tier: 'tier_2_semi_pro')
+        expect(org.can_access_scrims?).to be(true)
+      end
+
+      it 'returns true for tier_1_professional' do
+        org = build(:organization, tier: 'tier_1_professional')
+        expect(org.can_access_scrims?).to be(true)
+      end
+
+      it 'returns false for tier_3_amateur' do
+        org = build(:organization, tier: 'tier_3_amateur')
+        expect(org.can_access_scrims?).to be(false)
+      end
+    end
+
+    describe '#can_access_competitive_data?' do
+      it 'returns true for tier_1_professional only' do
+        expect(build(:organization, tier: 'tier_1_professional').can_access_competitive_data?).to be(true)
+        expect(build(:organization, tier: 'tier_2_semi_pro').can_access_competitive_data?).to be(false)
+        expect(build(:organization, tier: 'tier_3_amateur').can_access_competitive_data?).to be(false)
+      end
+    end
+
+    describe '#player_limit_reached?' do
+      it 'returns false when player count is below the tier limit' do
+        org = create(:organization, tier: 'tier_3_amateur')
+        # 0 players, limit is 10 — not reached
+        expect(org.player_limit_reached?).to be(false)
+      end
+    end
+
+    describe '#analytics_level' do
+      it 'returns :basic for tier_3_amateur' do
+        org = build(:organization, tier: 'tier_3_amateur')
+        expect(org.analytics_level).to eq(:basic)
+      end
+
+      it 'returns :advanced for tier_2_semi_pro' do
+        org = build(:organization, tier: 'tier_2_semi_pro')
+        expect(org.analytics_level).to eq(:advanced)
+      end
+
+      it 'returns :predictive for tier_1_professional' do
+        org = build(:organization, tier: 'tier_1_professional')
+        expect(org.analytics_level).to eq(:predictive)
+      end
+    end
+
+    describe '#tier_display_name' do
+      it 'returns human-readable names for each tier' do
+        expect(build(:organization, tier: 'tier_3_amateur').tier_display_name).to eq('Amateur (Tier 3)')
+        expect(build(:organization, tier: 'tier_2_semi_pro').tier_display_name).to eq('Semi-Pro (Tier 2)')
+        expect(build(:organization, tier: 'tier_1_professional').tier_display_name).to eq('Professional (Tier 1)')
+      end
+    end
+
+    describe '#available_features' do
+      it 'returns the feature list for the org tier' do
+        org = build(:organization, tier: 'tier_1_professional')
+        features = org.available_features
+        expect(features).to include('competitive_data', 'predictive_analytics')
+      end
+    end
+  end
+
   describe 'trial management' do
     let(:org) { create(:organization) }
 

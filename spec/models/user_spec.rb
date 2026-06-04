@@ -10,7 +10,16 @@ RSpec.describe User, type: :model do
     it { is_expected.to validate_presence_of(:full_name) }
     it { is_expected.to validate_presence_of(:role) }
     it { is_expected.to validate_inclusion_of(:role).in_array(Constants::User::ROLES) }
-    it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
+
+    # validate_uniqueness_of requires a persisted record with password_digest.
+    # build(:user) has no password_digest until saved, causing a DB NOT NULL
+    # violation. Test uniqueness manually with a created record.
+    it 'validates uniqueness of email (case-insensitive)' do
+      existing = create(:user)
+      duplicate = build(:user, email: existing.email.upcase)
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:email]).to be_present
+    end
 
     it 'rejects invalid email format' do
       user = build(:user, email: 'not-an-email')
@@ -24,17 +33,18 @@ RSpec.describe User, type: :model do
     end
 
     it 'requires password to contain uppercase letter' do
-      user = build(:user, password: 'alllowercase1', password_confirmation: 'alllowercase1')
+      # User has no password_confirmation attr - pass only password
+      user = build(:user, password: 'alllowercase1')
       expect(user).not_to be_valid
     end
 
     it 'accepts a strong password' do
-      user = build(:user, password: 'StrongPass1!', password_confirmation: 'StrongPass1!')
+      user = build(:user, password: 'StrongPass1!')
       expect(user).to be_valid
     end
 
     it 'requires minimum password length of 8' do
-      user = build(:user, password: 'Ab1', password_confirmation: 'Ab1')
+      user = build(:user, password: 'Ab1')
       expect(user).not_to be_valid
     end
   end
@@ -94,6 +104,24 @@ RSpec.describe User, type: :model do
 
     it 'returns false for admin role' do
       expect(build(:user, :admin).owner?).to be(false)
+    end
+  end
+
+  describe '#admin_or_owner?' do
+    it 'returns true for admin role' do
+      expect(build(:user, :admin).admin_or_owner?).to be(true)
+    end
+
+    it 'returns true for owner role' do
+      expect(build(:user, :owner).admin_or_owner?).to be(true)
+    end
+
+    it 'returns false for coach role' do
+      expect(build(:user, :coach).admin_or_owner?).to be(false)
+    end
+
+    it 'returns false for analyst role' do
+      expect(build(:user, :analyst).admin_or_owner?).to be(false)
     end
   end
 

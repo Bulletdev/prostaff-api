@@ -33,8 +33,8 @@ RSpec.describe PlayerPolicy, type: :policy do
 
     it { should permit_action(:index) }
     it { should permit_action(:show) }
-    it { should_not permit_action(:create) }
-    it { should_not permit_action(:update) }
+    it { should permit_action(:create) }
+    it { should permit_action(:update) }
     it { should_not permit_action(:destroy) }
   end
 

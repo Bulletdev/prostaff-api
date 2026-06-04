@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Matches API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
+  let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
   path '/api/v1/matches' do
     get 'List all matches' do
@@ -290,6 +290,12 @@ RSpec.describe 'Matches API', type: :request do
       response '200', 'import started' do
         let(:player) { create(:player, organization: organization, riot_puuid: 'test-puuid') }
         let(:import_params) { { player_id: player.id, count: 10 } }
+
+        before do
+          allow_any_instance_of(ImportMatchesService).to receive(:call).and_return(
+            { job_id: "test-job-id", player_id: player.id.to_s, count: 10 }
+          )
+        end
 
         schema type: :object,
                properties: {

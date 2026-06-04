@@ -222,7 +222,7 @@ RSpec.describe 'Multi-tenancy isolation', type: :request do
 
   describe 'Messages' do
     let!(:user_b2)  { create(:user, :admin, organization: org_b) }
-    let!(:msg_a)    { create(:message, organization: org_a, user: user_a) }
+    let!(:msg_a)    { create(:message, organization: org_a, sender: user_a) }
 
     # Messages endpoint requires recipient_id — use another org_b user as recipient
     it 'does not list org_a messages when authenticated as org_b' do

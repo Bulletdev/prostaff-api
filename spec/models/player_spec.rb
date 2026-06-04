@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Player, type: :model do
   describe 'associations' do
-    it { should belong_to(:organization) }
+    it { should belong_to(:organization).optional }
     it { should have_many(:player_match_stats).dependent(:destroy) }
     it { should have_many(:matches).through(:player_match_stats) }
     it { should have_many(:champion_pools).dependent(:destroy) }

@@ -2,7 +2,8 @@
 
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
-ENV['RAILS_ENV'] ||= 'test'
+# Force test environment even when the container env has RAILS_ENV=development.
+ENV['RAILS_ENV'] = 'test'
 require_relative '../config/environment'
 require 'webmock/rspec'
 WebMock.allow_net_connect!

@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Competitive API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :owner, organization: organization) }
-  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
+  let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
   # ---------------------------------------------------------------------------
   # Competitive Matches (PandaScore imported - stored locally)
@@ -93,7 +93,7 @@ RSpec.describe 'Competitive API', type: :request do
                  }
                }
         before do
-          allow_any_instance_of(PandascoreService).to receive(:fetch_upcoming_matches).and_return([])
+          allow(PandascoreService.instance).to receive(:fetch_upcoming_matches).and_return({ data: [], total: 0, page: 1, per_page: 20 })
         end
         run_test!
       end
@@ -121,7 +121,7 @@ RSpec.describe 'Competitive API', type: :request do
                  }
                }
         before do
-          allow_any_instance_of(PandascoreService).to receive(:fetch_past_matches).and_return([])
+          allow(PandascoreService.instance).to receive(:fetch_past_matches).and_return({ data: [], total: 0, page: 1, per_page: 20 })
         end
         run_test!
       end
