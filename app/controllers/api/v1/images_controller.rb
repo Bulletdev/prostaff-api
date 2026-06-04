@@ -118,7 +118,7 @@ module Api
       # is an image proxy and paths vary per image. The domain allowlist
       # ensures all requests target trusted CDNs only. # nosemgrep
       def perform_http_request(uri)
-        host = ALLOWED_DOMAINS.find { |d| d == uri.host }
+        host = ALLOWED_DOMAINS.find { |d| d == uri.host } # codacy:disable FileAccess
         Net::HTTP.start(host, uri.port,
                         use_ssl: true,
                         **HTTP_TIMEOUT_OPTIONS) do |http|

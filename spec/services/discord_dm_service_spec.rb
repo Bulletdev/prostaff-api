@@ -13,10 +13,10 @@ RSpec.describe DiscordDmService do
 
   # Helpers to create users with discord_user_id set
   let!(:target_admin) do
-    create(:user, :admin, organization: target_org, discord_user_id: '123456789012345678')
+    create(:user, :admin, organization: target_org, discord_user_id: '123456789012345678') # codacy:disable Detect-Secret-Exposure
   end
   let!(:requesting_admin) do
-    create(:user, :admin, organization: requesting_org, discord_user_id: '234567890123456789')
+    create(:user, :admin, organization: requesting_org, discord_user_id: '234567890123456789') # codacy:disable Detect-Secret-Exposure
   end
 
   before do
