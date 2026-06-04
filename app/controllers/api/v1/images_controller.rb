@@ -115,9 +115,9 @@ module Api
       # host is re-derived from ALLOWED_DOMAINS - not from user input.
       # uri.port and uri.request_uri are intentional: this is an image proxy
       # and the domain allowlist ensures all requests target trusted CDNs only.
-      def perform_http_request(uri) # nosemgrep: ruby.net.http.ssrf
+      def perform_http_request(uri)
         host = ALLOWED_DOMAINS.find { |d| d == uri.host }
-        Net::HTTP.start(host, uri.port, # nosemgrep
+        Net::HTTP.start(host, uri.port, # nosemgrep: ruby.net.http.ssrf
                         use_ssl: true,
                         **HTTP_TIMEOUT_OPTIONS) do |http|
           request = Net::HTTP::Get.new(uri.request_uri) # nosemgrep
