@@ -2,6 +2,10 @@
 
 module Rack
   class Attack
+    # Disable entirely in test - specs use Rack::Test which sends no User-Agent
+    # and IP is 127.0.0.1 but the safelist proc order doesn't guarantee it runs first.
+    Rack::Attack.enabled = false if Rails.env.test?
+
     # Enable caching for Rack::Attack
     # Development: MemoryStore (simples e rápido)
     # Production: Redis DB 0 (persistente, compartilhado entre replicas)

@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Scouting API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
+  let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
   path '/api/v1/scouting/players' do
     get 'List all scouting targets' do

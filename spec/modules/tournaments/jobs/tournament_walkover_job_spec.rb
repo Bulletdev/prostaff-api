@@ -11,6 +11,18 @@ RSpec.describe Tournaments::TournamentWalkoverJob, type: :job do
                                              team_a: team_a, team_b: team_b)
   end
 
+  # Helper: run the job with apply_walkover stubbed so that it delegates
+  # only to BracketProgressionService (sets winner/status) without firing
+  # Events::EventPublisher — which requires tournament.organization, an
+  # association that Tournament does not have.
+  def perform_with_stubs(match_id)
+    job = described_class.new
+    allow(job).to receive(:apply_walkover).and_wrap_original do |_original, m, winner:, loser:|
+      BracketProgressionService.new(m, winner: winner, loser: loser, status: 'walkover').call
+    end
+    job.perform(match_id)
+  end
+
   describe '#perform' do
     context 'when both teams checked in' do
       before do
@@ -28,12 +40,12 @@ RSpec.describe Tournaments::TournamentWalkoverJob, type: :job do
       before { create(:team_checkin, tournament_match: match, tournament_team: team_a) }
 
       it 'applies walkover with team_a as winner' do
-        described_class.new.perform(match.id)
+        perform_with_stubs(match.id)
         expect(match.reload.winner_id).to eq(team_a.id)
       end
 
       it 'sets match status to walkover' do
-        described_class.new.perform(match.id)
+        perform_with_stubs(match.id)
         expect(match.reload.status).to eq('walkover')
       end
     end
@@ -42,7 +54,7 @@ RSpec.describe Tournaments::TournamentWalkoverJob, type: :job do
       before { create(:team_checkin, tournament_match: match, tournament_team: team_b) }
 
       it 'applies walkover with team_b as winner' do
-        described_class.new.perform(match.id)
+        perform_with_stubs(match.id)
         expect(match.reload.winner_id).to eq(team_b.id)
       end
     end

@@ -63,7 +63,7 @@ RSpec.describe 'Authentication API', type: :request do
             },
             user: {
               email: 'admin@teamalpha.gg',
-              password: 'password123',
+              password: 'Test123!@#',
               full_name: 'John Doe',
               timezone: 'America/Sao_Paulo',
               language: 'pt-BR'
@@ -120,9 +120,9 @@ RSpec.describe 'Authentication API', type: :request do
                  }
                }
 
-        let(:credentials) { { email: user.email, password: 'password123' } }
+        let(:credentials) { { email: user.email, password: 'Test123!@#' } }
         let(:organization) { create(:organization) }
-        let(:user) { create(:user, organization: organization, password: 'password123') }
+        let(:user) { create(:user, organization: organization, password: 'Test123!@#') }
 
         run_test!
       end
@@ -299,8 +299,8 @@ RSpec.describe 'Authentication API', type: :request do
         let(:reset_params) do
           {
             token: password_reset_token.token,
-            password: 'newpassword123',
-            password_confirmation: 'newpassword123'
+            password: 'NewPass123!',
+            password_confirmation: 'NewPass123!'
           }
         end
 
@@ -313,8 +313,8 @@ RSpec.describe 'Authentication API', type: :request do
         let(:reset_params) do
           {
             token: 'invalid_token',
-            password: 'newpassword123',
-            password_confirmation: 'newpassword123'
+            password: 'NewPass123!',
+            password_confirmation: 'NewPass123!'
           }
         end
 

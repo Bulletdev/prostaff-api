@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe 'Auth — endpoints faltantes', type: :request do
   let(:org)  { create(:organization) }
-  let(:user) { create(:user, organization: org, password: 'password123') }
+  let(:user) { create(:user, organization: org, password: 'Test123!@#') }
 
   # ---------------------------------------------------------------------------
   # POST /api/v1/auth/refresh
@@ -137,7 +137,7 @@ RSpec.describe 'Auth — endpoints faltantes', type: :request do
   describe 'POST /api/v1/auth/reset-password' do
     context 'without required params' do
       it 'returns 400 when token is missing' do
-        post '/api/v1/auth/reset-password', params: { password: 'newpassword123' }
+        post '/api/v1/auth/reset-password', params: { password: 'NewPass123!' }
         expect(response).to have_http_status(:bad_request)
       end
 
@@ -151,7 +151,7 @@ RSpec.describe 'Auth — endpoints faltantes', type: :request do
       it 'returns 400' do
         post '/api/v1/auth/reset-password', params: {
           token: 'sometoken',
-          password: 'newpassword123',
+          password: 'NewPass123!',
           password_confirmation: 'different'
         }
         expect(response).to have_http_status(:bad_request)
@@ -163,8 +163,8 @@ RSpec.describe 'Auth — endpoints faltantes', type: :request do
       it 'returns 400 with INVALID_RESET_TOKEN code' do
         post '/api/v1/auth/reset-password', params: {
           token: 'invalid-token-xyz',
-          password: 'newpassword123',
-          password_confirmation: 'newpassword123'
+          password: 'NewPass123!',
+          password_confirmation: 'NewPass123!'
         }
         expect(response).to have_http_status(:bad_request)
         expect(json_response.dig(:error, :code)).to eq('INVALID_RESET_TOKEN')
