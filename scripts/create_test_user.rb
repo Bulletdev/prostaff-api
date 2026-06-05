@@ -18,7 +18,6 @@ test_password = ENV['TEST_PASSWORD'] || 'Test123!@#'
 user = User.find_or_initialize_by(email: test_email)
 if user.new_record?
   user.password = test_password
-  user.password_confirmation = test_password
   user.organization = org
   user.role = 'admin'
   user.save!
