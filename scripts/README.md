@@ -1,186 +1,100 @@
-# Scripts do Projeto
+# Scripts
 
-Este diretório contém scripts úteis para desenvolvimento, segurança, e manutenção do projeto.
+Scripts de desenvolvimento, segurança e manutenção do ProStaff API.
 
----
+## Uso rapido
 
-## 🔒 Security Validation Script
+```bash
+# Criar usuario de teste (banco fresco)
+bundle exec rails runner scripts/create_test_user.rb
+
+# Validar segurança antes de commitar
+./scripts/validate-security.sh
+
+# Gerar secrets para .env
+./scripts/generate_secrets.sh
+
+# Obter JWT de desenvolvimento
+./scripts/get-token.sh
+
+# Testar rate limiting
+./scripts/test_rate_limit.sh
+
+# Fix de rede (503 no Traefik)
+./scripts/fix_network.sh
+
+# Atualizar diagrama de arquitetura no README
+ruby scripts/update_architecture_diagram.rb
+```
+
+## Scripts
+
+### `create_test_user.rb`
+
+Cria o usuario de teste (`test@prostaff.gg`) em uma organizacao existente. Requer que a organizacao ja exista no banco.
+
+```bash
+bundle exec rails runner scripts/create_test_user.rb
+# ou com credenciais customizadas
+TEST_EMAIL=outro@email.com TEST_PASSWORD=senha123 bundle exec rails runner scripts/create_test_user.rb
+```
 
 ### `validate-security.sh`
 
-Script para validar segurança do código **antes de fazer commit**. Roda Semgrep localmente e verifica vulnerabilidades críticas.
-
-#### Uso
+Roda Semgrep via Docker e exibe apenas erros com severidade ERROR. Retorna exit code 1 se encontrar vulnerabilidades criticas.
 
 ```bash
 ./scripts/validate-security.sh
 ```
 
-#### O que ele faz:
+### `generate_secrets.sh`
 
-✅ Roda Semgrep com Docker (não precisa instalar nada)
-✅ Analisa código buscando vulnerabilidades
-✅ Mostra apenas erros **CRÍTICOS** (severity ERROR)
-✅ Retorna exit code apropriado (0 = passou, 1 = falhou)
+Gera valores aleatorios para `SECRET_KEY_BASE` e `JWT_SECRET_KEY` via `openssl rand`. Colar no `.env`.
 
-#### Output de exemplo:
-
-```
-================================================
-🔒 Security Validation Script
-================================================
-
-🔍 Rodando Semgrep...
-
-📋 Resumo:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Erros (CRITICAL):  0
-⚠️  Warnings:          21
-ℹ️  Info:             0
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✅ PASSOU - Sem erros críticos encontrados!
-   Você pode fazer o commit com segurança.
-================================================
+```bash
+./scripts/generate_secrets.sh
 ```
 
-**Recomendação:** Execute antes de todo commit!
+### `get-token.sh`
 
----
+Faz login com as credenciais de teste e retorna o JWT de acesso. Util para testes rapidos com curl.
 
-## 🏗️ Architecture Diagram Auto-Update System
+```bash
+./scripts/get-token.sh
+# usa TEST_EMAIL / TEST_PASSWORD do ambiente, com fallback para test@prostaff.gg
+```
 
-### Overview
+### `test_rate_limit.sh`
 
-Sistema automatizado para manter o diagrama de arquitetura no README.md sincronizado com a estrutura do projeto.
+Dispara 100 requisicoes contra `API_URL` para verificar o rate limiting do Traefik (limite: 30 req/s, burst: 50).
 
-## How It Works
+```bash
+./scripts/test_rate_limit.sh
+API_URL=https://staging.prostaff.gg/up ./scripts/test_rate_limit.sh
+```
 
-### 1. Script: `update_architecture_diagram.rb`
+### `fix_network.sh`
 
-The Ruby script analyzes the Rails application structure and generates a Mermaid diagram that reflects:
+Diagnostica e corrige erros 503 causados por desconexao entre o container da API e a rede do Traefik no Coolify.
 
-- **Modules**: Discovered from `app/modules/` directory
-- **Models**: Scanned from `app/models/`
-- **Controllers**: Found in module controllers and API controllers
-- **Services**: Located in module services directories
-- **Routes**: Analyzed from `config/routes.rb`
-- **Dependencies**: Detected from `Gemfile` (Redis, Sidekiq, Riot API integration)
+```bash
+./scripts/fix_network.sh
+```
 
-### 2. GitHub Actions Workflow
+### `apply_quick_optimizations.sh`
 
-Location: `.github/workflows/update-architecture-diagram.yml`
+Aplica indexes de banco de dados e outras otimizacoes de performance via `rails runner`. Para uso em ambientes que nao passaram pelas migrations mais recentes.
 
-**Triggers:**
-- Push to `master` or `main` branch
-- Pull requests to `master` or `main` branch
-- Manual workflow dispatch
-- When changes occur in:
-  - `app/modules/**`
-  - `app/models/**`
-  - `app/controllers/**`
-  - `config/routes.rb`
-  - `Gemfile`
+```bash
+./scripts/apply_quick_optimizations.sh
+```
 
-**Process:**
-1. Checks out the code
-2. Sets up Ruby environment
-3. Runs the update script
-4. Checks if README.md was modified
-5. Commits and pushes changes (if any)
+### `update_architecture_diagram.rb`
 
-## Manual Usage
-
-To manually update the architecture diagram:
+Introspecta a estrutura do projeto (modulos, models, controllers, services, rotas, dependencias do Gemfile) e atualiza o diagrama Mermaid no `README.md`.
 
 ```bash
 ruby scripts/update_architecture_diagram.rb
 ```
 
-This is useful when:
-- Testing diagram changes locally
-- Verifying the diagram before committing
-- Making custom adjustments to the architecture section
-
-## Architecture Components
-
-The generated diagram includes:
-
-### Client Layer
-- Frontend application interface
-
-### API Gateway
-- Rails Router
-- CORS Middleware
-- Rate Limiting (Rack::Attack)
-- Authentication Middleware (JWT)
-
-### Application Layer - Modular Monolith
-Each module is automatically discovered and represented with:
-- Controllers
-- Models
-- Services
-
-Current modules:
-- **Authentication**: User auth, JWT tokens
-- **Dashboard**: Statistics and metrics
-- **Players**: Player management
-- **Scouting**: Talent discovery
-- **Analytics**: Performance analysis
-- **Matches**: Match data
-- **Schedules**: Event management
-- **VOD Reviews**: Video reviews
-- **Team Goals**: Goal tracking
-- **Riot Integration**: External API integration
-
-### Data Layer
-- PostgreSQL (persistent storage)
-- Redis (caching and job queue)
-
-### Background Jobs
-- Sidekiq workers
-- Job queue management
-
-### External Services
-- Riot Games API
-
-## Customizing the Diagram
-
-To modify the diagram generation logic, edit `update_architecture_diagram.rb`:
-
-1. **Add new module detection**: Update `discover_modules()` method
-2. **Change connection logic**: Modify `generate_*_connections()` methods
-3. **Adjust styling**: Update the `style` lines in the Mermaid output
-4. **Add new layers**: Create new `generate_*_section()` methods
-
-## Benefits
-
-1. **Always Up-to-Date**: Diagram automatically reflects code structure
-2. **Documentation Quality**: Reduces documentation drift
-3. **Onboarding**: New developers see accurate architecture
-4. **Change Visibility**: Architecture changes are tracked in git history
-5. **No Manual Work**: Eliminates need for manual diagram updates
-
-## Best Practices
-
-1. **Review Diagram Changes**: Check the auto-generated diagram in PRs
-2. **Module Naming**: Use clear, consistent module names in `app/modules/`
-3. **Model Organization**: Keep models in standard locations for auto-discovery
-4. **Service Patterns**: Follow consistent naming conventions for services
-
-## Troubleshooting
-
-**Diagram not updating:**
-- Check workflow logs in GitHub Actions
-- Verify paths in workflow triggers
-- Ensure script has execution permissions
-
-**Incorrect connections:**
-- Review `config/routes.rb` for routing information
-- Check model relationships
-- Verify service discovery logic
-
-**Missing modules:**
-- Ensure modules are in `app/modules/`
-- Check directory structure matches expected pattern
-- Verify controller and service naming conventions
+Tambem executado automaticamente pelo GitHub Actions a cada push em `master` quando arquivos em `app/modules/`, `app/models/`, `app/controllers/`, `config/routes.rb` ou `Gemfile` sao alterados.

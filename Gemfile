@@ -13,7 +13,7 @@ gem 'connection_pool', '< 3.0'
 gem 'pg', '~> 1.1'
 
 # Use the Puma web server [https://github.com/puma/puma]
-gem 'puma', '~> 6.0'
+gem 'puma', '~> 7.2', '>= 7.2.1'
 
 # Security: Force Rack to safe version to fix CVE-2025-61780 and CVE-2025-61919
 gem 'rack', '~> 3.1.20'
