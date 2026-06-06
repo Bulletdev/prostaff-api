@@ -461,24 +461,37 @@ module Players
 
       # Handle import error
       def handle_import_error(result)
-        # Determine appropriate HTTP status based on error code
-        status = case result[:code]
-                 when 'PLAYER_NOT_FOUND', 'INVALID_FORMAT'
-                   :not_found
-                 when 'PLAYER_BELONGS_TO_OTHER_ORGANIZATION'
-                   :forbidden
-                 when 'RIOT_API_ERROR'
-                   # Check if it's a server error (5xx) or rate limit
-                   result[:status_code] && result[:status_code] >= 500 ? :bad_gateway : :service_unavailable
-                 else
-                   :service_unavailable
-                 end
-
         render_error(
-          message: result[:error] || 'Failed to import from Riot API',
+          message: import_error_message(result),
           code: result[:code] || 'IMPORT_ERROR',
-          status: status
+          status: import_error_status(result)
         )
+      end
+
+      def import_error_status(result)
+        case result[:code]
+        when 'PLAYER_NOT_FOUND', 'INVALID_FORMAT'      then :not_found
+        when 'PLAYER_BELONGS_TO_OTHER_ORGANIZATION'    then :forbidden
+        when 'RIOT_API_ERROR'                          then riot_api_status(result[:status_code])
+        else                                                :service_unavailable
+        end
+      end
+
+      def riot_api_status(status_code)
+        return :too_many_requests if status_code == 429
+        return :bad_gateway       if status_code.to_i >= 500
+
+        :service_unavailable
+      end
+
+      def import_error_message(result)
+        return result[:error] || 'Failed to import from Riot API' unless result[:code] == 'RIOT_API_ERROR'
+
+        case result[:status_code]
+        when 401 then 'Riot API key expired or invalid. Contact the administrator to renew the API key.'
+        when 429 then 'Riot API rate limit reached. Please try again in a few minutes.'
+        else          result[:error] || 'Failed to import from Riot API'
+        end
       end
     end
   end

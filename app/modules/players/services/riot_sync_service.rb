@@ -269,11 +269,15 @@ class RiotSyncService
       profile_icon_id: summoner_data['profileIconId'],
       rank_data: rank_data
     }
+  rescue RiotApiError => e
+    raise e unless e.not_found?
+
+    nil
   rescue StandardError => e
     Rails.logger.error("Failed to search Riot ID #{game_name}##{tag_line}: #{e.message}")
     Rails.logger.error("Exception class: #{e.class.name}")
     Rails.logger.error("Backtrace: #{e.backtrace.first(5).join("\n")}")
-    nil
+    raise
   end
 
   private
