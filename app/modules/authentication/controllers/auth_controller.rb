@@ -274,25 +274,26 @@ module Authentication
 
       # Logs out the current user
       #
-      # Blacklists the current access token to prevent further use.
-      # Optionally blacklists the refresh token if sent in the request body, so that
-      # an attacker who obtained the refresh token cannot create new sessions after
-      # the user has explicitly logged out.
+      # Blacklists both the access token and the linked refresh token. The refresh
+      # token JTI is embedded in the access token payload as +linked_refresh_jti+,
+      # so full session invalidation is guaranteed without requiring the client to
+      # send the refresh token in the request body.
       #
-      # The client SHOULD send the refresh token in the body for full session
-      # invalidation. Omitting it is not an error, but leaves the refresh token valid
-      # until its natural expiry.
+      # For backward compatibility, if the client also sends the refresh token in
+      # the body, it is blacklisted as well (covers tokens issued before the
+      # +linked_refresh_jti+ field was introduced).
       #
       # POST /api/v1/auth/logout
       #
-      # @param refresh_token [String] (optional) The refresh token to also invalidate
+      # @param refresh_token [String] (optional) Refresh token for backward-compat invalidation
       # @return [JSON] Success message
       def logout
-        # Blacklist the current access token
         access_token = request.headers['Authorization']&.split&.last
         JwtService.blacklist_token(access_token) if access_token
 
-        # Also blacklist the refresh token when the client supplies it
+        blacklist_linked_refresh_token(access_token)
+
+        # Backward compatibility: also blacklist refresh token supplied by the client
         refresh_token = params[:refresh_token]
         JwtService.blacklist_token(refresh_token) if refresh_token.present?
 
@@ -404,6 +405,31 @@ module Authentication
       end
 
       private
+
+      # Blacklists the refresh token that is linked to the given access token.
+      #
+      # Reads the +linked_refresh_jti+ field embedded in the access token payload
+      # (set at token generation time) and adds it to the blacklist directly by JTI,
+      # without needing the raw refresh token string. Uses +decode_without_blacklist_check+
+      # because the access token was already blacklisted earlier in the same request.
+      #
+      # Failures are swallowed so that a malformed or missing +linked_refresh_jti+
+      # never prevents a successful logout response.
+      #
+      # @param access_token [String, nil] The raw access token from the Authorization header
+      # @return [void]
+      def blacklist_linked_refresh_token(access_token)
+        return unless access_token
+
+        payload = JwtService.decode_without_blacklist_check(access_token)
+        linked_jti = payload[:linked_refresh_jti]
+        return unless linked_jti.present?
+
+        expires_at = JwtService::REFRESH_EXPIRATION_DAYS.days.from_now
+        TokenBlacklist.add_to_blacklist(linked_jti, expires_at)
+      rescue StandardError => e
+        Rails.logger.warn("[AUTH] Could not blacklist linked refresh token: #{e.message}")
+      end
 
       # Deliver email using async queue if Redis available, otherwise deliver synchronously
       def deliver_email(mailer)
