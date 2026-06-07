@@ -30,7 +30,7 @@ class TacticalBoardPolicy < ApplicationPolicy
   # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
-      if %w[coach admin owner].include?(user.role)
+      if %w[coach manager admin owner].include?(user.role)
         scope.where(organization: user.organization)
       else
         scope.none

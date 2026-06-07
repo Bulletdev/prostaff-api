@@ -16,7 +16,9 @@ module Players
       def index
         ActiveRecord::Base.connection.execute("SET statement_timeout = '5000'")
 
-        players = organization_scoped(Player).includes(:organization)
+        base_includes = [:organization]
+        base_includes << :active_contract if financial_access?
+        players = organization_scoped(Player).includes(base_includes)
 
         players = players.by_role(params[:role]) if params[:role].present?
         players = players.by_status(params[:status]) if params[:status].present?
@@ -28,10 +30,12 @@ module Players
         end
 
         result = paginate(players.ordered_by_role.order(:summoner_name))
+        view = financial_access? ? :with_contract : :default
 
-        data = cache_response('players', expires_in: 5.minutes) do
+        cache_key = "players/#{financial_access? ? 'financial' : 'standard'}"
+        data = cache_response(cache_key, expires_in: 5.minutes) do
           {
-            players: PlayerSerializer.render_as_hash(result[:data]),
+            players: PlayerSerializer.render_as_hash(result[:data], view: view),
             pagination: result[:pagination]
           }
         end
@@ -54,8 +58,10 @@ module Players
 
       # GET /api/v1/players/:id
       def show
-        data = cache_response("players/#{@player.id}", expires_in: 5.minutes) do
-          { player: PlayerSerializer.render_as_hash(@player) }
+        view = financial_access? ? :with_contract : :default
+        cache_key = "players/#{@player.id}/#{financial_access? ? 'financial' : 'standard'}"
+        data = cache_response(cache_key, expires_in: 5.minutes) do
+          { player: PlayerSerializer.render_as_hash(@player, root: :player, view: view) }
         end
         render_success(data)
       end
@@ -372,6 +378,10 @@ module Players
 
       private
 
+      def financial_access?
+        current_user.role.in?(%w[owner admin manager])
+      end
+
       def set_player
         @player = organization_scoped(Player).find(params[:id])
       end
@@ -382,7 +392,6 @@ module Players
         params.require(:player).permit(
           :summoner_name, :real_name, :professional_name, :role, :region, :status, :jersey_number,
           :birth_date, :country, :nationality,
-          :contract_start_date, :contract_end_date,
           :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
           :solo_queue_wins, :solo_queue_losses,
           :flex_queue_tier, :flex_queue_rank, :flex_queue_lp,

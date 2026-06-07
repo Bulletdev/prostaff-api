@@ -1,0 +1,28 @@
+PROSTAFF — Alerta de Contrato
+========================================
+
+Jogador:      <%= @player.summoner_name %><% if @player.role.present? %> (<%= @player.role.upcase %>)<% end %>
+Organização:  <%= @organization.name %>
+Vencimento:   <%= @end_date %> (<%= @days %> dias restantes)
+
+Detalhes do contrato:
+  Tipo:    <%= @contract.contract_type.capitalize %>
+  Salário: <%= @base_salary %>
+  Status:  <%= @contract.status.capitalize %>
+
+<% if @days <= 7 %>
+ATENÇÃO — Prazo crítico. Tome uma decisão imediatamente: renove ou formalize
+a rescisão antes do vencimento para evitar pendências contratuais.
+<% elsif @days <= 14 %>
+Atenção: prazo crítico. Providencie a renovação ou rescisão o quanto antes.
+<% elsif @days <= 30 %>
+Inicie as tratativas de renovação para evitar a expiração automática do contrato.
+<% else %>
+Antecipação preventiva. Nenhuma ação urgente necessária ainda — monitore o vencimento.
+<% end %>
+
+Acesse o Manager Hub: <%= @frontend_url %>/manager
+
+----------------------------------------
+Alerta automático para threshold de <%= @days %> dias.
+© <%= Date.current.year %> ProStaff.gg — Não responda a este e-mail.
