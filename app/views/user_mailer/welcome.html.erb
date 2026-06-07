@@ -1,45 +1,74 @@
-<h2 style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#1a1a2e;">Bem-vindo ao ProStaff!</h2>
+<% content_for :preheader do %>
+  Sua conta ProStaff está pronta. Acesse a plataforma de gestão de esports.
+<% end %>
 
-<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Ola, <strong><%= @user.full_name || 'jogador' %></strong>,</p>
+<% content_for :category_bar do %>
+  &#9670; Bem-vindo &middot; Conta Criada
+<% end %>
 
-<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Sua conta esta pronta. Bem-vindo a plataforma de gestao de times de esports mais completa para League of Legends.</p>
+<div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">
+  Acesso liberado
+</div>
 
-<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Com o ProStaff voce pode:</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#FFFFFF;margin:0 0 6px;line-height:1.6;font-weight:500;">
+  Olá, <strong style="color:#C89B3C;"><%= @user.full_name || 'jogador' %></strong>.
+</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#bcc4cf;margin:0 0 24px;line-height:1.6;">
+  Sua conta está pronta. Bem-vindo à plataforma de gestão de times de esports mais completa para League of Legends.
+</p>
 
-<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+<!-- Features card -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0E1A;border:1px solid rgba(200,155,60,0.5);margin-bottom:28px;">
   <tr>
-    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
-      &bull;&nbsp; Gerenciar jogadores, estatisticas e performance individual
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
-      &bull;&nbsp; Acompanhar historico de partidas e dados da Riot API
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
-      &bull;&nbsp; Revisar VODs com anotacoes em timestamps
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
-      &bull;&nbsp; Fazer scouting de talentos e acompanhar prospects
+    <td style="padding:22px 26px;">
+      <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Com o ProStaff você pode</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> Gerenciar jogadores, estatísticas e performance individual
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> Acompanhar histórico de partidas e dados da Riot API
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> Revisar VODs com anotações em timestamps
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> Fazer scouting de talentos e acompanhar prospects
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
 </table>
 
-<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+<!-- CTA button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
   <tr>
-    <td>
+    <td align="center">
+      <!--[if mso]>
+      <v:rect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+        href="<%= @frontend_url %>" style="height:46px;v-text-anchor:middle;width:220px;" stroke="t" strokecolor="#C89B3C" fillcolor="#C89B3C">
+        <w:anchorlock/>
+        <center style="color:#0A0E1A;font-family:Verdana,sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;">ACESSAR PROSTAFF</center>
+      </v:rect>
+      <![endif]-->
+      <!--[if !mso]><!-->
       <a href="<%= @frontend_url %>" <%# nosemgrep: ruby.rails.security.audit.xss.templates.var-in-href.var-in-href %>
-         style="display:inline-block;padding:13px 28px;background-color:#e53e3e;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;border-radius:4px;">
+         style="background-color:#C89B3C;color:#0A0E1A;display:inline-block;font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:12px;font-weight:700;line-height:1;padding:16px 38px;text-decoration:none;letter-spacing:2px;text-transform:uppercase;border:1px solid #C89B3C;">
         Acessar ProStaff
       </a>
+      <!--<![endif]-->
     </td>
   </tr>
 </table>
 
-<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Qualquer duvida, entre em contato com <a href="mailto:hello@prostaff.gg" style="color:#e53e3e;text-decoration:none;">hello@prostaff.gg</a>.</p>
-
-<p style="margin:16px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Equipe ProStaff</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:rgba(188,196,207,0.6);margin:0;text-align:center;">
+  Dúvidas? <a href="mailto:hello@prostaff.gg" style="color:#C89B3C;text-decoration:none;">hello@prostaff.gg</a>
+</p>
