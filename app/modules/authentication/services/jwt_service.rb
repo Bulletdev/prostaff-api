@@ -55,21 +55,30 @@ class JwtService
     end
 
     # Generates both access and refresh tokens for a player (individual access)
+    #
+    # The refresh token JTI is pre-generated and embedded in the access token as
+    # +linked_refresh_jti+, allowing the logout endpoint to invalidate both tokens
+    # using only the access token from the Authorization header.
+    #
     # @param player [Player] The player to generate tokens for
     # @return [Hash] Contains access_token, refresh_token, expires_in, and token_type
     def generate_player_tokens(player)
+      refresh_jti = SecureRandom.uuid
+
       access_payload = {
         entity_type: 'player',
         player_id: player.id,
         organization_id: player.organization_id,
-        type: 'access'
+        type: 'access',
+        linked_refresh_jti: refresh_jti
       }
 
       refresh_payload = {
         entity_type: 'player',
         player_id: player.id,
         organization_id: player.organization_id,
-        type: 'refresh'
+        type: 'refresh',
+        jti: refresh_jti
       }
 
       {
@@ -81,21 +90,30 @@ class JwtService
     end
 
     # Generates both access and refresh tokens for a user
+    #
+    # The refresh token JTI is pre-generated and embedded in the access token as
+    # +linked_refresh_jti+, allowing the logout endpoint to invalidate both tokens
+    # using only the access token from the Authorization header.
+    #
     # @param user [User] The user to generate tokens for
     # @return [Hash] Contains access_token, refresh_token, expires_in, and token_type
     def generate_tokens(user)
+      refresh_jti = SecureRandom.uuid
+
       access_payload = {
         user_id: user.id,
         organization_id: user.organization_id,
         role: user.role,
         email: user.email,
-        type: 'access'
+        type: 'access',
+        linked_refresh_jti: refresh_jti
       }
 
       refresh_payload = {
         user_id: user.id,
         organization_id: user.organization_id,
-        type: 'refresh'
+        type: 'refresh',
+        jti: refresh_jti
       }
 
       {
@@ -104,6 +122,24 @@ class JwtService
         expires_in: EXPIRATION_HOURS.hours.to_i,
         token_type: 'Bearer'
       }
+    end
+
+    # Decodes a JWT token without checking the blacklist
+    #
+    # Used exclusively by logout to read the +linked_refresh_jti+ from an access
+    # token that has already been blacklisted in the same request. Calling the
+    # regular +decode+ after blacklisting would raise +TokenRevokedError+.
+    #
+    # @param token [String] The JWT token to decode
+    # @return [HashWithIndifferentAccess] The decoded payload
+    # @raise [TokenInvalidError, TokenExpiredError]
+    def decode_without_blacklist_check(token)
+      decoded = JWT.decode(token, SECRET_KEY, true, { algorithm: 'HS256' })
+      HashWithIndifferentAccess.new(decoded[0])
+    rescue JWT::ExpiredSignature
+      raise TokenExpiredError, 'Token has expired'
+    rescue JWT::DecodeError => e
+      raise TokenInvalidError, "Invalid token: #{e.message}"
     end
 
     # Refreshes the access token using a valid refresh token

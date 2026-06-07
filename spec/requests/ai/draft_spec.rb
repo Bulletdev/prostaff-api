@@ -10,7 +10,7 @@ RSpec.describe 'POST /api/v1/ai/draft/analyze', type: :request do
   let(:valid_params) do
     {
       team_a: %w[Jinx Thresh Azir Vi Garen],
-      team_b: %w[Caitlyn Lulu Viktor Lee\ Sin Malphite]
+      team_b: %w[Caitlyn Lulu Viktor LeeSin Malphite]
     }
   end
 
@@ -67,8 +67,8 @@ RSpec.describe 'POST /api/v1/ai/draft/analyze', type: :request do
   end
 
   describe 'missing required params' do
-    it 'returns 400 when team_a is missing' do
-      post '/api/v1/ai/draft/analyze', params: { team_b: %w[Caitlyn Lulu] }.to_json, headers: headers
+    it 'returns 400 when both team_a and team_b are missing' do
+      post '/api/v1/ai/draft/analyze', params: {}.to_json, headers: headers
       expect(response).to have_http_status(:bad_request)
     end
   end

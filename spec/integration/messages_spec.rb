@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'Messages API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
+  let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
   # ---------------------------------------------------------------------------
   # Messages
@@ -70,7 +70,7 @@ RSpec.describe 'Messages API', type: :request do
       response '200', 'message deleted' do
         schema type: :object,
                properties: { message: { type: :string } }
-        let(:id) { create(:message, organization: organization, user: user).id }
+        let(:id) { create(:message, organization: organization, sender: user).id }
         run_test!
       end
 

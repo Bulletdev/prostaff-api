@@ -142,11 +142,13 @@ module Inhouses
         inhouses = inhouses.page(page).per(per_page)
 
         render_success(
-          inhouses: inhouses.map { |i| serialize_inhouse(i) },
-          meta: {
-            current_page: inhouses.current_page,
-            total_pages: inhouses.total_pages,
-            total_count: inhouses.total_count
+          {
+            inhouses: inhouses.map { |i| serialize_inhouse(i) },
+            meta: {
+              current_page: inhouses.current_page,
+              total_pages: inhouses.total_pages,
+              total_count: inhouses.total_count
+            }
           }
         )
       end

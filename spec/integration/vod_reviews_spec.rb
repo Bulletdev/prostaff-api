@@ -5,7 +5,7 @@ require 'swagger_helper'
 RSpec.describe 'VOD Reviews API', type: :request do
   let(:organization) { create(:organization) }
   let(:user) { create(:user, :admin, organization: organization) }
-  let(:Authorization) { "Bearer #{JwtService.encode({ user_id: user.id })}" }
+  let(:Authorization) { "Bearer #{JwtService.generate_tokens(user)[:access_token]}" }
 
   path '/api/v1/vod-reviews' do
     get 'List all VOD reviews' do

@@ -18,48 +18,17 @@ module Admin
       before_action :set_player, only: %i[soft_delete restore enable_access disable_access transfer change_status]
 
       # GET /api/v1/admin/players
-      # Lists all players including soft-deleted ones
-      # Admins can see ALL players from ALL organizations
+      # Lists all players including soft-deleted ones.
+      # Super-admins (role=admin) see ALL organizations.
+      # Owners see only their own organization.
       def index
-        if current_user.admin? || current_user.owner?
-          # Bypass OrganizationScoped default_scope — admins see all orgs
-          base = Player.unscoped
-          scope = params[:include_deleted] == 'true' ? base : base.where(deleted_at: nil)
-        else
-          scope = params[:include_deleted] == 'true' ? Player.with_deleted : Player.all
-          scope = scope.where(organization: current_organization)
-        end
-
-        players = apply_filters(scope)
-        players = apply_sorting(players)
-
-        result = paginate(players)
-
-        # Summary — admins see global counts (bypass default_scope)
-        if current_user.admin? || current_user.owner?
-          all_players = Player.unscoped.where(deleted_at: nil)
-          deleted_players = Player.unscoped.where.not(deleted_at: nil)
-          summary = {
-            total: all_players.count,
-            active: all_players.where(status: 'active').count,
-            deleted: deleted_players.count,
-            with_access: all_players.where(player_access_enabled: true).count
-          }
-        else
-          summary_scope = Player.all
-          deleted_scope = Player.unscoped.where(organization: current_organization).where.not(deleted_at: nil)
-          summary = {
-            total: summary_scope.count,
-            active: summary_scope.where(status: 'active').count,
-            deleted: deleted_scope.count,
-            with_access: summary_scope.where(player_access_enabled: true).count
-          }
-        end
+        scope  = build_index_scope
+        result = paginate(apply_sorting(apply_filters(scope)))
 
         render_success({
                          players: PlayerSerializer.render_as_hash(result[:data]),
                          pagination: result[:pagination],
-                         summary: summary
+                         summary: build_summary
                        })
       end
 
@@ -304,6 +273,60 @@ module Admin
             to_org_id: new_organization_id
           }
         )
+      end
+
+      # Builds the base query scope for the index action.
+      #
+      # Super-admins (role=admin) bypass multi-tenancy and see every organization.
+      # Owners are org-level admins and are scoped to their own organization only.
+      #
+      # @return [ActiveRecord::Relation]
+      def build_index_scope
+        if current_user.admin?
+          base = Player.unscoped
+          params[:include_deleted] == 'true' ? base : base.where(deleted_at: nil)
+        else
+          base = params[:include_deleted] == 'true' ? Player.with_deleted : Player.all
+          base.where(organization: current_organization)
+        end
+      end
+
+      # Builds summary counts for the index response.
+      #
+      # Super-admins receive global counts across all organizations.
+      # Owners receive counts scoped to their own organization.
+      #
+      # @return [Hash]
+      def build_summary
+        if current_user.admin?
+          build_global_summary
+        else
+          build_org_summary
+        end
+      end
+
+      # @return [Hash]
+      def build_global_summary
+        all_players     = Player.unscoped.where(deleted_at: nil)
+        deleted_players = Player.unscoped.where.not(deleted_at: nil)
+        {
+          total: all_players.count,
+          active: all_players.where(status: 'active').count,
+          deleted: deleted_players.count,
+          with_access: all_players.where(player_access_enabled: true).count
+        }
+      end
+
+      # @return [Hash]
+      def build_org_summary
+        base         = Player.all
+        deleted_base = Player.unscoped.where(organization: current_organization).where.not(deleted_at: nil)
+        {
+          total: base.count,
+          active: base.where(status: 'active').count,
+          deleted: deleted_base.count,
+          with_access: base.where(player_access_enabled: true).count
+        }
       end
 
       def require_admin_access

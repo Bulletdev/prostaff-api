@@ -84,7 +84,7 @@ RSpec.describe 'Internal Organizations', type: :request do
 
       it 'downgrades the organization to tier_3_amateur' do
         patch "/internal/organizations/by_user/#{user.id}/tier",
-              params: { tier: 'tier_3_amateur', subscription_plan: 'free', subscription_status: 'cancelled' }.to_json,
+              params: { tier: 'tier_3_amateur', subscription_plan: 'free', subscription_status: 'inactive' }.to_json,
               headers: auth_headers
 
         expect(response).to have_http_status(:ok)
@@ -92,7 +92,7 @@ RSpec.describe 'Internal Organizations', type: :request do
         org = organization.reload
         expect(org.tier).to eq('tier_3_amateur')
         expect(org.subscription_plan).to eq('free')
-        expect(org.subscription_status).to eq('cancelled')
+        expect(org.subscription_status).to eq('inactive')
       end
     end
 

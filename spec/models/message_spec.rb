@@ -4,9 +4,10 @@ require 'rails_helper'
 
 RSpec.describe Message, type: :model do
   describe 'associations' do
-    it { should belong_to(:user) }
+    # user_id is stored as a bare UUID column (FK was removed to support both
+    # User and Player senders). Only the organization association is an AR
+    # belongs_to.
     it { should belong_to(:organization) }
-    it { should belong_to(:recipient).class_name('User').optional }
   end
 
   describe 'validations' do
@@ -17,8 +18,8 @@ RSpec.describe Message, type: :model do
   describe 'scopes' do
     let(:org)  { create(:organization) }
     let(:user) { create(:user, organization: org) }
-    let!(:active_msg)  { create(:message, organization: org, user: user, deleted: false) }
-    let!(:deleted_msg) { create(:message, organization: org, user: user, deleted: true, deleted_at: Time.current) }
+    let!(:active_msg)  { create(:message, organization: org, user_id: user.id, deleted: false) }
+    let!(:deleted_msg) { create(:message, organization: org, user_id: user.id, deleted: true, deleted_at: Time.current) }
 
     describe '.active' do
       it 'returns only non-deleted messages' do
@@ -28,9 +29,9 @@ RSpec.describe Message, type: :model do
     end
 
     describe '.for_organization' do
-      let(:other_org) { create(:organization) }
+      let(:other_org)  { create(:organization) }
       let(:other_user) { create(:user, organization: other_org) }
-      let!(:other_msg) { create(:message, organization: other_org, user: other_user) }
+      let!(:other_msg) { create(:message, organization: other_org, user_id: other_user.id) }
 
       it 'returns only messages of the given org' do
         results = Message.for_organization(org.id)
@@ -42,7 +43,7 @@ RSpec.describe Message, type: :model do
 
   describe '.dm_stream_key' do
     it 'produces the same key regardless of user order' do
-      org = create(:organization)
+      org    = create(:organization)
       user_a = create(:user, organization: org)
       user_b = create(:user, organization: org)
       key_ab = Message.dm_stream_key(user_a.id, user_b.id, org.id)
@@ -51,10 +52,10 @@ RSpec.describe Message, type: :model do
     end
 
     it 'includes the org_id in the key' do
-      org = create(:organization)
+      org    = create(:organization)
       user_a = create(:user, organization: org)
       user_b = create(:user, organization: org)
-      key = Message.dm_stream_key(user_a.id, user_b.id, org.id)
+      key    = Message.dm_stream_key(user_a.id, user_b.id, org.id)
       expect(key).to include(org.id.to_s)
     end
   end
@@ -62,7 +63,7 @@ RSpec.describe Message, type: :model do
   describe '#soft_delete!' do
     let(:org)  { create(:organization) }
     let(:user) { create(:user, organization: org) }
-    let(:msg)  { create(:message, organization: org, user: user) }
+    let(:msg)  { create(:message, organization: org, user_id: user.id) }
 
     it 'sets deleted to true' do
       msg.soft_delete!
@@ -76,20 +77,28 @@ RSpec.describe Message, type: :model do
   end
 
   describe 'cross-org recipient validation' do
-    let(:org_a)   { create(:organization) }
-    let(:org_b)   { create(:organization) }
-    let(:user_a)  { create(:user, organization: org_a) }
-    let(:user_b)  { create(:user, organization: org_b) }
+    let(:org_a)  { create(:organization) }
+    let(:org_b)  { create(:organization) }
+    let(:user_a) { create(:user, organization: org_a) }
+    let(:user_b) { create(:user, organization: org_b) }
 
     it 'is invalid when recipient belongs to a different org' do
-      msg = build(:message, organization: org_a, user: user_a, recipient: user_b)
+      msg = build(:message,
+                  organization: org_a,
+                  user_id: user_a.id,
+                  recipient_id: user_b.id,
+                  recipient_type: 'User')
       expect(msg).not_to be_valid
       expect(msg.errors[:recipient]).to be_present
     end
 
     it 'is valid when recipient belongs to the same org' do
       user_b_same_org = create(:user, organization: org_a)
-      msg = build(:message, organization: org_a, user: user_a, recipient: user_b_same_org)
+      msg = build(:message,
+                  organization: org_a,
+                  user_id: user_a.id,
+                  recipient_id: user_b_same_org.id,
+                  recipient_type: 'User')
       expect(msg).to be_valid
     end
   end
