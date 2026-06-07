@@ -7,7 +7,6 @@ class PlayerSerializer < Blueprinter::Base
 
   fields :summoner_name, :real_name, :role, :status, :line,
          :jersey_number, :birth_date, :country,
-         :contract_start_date, :contract_end_date,
          :solo_queue_tier, :solo_queue_rank, :solo_queue_lp,
          :solo_queue_wins, :solo_queue_losses,
          :flex_queue_tier, :flex_queue_rank, :flex_queue_lp,
@@ -60,4 +59,10 @@ class PlayerSerializer < Blueprinter::Base
   end
 
   association :organization, blueprint: OrganizationSerializer
+
+  view :with_contract do
+    association :active_contract,
+                blueprint: Manager::ContractSerializer,
+                view: :summary
+  end
 end

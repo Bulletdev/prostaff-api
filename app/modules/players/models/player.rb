@@ -16,8 +16,6 @@
 # @attr [String] solo_queue_tier Current ranked tier (IRON to CHALLENGER)
 # @attr [String] solo_queue_rank Current ranked division (I to IV)
 # @attr [Integer] solo_queue_lp Current League Points in ranked
-# @attr [Date] contract_start_date Contract start date
-# @attr [Date] contract_end_date Contract end date
 #
 # @example Creating a new player
 #   player = Player.create!(
@@ -46,6 +44,11 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   has_many :team_goals, dependent: :destroy
   has_many :vod_timestamps, foreign_key: 'target_player_id', dependent: :nullify
   has_many :password_reset_tokens, dependent: :destroy
+  has_one :active_contract,
+          -> { where(status: 'active') },
+          class_name: 'Contract',
+          foreign_key: :player_id,
+          inverse_of: :player
 
   # Virtual attribute for the player password — has_secure_password is not used;
   # hashing is handled by Authentication::PasswordHasher.
@@ -63,10 +66,28 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
     )
   end
 
+  # Reject values containing HTML injection patterns.
+  # Denylist (not allowlist) to accommodate international summoner names,
+  # unicode characters, e-sports tags (#, |, _), and CJK scripts.
+  # Covers: HTML tags, javascript: protocol, event handlers, template delimiters.
+  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i.freeze
+
   # Validations
   validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
-  validates :summoner_name, presence: true, length: { maximum: 100 }
-  validates :real_name, length: { maximum: 255 }
+  validates :summoner_name, presence: true, length: { maximum: 100 },
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }
+  validates :real_name, length: { maximum: 255 },
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :professional_name,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :notes,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :twitter_handle,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :twitch_channel,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :instagram_handle,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
   validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
   validates :country, length: { maximum: 2 }
   validates :status, inclusion: { in: Constants::Player::STATUSES }
@@ -99,9 +120,9 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   scope :by_status, ->(status) { where(status: status) }
   scope :by_line, ->(line) { where(line: line) }
   scope :active, -> { where(status: 'active') }
-  scope :with_contracts, -> { where.not(contract_start_date: nil) }
+  scope :with_contracts, -> { joins(:active_contract) }
   scope :contracts_expiring_soon, lambda { |days = 30|
-    where(contract_end_date: Date.current..(Date.current + days.days))
+    joins(:active_contract).where(contracts: { end_date: (Date.current)..(Date.current + days.days) })
   }
   scope :by_tier, ->(tier) { where(solo_queue_tier: tier) }
   scope :ordered_by_role, lambda {
@@ -165,15 +186,9 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   end
 
   def contract_status
-    return 'No contract' if contract_start_date.blank? || contract_end_date.blank?
+    return 'No contract' unless active_contract
 
-    if contract_end_date < Date.current
-      'Expired'
-    elsif contract_end_date <= Date.current + 30.days
-      'Expiring soon'
-    else
-      'Active'
-    end
+    active_contract.days_remaining <= 30 ? 'Expiring soon' : 'Active'
   end
 
   def age

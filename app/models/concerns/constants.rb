@@ -36,14 +36,15 @@ module Constants
 
   # User roles
   module User
-    ROLES = %w[owner admin coach analyst viewer].freeze
+    ROLES = %w[owner admin manager coach analyst viewer].freeze
 
     ROLE_NAMES = {
-      'owner' => 'Owner',
-      'admin' => 'Administrator',
-      'coach' => 'Coach',
+      'owner'   => 'Owner',
+      'admin'   => 'Administrator',
+      'manager' => 'Team Manager',
+      'coach'   => 'Coach',
       'analyst' => 'Analyst',
-      'viewer' => 'Viewer'
+      'viewer'  => 'Viewer'
     }.freeze
   end
 

@@ -25,7 +25,7 @@ class VodReviewPolicy < ApplicationPolicy
   # Scope class for filtering resources based on authorization rules
   class Scope < Scope
     def resolve
-      if %w[analyst coach admin owner].include?(user.role)
+      if %w[analyst coach manager admin owner].include?(user.role)
         scope.where(organization: user.organization)
       else
         scope.none

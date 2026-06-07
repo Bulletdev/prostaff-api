@@ -464,6 +464,46 @@ Rails.application.routes.draw do
             as: 'meta_champion'
       end
 
+      # Manager Module — Contract Hub (M2) + Budget Tracker (M3)
+      # Access restricted to owner, admin, and manager roles.
+      namespace :manager do
+        resources :contracts, except: %i[new edit],
+                              controller: '/manager/controllers/contracts' do
+          collection do
+            get :expiring
+            get :dashboard
+          end
+          member do
+            patch :activate
+            patch :terminate
+            post  :renew
+          end
+          resources :bonuses, except: %i[new edit],
+                              controller: '/manager/controllers/contract_bonuses'
+        end
+
+        resources :budgets, except: %i[new edit],
+                            controller: '/manager/controllers/budgets' do
+          member do
+            get :summary
+          end
+        end
+
+        resources :expenses, except: %i[new edit],
+                             controller: '/manager/controllers/expenses' do
+          collection do
+            get :report
+            get :salary_summary
+            get :export
+          end
+          member do
+            post :approve
+            post :mark_paid
+            post :reject
+          end
+        end
+      end
+
       # Contact form (public, no auth)
       post 'contact', to: 'contact#create'
 

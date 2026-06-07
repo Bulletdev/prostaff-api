@@ -30,6 +30,7 @@ Metrics/BlockLength:
     - 'db/migrate/*'
     - 'db/seeds.rb'
     - 'spec/factories/**/*'
+    - 'spec/**/*_spec.rb'
   Max: 50
 
 Metrics/MethodLength:

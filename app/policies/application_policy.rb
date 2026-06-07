@@ -63,12 +63,16 @@ class ApplicationPolicy
     %w[admin owner].include?(user.role)
   end
 
+  def manager?
+    %w[manager admin owner].include?(user.role)
+  end
+
   def coach?
-    %w[coach admin owner].include?(user.role)
+    %w[coach manager admin owner].include?(user.role)
   end
 
   def analyst?
-    %w[analyst coach admin owner].include?(user.role)
+    %w[analyst coach manager admin owner].include?(user.role)
   end
 
   def same_organization?

@@ -94,3 +94,11 @@
     class: StatusSnapshotJob
     queue: default
     description: 'Record component health snapshots for uptime history'
+
+  # Daily contract expiry alerts at 8 AM UTC.
+  # Flags contracts approaching expiry at 90/60/30/14/7-day thresholds.
+  contract_expiry_alerts:
+    cron: '0 8 * * *'
+    class: Manager::ContractExpiryAlertJob
+    queue: default
+    description: 'Daily contract expiry alerts'

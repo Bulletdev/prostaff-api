@@ -42,7 +42,7 @@ class ScoutingTargetPolicy < ApplicationPolicy
   # Since targets are global, we return all targets for authorized users
   class Scope < Scope
     def resolve
-      if %w[coach admin owner].include?(user.role)
+      if %w[coach manager admin owner].include?(user.role)
         # Return ALL global scouting targets (no org filter)
         scope.all
       else

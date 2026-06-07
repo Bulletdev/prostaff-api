@@ -1,0 +1,259 @@
+<%
+  urgency_msg = if @days <= 7
+    "Prazo crítico. Tome uma decisão imediatamente — renove ou formalize a rescisão antes do vencimento."
+  elsif @days <= 14
+    "Prazo crítico. Providencie a renovação ou rescisão o quanto antes."
+  elsif @days <= 30
+    "Inicie as tratativas de renovação para evitar a expiração automática do contrato."
+  else
+    "Antecipação preventiva. Nenhuma ação urgente necessária ainda — monitore o vencimento."
+  end
+  callout_color  = @days <= 30 ? '#FF4444' : '#C89B3C'
+  callout_bg     = @days <= 30 ? 'rgba(255,68,68,0.08)' : 'rgba(200,155,60,0.08)'
+  callout_text   = @days <= 30 ? '#FF6B6B' : 'rgba(200,155,60,0.8)'
+  expiry_color   = @days <= 30 ? '#FF4444' : '#C89B3C'
+%>
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <title>ProStaff &mdash; Alerta de Contrato</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0A0E1A;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#0A0E1A;">
+    Contrato de <%= @player.summoner_name %> expira em <%= @days %> dias &mdash; <%= @end_date %>. Renovação ou rescisão recomendada.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0E1A;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+
+        <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+          <!-- HEADER -->
+          <tr>
+            <td style="background-color:#0C223F;background:linear-gradient(135deg,#0C223F 0%,#0A1929 100%);border:1px solid #C89B3C;border-bottom:none;padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="width:14px;height:14px;border-top:2px solid #C89B3C;border-left:2px solid #C89B3C;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:14px;height:14px;border-top:2px solid #C89B3C;border-right:2px solid #C89B3C;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+                <tr>
+                  <td colspan="3" align="center" style="padding:18px 48px 22px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td style="vertical-align:middle;padding-right:14px;">
+                          <img src="https://api.prostaff.gg/email/logo-icon.png"
+                               alt="ProStaff"
+                               width="52" height="52"
+                               style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+                        </td>
+                        <td style="vertical-align:middle;">
+                          <img src="https://api.prostaff.gg/email/logo-wordmark.png"
+                               alt="ProStaff.gg"
+                               width="170" height="55"
+                               style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+                        </td>
+                      </tr>
+                    </table>
+                    <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:rgba(200,155,60,0.5);letter-spacing:4px;text-transform:uppercase;margin-top:10px;">
+                      Esports Management Platform
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="width:14px;height:14px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:14px;height:14px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- gold divider -->
+          <tr>
+            <td style="height:2px;font-size:0;line-height:0;background-color:#C89B3C;background:linear-gradient(to right,#C89B3C 0%,rgba(200,155,60,0.12) 60%,rgba(10,14,26,0) 100%);">&nbsp;</td>
+          </tr>
+
+          <!-- CATEGORY BAR -->
+          <tr>
+            <td style="background-color:#0A1929;border-left:1px solid #C89B3C;border-right:1px solid #C89B3C;padding:9px 48px;">
+              <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:#0596AA;letter-spacing:3px;text-transform:uppercase;font-weight:700;">
+                &#9670; Alerta de Contrato &middot; Threshold <%= @days %>d
+              </span>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="background-color:#0F1823;border-left:1px solid #C89B3C;border-right:1px solid #C89B3C;padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="width:3px;background-color:#C89B3C;background:linear-gradient(to bottom,#C89B3C 0%,rgba(200,155,60,0.12) 60%,rgba(15,24,35,0) 100%);font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="padding:32px 44px 28px;">
+
+                    <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">
+                      Organização &mdash; <%= @organization.name %>
+                    </div>
+
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#FFFFFF;margin:0 0 6px;line-height:1.6;font-weight:500;">
+                      O contrato de <strong style="color:#C89B3C;"><%= @player.summoner_name %></strong> vence em
+                      <strong style="color:<%= expiry_color %>;"><%= @days %> dias</strong>.
+                    </p>
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;margin:0 0 28px;line-height:1.6;">
+                      Vencimento em <%= @end_date %>. Revise a renovação ou a rescisão antes do prazo.
+                    </p>
+
+                    <!-- Details card -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0E1A;border:1px solid rgba(200,155,60,0.5);margin-bottom:28px;">
+                      <tr>
+                        <td style="padding:22px 26px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                            <tr>
+                              <td style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;padding-bottom:5px;">Jogador</td>
+                            </tr>
+                            <tr>
+                              <td style="padding-bottom:18px;border-bottom:1px solid rgba(200,155,60,0.18);">
+                                <span style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#FFFFFF;font-weight:700;"><%= @player.summoner_name %></span>
+                                <% if @player.role.present? %>
+                                <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:#0A0E1A;background-color:#C89B3C;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;margin-left:8px;"><%= @player.role.upcase %></span>
+                                <% end %>
+                              </td>
+                            </tr>
+
+                            <tr><td style="height:16px;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+                            <tr>
+                              <td>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                  <tr>
+                                    <td width="50%" style="vertical-align:top;padding-right:14px;">
+                                      <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;padding-bottom:5px;">Tipo</div>
+                                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#FFFFFF;font-weight:600;"><%= @contract.contract_type.capitalize %></div>
+                                    </td>
+                                    <td width="50%" style="vertical-align:top;">
+                                      <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;padding-bottom:5px;">Status</div>
+                                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#00D364;font-weight:600;"><%= @contract.status.capitalize %></div>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+
+                            <tr><td style="height:18px;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+                            <tr>
+                              <td style="padding-top:16px;border-top:1px solid rgba(200,155,60,0.18);">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                  <tr>
+                                    <td width="50%" style="vertical-align:top;padding-right:14px;">
+                                      <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;padding-bottom:5px;">Salário</div>
+                                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#FFFFFF;font-weight:700;"><%= @base_salary %></div>
+                                    </td>
+                                    <td width="50%" style="vertical-align:top;">
+                                      <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;padding-bottom:5px;">Vencimento</div>
+                                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:<%= expiry_color %>;font-weight:700;"><%= @end_date %></div>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Urgency callout -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:<%= callout_bg %>;margin-bottom:30px;">
+                      <tr>
+                        <td style="width:3px;background-color:<%= callout_color %>;font-size:0;line-height:0;">&nbsp;</td>
+                        <td style="padding:14px 18px;">
+                          <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:<%= callout_text %>;font-weight:600;margin:0;line-height:1.5;">
+                            <%= urgency_msg %>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- CTA -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center">
+                          <!--[if mso]>
+                          <v:rect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+                            href="<%= @frontend_url %>/manager" style="height:46px;v-text-anchor:middle;width:240px;" stroke="t" strokecolor="#C89B3C" fillcolor="#C89B3C">
+                            <w:anchorlock/>
+                            <center style="color:#0A0E1A;font-family:Verdana,sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;">VER NO MANAGER HUB</center>
+                          </v:rect>
+                          <![endif]-->
+                          <!--[if !mso]><!-->
+                          <a href="<%= @frontend_url %>/manager"
+                             style="background-color:#C89B3C;color:#0A0E1A;display:inline-block;font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:12px;font-weight:700;line-height:1;padding:16px 38px;text-decoration:none;letter-spacing:2px;text-transform:uppercase;border:1px solid #C89B3C;">
+                            Ver no Manager Hub
+                          </a>
+                          <!--<![endif]-->
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#0C223F;background:linear-gradient(to right,#0C223F,#0A0E1A);border:1px solid #C89B3C;border-top:none;padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:18px 48px 6px;">
+                    <img src="https://api.prostaff.gg/email/logo-icon.png"
+                         alt="ProStaff"
+                         width="20" height="20"
+                         style="display:inline-block;border:0;opacity:0.5;vertical-align:middle;">
+                    <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;color:rgba(200,155,60,0.6);vertical-align:middle;margin-left:6px;">PROSTAFF.GG</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:0 48px 4px;">
+                    <span style="color:#C89B3C;font-size:7px;">&#9670;</span>
+                    <span style="display:inline-block;width:120px;height:1px;background-color:rgba(200,155,60,0.3);vertical-align:middle;margin:0 6px;">&nbsp;</span>
+                    <span style="color:#C89B3C;font-size:7px;">&#9670;</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:6px 48px 20px;">
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:rgba(188,196,207,0.7);margin:0 0 8px;line-height:1.6;">
+                      Alerta gerado automaticamente para o threshold de <strong style="color:rgba(200,155,60,0.7);"><%= @days %> dias</strong>.<br>
+                      Ajuste as notificações nas preferências da sua organização.
+                    </p>
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:rgba(188,196,207,0.4);margin:0;letter-spacing:0.5px;">
+                      &copy; <%= Date.current.year %> ProStaff.gg &nbsp;&middot;&nbsp; Plataforma de gestão de esports &nbsp;&middot;&nbsp; Mensagem automática, não responda
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

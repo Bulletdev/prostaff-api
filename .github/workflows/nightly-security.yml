@@ -190,7 +190,7 @@ jobs:
         with:
           script: |
             const date = new Date().toISOString().split('T')[0];
-            const title = `⚠️ Nightly Security Audit Failed — ${date}`;
+            const title = `Security Audit Failed — ${date}`;
             const body = [
               `## Nightly Security Audit — ${date}`,
               '',
@@ -202,29 +202,37 @@ jobs:
               `[View run artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
             ].join('\n');
 
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'security,automated',
-            });
+            try {
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'security,automated',
+              });
 
-            const existing = issues.find(i => i.title.includes('Nightly Security Audit Failed'));
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                body: `## Update — ${new Date().toISOString()}\n\n${body}`,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-                labels: ['security', 'automated', 'critical'],
-              });
+              const existing = issues.find(i => i.title.includes('Security Audit Failed'));
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `## Update — ${new Date().toISOString()}\n\n${body}`,
+                });
+                console.log(`Updated existing issue #${existing.number}`);
+              } else {
+                const { data: issue } = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels: ['security', 'automated', 'critical'],
+                });
+                console.log(`Created issue #${issue.number}`);
+              }
+            } catch (err) {
+              // Issues may be disabled in this repository — log and continue.
+              // Findings are still available in the job summary and uploaded artifacts.
+              core.warning(`Could not create/update GitHub Issue: ${err.message}`);
             }
 
       - name: Fail on Critical Issues
