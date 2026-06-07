@@ -1,47 +1,147 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
   <title>ProStaff</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
-    <tr>
-      <td align="center" style="padding:24px 16px;">
+<body style="margin:0;padding:0;background-color:#0A0E1A;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
 
-        <%# Header %>
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+<% if content_for?(:preheader) %>
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#0A0E1A;">
+    <%= yield :preheader %>
+  </div>
+<% end %>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0E1A;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+
+        <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+          <!-- HEADER -->
           <tr>
-            <td style="background-color:#1a1a2e;padding:24px 32px;text-align:center;">
-              <span style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:bold;color:#ffffff;letter-spacing:1px;">
-                Pro<span style="color:#e53e3e;">Staff</span>
+            <td style="background-color:#0C223F;background:linear-gradient(135deg,#0C223F 0%,#0A1929 100%);border:1px solid #C89B3C;border-bottom:none;padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="width:14px;height:14px;border-top:2px solid #C89B3C;border-left:2px solid #C89B3C;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:14px;height:14px;border-top:2px solid #C89B3C;border-right:2px solid #C89B3C;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+                <tr>
+                  <td colspan="3" align="center" style="padding:18px 48px 22px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td style="vertical-align:middle;padding-right:14px;">
+                          <img src="https://api.prostaff.gg/email/logo-icon.png"
+                               alt="ProStaff"
+                               width="52" height="52"
+                               style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+                        </td>
+                        <td style="vertical-align:middle;">
+                          <img src="https://api.prostaff.gg/email/logo-wordmark.png"
+                               alt="ProStaff.gg"
+                               width="170" height="55"
+                               style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
+                        </td>
+                      </tr>
+                    </table>
+                    <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:rgba(200,155,60,0.5);letter-spacing:4px;text-transform:uppercase;margin-top:10px;">
+                      Esports Management Platform
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="width:14px;height:14px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:14px;height:14px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- gold divider -->
+          <tr>
+            <td style="height:2px;font-size:0;line-height:0;background-color:#C89B3C;background:linear-gradient(to right,#C89B3C 0%,rgba(200,155,60,0.12) 60%,rgba(10,14,26,0) 100%);">&nbsp;</td>
+          </tr>
+
+          <!-- CATEGORY BAR -->
+          <tr>
+            <td style="background-color:#0A1929;border-left:1px solid #C89B3C;border-right:1px solid #C89B3C;padding:9px 48px;">
+              <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:#0596AA;letter-spacing:3px;text-transform:uppercase;font-weight:700;">
+                <% if content_for?(:category_bar) %>
+                  <%= yield :category_bar %>
+                <% else %>
+                  &#9670; ProStaff
+                <% end %>
               </span>
             </td>
           </tr>
-        </table>
 
-        <%# Body %>
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;">
+          <!-- BODY -->
           <tr>
-            <td style="padding:36px 40px;color:#333333;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;">
-              <%= yield %>
+            <td style="background-color:#0F1823;border-left:1px solid #C89B3C;border-right:1px solid #C89B3C;padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="width:3px;background-color:#C89B3C;background:linear-gradient(to bottom,#C89B3C 0%,rgba(200,155,60,0.12) 60%,rgba(15,24,35,0) 100%);font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="padding:32px 44px 28px;">
+                    <%= yield %>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
-        </table>
 
-        <%# Footer %>
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-top:1px solid #e4e4e4;">
+          <!-- FOOTER -->
           <tr>
-            <td style="padding:20px 40px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#888888;line-height:1.6;">
-              <p style="margin:0 0 4px 0;">&copy; <%= Time.current.year %> ProStaff.gg. Todos os direitos reservados.</p>
-              <p style="margin:0;">Esta e uma mensagem automatica. Por favor, nao responda a este email.</p>
+            <td style="background-color:#0C223F;background:linear-gradient(to right,#0C223F,#0A0E1A);border:1px solid #C89B3C;border-top:none;padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:18px 48px 6px;">
+                    <img src="https://api.prostaff.gg/email/logo-icon.png"
+                         alt="ProStaff"
+                         width="20" height="20"
+                         style="display:inline-block;border:0;opacity:0.5;vertical-align:middle;">
+                    <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;color:rgba(200,155,60,0.6);vertical-align:middle;margin-left:6px;">PROSTAFF.GG</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:0 48px 4px;">
+                    <span style="color:#C89B3C;font-size:7px;">&#9670;</span>
+                    <span style="display:inline-block;width:120px;height:1px;background-color:rgba(200,155,60,0.3);vertical-align:middle;margin:0 6px;">&nbsp;</span>
+                    <span style="color:#C89B3C;font-size:7px;">&#9670;</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:6px 48px 20px;">
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:rgba(188,196,207,0.7);margin:0 0 8px;line-height:1.6;">
+                      <% if content_for?(:footer_note) %>
+                        <%= yield :footer_note %>
+                      <% else %>
+                        Mensagem gerada automaticamente pela plataforma ProStaff.
+                      <% end %>
+                    </p>
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:rgba(188,196,207,0.4);margin:0;letter-spacing:0.5px;">
+                      &copy; <%= Date.current.year %> ProStaff.gg &nbsp;&middot;&nbsp; Plataforma de gest&atilde;o de esports &nbsp;&middot;&nbsp; N&atilde;o responda a este e-mail
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
+
         </table>
+        <!--[if mso]></td></tr></table><![endif]-->
 
       </td>
     </tr>
   </table>
+
 </body>
 </html>

@@ -25,10 +25,7 @@ module Manager
       mail(
         to: recipients,
         subject: "[ProStaff] Contrato expirando em #{days} dias — #{@player.summoner_name}"
-      ) do |format|
-        format.html { render layout: false }
-        format.text
-      end
+      )
     end
 
     private

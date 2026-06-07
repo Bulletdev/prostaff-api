@@ -1,27 +1,42 @@
-<h2 style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#1a1a2e;">Nova mensagem de contato</h2>
+<% content_for :preheader do %>
+  Nova mensagem de contato de <%= @name %> — Assunto: <%= @subject %>
+<% end %>
 
-<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px 0;background-color:#f9f9f9;border:1px solid #e4e4e4;">
+<% content_for :category_bar do %>
+  &#9670; Contato &middot; Nova Mensagem
+<% end %>
+
+<div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">
+  Formulário de contato &middot; prostaff.gg
+</div>
+
+<!-- Sender card -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0E1A;border:1px solid rgba(200,155,60,0.5);margin-bottom:20px;">
   <tr>
-    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;border-bottom:1px solid #e4e4e4;">
-      <strong style="color:#333333;">De:</strong>&nbsp; <%= @name %> &lt;<%= @email %>&gt;
+    <td style="padding:16px 20px;border-bottom:1px solid rgba(200,155,60,0.18);">
+      <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px;">De</span>
+      <span style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#FFFFFF;font-weight:600;"><%= @name %></span>
+      <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#bcc4cf;margin-left:6px;">&lt;<%= @email %>&gt;</span>
     </td>
   </tr>
   <tr>
-    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;">
-      <strong style="color:#333333;">Assunto:</strong>&nbsp; <%= @subject %>
+    <td style="padding:16px 20px;">
+      <span style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px;">Assunto</span>
+      <span style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#FFFFFF;font-weight:600;"><%= @subject %></span>
     </td>
   </tr>
 </table>
 
-<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px 0;">
+<!-- Message body -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
   <tr>
-    <td style="padding:16px;background-color:#f9f9f9;border:1px solid #e4e4e4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;line-height:1.7;">
+    <td style="padding:18px 20px;background-color:#0A0E1A;border:1px solid rgba(200,155,60,0.3);font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#bcc4cf;line-height:1.7;">
       <%= simple_format(@message) %>
     </td>
   </tr>
 </table>
 
-<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#888888;">
-  Mensagem enviada via formulario de contato em prostaff.gg/contact.<br>
-  Responda diretamente a este email para responder a <%= @name %>.
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:rgba(188,196,207,0.4);margin:0;">
+  Mensagem enviada via formulário de contato em prostaff.gg/contact.<br>
+  Responda diretamente a este e-mail para responder a <strong style="color:rgba(188,196,207,0.6);"><%= @name %></strong>.
 </p>

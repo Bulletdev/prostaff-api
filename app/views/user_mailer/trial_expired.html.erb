@@ -1,42 +1,77 @@
-<h2 style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#1a1a2e;">Seu periodo de teste encerrou</h2>
+<% content_for :preheader do %>
+  O período de teste da <%= @organization&.name %> encerrou. Assine para continuar com acesso completo.
+<% end %>
 
-<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Ola, <strong><%= @user.full_name || 'usuario' %></strong>,</p>
+<% content_for :category_bar do %>
+  &#9670; Trial &middot; Período Encerrado
+<% end %>
 
-<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">O periodo de teste de 14 dias da organizacao <strong><%= @organization&.name %></strong> encerrou. O acesso a plataforma foi suspenso.</p>
+<div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:9px;color:rgba(255,68,68,0.7);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">
+  Acesso suspenso
+</div>
 
-<p style="margin:0 0 20px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Assine o ProStaff para continuar gerenciando seu time e acessar todos os recursos:</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#FFFFFF;margin:0 0 6px;line-height:1.6;font-weight:500;">
+  Olá, <strong style="color:#C89B3C;"><%= @user.full_name || 'usuário' %></strong>.
+</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#bcc4cf;margin:0 0 10px;line-height:1.6;">
+  O período de teste de 14 dias da organização <strong style="color:#FFFFFF;"><%= @organization&.name %></strong> encerrou.
+  O acesso à plataforma foi <strong style="color:#FF4444;">suspenso</strong>.
+</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#bcc4cf;margin:0 0 24px;line-height:1.6;">
+  Assine o ProStaff para continuar gerenciando seu time e acessar todos os recursos:
+</p>
 
-<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;width:100%;background-color:#f9f9f9;border:1px solid #e4e4e4;">
+<!-- Features list card -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0E1A;border:1px solid rgba(200,155,60,0.5);margin-bottom:28px;">
   <tr>
-    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;border-bottom:1px solid #e4e4e4;">
-      &bull;&nbsp; Estatisticas de jogadores e historico de partidas
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;border-bottom:1px solid #e4e4e4;">
-      &bull;&nbsp; VOD review com anotacoes
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:8px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;">
-      &bull;&nbsp; Scouting e analise de talentos
+    <td style="padding:22px 26px;">
+      <div style="font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:8px;color:rgba(200,155,60,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Recursos disponíveis na assinatura</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> Estatísticas de jogadores e histórico de partidas
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> VOD review com anotações em timestamps
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#bcc4cf;">
+            <span style="color:#C89B3C;margin-right:8px;">&#9670;</span> Scouting e análise de talentos
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
 </table>
 
-<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+<!-- CTA button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
   <tr>
-    <td>
+    <td align="center">
+      <!--[if mso]>
+      <v:rect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+        href="<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/billing" style="height:46px;v-text-anchor:middle;width:220px;" stroke="t" strokecolor="#C89B3C" fillcolor="#C89B3C">
+        <w:anchorlock/>
+        <center style="color:#0A0E1A;font-family:Verdana,sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;">ASSINAR PROSTAFF</center>
+      </v:rect>
+      <![endif]-->
+      <!--[if !mso]><!-->
       <a href="<%= ENV.fetch('FRONTEND_URL', 'https://prostaff.gg') %>/billing"
-         style="display:inline-block;padding:13px 28px;background-color:#e53e3e;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;border-radius:4px;">
+         style="background-color:#C89B3C;color:#0A0E1A;display:inline-block;font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:12px;font-weight:700;line-height:1;padding:16px 38px;text-decoration:none;letter-spacing:2px;text-transform:uppercase;border:1px solid #C89B3C;">
         Assinar ProStaff
       </a>
+      <!--<![endif]-->
     </td>
   </tr>
 </table>
 
-<p style="margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#888888;">Os dados da sua organizacao serao mantidos por 30 dias apos o encerramento do trial.</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:rgba(188,196,207,0.4);margin:0 0 16px;text-align:center;">
+  Os dados da sua organização serão mantidos por 30 dias após o encerramento do trial.
+</p>
 
-<p style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555555;">Duvidas? Entre em contato: <a href="mailto:hello@prostaff.gg" style="color:#e53e3e;text-decoration:none;">hello@prostaff.gg</a></p>
-
-<p style="margin:16px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#333333;">Equipe ProStaff</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:rgba(188,196,207,0.5);margin:0;text-align:center;">
+  Dúvidas? <a href="mailto:hello@prostaff.gg" style="color:#C89B3C;text-decoration:none;">hello@prostaff.gg</a>
+</p>
