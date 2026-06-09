@@ -1208,7 +1208,7 @@ This API is one service in the ProStaff ecosystem. The other services it integra
 |-----------------------------------------------------|------------------|-----------------------------------------------------------------------------------------------------------|
 | [prostaff-events](https://github.com/bulletdev/prostaff-events)        | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
 | [prostaff-riot-gateway](https://github.com/bulletdev/prostaff-gateway) | Go 1.23               | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker         |
-| [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)      | Python / FastAPI      | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
+|🔒 [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)      | Python / FastAPI      | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
 |🔒prostaff-ml                 | Python 3.11 / FastAPI | ML service — Champion2Vec + XGBoost pick recommendations (serves `POST /ai/recommend-pick`) |
 |🔒prostaff-analytics-hub  | Next.js 15 / vinext    | Frontend SPA — consumes API (also: https://prostaff.gg, https://scrims.lol)
 

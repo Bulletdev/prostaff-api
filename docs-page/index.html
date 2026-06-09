@@ -1,579 +1,1979 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProStaff API Docs</title>
-  <meta name="description" content="ProStaff API V1 reference documentation. Esports Team Management Platform.">
-  <link rel="icon" href="logo.png" type="image/png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProStaff API Docs</title>
+<meta name="description" content="ProStaff API V1 — Esports Team Management Platform reference documentation.">
+<link rel="icon" href="logo.png" type="image/png">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C89B3C;--gold-dim:rgba(200,155,60,0.5);--gold-faint:rgba(200,155,60,0.12);
+  --blue:#0C223F;--blue-dark:#0A1929;--bg:#0A0E1A;--card:#0F1823;
+  --teal:#0596AA;--text:rgba(255,255,255,0.85);--text-dim:rgba(255,255,255,0.45);
+  --green:#00D364;--red:#FF4444;--yellow:#F59E0B;
+  --border-color:rgba(200,155,60,0.3);--font:Verdana,Geneva,Tahoma,sans-serif;
+  --mono:'Courier New',Courier,monospace;
+  --sidebar-w:260px;--header-h:52px;--playground-w:320px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.6}
+body{background-image:linear-gradient(rgba(200,155,60,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(200,155,60,0.025) 1px,transparent 1px);background-size:32px 32px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--gold-faint)}
+::-webkit-scrollbar-thumb:hover{background:var(--gold-dim)}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* HEADER */
+.top-bar{position:fixed;top:0;left:0;right:0;height:var(--header-h);z-index:100;
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  background:linear-gradient(to right,var(--blue-dark),var(--bg));
+  border-bottom:1px solid var(--border-color)}
+.top-bar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(to right,var(--gold),var(--gold-faint) 60%,transparent)}
+.logo{display:flex;align-items:center;gap:8px;color:var(--gold);font-weight:bold;
+  font-size:13px;text-transform:uppercase;letter-spacing:.08em;text-shadow:0 1px 6px rgba(200,155,60,.4)}
+.logo img{width:26px;height:26px;object-fit:contain}
+.top-nav{display:flex;gap:16px;align-items:center}
+.top-nav a{color:var(--text-dim);font-size:11px;letter-spacing:.05em;text-transform:uppercase;transition:color .2s}
+.top-nav a:hover{color:var(--gold);text-decoration:none}
+.v-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;
+  font-size:9px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--teal);border:1px solid rgba(5,150,170,.35);background:rgba(5,150,170,.07)}
 
-    /* ── ProStaff Retro Design Tokens ─────────────────────────────── */
-    :root {
-      --gold:        #C89B3C;
-      --gold-dim:    rgba(200,155,60,0.5);
-      --gold-faint:  rgba(200,155,60,0.12);
-      --blue:        #0C223F;
-      --blue-dark:   #0A1929;
-      --bg:          #0A0E1A;
-      --card:        #0F1823;
-      --teal:        #0596AA;
-      --text:        rgba(255,255,255,0.85);
-      --text-dim:    rgba(255,255,255,0.45);
-      --green:       #00D364;
-      --red:         #FF4444;
-      --border:      1px solid #C89B3C;
-      --font:        Verdana, Geneva, Tahoma, sans-serif;
-    }
+/* LAYOUT */
+.layout{display:flex;padding-top:var(--header-h);min-height:100vh}
 
-    /* ── Patterns ─────────────────────────────────────────────────── */
-    .pat-scanline {
-      background-image: repeating-linear-gradient(
-        0deg, transparent, transparent 3px,
-        rgba(200,155,60,0.04) 3px, rgba(200,155,60,0.04) 4px
-      );
-    }
-    .pat-diagonal {
-      background-image: repeating-linear-gradient(
-        45deg, transparent, transparent 6px,
-        rgba(200,155,60,0.03) 6px, rgba(200,155,60,0.03) 7px
-      );
-    }
+/* SIDEBAR */
+.sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);
+  overflow-y:auto;background:rgba(10,14,26,.95);border-right:1px solid var(--border-color);
+  padding:16px 0}
+.sb-group{margin-bottom:4px}
+.sb-group-label{padding:10px 16px 4px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold-dim);font-weight:bold;display:flex;align-items:center;gap:6px}
+.sb-group-label::after{content:'';flex:1;height:1px;background:var(--gold-faint)}
+.sb-link{display:block;padding:5px 16px 5px 24px;font-size:11px;color:var(--text-dim);
+  cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:var(--gold-faint);text-decoration:none}
+.sb-link.active{color:var(--gold);border-left-color:var(--gold);background:rgba(200,155,60,.06)}
 
-    /* ── Base ─────────────────────────────────────────────────────── */
-    html, body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: 13px;
-      line-height: 1.5;
-      min-height: 100vh;
-    }
+/* MAIN CONTENT */
+.main{margin-left:var(--sidebar-w);margin-right:var(--playground-w);flex:1;padding:32px 48px 80px}
 
-    body {
-      background-image:
-        linear-gradient(rgba(200,155,60,0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(200,155,60,0.035) 1px, transparent 1px);
-      background-size: 32px 32px;
-    }
+/* PLAYGROUND PANEL */
+.playground{position:fixed;top:var(--header-h);right:0;bottom:0;width:var(--playground-w);
+  overflow-y:auto;background:rgba(8,12,22,.97);border-left:1px solid var(--border-color);
+  display:flex;flex-direction:column}
+.pg-auth{padding:16px;border-bottom:1px solid var(--border-color)}
+.pg-auth-title{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:10px;
+  display:flex;align-items:center;gap:6px}
+.pg-auth-title::before{content:'';width:4px;height:4px;background:var(--gold);transform:rotate(45deg);display:inline-block}
+.pg-param-row{display:flex;align-items:stretch;border-bottom:1px solid rgba(200,155,60,.08)}
+.pg-param-row:last-child{border-bottom:none}
+.pg-param-label{width:64px;min-width:64px;padding:6px 8px;font-family:var(--mono);font-size:10px;
+  color:var(--teal);background:rgba(0,0,0,.18);border-right:1px solid rgba(200,155,60,.1);
+  display:flex;align-items:center;flex-shrink:0}
+.pg-param-input{flex:1;background:transparent;border:none;color:var(--text);
+  font-family:var(--mono);font-size:10px;padding:6px 8px;outline:none;min-width:0}
+.pg-param-input:focus{background:rgba(200,155,60,.03)}
+.pg-params-wrap{border:1px solid var(--border-color);margin-bottom:8px}
+.pg-exec{width:100%;font-size:9px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;
+  background:var(--gold);color:var(--bg);border:none;padding:8px;cursor:pointer;transition:opacity .15s}
+.pg-exec:hover{opacity:.85}
+.pg-exec:disabled{opacity:.4;cursor:default}
+.pg-status{display:none;margin-top:8px}
+.pg-status.show{display:block}
+.pg-resp-pre{background:var(--bg);border:1px solid var(--border-color);padding:8px 10px;
+  font-family:var(--mono);font-size:10px;line-height:1.6;overflow-x:auto;max-height:200px;overflow-y:auto;
+  white-space:pre;color:rgba(255,255,255,.65);margin-top:4px}
+.pg-token-ok{font-size:10px;color:var(--green);padding:4px 0;font-family:var(--mono)}
+.pg-token-none{font-size:10px;color:var(--text-dim);padding:4px 0}
+.pg-divider{height:1px;background:linear-gradient(to right,var(--gold),transparent);margin:0}
+.pg-body{flex:1;padding:16px;overflow-y:auto}
+.pg-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;
+  gap:8px;text-align:center;color:var(--text-dim);font-size:11px;padding:24px}
+.pg-idle-icon{font-size:24px;opacity:.3;line-height:1}
+.pg-endpoint-title{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:10px;
+  display:flex;align-items:center;gap:6px}
+.pg-endpoint-title::before{content:'';width:4px;height:4px;background:var(--gold);transform:rotate(45deg);display:inline-block}
 
-    /* ── RetroPanel ───────────────────────────────────────────────── */
-    .retro-panel { width: 100%; position: relative; }
+/* SECTION */
+.section{margin-bottom:56px;scroll-margin-top:72px}
+.section-title{font-size:18px;font-weight:bold;color:var(--gold);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--border-color),transparent)}
+.section-sub{font-size:11px;color:var(--text-dim);margin-bottom:20px;letter-spacing:.04em}
 
-    .retro-panel-header {
-      display: flex;
-      border-top: var(--border);
-      border-left: var(--border);
-      border-right: var(--border);
-      position: relative;
-      overflow: hidden;
-    }
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border-color);margin-bottom:12px;position:relative}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:linear-gradient(to bottom,var(--gold),var(--gold-faint) 60%,transparent)}
+.card-head{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:linear-gradient(to right,rgba(12,34,63,.8),transparent);border-bottom:1px solid var(--border-color)}
+.card-body{padding:14px}
 
-    .retro-panel-header-left {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 56px;
-      min-height: 52px;
-      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-      border-right: var(--border);
-      position: relative;
-      overflow: hidden;
-    }
+/* METHOD BADGES */
+.method{display:inline-flex;align-items:center;padding:2px 8px;font-size:10px;font-weight:bold;
+  letter-spacing:.08em;font-family:var(--mono)}
+.m-get{background:rgba(5,150,170,.15);color:var(--teal);border:1px solid rgba(5,150,170,.4)}
+.m-post{background:rgba(0,211,100,.12);color:var(--green);border:1px solid rgba(0,211,100,.35)}
+.m-patch{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.m-put{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.m-delete{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.3)}
 
-    .retro-panel-header-right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 8px 12px;
-      min-height: 52px;
-      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-      position: relative;
-      overflow: hidden;
-    }
+/* ENDPOINT PATH */
+.ep-path{font-family:var(--mono);font-size:12px;color:var(--text);flex:1}
+.ep-desc{font-size:11px;color:var(--text-dim);margin-left:auto}
 
-    .retro-panel-category {
-      font-size: 8px;
-      color: var(--teal);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      font-weight: bold;
-      margin-bottom: 2px;
-    }
+/* ENDPOINT TABLE */
+.ep-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.ep-table tr{border-bottom:1px solid rgba(200,155,60,.08)}
+.ep-table tr:hover{background:var(--gold-faint)}
+.ep-table td{padding:7px 10px;vertical-align:middle}
+.ep-table td:first-child{width:75px}
+.ep-table td:nth-child(2){font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.7)}
+.ep-table td:last-child{font-size:11px;color:var(--text-dim)}
+.ep-badge-pub{font-size:8px;padding:1px 6px;background:rgba(0,211,100,.12);color:var(--green);
+  border:1px solid rgba(0,211,100,.3);letter-spacing:.08em;text-transform:uppercase}
 
-    .retro-panel-title {
-      font-size: 12px;
-      font-weight: bold;
-      color: var(--gold);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      text-shadow: 0 1px 6px rgba(200,155,60,0.5);
-      position: relative;
-      z-index: 1;
-    }
+/* CODE BLOCKS */
+.code-block{background:#060a12;border:1px solid var(--border-color);
+  font-family:var(--mono);font-size:11px;line-height:1.7;position:relative;margin:12px 0}
+.code-block pre{padding:14px 16px;overflow-x:auto;color:rgba(255,255,255,.75)}
+.code-label{position:absolute;top:0;right:0;padding:2px 8px;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;background:var(--blue);color:var(--gold-dim);border-left:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+.c-key{color:#7dd3fc}.c-str{color:#86efac}.c-num{color:#fbbf24}.c-kw{color:#c084fc}
+.c-cmt{color:#4b5563}.c-url{color:var(--teal)}.c-method{color:var(--green)}
 
-    .retro-panel-subtitle {
-      font-size: 9px;
-      color: var(--gold-dim);
-      letter-spacing: 0.05em;
-      position: relative;
-      z-index: 1;
-      margin-top: 2px;
-    }
+/* PARAM TABLE */
+.param-table{width:100%;border-collapse:collapse;margin:10px 0 16px}
+.param-table th{padding:6px 10px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold-dim);background:rgba(200,155,60,.05);border-bottom:1px solid var(--border-color);text-align:left}
+.param-table td{padding:6px 10px;font-size:11px;border-bottom:1px solid rgba(200,155,60,.07)}
+.param-table td:first-child{font-family:var(--mono);color:var(--teal);font-size:11px}
+.param-table td:nth-child(2){color:var(--yellow);font-size:10px}
+.param-table td:last-child{color:var(--text-dim)}
+.req-dot{width:5px;height:5px;background:var(--red);border-radius:50%;display:inline-block;margin-right:4px}
+.opt-dot{width:5px;height:5px;background:var(--text-dim);border-radius:50%;display:inline-block;margin-right:4px}
 
-    .retro-panel-divider {
-      height: 1px;
-      background: linear-gradient(to right, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
-    }
+/* ALERT BOXES */
+.alert{padding:10px 14px;margin:12px 0;border-left:3px solid;font-size:11px}
+.alert-info{border-color:var(--teal);background:rgba(5,150,170,.07);color:rgba(255,255,255,.7)}
+.alert-warn{border-color:var(--yellow);background:rgba(245,158,11,.07);color:rgba(255,255,255,.7)}
+.alert-danger{border-color:var(--red);background:rgba(255,68,68,.07);color:rgba(255,255,255,.7)}
 
-    .retro-panel-body {
-      background: var(--card);
-      border-left: var(--border);
-      border-right: var(--border);
-      position: relative;
-    }
+/* TIER BADGES */
+.tier{display:inline-flex;align-items:center;padding:1px 7px;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:bold}
+.tier-0{color:#64748b;border:1px solid #334155;background:rgba(100,116,139,.1)}
+.tier-1{color:var(--teal);border:1px solid rgba(5,150,170,.4);background:rgba(5,150,170,.08)}
+.tier-2{color:var(--gold);border:1px solid rgba(200,155,60,.4);background:rgba(200,155,60,.08)}
+.tier-3{color:#e879f9;border:1px solid rgba(232,121,249,.4);background:rgba(232,121,249,.08)}
 
-    .retro-panel-body-stripe {
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 3px;
-      background: linear-gradient(to bottom, var(--gold), rgba(200,155,60,0.12) 60%, transparent);
-      z-index: 1;
-      pointer-events: none;
-    }
+/* WS TABLE */
+.ws-table{width:100%;border-collapse:collapse}
+.ws-table th{padding:7px 12px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold-dim);background:rgba(200,155,60,.05);border-bottom:1px solid var(--border-color);text-align:left}
+.ws-table td{padding:8px 12px;font-size:11px;border-bottom:1px solid rgba(200,155,60,.08);vertical-align:top}
+.ws-table td:first-child{font-family:var(--mono);color:var(--teal)}
+.ws-table td:nth-child(2){font-family:var(--mono);color:rgba(255,255,255,.55)}
+.ws-table td:last-child{color:var(--text-dim)}
 
-    .retro-panel-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 12px;
-      height: 18px;
-      background: linear-gradient(to right, var(--blue), var(--bg));
-      border-bottom: var(--border);
-      border-left: var(--border);
-      border-right: var(--border);
-    }
+/* INTRO GRID */
+.intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.intro-card{background:var(--card);border:1px solid var(--border-color);padding:14px;position:relative}
+.intro-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:linear-gradient(to bottom,var(--gold),transparent)}
+.intro-card h4{font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.intro-card p{font-size:11px;color:var(--text-dim);line-height:1.7}
 
-    .retro-panel-footer-label {
-      font-size: 8px;
-      color: var(--gold-dim);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-    }
+/* DIAMOND */
+.diamond{width:5px;height:5px;background:var(--gold);transform:rotate(45deg);display:inline-block;flex-shrink:0}
+.diamond-sm{width:4px;height:4px}
 
-    /* ── RetroCorners ─────────────────────────────────────────────── */
-    .retro-corners { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-    .rc { position: absolute; width: 10px; height: 10px; }
-    .rc-tl { top: 0; left: 0; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
-    .rc-tr { top: 0; right: 0; border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); }
-    .rc-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--gold); border-left: 2px solid var(--gold); }
-    .rc-br { bottom: 0; right: 0; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+/* INLINE CODE */
+code{font-family:var(--mono);font-size:11px;background:rgba(200,155,60,.08);
+  color:var(--gold);padding:1px 5px;border:1px solid rgba(200,155,60,.2)}
 
-    /* ── RetroDiamond ─────────────────────────────────────────────── */
-    .diamond {
-      width: 5px; height: 5px;
-      background: var(--gold);
-      transform: rotate(45deg);
-      flex-shrink: 0;
-      display: inline-block;
-    }
-    .diamond-sm { width: 4px; height: 4px; }
+/* FOOTER */
+.site-footer{margin-top:40px;border-top:1px solid var(--border-color);padding:28px 0 20px}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.footer-riot{font-size:9px;color:var(--text-dim);max-width:520px;line-height:1.8}
+.footer-links{display:flex;gap:14px}
+.footer-links a{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;transition:color .2s}
+.footer-links a:hover{color:var(--gold);text-decoration:none}
 
-    /* ── Footer diamonds ──────────────────────────────────────────── */
-    .footer-diamonds { display: flex; align-items: center; gap: 6px; }
-    .footer-line { height: 1px; width: 20px; background: linear-gradient(to right, var(--gold), transparent); }
-    .footer-line-r { background: linear-gradient(to left, var(--gold), transparent); }
+/* HIGHLIGHT */
+.hl-gold{color:var(--gold)}
+.hl-teal{color:var(--teal)}
+.hl-green{color:var(--green)}
+.hl-red{color:var(--red)}
 
-    /* ── Site Header ──────────────────────────────────────────────── */
-    .site-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: 56px;
-      background: linear-gradient(to right, var(--blue-dark), var(--bg));
-      position: relative;
-    }
-    .site-header::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(to right, var(--gold), var(--gold-faint) 60%, transparent);
-    }
+/* TOKEN BAR */
+.token-wrap{display:flex;align-items:center;gap:6px}
+.tlabel{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);white-space:nowrap}
+.token-wrap input{background:rgba(0,0,0,.3);border:1px solid var(--border-color);color:var(--teal);
+  font-family:var(--mono);font-size:11px;padding:3px 8px;width:200px;outline:none;transition:border-color .15s}
+.token-wrap input:focus{border-color:var(--gold-dim)}
+.token-wrap input::placeholder{color:var(--text-dim)}
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      color: var(--gold);
-      font-size: 13px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      text-shadow: 0 1px 6px rgba(200,155,60,0.4);
-    }
-    .logo img { width: 28px; height: 28px; object-fit: contain; }
+/* TRY PANEL */
+.ep-card{border-bottom:1px solid rgba(200,155,60,.08)}
+.ep-card:last-child{border-bottom:none}
+.ep-row{display:flex;align-items:center;gap:10px;padding:8px 12px;transition:background .12s}
+.ep-row:hover{background:rgba(200,155,60,.04)}
+.ep-path-s{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.75);flex:1}
+.try-btn{font-size:8px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--border-color);color:var(--gold-dim);padding:3px 10px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;flex-shrink:0}
+.try-btn:hover,.try-btn.open{border-color:var(--gold);color:var(--gold);background:rgba(200,155,60,.06)}
+.try-panel{background:rgba(0,0,0,.25);border-top:1px solid rgba(200,155,60,.12);padding:14px 16px;display:none}
+.try-panel.open{display:block}
+.try-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.try-field label{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);display:block;margin-bottom:3px}
+.try-field input,.try-field textarea{
+  width:100%;background:var(--bg);border:1px solid var(--border-color);color:var(--text);
+  font-family:var(--mono);font-size:11px;padding:6px 9px;outline:none;resize:vertical}
+.try-field input:focus,.try-field textarea:focus{border-color:var(--gold-dim)}
+.try-field input::placeholder,.try-field textarea::placeholder{color:var(--text-dim)}
+.try-field textarea{min-height:72px}
+.try-actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+.try-exec{font-size:9px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;
+  background:var(--gold);color:var(--bg);border:none;padding:7px 18px;cursor:pointer;transition:opacity .15s}
+.try-exec:hover{opacity:.85}
+.try-exec:disabled{opacity:.4;cursor:default}
+.try-clear{font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--border-color);color:var(--text-dim);padding:7px 12px;cursor:pointer}
+.try-clear:hover{border-color:var(--gold-dim);color:var(--text)}
+.try-resp{margin-top:10px;display:none}
+.try-resp.show{display:block}
+.try-status{font-size:9px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 9px;display:inline-block;margin-bottom:6px}
+.try-status.ok{background:rgba(0,211,100,.12);color:var(--green);border:1px solid rgba(0,211,100,.3)}
+.try-status.warn{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.try-status.err{background:rgba(255,68,68,.12);color:var(--red);border:1px solid rgba(255,68,68,.3)}
+.try-pre{background:var(--bg);border:1px solid var(--border-color);padding:10px 14px;
+  font-family:var(--mono);font-size:11px;line-height:1.6;overflow-x:auto;max-height:280px;overflow-y:auto;
+  white-space:pre;color:rgba(255,255,255,.65)}
 
-    .site-nav { display: flex; gap: 16px; align-items: center; }
-    .site-nav a {
-      text-decoration: none;
-      color: var(--text-dim);
-      font-size: 11px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-    }
-    .site-nav a:hover { color: var(--gold); }
+/* NAMED PARAMS */
+.try-params{border:1px solid var(--border-color);margin-bottom:10px}
+.try-param-row{display:flex;align-items:stretch;border-bottom:1px solid rgba(200,155,60,.08)}
+.try-param-row:last-child{border-bottom:none}
+.try-param-label{width:150px;min-width:150px;padding:7px 10px;font-family:var(--mono);font-size:11px;
+  color:var(--teal);background:rgba(0,0,0,.18);border-right:1px solid rgba(200,155,60,.1);
+  display:flex;align-items:center;gap:4px;flex-shrink:0}
+.try-param-req{font-size:8px;color:var(--red);letter-spacing:.05em}
+.try-param-input{flex:1;background:transparent;border:none;color:var(--text);
+  font-family:var(--mono);font-size:11px;padding:7px 10px;outline:none;min-width:0}
+.try-param-input:focus{background:rgba(200,155,60,.03)}
+.try-param-type{font-size:9px;color:var(--text-dim);padding:0 8px;
+  display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
+.try-section-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:5px}
 
-    .header-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      font-size: 9px;
-      font-weight: bold;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--teal);
-      border: 1px solid rgba(5,150,170,0.4);
-      background: rgba(5,150,170,0.08);
-    }
+/* LANGUAGE PICKER */
+.lang-tabs{display:flex;gap:0;margin:10px 0 0}
+.lang-tab{font-size:9px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 14px;background:rgba(0,0,0,.2);border:1px solid var(--border-color);
+  color:var(--text-dim);cursor:pointer;transition:all .15s;border-right:none}
+.lang-tab:last-child{border-right:1px solid var(--border-color)}
+.lang-tab.active{background:var(--blue);color:var(--gold);border-color:var(--gold-dim)}
+.lang-code{display:none;background:var(--bg);border:1px solid var(--border-color);border-top:none;
+  padding:12px 16px;font-family:var(--mono);font-size:11px;line-height:1.7;
+  color:rgba(255,255,255,.7);overflow-x:auto;margin-bottom:10px;white-space:pre}
+.lang-code.active{display:block}
 
-    /* ── Main container ───────────────────────────────────────────── */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px 16px;
-    }
+/* RESPONSE SCHEMAS */
+.resp-schemas{margin-top:14px;border-top:1px solid rgba(200,155,60,.1);padding-top:12px}
+.resp-schemas-title{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:7px}
+.resp-schema{border:1px solid rgba(200,155,60,.1);margin-bottom:3px}
+.resp-schema-hd{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .12s}
+.resp-schema-hd:hover{background:rgba(200,155,60,.04)}
+.resp-schema-hd-label{font-size:11px;color:var(--text-dim);flex:1}
+.resp-schema-arrow{font-size:9px;color:var(--gold-dim);transition:transform .15s;display:inline-block}
+.resp-schema-arrow.open{transform:rotate(90deg)}
+.resp-schema-body{display:none;background:var(--bg);border-top:1px solid rgba(200,155,60,.1);
+  padding:10px 14px;font-family:var(--mono);font-size:11px;line-height:1.6;
+  color:rgba(255,255,255,.55);overflow-x:auto;white-space:pre}
+.resp-schema-body.open{display:block}
+.sc-ok{background:rgba(0,211,100,.12);color:var(--green);border:1px solid rgba(0,211,100,.3);
+  font-size:10px;font-weight:bold;padding:1px 7px;font-family:var(--mono)}
+.sc-err{background:rgba(255,68,68,.12);color:var(--red);border:1px solid rgba(255,68,68,.3);
+  font-size:10px;font-weight:bold;padding:1px 7px;font-family:var(--mono)}
+.sc-warn{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.3);
+  font-size:10px;font-weight:bold;padding:1px 7px;font-family:var(--mono)}
 
-    /* ── Scalar theme — map ProStaff tokens into Scalar CSS variables ─ */
-    .scalar-app,
-    .dark-mode,
-    :root {
-      --scalar-color-1:             rgba(255,255,255,0.85);
-      --scalar-color-2:             rgba(255,255,255,0.55);
-      --scalar-color-3:             rgba(255,255,255,0.35);
-      --scalar-color-accent:        #C89B3C;
-      --scalar-background-1:        #0A0E1A;
-      --scalar-background-2:        #0F1823;
-      --scalar-background-3:        #0C223F;
-      --scalar-background-accent:   rgba(200,155,60,0.08);
-      --scalar-border-color:        rgba(200,155,60,0.2);
-      --scalar-scrollbar-color:     rgba(200,155,60,0.25);
-      --scalar-scrollbar-color-active: rgba(200,155,60,0.5);
-      --scalar-color-green:         #00D364;
-      --scalar-color-red:           #FF4444;
-      --scalar-color-yellow:        #F59E0B;
-      --scalar-color-blue:          #0596AA;
-      --scalar-font:                Verdana, Geneva, Tahoma, sans-serif;
-      --scalar-font-code:           'Courier New', Courier, monospace;
-    }
+/* ARCH GRID */
+.arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.arch-card{background:var(--card);border:1px solid var(--border-color);padding:14px;position:relative}
+.arch-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:linear-gradient(to bottom,var(--gold),var(--gold-faint) 60%,transparent)}
+.arch-name{font-size:12px;font-weight:bold;color:var(--text);margin-bottom:2px}
+.arch-port{font-family:var(--mono);font-size:10px;color:var(--teal);background:rgba(5,150,170,.1);
+  border:1px solid rgba(5,150,170,.3);padding:1px 6px;display:inline-block;margin-bottom:5px}
+.arch-stack{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:5px}
+.arch-desc{font-size:11px;color:var(--text-dim);line-height:1.6}
+.fmatrix{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+.fmatrix th{padding:6px 10px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold-dim);background:rgba(200,155,60,.05);border-bottom:1px solid var(--border-color);text-align:left}
+.fmatrix td{padding:7px 10px;border-bottom:1px solid rgba(200,155,60,.07);vertical-align:middle}
+.fmatrix td:first-child{color:var(--text);font-weight:500}
+.fmatrix tr:hover td{background:rgba(200,155,60,.03)}
+.fyes{color:var(--green);font-weight:bold}
+.fno{color:rgba(255,255,255,.2)}
+.fpart{color:var(--yellow)}
 
-    /* ── Full Footer ──────────────────────────────────────────────── */
-    .site-footer-full {
-      background: var(--bg);
-      border-top: 1px solid var(--gold);
-      font-family: var(--font);
-      margin-top: 24px;
-    }
-    .footer-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 24px 24px;
-    }
-    .footer-top-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 32px;
-    }
-    .footer-top-line {
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(to right, var(--gold), transparent);
-    }
-    .footer-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-      gap: 32px;
-      margin-bottom: 36px;
-    }
-    .footer-col-logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      color: var(--gold);
-      font-size: 13px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 12px;
-    }
-    .footer-col-logo img { width: 28px; height: 28px; object-fit: contain; }
-    .footer-col-desc {
-      font-size: 11px;
-      color: var(--text-dim);
-      line-height: 1.8;
-    }
-    .footer-col-head {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 10px;
-      color: var(--gold);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 14px;
-    }
-    .footer-links-col {
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-    }
-    .footer-links-col a {
-      font-size: 11px;
-      color: var(--text-dim);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .footer-links-col a:hover { color: var(--gold); }
-    .footer-bottom-bar {
-      border-top: 1px solid var(--gold-faint);
-      padding-top: 20px;
-    }
-    .footer-sep {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-    }
-    .footer-sep-line { flex: 1; height: 1px; }
-    .footer-sep-line-l { background: linear-gradient(to right, transparent, var(--gold)); }
-    .footer-sep-line-r { background: linear-gradient(to left, transparent, var(--gold)); }
-    .footer-sep-label {
-      font-size: 9px;
-      color: var(--gold-dim);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .footer-riot {
-      text-align: center;
-      font-size: 9px;
-      color: var(--text-dim);
-      line-height: 1.8;
-      max-width: 620px;
-      margin: 14px auto 0;
-    }
-    @media (max-width: 860px) {
-      .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
-      .footer-brand-col { grid-column: 1 / -1; }
-    }
-    @media (max-width: 540px) {
-      .footer-grid { grid-template-columns: 1fr 1fr; }
-    }
-
-    /* ── Scrollbar ──────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--gold-faint); border-radius: 0; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
-
-    /* ── Responsive ─────────────────────────────────────────────── */
-    @media (max-width: 600px) {
-      .site-nav { display: none; }
-    }
-  </style>
+/* RESPONSIVE */
+@media(max-width:1100px){
+  .playground{display:none}
+  .main{margin-right:0}
+}
+@media(max-width:860px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:24px 20px 60px}
+  .intro-grid{grid-template-columns:1fr}
+  .top-nav{display:none}
+  .arch-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
 
-<!-- ── SITE HEADER ──────────────────────────────────────────────────── -->
-<header class="site-header pat-scanline">
+<!-- TOP BAR -->
+<header class="top-bar">
   <a class="logo" href="https://prostaff.gg" target="_blank" rel="noopener">
     <img src="logo.png" alt="ProStaff">
     ProStaff API
   </a>
-
-  <nav class="site-nav">
+  <nav class="top-nav">
+    <a href="#intro">Docs</a>
+    <a href="https://api.prostaff.gg/api-docs/v1/swagger.yaml" target="_blank" rel="noopener">OpenAPI</a>
     <a href="https://status.prostaff.gg" target="_blank" rel="noopener">Status</a>
-    <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
     <a href="mailto:support@prostaff.gg">Support</a>
   </nav>
-
-  <div class="header-badge">
-    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
-      <circle cx="4" cy="4" r="3"/>
-    </svg>
-    v1
+  <div class="token-wrap">
+    <span class="tlabel">Bearer</span>
+    <input type="password" id="g-token" placeholder="eyJhbGci… (auto-salvo)" oninput="saveToken(this.value)">
+  </div>
+  <div class="v-badge">
+    <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="3"/></svg>
+    v1 · REST
   </div>
 </header>
 
-<!-- ── MAIN ─────────────────────────────────────────────────────────── -->
-<main class="container">
+<!-- LAYOUT -->
+<div class="layout">
 
-  <!-- DOCS PANEL -->
-  <div class="retro-panel" style="margin-top: 0;">
-    <div class="retro-panel-header pat-diagonal">
-      <div class="retro-panel-header-left pat-scanline">
-        <div class="retro-corners">
-          <div class="rc rc-tl"></div><div class="rc rc-tr"></div>
-          <div class="rc rc-bl"></div><div class="rc rc-br"></div>
-        </div>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89B3C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-      </div>
-      <div class="retro-panel-header-right">
-        <span class="retro-panel-category">REST API Reference</span>
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;position:relative;z-index:1">
-          <span class="retro-panel-title">ProStaff API v1</span>
-          <span class="retro-panel-subtitle">Use Authorize to authenticate with a Bearer JWT token</span>
-        </div>
-      </div>
+<!-- SIDEBAR -->
+<nav class="sidebar">
+
+  <div class="sb-group">
+    <div class="sb-group-label">Getting Started</div>
+    <a class="sb-link active" href="#intro" onclick="setActive(this)">Introduction</a>
+    <a class="sb-link" href="#auth" onclick="setActive(this)">Authentication</a>
+    <a class="sb-link" href="#servers" onclick="setActive(this)">Base URL &amp; Servers</a>
+    <a class="sb-link" href="#errors" onclick="setActive(this)">Errors &amp; Status Codes</a>
+    <a class="sb-link" href="#rate-limits" onclick="setActive(this)">Rate Limits</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Core</div>
+    <a class="sb-link" href="#health" onclick="setActive(this)">Health &amp; Status</a>
+    <a class="sb-link" href="#dashboard" onclick="setActive(this)">Dashboard</a>
+    <a class="sb-link" href="#players" onclick="setActive(this)">Players &amp; Roster</a>
+    <a class="sb-link" href="#scouting" onclick="setActive(this)">Scouting</a>
+    <a class="sb-link" href="#analytics" onclick="setActive(this)">Analytics</a>
+    <a class="sb-link" href="#matches" onclick="setActive(this)">Matches &amp; Schedules</a>
+    <a class="sb-link" href="#vod" onclick="setActive(this)">VOD Reviews</a>
+    <a class="sb-link" href="#goals" onclick="setActive(this)">Team Goals</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Competition</div>
+    <a class="sb-link" href="#scrims" onclick="setActive(this)">Scrims</a>
+    <a class="sb-link" href="#inhouse" onclick="setActive(this)">Inhouse League</a>
+    <a class="sb-link" href="#matchmaking" onclick="setActive(this)">Matchmaking</a>
+    <a class="sb-link" href="#competitive" onclick="setActive(this)">Competitive Intelligence</a>
+    <a class="sb-link" href="#tournaments" onclick="setActive(this)">Tournaments</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Strategy &amp; AI</div>
+    <a class="sb-link" href="#strategy" onclick="setActive(this)">Strategy &amp; Draft</a>
+    <a class="sb-link" href="#ai" onclick="setActive(this)">AI Intelligence</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Management</div>
+    <a class="sb-link" href="#manager" onclick="setActive(this)">Manager Hub</a>
+    <a class="sb-link" href="#support" onclick="setActive(this)">Support Tickets</a>
+    <a class="sb-link" href="#notifications" onclick="setActive(this)">Notifications</a>
+    <a class="sb-link" href="#messaging" onclick="setActive(this)">Messaging</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Data &amp; Search</div>
+    <a class="sb-link" href="#riot-data" onclick="setActive(this)">Riot Data</a>
+    <a class="sb-link" href="#search" onclick="setActive(this)">Search &amp; Constants</a>
+    <a class="sb-link" href="#wallet" onclick="setActive(this)">Wallet (ProPay)</a>
+    <a class="sb-link" href="#admin" onclick="setActive(this)">Admin</a>
+    <a class="sb-link" href="#monitoring" onclick="setActive(this)">Monitoring</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Real-time</div>
+    <a class="sb-link" href="#websockets" onclick="setActive(this)">WebSocket Channels</a>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-group-label">Infrastructure</div>
+    <a class="sb-link" href="#jobs" onclick="setActive(this)">Background Jobs</a>
+    <a class="sb-link" href="#integrations" onclick="setActive(this)">External Integrations</a>
+    <a class="sb-link" href="#architecture" onclick="setActive(this)">Arquitetura (8 servicos)</a>
+    <a class="sb-link" href="#feature-matrix" onclick="setActive(this)">Feature Matrix</a>
+  </div>
+
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ──────────────────────────── INTRODUCTION ──────────────────────────── -->
+<section class="section" id="intro">
+  <div class="section-title"><span class="diamond diamond-sm"></span> ProStaff API</div>
+  <div class="section-sub">Esports Team Management Platform — REST API Reference v1</div>
+
+  <div class="intro-grid">
+    <div class="intro-card">
+      <h4>What is ProStaff?</h4>
+      <p>ProStaff is a full-stack esports management platform for League of Legends organizations. It provides player analytics, draft intelligence, scrim management, inhouse leagues, competitive intelligence, contract management, and real-time team communication.</p>
     </div>
-    <div class="retro-panel-divider"></div>
-    <div class="retro-panel-body">
-      <div class="retro-panel-body-stripe"></div>
-      <script
-        id="api-reference"
-        data-url="https://api.prostaff.gg/api-docs/v1/swagger.yaml"
-      ></script>
+    <div class="intro-card">
+      <h4>API Overview</h4>
+      <p>Rails 7.1 REST API with JWT authentication, multi-tenant architecture (organization-scoped data), WebSocket channels via Action Cable, and background job processing via Sidekiq.</p>
     </div>
-    <div class="retro-panel-footer">
-      <div class="footer-diamonds">
-        <span class="diamond diamond-sm"></span>
-        <div class="footer-line"></div>
-      </div>
-      <span class="retro-panel-footer-label">ProStaff Analytics</span>
-      <div class="footer-diamonds">
-        <div class="footer-line footer-line-r"></div>
-        <span class="diamond diamond-sm"></span>
-      </div>
+    <div class="intro-card">
+      <h4>Tech Stack</h4>
+      <p>Ruby 3.4 · Rails 7.1 · PostgreSQL 15 · Redis 7 · Sidekiq · Meilisearch · Action Cable · Supabase</p>
+    </div>
+    <div class="intro-card">
+      <h4>External APIs</h4>
+      <p>Riot Games API · PandaScore · ProStaff Scraper · Leaguepedia · OpenAI · Discord · AWS S3 · ProPay (PIX)</p>
     </div>
   </div>
 
-</main>
+  <div class="alert alert-info">
+    All endpoints require <code>Authorization: Bearer {access_token}</code> unless marked as <span class="ep-badge-pub">public</span>.
+    Multi-tenant: every query is automatically scoped to the authenticated organization.
+  </div>
 
-<!-- ── SITE FOOTER ───────────────────────────────────────────────────── -->
-<footer class="site-footer-full pat-scanline">
-  <div class="footer-container">
+  <div style="margin-top:16px">
+    <div style="font-size:11px;color:var(--gold-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Subscription Tiers</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <span class="tier tier-1" title="free / amateur plans · 10 players · 50 matches/mo · 3mo retention">Tier 3 — Amateur</span>
+      <span class="tier tier-2" title="semi_pro plan · 25 players · 200 matches/mo · 12mo retention">Tier 2 — Semi-Pro</span>
+      <span class="tier tier-3" title="professional / enterprise · 50 players · unlimited">Tier 1 — Professional</span>
+    </div>
+  </div>
+</section>
 
-    <!-- Top bar -->
-    <div class="footer-top-bar">
-      <span class="diamond diamond-sm"></span>
-      <div class="footer-top-line"></div>
+<!-- ──────────────────────────── AUTHENTICATION ──────────────────────────── -->
+<section class="section" id="auth">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Authentication</div>
+  <div class="section-sub">JWT Bearer tokens — access (24h) + refresh (7 days)</div>
+
+  <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px">
+    ProStaff uses JWT tokens. Login returns an <code>access_token</code> (24h) and a <code>refresh_token</code> (7 days).
+    Send the access token in every request header. When it expires, use the refresh endpoint to get a new pair without re-authenticating.
+  </p>
+
+  <div class="card" style="padding:0;overflow:hidden">
+
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/register</span>
+        <span class="ep-desc-sm">Criar org + usuário admin (trial 14 dias)</span>
+        <button class="try-btn" onclick="toggleTry(this)">▶ TRY</button>
+      </div>
+      <div class="try-panel" data-method="POST" data-path="/api/v1/auth/register" data-no-auth="true" data-auto-token="true">
+        <div class="try-section-label">Body params</div>
+        <div class="try-params">
+          <div class="try-param-row">
+            <span class="try-param-label">organization.name <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="organization.name" type="text" value="Team Liquid BR" oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
+          <div class="try-param-row">
+            <span class="try-param-label">user.name <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="user.name" type="text" value="Head Coach" oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
+          <div class="try-param-row">
+            <span class="try-param-label">user.email <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="user.email" type="email" value="coach@team.gg" oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
+          <div class="try-param-row">
+            <span class="try-param-label">user.password <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="user.password" type="password" value="Test123!@#" oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
+        </div>
+        <div class="lang-tabs">
+          <button class="lang-tab active" data-lang="curl" onclick="switchLang(this)">curl</button>
+          <button class="lang-tab" data-lang="js" onclick="switchLang(this)">JavaScript</button>
+          <button class="lang-tab" data-lang="python" onclick="switchLang(this)">Python</button>
+          <button class="lang-tab" data-lang="ruby" onclick="switchLang(this)">Ruby</button>
+        </div>
+        <pre class="lang-code active" data-lang="curl"></pre>
+        <pre class="lang-code" data-lang="js"></pre>
+        <pre class="lang-code" data-lang="python"></pre>
+        <pre class="lang-code" data-lang="ruby"></pre>
+        <div class="try-actions">
+          <button class="try-exec" onclick="execReq(this)">Execute</button>
+          <button class="try-clear" onclick="clearResp(this)">Limpar</button>
+          <span style="font-size:9px;color:var(--gold-dim)">token auto-salvo</span>
+        </div>
+        <div class="try-resp"><span class="try-status"></span><pre class="try-pre"></pre></div>
+        <div class="resp-schemas">
+          <div class="resp-schemas-title">Response schemas</div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-ok">201</span><span class="resp-schema-hd-label">Created — org + user + tokens</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"message":"Organization and user created","data":{"user":{"id":1,"email":"coach@team.gg","role":"admin"},"organization":{"id":1,"name":"Team Liquid BR","subscription_plan":"free","tier":"tier_3_amateur","trial_ends_at":"2026-06-22"},"access_token":"eyJ...","refresh_token":"eyJ..."}}</pre>
+          </div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-warn">422</span><span class="resp-schema-hd-label">Validation error</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"errors":["Email has already been taken","Password is too short (minimum 8 characters)"]}</pre>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Grid -->
-    <div class="footer-grid">
-
-      <!-- Brand -->
-      <div class="footer-brand-col">
-        <a class="footer-col-logo" href="https://prostaff.gg" target="_blank" rel="noopener">
-          <img src="logo.png" alt="ProStaff">
-          ProStaff
-        </a>
-        <p class="footer-col-desc">Esports Team Management Platform. Advanced analytics, scouting, and performance tracking for professional organizations.</p>
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/login</span>
+        <span class="ep-desc-sm">Login — retorna access_token + refresh_token</span>
+        <button class="try-btn" onclick="toggleTry(this)">▶ TRY</button>
       </div>
-
-      <!-- Product -->
-      <div>
-        <div class="footer-col-head">
-          <span class="diamond diamond-sm"></span>
-          Product
+      <div class="try-panel" data-method="POST" data-path="/api/v1/auth/login" data-auto-token="true" data-no-auth="true">
+        <div class="try-section-label">Body params</div>
+        <div class="try-params">
+          <div class="try-param-row">
+            <span class="try-param-label">email <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="email" type="email" value="test@prostaff.gg" oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
+          <div class="try-param-row">
+            <span class="try-param-label">password <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="password" type="password" value="Test123!@#" oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
         </div>
-        <div class="footer-links-col">
-          <a href="https://prostaff.gg/features" target="_blank" rel="noopener">Features</a>
-          <a href="https://prostaff.gg/pricing" target="_blank" rel="noopener">Pricing</a>
-          <a href="https://prostaff.gg/comparison" target="_blank" rel="noopener">Comparison</a>
+        <div class="lang-tabs">
+          <button class="lang-tab active" data-lang="curl" onclick="switchLang(this)">curl</button>
+          <button class="lang-tab" data-lang="js" onclick="switchLang(this)">JavaScript</button>
+          <button class="lang-tab" data-lang="python" onclick="switchLang(this)">Python</button>
+          <button class="lang-tab" data-lang="ruby" onclick="switchLang(this)">Ruby</button>
         </div>
-      </div>
-
-      <!-- Company -->
-      <div>
-        <div class="footer-col-head">
-          <span class="diamond diamond-sm"></span>
-          Company
+        <pre class="lang-code active" data-lang="curl"></pre>
+        <pre class="lang-code" data-lang="js"></pre>
+        <pre class="lang-code" data-lang="python"></pre>
+        <pre class="lang-code" data-lang="ruby"></pre>
+        <div class="try-actions">
+          <button class="try-exec" onclick="execReq(this)">Execute</button>
+          <button class="try-clear" onclick="clearResp(this)">Limpar</button>
+          <span style="font-size:9px;color:var(--gold-dim)">token auto-salvo no Bearer</span>
         </div>
-        <div class="footer-links-col">
-          <a href="https://prostaff.gg/about" target="_blank" rel="noopener">About</a>
-          <a href="https://prostaff.gg/contact" target="_blank" rel="noopener">Contact</a>
-        </div>
-      </div>
-
-      <!-- Legal -->
-      <div>
-        <div class="footer-col-head">
-          <span class="diamond diamond-sm"></span>
-          Legal
-        </div>
-        <div class="footer-links-col">
-          <a href="https://prostaff.gg/privacy" target="_blank" rel="noopener">Privacy Policy</a>
-          <a href="https://prostaff.gg/tos" target="_blank" rel="noopener">Terms of Service</a>
-          <a href="https://developer.riotgames.com/policies/general" target="_blank" rel="noopener">Riot API Policies</a>
-        </div>
-      </div>
-
-      <!-- Resources -->
-      <div>
-        <div class="footer-col-head">
-          <span class="diamond diamond-sm"></span>
-          Resources
-        </div>
-        <div class="footer-links-col">
-          <a href="https://docs.prostaff.gg" target="_blank" rel="noopener">API Docs</a>
-          <a href="https://status.prostaff.gg" target="_blank" rel="noopener">System Status</a>
-          <a href="mailto:support@prostaff.gg">Support</a>
+        <div class="try-resp"><span class="try-status"></span><pre class="try-pre"></pre></div>
+        <div class="resp-schemas">
+          <div class="resp-schemas-title">Response schemas</div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-ok">200</span><span class="resp-schema-hd-label">Login successful</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"message":"Login successful","data":{"user":{"id":1,"email":"test@prostaff.gg","role":"admin","name":"Head Coach"},"organization":{"id":1,"name":"Team Example","subscription_plan":"semi_pro","tier":"tier_2_semi_pro"},"access_token":"eyJhbGciOiJIUzI1NiJ9...","refresh_token":"eyJhbGciOiJIUzI1NiJ9..."}}</pre>
+          </div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-err">401</span><span class="resp-schema-hd-label">Invalid credentials</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"error":"Unauthorized","message":"Invalid email or password"}</pre>
+          </div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-warn">422</span><span class="resp-schema-hd-label">Validation error</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"errors":["Email can't be blank","Password can't be blank"]}</pre>
+          </div>
         </div>
       </div>
-
     </div>
 
-    <!-- Bottom -->
-    <div class="footer-bottom-bar">
-      <div class="footer-sep">
-        <div class="footer-sep-line footer-sep-line-l"></div>
-        <span class="footer-sep-label">ProStaff.gg</span>
-        <div class="footer-sep-line footer-sep-line-r"></div>
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/player-login</span>
+        <span class="ep-desc-sm">Login como entidade player</span>
+        <button class="try-btn" onclick="toggleTry(this)">▶ TRY</button>
       </div>
-      <p class="footer-riot">
-        ProStaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
-      </p>
+      <div class="try-panel" data-method="POST" data-path="/api/v1/auth/player-login" data-auto-token="true">
+        <div class="try-grid">
+          <div class="try-field" style="grid-column:1/-1">
+            <label>Body (JSON)</label>
+            <textarea class="try-body">{"email":"player@team.gg","password":"Test123!@#"}</textarea>
+          </div>
+        </div>
+        <div class="try-actions">
+          <button class="try-exec" onclick="execReq(this)">Execute</button>
+          <button class="try-clear" onclick="clearResp(this)">Limpar</button>
+        </div>
+        <div class="try-resp"><span class="try-status"></span><pre class="try-pre"></pre></div>
+      </div>
     </div>
 
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/refresh</span>
+        <span class="ep-desc-sm">Trocar refresh_token por novo par</span>
+        <button class="try-btn" onclick="toggleTry(this)">▶ TRY</button>
+      </div>
+      <div class="try-panel" data-method="POST" data-path="/api/v1/auth/refresh" data-no-auth="true" data-auto-token="true">
+        <div class="try-section-label">Body params</div>
+        <div class="try-params">
+          <div class="try-param-row">
+            <span class="try-param-label">refresh_token <span class="try-param-req">*</span></span>
+            <input class="try-param-input" data-ptype="body" data-key="refresh_token" type="text" placeholder="eyJ..." oninput="refreshLangCode(this.closest('.try-panel'))">
+            <span class="try-param-type">string</span>
+          </div>
+        </div>
+        <div class="lang-tabs">
+          <button class="lang-tab active" data-lang="curl" onclick="switchLang(this)">curl</button>
+          <button class="lang-tab" data-lang="js" onclick="switchLang(this)">JavaScript</button>
+          <button class="lang-tab" data-lang="python" onclick="switchLang(this)">Python</button>
+          <button class="lang-tab" data-lang="ruby" onclick="switchLang(this)">Ruby</button>
+        </div>
+        <pre class="lang-code active" data-lang="curl"></pre>
+        <pre class="lang-code" data-lang="js"></pre>
+        <pre class="lang-code" data-lang="python"></pre>
+        <pre class="lang-code" data-lang="ruby"></pre>
+        <div class="try-actions">
+          <button class="try-exec" onclick="execReq(this)">Execute</button>
+          <button class="try-clear" onclick="clearResp(this)">Limpar</button>
+          <span style="font-size:9px;color:var(--gold-dim)">novo access_token auto-salvo</span>
+        </div>
+        <div class="try-resp"><span class="try-status"></span><pre class="try-pre"></pre></div>
+        <div class="resp-schemas">
+          <div class="resp-schemas-title">Response schemas</div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-ok">200</span><span class="resp-schema-hd-label">New token pair</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"data":{"access_token":"eyJ...","refresh_token":"eyJ..."}}</pre>
+          </div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-err">401</span><span class="resp-schema-hd-label">Token inválido ou expirado</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"error":"Unauthorized","message":"Refresh token has expired or been revoked"}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/logout</span>
+        <span class="ep-desc-sm">Blacklist refresh token</span>
+        <button class="try-btn" onclick="toggleTry(this)">▶ TRY</button>
+      </div>
+      <div class="try-panel" data-method="POST" data-path="/api/v1/auth/logout">
+        <div class="try-grid">
+          <div class="try-field" style="grid-column:1/-1">
+            <label>Body (JSON)</label>
+            <textarea class="try-body">{"refresh_token":"eyJ..."}</textarea>
+          </div>
+        </div>
+        <div class="try-actions">
+          <button class="try-exec" onclick="execReq(this)">Execute</button>
+          <button class="try-clear" onclick="clearResp(this)">Limpar</button>
+        </div>
+        <div class="try-resp"><span class="try-status"></span><pre class="try-pre"></pre></div>
+      </div>
+    </div>
+
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-get">GET</span>
+        <span class="ep-path-s">/api/v1/auth/me</span>
+        <span class="ep-desc-sm">Usuário autenticado atual</span>
+        <button class="try-btn" onclick="toggleTry(this)">▶ TRY</button>
+      </div>
+      <div class="try-panel" data-method="GET" data-path="/api/v1/auth/me">
+        <div class="lang-tabs">
+          <button class="lang-tab active" data-lang="curl" onclick="switchLang(this)">curl</button>
+          <button class="lang-tab" data-lang="js" onclick="switchLang(this)">JavaScript</button>
+          <button class="lang-tab" data-lang="python" onclick="switchLang(this)">Python</button>
+          <button class="lang-tab" data-lang="ruby" onclick="switchLang(this)">Ruby</button>
+        </div>
+        <pre class="lang-code active" data-lang="curl"></pre>
+        <pre class="lang-code" data-lang="js"></pre>
+        <pre class="lang-code" data-lang="python"></pre>
+        <pre class="lang-code" data-lang="ruby"></pre>
+        <div class="try-actions">
+          <button class="try-exec" onclick="execReq(this)">Execute</button>
+          <button class="try-clear" onclick="clearResp(this)">Limpar</button>
+        </div>
+        <div class="try-resp"><span class="try-status"></span><pre class="try-pre"></pre></div>
+        <div class="resp-schemas">
+          <div class="resp-schemas-title">Response schemas</div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-ok">200</span><span class="resp-schema-hd-label">Current user</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"data":{"user":{"id":1,"email":"coach@team.gg","name":"Head Coach","role":"admin","tier":"tier_2_semi_pro"},"organization":{"id":1,"name":"Team Example","subscription_plan":"semi_pro"}}}</pre>
+          </div>
+          <div class="resp-schema">
+            <div class="resp-schema-hd" onclick="toggleSchema(this)">
+              <span class="sc-err">401</span><span class="resp-schema-hd-label">Token ausente ou expirado</span><span class="resp-schema-arrow">▶</span>
+            </div>
+            <pre class="resp-schema-body">{"error":"Unauthorized","message":"Token has expired"}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/forgot-password</span>
+        <span class="ep-desc-sm">Enviar email de redefinição</span>
+      </div>
+    </div>
+    <div class="ep-card">
+      <div class="ep-row">
+        <span class="method m-post">POST</span>
+        <span class="ep-path-s">/api/v1/auth/reset-password</span>
+        <span class="ep-desc-sm">Definir nova senha com token</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="code-block">
+    <span class="code-label">Login</span>
+    <pre><span class="c-method">POST</span> <span class="c-url">/api/v1/auth/login</span>
+
+{
+  <span class="c-key">"email"</span>: <span class="c-str">"coach@org.gg"</span>,
+  <span class="c-key">"password"</span>: <span class="c-str">"password123"</span>
+}
+
+<span class="c-cmt">// Response 200</span>
+{
+  <span class="c-key">"message"</span>: <span class="c-str">"Login successful"</span>,
+  <span class="c-key">"data"</span>: {
+    <span class="c-key">"user"</span>: { <span class="c-key">"id"</span>: <span class="c-num">42</span>, <span class="c-key">"email"</span>: <span class="c-str">"..."</span>, <span class="c-key">"role"</span>: <span class="c-str">"admin"</span> },
+    <span class="c-key">"organization"</span>: { <span class="c-key">"id"</span>: <span class="c-num">7</span>, <span class="c-key">"name"</span>: <span class="c-str">"Team Example"</span> },
+    <span class="c-key">"access_token"</span>: <span class="c-str">"eyJ..."</span>,
+    <span class="c-key">"refresh_token"</span>: <span class="c-str">"eyJ..."</span>
+  }
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <span class="code-label">Every Request</span>
+    <pre><span class="c-cmt"># HTTP header (all protected endpoints)</span>
+Authorization: Bearer {access_token}
+
+<span class="c-cmt"># WebSocket connection</span>
+wss://api.prostaff.gg/cable?token={access_token}</pre>
+  </div>
+
+  <div class="alert alert-info">
+    JWT payload includes: <code>user_id</code>, <code>organization_id</code>, <code>role</code>, <code>jti</code> (for blacklisting), <code>tier</code>.
+    Player tokens additionally carry <code>entity_type: "player"</code> and <code>player_id</code>.
+  </div>
+
+  <div style="margin-top:16px;font-size:12px;color:var(--text-dim)">Profile management:</div>
+  <table class="ep-table" style="margin-top:6px">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/profile</td><td>Get current user profile</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/profile</td><td>Update profile</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/profile/password</td><td>Change password</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/profile/notifications</td><td>Update notification preferences</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/organizations/:id</td><td>Update organization settings</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/organizations/:id/logo</td><td>Upload organization logo</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/organizations/:id/lines</td><td>Update roster lines config</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── BASE URL ──────────────────────────── -->
+<section class="section" id="servers">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Base URL &amp; Servers</div>
+  <div class="section-sub">Production and local development endpoints</div>
+
+  <table class="ep-table">
+    <tr><td style="color:var(--green);font-size:10px;font-weight:bold">PROD</td><td style="font-family:var(--mono)">https://api.prostaff.gg</td><td>Production (Coolify, SA East)</td></tr>
+    <tr><td style="color:var(--yellow);font-size:10px;font-weight:bold">DEV</td><td style="font-family:var(--mono)">http://localhost:3333</td><td>Local Docker Compose</td></tr>
+    <tr><td style="color:var(--teal);font-size:10px;font-weight:bold">WS</td><td style="font-family:var(--mono)">wss://api.prostaff.gg/cable</td><td>Action Cable WebSocket</td></tr>
+    <tr><td style="color:var(--gold-dim);font-size:10px;font-weight:bold">DOCS</td><td style="font-family:var(--mono)">https://api.prostaff.gg/api-docs/v1/swagger.yaml</td><td>OpenAPI spec</td></tr>
+  </table>
+
+  <div class="alert alert-info">All endpoints are prefixed with <code>/api/v1/</code>. Responses follow the shape: <code>{"message":"...", "data":{...}}</code></div>
+</section>
+
+<!-- ──────────────────────────── ERRORS ──────────────────────────── -->
+<section class="section" id="errors">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Errors &amp; Status Codes</div>
+  <div class="section-sub">Standard HTTP status codes with JSON error bodies</div>
+
+  <table class="param-table">
+    <tr><th>Code</th><th>Meaning</th><th>Common Cause</th></tr>
+    <tr><td>200</td><td style="color:var(--green)">OK</td><td>Success</td></tr>
+    <tr><td>201</td><td style="color:var(--green)">Created</td><td>Resource created</td></tr>
+    <tr><td>204</td><td style="color:var(--green)">No Content</td><td>Successful DELETE</td></tr>
+    <tr><td>400</td><td style="color:var(--yellow)">Bad Request</td><td>Validation errors</td></tr>
+    <tr><td>401</td><td style="color:var(--red)">Unauthorized</td><td>Missing or expired token</td></tr>
+    <tr><td>403</td><td style="color:var(--red)">Forbidden</td><td>Pundit authorization failure</td></tr>
+    <tr><td>404</td><td style="color:var(--red)">Not Found</td><td>Resource not found or out of scope</td></tr>
+    <tr><td>422</td><td style="color:var(--red)">Unprocessable</td><td>Model validation failure</td></tr>
+    <tr><td>429</td><td style="color:var(--red)">Too Many Requests</td><td>Rack::Attack rate limit</td></tr>
+    <tr><td>500</td><td style="color:var(--red)">Server Error</td><td>Unexpected server-side error</td></tr>
+  </table>
+
+  <div class="code-block">
+    <span class="code-label">Error Shape</span>
+    <pre>{
+  <span class="c-key">"error"</span>: <span class="c-str">"Unauthorized"</span>,
+  <span class="c-key">"message"</span>: <span class="c-str">"Token has expired"</span>
+}
+
+<span class="c-cmt">// Validation error (422)</span>
+{
+  <span class="c-key">"errors"</span>: [<span class="c-str">"Name can't be blank"</span>, <span class="c-str">"Role is not included in the list"</span>]
+}</pre>
+  </div>
+</section>
+
+<!-- ──────────────────────────── RATE LIMITS ──────────────────────────── -->
+<section class="section" id="rate-limits">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Rate Limits</div>
+  <div class="section-sub">Rack::Attack — applied globally and per-endpoint</div>
+
+  <table class="param-table">
+    <tr><th>Rule</th><th>Limit</th><th>Window</th></tr>
+    <tr><td>Global per IP</td><td>300 requests</td><td>5 minutes</td></tr>
+    <tr><td>Auth endpoints</td><td>10 requests</td><td>1 minute</td></tr>
+    <tr><td>Riot API sync</td><td>Throttled</td><td>Per Riot API limits</td></tr>
+  </table>
+  <div class="alert alert-warn">Exceeding limits returns <code>429 Too Many Requests</code>. Back off exponentially before retrying.</div>
+</section>
+
+<!-- ──────────────────────────── HEALTH ──────────────────────────── -->
+<section class="section" id="health">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Health &amp; Status</div>
+  <div class="section-sub">Liveness, readiness, and public status probes</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/up</td><td><span class="ep-badge-pub">public</span> Rails default health check</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/health/live</td><td><span class="ep-badge-pub">public</span> Liveness probe (no deps)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/health/ready</td><td><span class="ep-badge-pub">public</span> Readiness — PostgreSQL + Redis + Meilisearch</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/health/detailed</td><td><span class="ep-badge-pub">public</span> Alias of /health/ready with extra detail</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/status</td><td><span class="ep-badge-pub">public</span> Public API status page</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/admin/status/incidents</td><td>Active incidents (admin)</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/admin/status/incidents</td><td>Create incident</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/admin/status/incidents/:id</td><td>Update/resolve incident</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── DASHBOARD ──────────────────────────── -->
+<section class="section" id="dashboard">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Dashboard</div>
+  <div class="section-sub">Team overview, cached stats, activity feed, and schedule</div>
+
+  <div class="alert alert-info"><code>/dashboard/stats</code> is cached in Redis for 5 minutes. Subsequent calls return cached data until TTL expires.</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/dashboard</td><td>Full dashboard data (players, matches, goals, scrims)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/dashboard/stats</td><td>Quick stats — cached 5min in Redis</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/dashboard/activities</td><td>Recent activity feed</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/dashboard/schedule</td><td>Upcoming scheduled events</td></tr>
+  </table>
+
+  <div class="code-block">
+    <span class="code-label">Dashboard Stats</span>
+    <pre><span class="c-method">GET</span> <span class="c-url">/api/v1/dashboard/stats</span>
+
+<span class="c-cmt">// Response (cached 5min)</span>
+{
+  <span class="c-key">"data"</span>: {
+    <span class="c-key">"players_count"</span>: <span class="c-num">10</span>,
+    <span class="c-key">"win_rate"</span>: <span class="c-num">62.5</span>,
+    <span class="c-key">"matches_this_week"</span>: <span class="c-num">4</span>,
+    <span class="c-key">"active_goals"</span>: <span class="c-num">3</span>,
+    <span class="c-key">"scrims_this_month"</span>: <span class="c-num">12</span>
+  }
+}</pre>
+  </div>
+</section>
+
+<!-- ──────────────────────────── PLAYERS ──────────────────────────── -->
+<section class="section" id="players">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Players &amp; Roster</div>
+  <div class="section-sub">Player CRUD, Riot API sync, stats, bulk operations, and roster management</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/players</td><td>List players (paginated, filterable by role/status)</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/players</td><td>Create player</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/players/:id</td><td>Get player detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/players/:id</td><td>Update player</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/players/:id</td><td>Remove player from org</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/players/:id/stats</td><td>Player KDA, win rate, champion pool stats</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/players/:id/matches</td><td>Player match history</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/players/:id/sync_from_riot</td><td>Trigger Riot API sync (queues Sidekiq job)</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/players/import</td><td>Import player by Riot ID</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/players/bulk_sync</td><td>Bulk Riot sync for all org players</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/players/search_riot_id</td><td>Search Riot by gameName#tagLine</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/players/by_discord/:discord_user_id</td><td>Look up player by Discord ID</td></tr>
+  </table>
+
+  <div style="margin-top:12px;font-size:12px;color:var(--text-dim)">Roster management:</div>
+  <table class="ep-table" style="margin-top:6px">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/rosters/free-agents</td><td>Players without active roster slot</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/rosters/hire/:scouting_target_id</td><td>Convert scouting target to roster player</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/rosters/remove/:player_id</td><td>Remove player from active roster</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/rosters/statistics</td><td>Roster-level aggregate stats</td></tr>
+  </table>
+
+  <table class="param-table">
+    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+    <tr><td>role</td><td>string</td><td>top / jungle / mid / bot / support</td></tr>
+    <tr><td>status</td><td>string</td><td>active / inactive / trial</td></tr>
+    <tr><td>page</td><td>integer</td><td>Page number (default: 1)</td></tr>
+    <tr><td>per_page</td><td>integer</td><td>Records per page (default: 20)</td></tr>
+  </table>
+
+  <div class="code-block">
+    <span class="code-label">Create Player</span>
+    <pre><span class="c-method">POST</span> <span class="c-url">/api/v1/players</span>
+
+{
+  <span class="c-key">"player"</span>: {
+    <span class="c-key">"summoner_name"</span>: <span class="c-str">"Faker"</span>,
+    <span class="c-key">"riot_id"</span>: <span class="c-str">"Faker#KR1"</span>,
+    <span class="c-key">"role"</span>: <span class="c-str">"mid"</span>,
+    <span class="c-key">"region"</span>: <span class="c-str">"KR"</span>
+  }
+}</pre>
+  </div>
+</section>
+
+<!-- ──────────────────────────── SCOUTING ──────────────────────────── -->
+<section class="section" id="scouting">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Scouting</div>
+  <div class="section-sub">External player watchlist, scouting targets, regional search, and roster import</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scouting/players</td><td>List scouting targets</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scouting/players</td><td>Add scouting target</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scouting/players/:id</td><td>Scouting target detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/scouting/players/:id</td><td>Update scouting notes/status</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/scouting/players/:id</td><td>Remove from scouting list</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scouting/players/:id/sync</td><td>Sync target stats from Riot API</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scouting/players/:id/import_to_roster</td><td>Hire target — add to org roster</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scouting/regions</td><td>Available regions for search</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scouting/watchlist</td><td>Current watchlist</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scouting/watchlist</td><td>Add player to watchlist</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/scouting/watchlist/:id</td><td>Remove from watchlist</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── ANALYTICS ──────────────────────────── -->
+<section class="section" id="analytics">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Analytics</div>
+  <div class="section-sub">Player and team performance metrics, KDA trends, laning, vision, and competitive stats</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/performance</td><td>Team performance overview</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/champions/:player_id</td><td>Champion pool stats for player</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/champions/:player_id/details</td><td>Detailed champion breakdown</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/kda-trend/:player_id</td><td>KDA over time (trend chart data)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/laning/:player_id</td><td>Laning phase stats (CS, gold diff)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/teamfights/:player_id</td><td>Teamfight participation metrics</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/vision/:player_id</td><td>Vision score, ward stats</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/team-comparison</td><td>Head-to-head team comparison</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/objectives</td><td>Dragon/baron/tower objective control</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/players/:player_id/ping-profile</td><td>Ping usage profile (aggro/vision/etc)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/competitive/draft-performance</td><td>Win rate by draft archetype</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/competitive/tournament-stats</td><td>Aggregate tournament performance</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/competitive/patch-meta</td><td>Meta shift across patches</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/analytics/competitive/player-stats</td><td>Pro player stats comparison</td></tr>
+  </table>
+
+  <table class="param-table">
+    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+    <tr><td>from</td><td>date</td><td>Start date filter (ISO8601)</td></tr>
+    <tr><td>to</td><td>date</td><td>End date filter (ISO8601)</td></tr>
+    <tr><td>games</td><td>integer</td><td>Last N games (default: 20)</td></tr>
+    <tr><td>patch</td><td>string</td><td>Filter by patch version</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── MATCHES ──────────────────────────── -->
+<section class="section" id="matches">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Matches &amp; Schedules</div>
+  <div class="section-sub">Match history (Riot + manual), per-match stats, and upcoming schedule</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matches</td><td>Match history (paginated)</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/matches</td><td>Record manual match</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matches/:id</td><td>Match detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/matches/:id</td><td>Update match data</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/matches/:id</td><td>Delete match</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matches/:id/stats</td><td>Per-player stats for a match</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/matches/import</td><td>Import from Riot match ID</td></tr>
+  </table>
+
+  <table class="ep-table" style="margin-top:8px">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/schedules</td><td>Upcoming scheduled matches</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/schedules</td><td>Schedule a match</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/schedules/:id</td><td>Schedule detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/schedules/:id</td><td>Reschedule</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/schedules/:id</td><td>Cancel scheduled match</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── VOD REVIEWS ──────────────────────────── -->
+<section class="section" id="vod">
+  <div class="section-title"><span class="diamond diamond-sm"></span> VOD Reviews</div>
+  <div class="section-sub">Video review sessions with timestamped annotations</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/vod-reviews</td><td>List VOD review sessions</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/vod-reviews</td><td>Create VOD review</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/vod-reviews/:id</td><td>Review detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/vod-reviews/:id</td><td>Update review</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/vod-reviews/:id</td><td>Delete review</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/vod-reviews/:id/vod-timestamps</td><td>List timestamps for a review</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/vod-reviews/:id/vod-timestamps</td><td>Add timestamp annotation</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/vod-timestamps/:id</td><td>Edit timestamp note</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/vod-timestamps/:id</td><td>Remove timestamp</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── TEAM GOALS ──────────────────────────── -->
+<section class="section" id="goals">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Team Goals</div>
+  <div class="section-sub">Goal setting, tracking, and progress management</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/team-goals</td><td>List all team goals</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/team-goals</td><td>Create goal</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/team-goals/:id</td><td>Goal detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/team-goals/:id</td><td>Update goal progress</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/team-goals/:id</td><td>Delete goal</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── SCRIMS ──────────────────────────── -->
+<section class="section" id="scrims">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Scrims</div>
+  <div class="section-sub">Scrim scheduling, results, game-by-game logs, calendar, analytics, and opponent management</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/lobby</td><td><span class="ep-badge-pub">public</span> Open scrim lobby (no auth)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/scrims</td><td>List scrims</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scrims/scrims</td><td>Create scrim</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/scrims/:id</td><td>Scrim detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/scrims/scrims/:id</td><td>Update scrim</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/scrims/scrims/:id</td><td>Cancel scrim</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scrims/scrims/:id/add_game</td><td>Add individual game result</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/scrims/calendar</td><td>Calendar view of scrims</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/scrims/analytics</td><td>Scrim win rate, trends</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/scrims/:id/result</td><td>Get scrim result</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scrims/scrims/:id/result</td><td>Submit scrim result</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/scrims/:id/messages</td><td>Scrim chat history</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scrims/scrims/:id/messages</td><td>Send scrim message (also via WS)</td></tr>
+  </table>
+
+  <div style="margin-top:12px;font-size:12px;color:var(--text-dim)">Opponent teams:</div>
+  <table class="ep-table" style="margin-top:6px">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/opponent-teams</td><td>List known opponent organizations</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/scrims/opponent-teams</td><td>Add opponent team</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/scrims/opponent-teams/:id</td><td>Update opponent info</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/scrims/opponent-teams/:id</td><td>Remove opponent</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/scrims/opponent-teams/:id/scrim-history</td><td>Historical results vs this opponent</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── INHOUSE ──────────────────────────── -->
+<section class="section" id="inhouse">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Inhouse League</div>
+  <div class="section-sub">Full inhouse queue lifecycle, captain draft, ladder, and game recording</div>
+
+  <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Queue management:</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/queue/status</td><td>Current queue state</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/open</td><td>Open queue for players</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/join</td><td>Join queue</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/leave</td><td>Leave queue</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/start_checkin</td><td>Initiate check-in phase</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/checkin</td><td>Player confirms attendance</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/start_session</td><td>Launch inhouse session</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/queue/close</td><td>Close queue</td></tr>
+  </table>
+
+  <div style="font-size:12px;color:var(--text-dim);margin:10px 0 6px">Sessions &amp; ladder:</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/ladder</td><td>ELO ladder rankings</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/ladder/:player_id/ratings</td><td>Player ELO history</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/sessions</td><td>Past inhouse sessions</td></tr>
+  </table>
+
+  <div style="font-size:12px;color:var(--text-dim);margin:10px 0 6px">Inhouse instances (captain pick draft):</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/inhouses</td><td>List inhouse games</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses</td><td>Create inhouse game</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/inhouses/active</td><td>Currently active inhouse</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/inhouse/inhouses/:id</td><td>Inhouse detail</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses/:id/join</td><td>Join inhouse lobby</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses/:id/balance_teams</td><td>Auto-balance by ELO</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses/:id/start_draft</td><td>Begin captain pick phase</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses/:id/captain_pick</td><td>Captain selects a player</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses/:id/start_game</td><td>Mark game as started</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/inhouse/inhouses/:id/record_game</td><td>Record game result + apply ELO</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/inhouse/inhouses/:id/close</td><td>Close inhouse session</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── MATCHMAKING ──────────────────────────── -->
+<section class="section" id="matchmaking">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Matchmaking</div>
+  <div class="section-sub">Availability windows, scrim request negotiation, and smart match suggestions</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matchmaking/suggestions</td><td>Smart scrim opponent suggestions</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matchmaking/availability-windows</td><td>List practice availability</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/matchmaking/availability-windows</td><td>Add availability slot</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/matchmaking/availability-windows/:id</td><td>Update availability</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/matchmaking/availability-windows/:id</td><td>Remove availability slot</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matchmaking/scrim-requests</td><td>Incoming/outgoing scrim requests</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/matchmaking/scrim-requests</td><td>Send scrim request to org</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/matchmaking/scrim-requests/:id</td><td>Request detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/matchmaking/scrim-requests/:id/accept</td><td>Accept scrim request</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/matchmaking/scrim-requests/:id/decline</td><td>Decline request</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/matchmaking/scrim-requests/:id/cancel</td><td>Cancel sent request</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── COMPETITIVE ──────────────────────────── -->
+<section class="section" id="competitive">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Competitive Intelligence</div>
+  <div class="section-sub">Professional match data, draft comparison, meta analysis, and counter picks</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/pro-matches</td><td>Pro match list (PandaScore + scraper)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/pro-matches/upcoming</td><td>Upcoming pro matches</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/pro-matches/past</td><td>Completed pro matches</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/pro-matches/:id</td><td>Pro match detail with full draft</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/competitive/pro-matches/refresh</td><td>Refresh from PandaScore</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/competitive/pro-matches/sync-from-scraper</td><td>Sync from ProStaff Scraper</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/competitive/pro-matches/sync-from-leaguepedia</td><td>Backfill from Leaguepedia</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/competitive/draft-comparison</td><td>Compare two drafts head-to-head</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/meta/:role</td><td>Current meta picks by role</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/composition-winrate</td><td>Win rate by team composition archetype</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/competitive/counters</td><td>Counter-pick data</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── STRATEGY ──────────────────────────── -->
+<section class="section" id="strategy">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Strategy &amp; Draft</div>
+  <div class="section-sub">Draft plans, tactical boards, draft simulations, and game asset proxy</div>
+
+  <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Draft plans:</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/draft-plans</td><td>List draft plans</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/strategy/draft-plans</td><td>Create draft plan</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/draft-plans/:id</td><td>Plan detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/strategy/draft-plans/:id</td><td>Update plan</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/strategy/draft-plans/:id</td><td>Delete plan</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/strategy/draft-plans/:id/analyze</td><td>Run AI analysis on plan</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/strategy/draft-plans/:id/activate</td><td>Set as active plan</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/strategy/draft-plans/:id/deactivate</td><td>Deactivate plan</td></tr>
+  </table>
+
+  <div style="font-size:12px;color:var(--text-dim);margin:10px 0 6px">Tactical boards &amp; simulations:</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/tactical-boards</td><td>List tactical boards</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/strategy/tactical-boards</td><td>Create board</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/tactical-boards/:id</td><td>Board detail (canvas data)</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/strategy/tactical-boards/:id</td><td>Save board state</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/strategy/tactical-boards/:id</td><td>Delete board</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/draft-simulations/list</td><td>List saved simulations</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/strategy/draft-simulations</td><td>Create simulation</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/strategy/draft-simulations/:id</td><td>Update simulation</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/strategy/draft-simulations/:id</td><td>Delete simulation</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/assets/champion/:champion_name</td><td>Champion splash/icon URL</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/strategy/assets/map</td><td>Summoner's Rift map asset URL</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── AI ──────────────────────────── -->
+<section class="section" id="ai">
+  <div class="section-title"><span class="diamond diamond-sm"></span> AI Intelligence</div>
+  <div class="section-sub">Draft analysis, win probability, synergy matrix, and champion vectors — powered by cosine similarity + sigmoid</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/ai/draft/analyze</td><td>Full draft analysis: threats, synergies, win probability</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/ai/draft/synergy-matrix</td><td>Heatmap of champion synergies</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/ai/recommend-pick</td><td>Next pick suggestion given partial draft</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/ai/champion-analytics</td><td>Vector analytics per champion</td></tr>
+  </table>
+
+  <div class="code-block">
+    <span class="code-label">Draft Analyze</span>
+    <pre><span class="c-method">POST</span> <span class="c-url">/api/v1/ai/draft/analyze</span>
+
+{
+  <span class="c-key">"blue_team"</span>: [<span class="c-str">"Garen"</span>, <span class="c-str">"Vi"</span>, <span class="c-str">"Azir"</span>, <span class="c-str">"Jinx"</span>, <span class="c-str">"Thresh"</span>],
+  <span class="c-key">"red_team"</span>:  [<span class="c-str">"Darius"</span>, <span class="c-str">"Lee Sin"</span>, <span class="c-str">"Orianna"</span>, <span class="c-str">"Caitlyn"</span>, <span class="c-str">"Leona"</span>]
+}
+
+<span class="c-cmt">// Response</span>
+{
+  <span class="c-key">"data"</span>: {
+    <span class="c-key">"blue_win_probability"</span>: <span class="c-num">54.3</span>,
+    <span class="c-key">"red_win_probability"</span>: <span class="c-num">45.7</span>,
+    <span class="c-key">"blue_synergy_score"</span>: <span class="c-num">78.2</span>,
+    <span class="c-key">"red_synergy_score"</span>: <span class="c-num">71.5</span>,
+    <span class="c-key">"blue_threats"</span>: [<span class="c-str">"Orianna teamfight ult"</span>],
+    <span class="c-key">"red_threats"</span>: [<span class="c-str">"Azir late-game hyperscale"</span>],
+    <span class="c-key">"recommendations"</span>: [<span class="c-str">"Prioritize early objectives..."</span>]
+  }
+}</pre>
+  </div>
+
+  <div class="alert alert-info">
+    AI uses cosine similarity on <code>ai_champion_vectors</code> table and sigmoid for win probability.
+    Real-time draft analysis is also available via <a href="#websockets">DraftChannel WebSocket</a>.
+  </div>
+</section>
+
+<!-- ──────────────────────────── MANAGER HUB ──────────────────────────── -->
+<section class="section" id="manager">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Manager Hub</div>
+  <div class="section-sub">Player contracts, bonus milestones, budget tracking, and expense management</div>
+
+  <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Contracts:</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/contracts</td><td>List all contracts</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/contracts</td><td>Create contract</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/contracts/:id</td><td>Contract detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/manager/contracts/:id</td><td>Update contract</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/manager/contracts/:id</td><td>Delete contract</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/contracts/expiring</td><td>Contracts expiring within 30 days</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/contracts/dashboard</td><td>Contract health dashboard</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/manager/contracts/:id/activate</td><td>Activate contract</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/manager/contracts/:id/terminate</td><td>Terminate contract early</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/contracts/:id/renew</td><td>Create renewal contract</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/contracts/:contract_id/bonuses</td><td>List performance bonuses</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/contracts/:contract_id/bonuses</td><td>Add bonus milestone</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/manager/contracts/:contract_id/bonuses/:id</td><td>Update bonus</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/manager/contracts/:contract_id/bonuses/:id</td><td>Remove bonus</td></tr>
+  </table>
+
+  <div style="font-size:12px;color:var(--text-dim);margin:10px 0 6px">Budgets &amp; expenses:</div>
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/budgets</td><td>List budgets</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/budgets</td><td>Create budget period</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/budgets/:id/summary</td><td>Budget vs actual summary</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/expenses</td><td>List expenses</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/expenses</td><td>Submit expense</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/manager/expenses/:id</td><td>Update expense</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/expenses/:id/approve</td><td>Approve expense</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/expenses/:id/mark_paid</td><td>Mark as paid</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/manager/expenses/:id/reject</td><td>Reject expense</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/expenses/report</td><td>Expense report export</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/manager/expenses/salary_summary</td><td>Salary totals by period</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── TOURNAMENTS ──────────────────────────── -->
+<section class="section" id="tournaments">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Tournaments (ArenaBR)</div>
+  <div class="section-sub">Tournament creation, bracket generation, team registration, and match reporting</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/tournaments</td><td>List tournaments</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/tournaments</td><td>Create tournament</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/tournaments/:id</td><td>Tournament detail</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/tournaments/:id</td><td>Update tournament</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/tournaments/:id/generate_bracket</td><td>Generate bracket from registered teams</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/tournaments/:tournament_id/teams</td><td>Registered teams</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/tournaments/:tournament_id/teams</td><td>Register team</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/tournaments/:tournament_id/teams/:id/approve</td><td>Approve team registration</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/tournaments/:tournament_id/teams/:id/reject</td><td>Reject team registration</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/tournaments/:tournament_id/matches</td><td>Tournament bracket matches</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/tournaments/:tournament_id/matches/:id</td><td>Match detail</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/tournaments/:tournament_id/matches/:id/checkin</td><td>Team check-in</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/tournaments/:tournament_id/matches/:id/report</td><td>Submit match result</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/tournaments/:tournament_id/matches/:id/report/admin_resolve</td><td>Admin dispute resolution</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── SUPPORT ──────────────────────────── -->
+<section class="section" id="support">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Support Tickets</div>
+  <div class="section-sub">Help desk, FAQ, file uploads, and staff management tools</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/support/tickets</td><td>List support tickets</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/tickets</td><td>Create ticket</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/support/tickets/:id</td><td>Ticket detail + messages</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/support/tickets/:id</td><td>Update ticket</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/tickets/:id/close</td><td>Close ticket</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/tickets/:id/reopen</td><td>Reopen ticket</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/tickets/:id/messages</td><td>Reply to ticket</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/support/faq</td><td>FAQ list</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/support/faq/:slug</td><td><span class="ep-badge-pub">public</span> FAQ article by slug</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/faq/:slug/helpful</td><td>Mark FAQ as helpful</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/uploads</td><td>Upload attachment (S3)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/support/staff/dashboard</td><td>Staff support dashboard</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/support/staff/analytics</td><td>Support analytics</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/staff/tickets/:id/assign</td><td>Assign ticket to agent</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/support/staff/tickets/:id/resolve</td><td>Staff resolve ticket</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── NOTIFICATIONS ──────────────────────────── -->
+<section class="section" id="notifications">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Notifications</div>
+  <div class="section-sub">In-app notification management</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/notifications</td><td>List notifications (paginated)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/notifications/unread_count</td><td>Unread notification count badge</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/notifications/:id/mark_as_read</td><td>Mark single notification as read</td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td>/api/v1/notifications/mark_all_as_read</td><td>Mark all as read</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/notifications/:id</td><td>Delete notification</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── MESSAGING ──────────────────────────── -->
+<section class="section" id="messaging">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Messaging</div>
+  <div class="section-sub">Team chat history and team member directory. Real-time via TeamChannel WebSocket.</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/messages</td><td>Team message history</td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td>/api/v1/messages/:id</td><td>Delete message (author or admin)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/team-members</td><td>List team members (for DM selector)</td></tr>
+  </table>
+
+  <div class="alert alert-info">Send messages in real-time via <a href="#websockets">TeamChannel</a> WebSocket. The REST endpoint is for history retrieval only.</div>
+</section>
+
+<!-- ──────────────────────────── RIOT DATA ──────────────────────────── -->
+<section class="section" id="riot-data">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Riot Data</div>
+  <div class="section-sub">Cached champion, item, and summoner spell data from Data Dragon</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/riot-data/champions</td><td>All champions (name, key, roles)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/riot-data/champions/:champion_key</td><td>Single champion detail</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/riot-data/all-champions</td><td>Full champion list with stats</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/riot-data/items</td><td>All items</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/riot-data/summoner-spells</td><td>All summoner spells</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/riot-data/version</td><td>Current patch version</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/riot-data/clear-cache</td><td>Clear Data Dragon cache</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/riot-data/update-cache</td><td>Force refresh Data Dragon cache</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── SEARCH ──────────────────────────── -->
+<section class="section" id="search">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Search &amp; Constants</div>
+  <div class="section-sub">Full-text search via Meilisearch and game constants</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/search</td><td>Full-text search (players, scrims, matches)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/constants</td><td>Game constants (roles, regions, tiers)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/images/proxy</td><td>Proxied champion/item image (CORS safe)</td></tr>
+  </table>
+
+  <table class="param-table">
+    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+    <tr><td>q</td><td>string</td><td>Search query (min 2 chars)</td></tr>
+    <tr><td>type</td><td>string</td><td>players / matches / scrims (optional)</td></tr>
+    <tr><td>limit</td><td>integer</td><td>Max results (default: 20)</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── WALLET ──────────────────────────── -->
+<section class="section" id="wallet">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Wallet (ProPay)</div>
+  <div class="section-sub">PIX deposits, balance, transactions, and payouts — proxied to ProPay service</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/wallet</td><td>Wallet balance and status</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/wallet/transactions</td><td>Transaction history</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/wallet/deposit</td><td>Create PIX deposit charge</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/wallet/payouts</td><td>Request payout</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/wallet/payouts/:id</td><td>Payout status</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/wallet/charges/:txid</td><td>Charge status by transaction ID</td></tr>
+  </table>
+
+  <div class="alert alert-warn">Wallet endpoints proxy to the ProPay service. Ensure <code>PROPAY_API_KEY</code> is configured in production.</div>
+</section>
+
+<!-- ──────────────────────────── ADMIN ──────────────────────────── -->
+<section class="section" id="admin">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Admin</div>
+  <div class="section-sub">Super-admin operations — requires role: super_admin</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/admin/players</td><td>All players across all organizations</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/admin/players/:id/soft_delete</td><td>Soft delete player</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/admin/players/:id/restore</td><td>Restore soft-deleted player</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td>/api/v1/admin/players/:id/transfer</td><td>Transfer player to another org</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/admin/organizations</td><td>All organizations</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/admin/audit-logs</td><td>Audit log (all org changes)</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/admin/ml-metrics</td><td>ML model quality metrics</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── MONITORING ──────────────────────────── -->
+<section class="section" id="monitoring">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Monitoring</div>
+  <div class="section-sub">Internal Sidekiq and cache stats — requires admin role</div>
+
+  <table class="ep-table">
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/monitoring/sidekiq</td><td>Sidekiq queue depth, workers, dead queue</td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td>/api/v1/monitoring/cache_stats</td><td>Redis cache hit/miss ratio</td></tr>
+  </table>
+</section>
+
+<!-- ──────────────────────────── WEBSOCKETS ──────────────────────────── -->
+<section class="section" id="websockets">
+  <div class="section-title"><span class="diamond diamond-sm"></span> WebSocket Channels</div>
+  <div class="section-sub">Action Cable real-time channels — auth via JWT query param</div>
+
+  <div class="code-block">
+    <span class="code-label">Connect</span>
+    <pre><span class="c-cmt">// Production</span>
+wss://api.prostaff.gg/cable?token={access_token}
+
+<span class="c-cmt">// Local</span>
+ws://localhost:3333/cable?token={access_token}
+
+<span class="c-cmt">// Subscribe to a channel (Action Cable protocol)</span>
+{
+  <span class="c-key">"command"</span>: <span class="c-str">"subscribe"</span>,
+  <span class="c-key">"identifier"</span>: <span class="c-str">"{\"channel\":\"TeamChannel\"}"</span>
+}</pre>
+  </div>
+
+  <table class="ws-table" style="margin-top:16px">
+    <tr><th>Channel</th><th>Stream</th><th>Events</th></tr>
+    <tr>
+      <td>TeamChannel</td>
+      <td>team:{org_id}</td>
+      <td>New messages, user joins/leaves, typing indicators</td>
+    </tr>
+    <tr>
+      <td>DirectMessageChannel</td>
+      <td>dm:{user_id}</td>
+      <td>Private direct messages between users</td>
+    </tr>
+    <tr>
+      <td>ScrimChatChannel</td>
+      <td>scrim:{scrim_id}</td>
+      <td>Scrim chat, result updates, game additions</td>
+    </tr>
+    <tr>
+      <td>TournamentChannel</td>
+      <td>tournament:{tournament_id}</td>
+      <td>Bracket updates, match results, check-in status</td>
+    </tr>
+    <tr>
+      <td>DraftChannel</td>
+      <td>draft:{org_id}</td>
+      <td>Real-time AI draft analysis, win probability updates, pick suggestions</td>
+    </tr>
+  </table>
+
+  <div class="code-block" style="margin-top:16px">
+    <span class="code-label">DraftChannel — Real-time AI</span>
+    <pre><span class="c-cmt">// Subscribe</span>
+{
+  <span class="c-key">"command"</span>: <span class="c-str">"subscribe"</span>,
+  <span class="c-key">"identifier"</span>: <span class="c-str">"{\"channel\":\"DraftChannel\"}"</span>
+}
+
+<span class="c-cmt">// Send pick</span>
+{
+  <span class="c-key">"command"</span>: <span class="c-str">"message"</span>,
+  <span class="c-key">"identifier"</span>: <span class="c-str">"{\"channel\":\"DraftChannel\"}"</span>,
+  <span class="c-key">"data"</span>: <span class="c-str">"{\"action\":\"analyze\",\"blue_team\":[\"Azir\",\"Vi\"],\"red_team\":[\"Orianna\"]}"</span>
+}
+
+<span class="c-cmt">// Server broadcasts back</span>
+{
+  <span class="c-key">"type"</span>: <span class="c-str">"draft_analysis"</span>,
+  <span class="c-key">"blue_win_probability"</span>: <span class="c-num">51.8</span>,
+  <span class="c-key">"recommendation"</span>: <span class="c-str">"Consider Thresh for peel..."</span>
+}</pre>
+  </div>
+</section>
+
+<!-- ──────────────────────────── JOBS ──────────────────────────── -->
+<section class="section" id="jobs">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Background Jobs</div>
+  <div class="section-sub">Sidekiq workers — async and scheduled tasks</div>
+
+  <table class="ws-table">
+    <tr><th>Job</th><th>Queue</th><th>Description</th></tr>
+    <tr><td>SyncPlayerJob</td><td>default</td><td>Sync player profile with Riot API</td></tr>
+    <tr><td>ImportPlayerMatchesJob</td><td>default</td><td>Import match history from Riot Match-V5</td></tr>
+    <tr><td>ContractExpiryAlertJob</td><td>scheduled</td><td>Send email alerts for contracts expiring in 30/14/7 days</td></tr>
+    <tr><td>RebuildChampionMatrixJob</td><td>low</td><td>Rebuild AI champion synergy/counter matrix</td></tr>
+    <tr><td>UpdateMetaStatsJob</td><td>low</td><td>Update meta champion stats from competitive data</td></tr>
+    <tr><td>CleanupExpiredTokensJob</td><td>scheduled</td><td>Purge blacklisted JWT tokens from Redis</td></tr>
+    <tr><td>SyncScraperMatchesJob</td><td>default</td><td>Pull new pro matches from ProStaff Scraper</td></tr>
+    <tr><td>RollingAucJob</td><td>low</td><td>Calculate rolling AUC for ML model quality</td></tr>
+    <tr><td>EventPublishJob</td><td>default</td><td>Publish domain events to prostaff-events (Phoenix)</td></tr>
+    <tr><td>IndexDocumentJob</td><td>default</td><td>Index/update document in Meilisearch</td></tr>
+    <tr><td>TournamentWalkoverJob</td><td>default</td><td>Award walkover win for no-show in tournament</td></tr>
+  </table>
+
+  <div class="alert alert-info">Jobs use <code>Current.organization_id</code> for multi-tenant scoping. Pass primitives only to <code>perform_async</code>. Idempotency flags set after successful delivery.</div>
+</section>
+
+<!-- ──────────────────────────── INTEGRATIONS ──────────────────────────── -->
+<section class="section" id="integrations">
+  <div class="section-title"><span class="diamond diamond-sm"></span> External Integrations</div>
+  <div class="section-sub">Third-party services connected to the ProStaff platform</div>
+
+  <table class="ws-table">
+    <tr><th>Service</th><th>Purpose</th><th>Env Var</th></tr>
+    <tr><td>Riot Games API</td><td>Summoner lookup, match history, ranked stats (via prostaff-riot-gateway)</td><td><code>RIOT_API_KEY</code>, <code>RIOT_GATEWAY_URL</code></td></tr>
+    <tr><td>PandaScore</td><td>Professional match data, tournaments, rosters</td><td><code>PANDASCORE_API_KEY</code></td></tr>
+    <tr><td>ProStaff Scraper</td><td>Custom ETL for pro matches (FastAPI + Elasticsearch)</td><td><code>SCRAPER_API_URL</code></td></tr>
+    <tr><td>Leaguepedia</td><td>Historical competitive data backfill</td><td>—</td></tr>
+    <tr><td>OpenAI</td><td>Draft analysis recommendations, support chatbot</td><td><code>OPENAI_API_KEY</code></td></tr>
+    <tr><td>Meilisearch</td><td>Full-text search (players, matches, scrims)</td><td><code>MEILISEARCH_URL</code>, <code>MEILISEARCH_KEY</code></td></tr>
+    <tr><td>Redis</td><td>Cache, JWT blacklist, Sidekiq queues, Action Cable adapter</td><td><code>REDIS_URL</code></td></tr>
+    <tr><td>Discord</td><td>Scrim webhooks, bot commands, DM notifications</td><td><code>DISCORD_WEBHOOK_URL</code></td></tr>
+    <tr><td>AWS S3</td><td>Logo uploads, VOD references, support attachments</td><td><code>AWS_ACCESS_KEY_ID</code>, <code>S3_BUCKET</code></td></tr>
+    <tr><td>ProPay</td><td>PIX wallet, deposits, payouts</td><td><code>PROPAY_API_KEY</code>, <code>PROPAY_URL</code></td></tr>
+    <tr><td>ProStaff Events</td><td>Domain event bus (Phoenix/Elixir real-time service)</td><td><code>EVENTS_SERVICE_URL</code></td></tr>
+  </table>
+
+  <div class="alert alert-warn">The Riot API gateway (<code>prostaff-riot-gateway</code>) must be running and share the same <code>INTERNAL_JWT_SECRET</code> as this API for Riot endpoints to function.</div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="section" id="architecture">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Arquitetura — 8 Servicos</div>
+  <div class="section-sub">Stack completa do ecossistema ProStaff</div>
+  <div class="arch-grid">
+    <div class="arch-card">
+      <div class="arch-name">prostaff-api</div>
+      <span class="arch-port">:3333</span>
+      <div class="arch-stack">Ruby 3.4 · Rails 7.2.3.1 · PostgreSQL 15 · Redis 7 · Sidekiq</div>
+      <div class="arch-desc">Core API — auth JWT, multi-tenant (organization_scoped), Action Cable WebSockets, Meilisearch, Pundit, Blueprinter. Deploy via Coolify (SA East).</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">ProPay</div>
+      <span class="arch-port">:5555</span>
+      <div class="arch-stack">Ruby · Roda 3.103 · PostgreSQL · Redis</div>
+      <div class="arch-desc">Servico de carteira digital. PIX deposits via Abacate Pay, gestao de saldo, payouts. API REST isolada, consumida via proxy no prostaff-api (/api/v1/wallet).</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">prostaff-riot-gateway</div>
+      <span class="arch-port">:4444</span>
+      <div class="arch-stack">Go 1.23 · HTTP proxy · Internal JWT</div>
+      <div class="arch-desc">Proxy seguro para a Riot Games API. Autentica requisicoes internas via INTERNAL_JWT_SECRET compartilhado com o prostaff-api. Rate limiting e region routing.</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">prostaff-events</div>
+      <span class="arch-port">:4000</span>
+      <div class="arch-stack">Elixir · Phoenix 1.7 · Phoenix Channels · Redis pub/sub</div>
+      <div class="arch-desc">Bus de eventos de dominio em tempo real. EventPublisher via Redis, InhouseQueue GenServer, DraftChannel. 10 domain events wired (player_synced, match_imported, contract_expiring…).</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">prostaff-ml</div>
+      <span class="arch-port">:8001</span>
+      <div class="arch-stack">Python · FastAPI · scikit-learn · pandas</div>
+      <div class="arch-desc">Servico de Machine Learning. Modelos de win probability, analise de draft avancada, feature engineering sobre dados de partidas. Alimenta o modulo ai_intelligence da API Rails.</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">ProStaff-Scraper</div>
+      <span class="arch-port">:8000</span>
+      <div class="arch-stack">Python · FastAPI · Elasticsearch 8.13 · Leaguepedia</div>
+      <div class="arch-desc">Pipeline ETL de partidas profissionais. Scraping de LoL Esports API + Leaguepedia + Riot Match-V5. 97K+ jogos pro indexados no Elasticsearch. Backfill historico e enrichment daemon.</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">prostaff-discord-bot</div>
+      <span class="arch-port">Railway</span>
+      <div class="arch-stack">Ruby · discordrb 3.5 · SQLite · Scheduler</div>
+      <div class="arch-desc">Bot Discord com slash commands. Inhouse queue server-side, scrims via Discord, matchmaking, webhooks, embeds. Integra com a prostaff-api via REST. Deploy no Railway.</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-name">prostaff-analytics-hub</div>
+      <span class="arch-port">:3000</span>
+      <div class="arch-stack">Next.js 15 · React 19 · TanStack Query · Zustand · Framer Motion</div>
+      <div class="arch-desc">Frontend principal. Dashboard, analytics, scouting, draft board, tactical board (React-Konva). Internacionalizacao em 5 idiomas (next-intl). Auth via cookies JWT, shadcn/ui + Tailwind.</div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px">
+    <div style="font-size:11px;color:var(--gold-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Infraestrutura Compartilhada</div>
+    <table class="ws-table">
+      <tr><th>Servico</th><th>Versao</th><th>Uso</th></tr>
+      <tr><td>PostgreSQL</td><td>14+ (Supabase SA East)</td><td>Banco principal multi-tenant</td></tr>
+      <tr><td>Redis</td><td>7 (local :6380 / prod :6379)</td><td>Cache, JWT blacklist, Sidekiq, Action Cable adapter, pub/sub events</td></tr>
+      <tr><td>Elasticsearch</td><td>8.13 (self-hosted)</td><td>97K+ jogos pro — usado pelo Scraper</td></tr>
+      <tr><td>Meilisearch</td><td>v1.11 (self-hosted)</td><td>Full-text search (players, matches, scrims)</td></tr>
+      <tr><td>Traefik</td><td>v2</td><td>Reverse proxy + SSL no Coolify</td></tr>
+      <tr><td>Supabase S3</td><td>—</td><td>Logos, VOD refs, support attachments</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- FEATURE MATRIX -->
+<section class="section" id="feature-matrix">
+  <div class="section-title"><span class="diamond diamond-sm"></span> Feature Matrix</div>
+  <div class="section-sub">Disponibilidade por tier de assinatura</div>
+  <table class="fmatrix">
+    <tr>
+      <th>Feature</th>
+      <th>Tier 3 — Amateur<br><span style="font-weight:400;letter-spacing:0">(free / amateur)</span></th>
+      <th>Tier 2 — Semi-Pro<br><span style="font-weight:400;letter-spacing:0">(semi_pro)</span></th>
+      <th>Tier 1 — Professional<br><span style="font-weight:400;letter-spacing:0">(professional / enterprise)</span></th>
+    </tr>
+    <tr><td>Players no roster</td><td>ate 10</td><td>ate 25</td><td>ate 50</td></tr>
+    <tr><td>Matches / mes</td><td>50</td><td>200</td><td>ilimitado</td></tr>
+    <tr><td>Retencao historico</td><td>3 meses</td><td>12 meses</td><td>ilimitado</td></tr>
+    <tr><td>Dashboard &amp; Stats</td><td class="fyes">sim</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Analytics avancado</td><td class="fno">nao</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Scouting &amp; Watchlist</td><td class="fno">nao</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Scrims</td><td class="fpart">soloq apenas</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Inhouse League</td><td class="fno">nao</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Matchmaking</td><td class="fno">nao</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Competitive Intel</td><td class="fno">nao</td><td class="fpart">basico</td><td class="fyes">sim</td></tr>
+    <tr><td>AI Draft Analysis</td><td class="fno">nao</td><td class="fpart">limitado</td><td class="fyes">sim</td></tr>
+    <tr><td>Manager Hub (contratos)</td><td class="fno">nao</td><td class="fno">nao</td><td class="fyes">sim</td></tr>
+    <tr><td>Tournaments (ArenaBR)</td><td class="fpart">participante</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>VOD Reviews</td><td class="fno">nao</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Action Cable (WS)</td><td class="fyes">sim</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>ProPay Wallet (PIX)</td><td class="fyes">sim</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Discord Bot</td><td class="fno">nao</td><td class="fyes">sim</td><td class="fyes">sim</td></tr>
+    <tr><td>Support Tickets</td><td class="fyes">sim</td><td class="fyes">sim</td><td class="fyes">sim (SLA prioritario)</td></tr>
+  </table>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p class="footer-riot">
+      ProStaff.gg isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+    </p>
+    <div class="footer-links">
+      <a href="https://prostaff.gg" target="_blank" rel="noopener">prostaff.gg</a>
+      <a href="https://status.prostaff.gg" target="_blank" rel="noopener">Status</a>
+      <a href="https://api.prostaff.gg/api-docs/v1/swagger.yaml" target="_blank" rel="noopener">OpenAPI</a>
+      <a href="mailto:support@prostaff.gg">Support</a>
+    </div>
   </div>
 </footer>
 
-<script>
-  document.getElementById('api-reference').dataset.configuration = JSON.stringify({
-    theme: 'none',
-    darkMode: true,
-    layout: 'modern',
-    showSidebar: true,
-    defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' },
-    servers: [
-      { url: 'https://api.prostaff.gg', description: 'Production' },
-      { url: 'http://localhost:3333',    description: 'Local development' }
-    ],
-    searchHotKey: 'k',
-    hideDarkModeToggle: true,
-    defaultOpenAllTags: false,
-    customCss: '.scalar-card--intro { display: none !important; } .t-doc__header { display: none !important; }'
-  });
-</script>
-<!-- nosemgrep: html.security.audit.missing-integrity -->
-<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference" crossorigin="anonymous"></script>
+</main>
 
+<!-- PLAYGROUND PANEL -->
+<aside class="playground" id="playground">
+  <!-- Auth block — always visible -->
+  <div class="pg-auth">
+    <div class="pg-auth-title">Get Bearer Token</div>
+    <div id="pg-token-status" class="pg-token-none">No token saved</div>
+    <div class="pg-params-wrap" style="margin-top:8px">
+      <div class="pg-param-row">
+        <span class="pg-param-label">email</span>
+        <input class="pg-param-input" id="pg-email" type="email" value="test@prostaff.gg" placeholder="email">
+      </div>
+      <div class="pg-param-row">
+        <span class="pg-param-label">password</span>
+        <input class="pg-param-input" id="pg-password" type="password" value="Test123!@#" placeholder="password">
+      </div>
+    </div>
+    <button class="pg-exec" onclick="pgLogin()">Login &amp; Save Token</button>
+    <div class="pg-status" id="pg-login-status">
+      <pre class="pg-resp-pre" id="pg-login-pre"></pre>
+    </div>
+  </div>
+  <div class="pg-divider"></div>
+
+  <!-- Endpoint area — idle by default, filled by TRY clicks -->
+  <div class="pg-body" id="pg-body">
+    <div class="pg-idle" id="pg-idle">
+      <div class="pg-idle-icon">&#9670;</div>
+      <span>Click <strong style="color:var(--gold)">TRY</strong> on any endpoint to test it here</span>
+    </div>
+  </div>
+</aside>
+
+</div>
+
+<script>
+// ── Token ──────────────────────────────────────────────────────────────────
+const TOKEN_KEY = 'ps_bearer';
+function saveToken(v){ localStorage.setItem(TOKEN_KEY, v.trim()); refreshAllLangCodes(); updatePgTokenStatus(); }
+function getToken(){ return localStorage.getItem(TOKEN_KEY) || ''; }
+function getBase(){ return 'https://api.prostaff.gg'; }
+
+function updatePgTokenStatus() {
+  const t = getToken();
+  const el = document.getElementById('pg-token-status');
+  if (!el) return;
+  if (t) {
+    el.className = 'pg-token-ok';
+    el.textContent = 'Token saved: ' + t.slice(0,20) + '...';
+  } else {
+    el.className = 'pg-token-none';
+    el.textContent = 'No token saved — login below';
+  }
+}
+
+async function pgLogin() {
+  const email = document.getElementById('pg-email').value.trim();
+  const pass  = document.getElementById('pg-password').value;
+  const btn   = document.querySelector('.pg-exec');
+  const statusEl = document.getElementById('pg-login-status');
+  const pre   = document.getElementById('pg-login-pre');
+  btn.disabled = true;
+  statusEl.classList.add('show');
+  pre.textContent = 'Sending...';
+  try {
+    const res = await fetch(getBase() + '/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const text = await res.text();
+    let parsed; try { parsed = JSON.parse(text); } catch { parsed = text; }
+    pre.textContent = typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
+    if (res.ok && parsed?.data?.access_token) {
+      const tk = parsed.data.access_token;
+      localStorage.setItem(TOKEN_KEY, tk);
+      document.getElementById('g-token').value = tk;
+      refreshAllLangCodes();
+      updatePgTokenStatus();
+    }
+  } catch (err) {
+    pre.textContent = 'Network error: ' + err.message;
+  }
+  btn.disabled = false;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const t = getToken();
+  if (t) document.getElementById('g-token').value = t;
+  updatePgTokenStatus();
+  document.querySelectorAll('.try-panel').forEach(p => refreshLangCode(p));
+});
+
+// ── Build request from panel ───────────────────────────────────────────────
+function buildReq(panel) {
+  const method = panel.dataset.method;
+  const noAuth = panel.dataset.noAuth === 'true';
+  let path = panel.dataset.path;
+
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+  if (!noAuth && token) headers['Authorization'] = 'Bearer ' + token;
+
+  // Path params
+  panel.querySelectorAll('[data-ptype="path"]').forEach(inp => {
+    path = path.replace(':' + inp.dataset.key, encodeURIComponent(inp.value || inp.dataset.key));
+  });
+
+  // Query params
+  const qp = {};
+  panel.querySelectorAll('[data-ptype="query"]').forEach(inp => { if (inp.value) qp[inp.dataset.key] = inp.value; });
+  const qs = new URLSearchParams(qp).toString();
+  if (qs) path += '?' + qs;
+
+  // Body from named inputs
+  let body = null;
+  const bodyInputs = [...panel.querySelectorAll('[data-ptype="body"]')];
+  if (bodyInputs.length) {
+    body = {};
+    bodyInputs.forEach(inp => {
+      const keys = inp.dataset.key.split('.');
+      let o = body;
+      keys.forEach((k, i) => { if (i === keys.length - 1) o[k] = inp.value; else { o[k] = o[k] || {}; o = o[k]; } });
+    });
+  } else {
+    const ta = panel.querySelector('.try-body');
+    if (ta && ta.value.trim()) { try { body = JSON.parse(ta.value); } catch { body = ta.value; } }
+  }
+
+  return { method, path, headers, body, url: getBase() + path };
+}
+
+// ── Code generation ────────────────────────────────────────────────────────
+function genCode(req, lang) {
+  const token = getToken();
+  const tok = token ? token.slice(0, 24) + '...' : 'YOUR_TOKEN';
+  const bodyStr = req.body ? JSON.stringify(req.body) : null;
+  const bodyPretty = req.body ? JSON.stringify(req.body, null, 2) : null;
+
+  if (lang === 'curl') {
+    let s = `curl -X ${req.method} '${req.url}'`;
+    s += ` \\\n  -H 'Content-Type: application/json'`;
+    s += ` \\\n  -H 'Accept: application/json'`;
+    if (req.headers['Authorization']) s += ` \\\n  -H 'Authorization: Bearer ${tok}'`;
+    if (bodyStr) s += ` \\\n  -d '${bodyStr}'`;
+    return s;
+  }
+  if (lang === 'js') {
+    let opts = `{\n  method: '${req.method}',\n  headers: {\n    'Content-Type': 'application/json'`;
+    if (req.headers['Authorization']) opts += `,\n    'Authorization': 'Bearer ${tok}'`;
+    opts += `\n  }`;
+    if (bodyPretty) opts += `,\n  body: JSON.stringify(${bodyPretty})`;
+    opts += `\n}`;
+    return `const res = await fetch('${req.url}', ${opts});\nconst data = await res.json();\nconsole.log(data);`;
+  }
+  if (lang === 'python') {
+    let s = `import requests\n\nurl = '${req.url}'\nheaders = {\n    'Content-Type': 'application/json'`;
+    if (req.headers['Authorization']) s += `,\n    'Authorization': f'Bearer ${tok}'`;
+    s += `\n}`;
+    if (req.body) {
+      s += `\njson = ${JSON.stringify(req.body, null, 4)}`;
+      s += `\n\nres = requests.${req.method.toLowerCase()}(url, headers=headers, json=json)`;
+    } else {
+      s += `\n\nres = requests.${req.method.toLowerCase()}(url, headers=headers)`;
+    }
+    s += `\nprint(res.json())`;
+    return s;
+  }
+  if (lang === 'ruby') {
+    const methodCap = req.method.charAt(0) + req.method.slice(1).toLowerCase();
+    let s = `require 'net/http'\nrequire 'json'\n\nuri = URI('${req.url}')\nhttp = Net::HTTP.new(uri.host, uri.port)\nhttp.use_ssl = uri.scheme == 'https'\n\nrequest = Net::HTTP::${methodCap}.new(uri)\nrequest['Content-Type'] = 'application/json'\nrequest['Accept'] = 'application/json'`;
+    if (req.headers['Authorization']) s += `\nrequest['Authorization'] = 'Bearer ${tok}'`;
+    if (req.body) s += `\nrequest.body = ${JSON.stringify(JSON.stringify(req.body))}`;
+    s += `\n\nresponse = http.request(request)\nputs JSON.parse(response.body)`;
+    return s;
+  }
+  return '';
+}
+
+function refreshLangCode(panel) {
+  const req = buildReq(panel);
+  panel.querySelectorAll('.lang-code').forEach(pre => { pre.textContent = genCode(req, pre.dataset.lang); });
+}
+
+function refreshAllLangCodes() {
+  document.querySelectorAll('.try-panel.open').forEach(p => refreshLangCode(p));
+}
+
+function switchLang(btn) {
+  const panel = btn.closest('.try-panel');
+  const lang = btn.dataset.lang;
+  btn.closest('.lang-tabs').querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t === btn));
+  panel.querySelectorAll('.lang-code').forEach(pre => pre.classList.toggle('active', pre.dataset.lang === lang));
+}
+
+// ── TRY panel toggle ──────────────────────────────────────────────────────
+function toggleTry(btn) {
+  const card = btn.closest('.ep-card');
+  const panel = card.querySelector('.try-panel');
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  btn.textContent = isOpen ? '▼ TRY' : '▶ TRY';
+  if (isOpen) refreshLangCode(panel);
+}
+
+// ── Execute request ───────────────────────────────────────────────────────
+async function execReq(btn) {
+  const panel  = btn.closest('.try-panel');
+  const req    = buildReq(panel);
+  const autoTk = panel.dataset.autoToken === 'true';
+  const resp   = panel.querySelector('.try-resp');
+  const status = panel.querySelector('.try-status');
+  const pre    = panel.querySelector('.try-pre');
+
+  btn.disabled = true;
+  resp.classList.remove('show');
+  status.className = 'try-status';
+  status.textContent = 'Enviando...';
+  resp.classList.add('show');
+
+  try {
+    const opts = { method: req.method, headers: req.headers };
+    if (req.body && req.method !== 'GET') opts.body = JSON.stringify(req.body);
+    const res = await fetch(req.url, opts);
+    const text = await res.text();
+    let parsed; try { parsed = JSON.parse(text); } catch { parsed = text; }
+
+    const ok = res.status >= 200 && res.status < 300;
+    status.textContent = res.status + ' ' + res.statusText;
+    status.className = 'try-status ' + (ok ? 'ok' : res.status >= 500 ? 'err' : 'warn');
+    pre.textContent = typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
+
+    if (autoTk && ok && parsed?.data?.access_token) {
+      const tk = parsed.data.access_token;
+      localStorage.setItem(TOKEN_KEY, tk);
+      document.getElementById('g-token').value = tk;
+      refreshAllLangCodes();
+      updatePgTokenStatus();
+      status.textContent += ' — token salvo';
+    }
+  } catch (err) {
+    status.className = 'try-status err';
+    status.textContent = 'Erro de rede';
+    pre.textContent = err.message;
+  }
+  btn.disabled = false;
+}
+
+function clearResp(btn) {
+  btn.closest('.try-panel').querySelector('.try-resp').classList.remove('show');
+}
+
+// ── Response schema accordion ─────────────────────────────────────────────
+function toggleSchema(hd) {
+  const body  = hd.nextElementSibling;
+  const arrow = hd.querySelector('.resp-schema-arrow');
+  const open  = body.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open', open);
+}
+
+// ── Sidebar scrollspy ─────────────────────────────────────────────────────
+function setActive(el) {
+  document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+  el.classList.add('active');
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+      const t = document.querySelector('.sb-link[href="#' + e.target.id + '"]');
+      if (t) t.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+</script>
 </body>
 </html>
