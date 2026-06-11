@@ -242,21 +242,13 @@ This API follows a modular monolith architecture with the following modules:
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        Client[Frontend Applications\nprostaff.gg / scrims.lol / arena-br.vercel.app]
-    end
-
-    subgraph "Infrastructure Layer"
-        Traefik[Traefik Reverse Proxy\napi.prostaff.gg - SSL + CORS]
-        subgraph "API Replicas - Round Robin"
-            API1[api-1\nPuma 4 workers]
-            API2[api-2\nPuma 4 workers]
-        end
+        Client[Frontend Application]
     end
 
     subgraph "API Gateway"
         Router[Rails Router]
         CORS[CORS Middleware]
-        RateLimit[Rate Limiting - Rack::Attack / Redis]
+        RateLimit[Rate Limiting]
         Auth[Authentication Middleware]
     end
 
@@ -360,15 +352,11 @@ graph TB
         PandaScoreAPI[PandaScore API]
     end
 
-    Client -->|HTTPS| Traefik
-    Traefik -->|Round Robin| API1
-    Traefik -->|Round Robin| API2
-    API1 -->|HTTP| CORS
-    API2 -->|HTTP| CORS
+    Client -->|HTTP/JSON| CORS
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
-
+        
     Router --> AuthController
     Router --> DashboardController
     Router --> PlayersController
@@ -428,14 +416,11 @@ graph TB
     Sidekiq -- Uses --> Redis
 
     style Client fill:#e1f5ff
-    style Traefik fill:#1d63ed,color:#fff
-    style API1 fill:#4a90d9,color:#fff
-    style API2 fill:#4a90d9,color:#fff
-    style PostgreSQL fill:#336791,color:#fff
-    style Redis fill:#d82c20,color:#fff
-    style RiotAPI fill:#eb0029,color:#fff
-    style PandaScoreAPI fill:#ff6b35,color:#fff
-    style Sidekiq fill:#b1003e,color:#fff
+    style PostgreSQL fill:#336791
+    style Redis fill:#d82c20
+    style RiotAPI fill:#eb0029
+    style PandaScoreAPI fill:#ff6b35
+    style Sidekiq fill:#b1003e
 ```
 
 
