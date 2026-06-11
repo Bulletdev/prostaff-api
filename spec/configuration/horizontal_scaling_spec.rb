@@ -4,6 +4,24 @@ require 'rails_helper'
 require 'yaml'
 
 RSpec.describe 'Horizontal scaling configuration' do
+  # Redis.new validates kwargs in RedisClient::Config#initialize synchronously,
+  # before any TCP connection. The cache store is lazy (first cache access),
+  # so invalid options bypass boot checks and only blow up in production.
+  # This test catches unknown keyword errors without needing a live Redis.
+  describe 'config/environments/production.rb RedisCacheStore options' do
+    # Mirror the options passed to RedisCacheStore in production.rb.
+    # Update this hash whenever production.rb cache_store config changes.
+    let(:redis_client_options) do
+      { url: 'redis://localhost:6379/0', reconnect_attempts: 3 }
+    end
+
+    it 'passes only valid keywords to the Redis client constructor' do
+      msg = 'RedisCacheStore is lazy-initialized, so invalid kwargs only surface at ' \
+            'first cache access in production. Keep this hash in sync with production.rb.'
+      expect { Redis.new(**redis_client_options) }.not_to raise_error(ArgumentError), msg
+    end
+  end
+
   describe 'database advisory locks' do
     it 'is enabled to serialize concurrent migrations across replicas at startup' do
       db_config = ActiveRecord::Base.connection_db_config.configuration_hash
