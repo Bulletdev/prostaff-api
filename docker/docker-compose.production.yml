@@ -69,6 +69,10 @@ services:
       context: .
       dockerfile: Dockerfile.production
     restart: unless-stopped
+    # Duas replicas: isolamento de crash/OOM entre processos
+    deploy:
+      replicas: 2
+    stop_grace_period: 35s
     networks:
       - coolify
     expose:
@@ -110,6 +114,18 @@ services:
       # Explicitly set service name for Traefik
       - traefik.http.services.prostaff-api.loadbalancer.server.scheme=http
 
+      # Sticky sessions - no-op hoje (frontends nao enviam cookies); preparacao para credentials: 'include'
+      - traefik.http.services.prostaff-api.loadbalancer.sticky.cookie=true
+      - traefik.http.services.prostaff-api.loadbalancer.sticky.cookie.name=prostaff_lb
+      - traefik.http.services.prostaff-api.loadbalancer.sticky.cookie.httponly=true
+      - traefik.http.services.prostaff-api.loadbalancer.sticky.cookie.secure=true
+      - traefik.http.services.prostaff-api.loadbalancer.sticky.cookie.samesite=none
+
+      # Traefik healthcheck - defesa em profundidade sobre o Docker healthcheck existente
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.path=/up
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.prostaff-api.loadbalancer.healthcheck.timeout=5s
+
     environment:
       RAILS_ENV: production
       WEB_CONCURRENCY: '4'
@@ -138,7 +154,7 @@ services:
       SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
       ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
       APP_HOST: '${APP_HOST:-api.prostaff.gg}'
-      # Meilisearch (self-hosted — same Docker network)
+      # Meilisearch (self-hosted - same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
       # SMTP (email delivery)
@@ -199,7 +215,7 @@ services:
       PROSTAFF_URL: '${PROSTAFF_URL:-https://prostaff.gg}'
       SCRIMS_URL: '${SCRIMS_URL:-https://scrims.lol}'
       ARENA_BR_URL: '${ARENA_BR_URL:-https://arena-br.vercel.app}'
-      # Meilisearch (self-hosted — same Docker network)
+      # Meilisearch (self-hosted - same Docker network)
       MEILISEARCH_URL: 'http://meilisearch:7700'
       MEILI_MASTER_KEY: '${MEILI_MASTER_KEY}'
       # SMTP (email delivery)
@@ -243,7 +259,7 @@ services:
       - coolify.applicationId=1
       - coolify.type=application
 
-      # Traefik — HTTPS router
+      # Traefik - HTTPS router
       - traefik.enable=true
       - traefik.http.routers.prostaff-status.rule=Host(`status.prostaff.gg`)
       - traefik.http.routers.prostaff-status.entrypoints=https
@@ -286,7 +302,7 @@ services:
       - coolify.applicationId=1
       - coolify.type=application
 
-      # Traefik — HTTPS router
+      # Traefik - HTTPS router
       - traefik.enable=true
       - traefik.http.routers.prostaff-docs.rule=Host(`docs.prostaff.gg`)
       - traefik.http.routers.prostaff-docs.entrypoints=https
