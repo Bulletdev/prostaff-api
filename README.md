@@ -6,7 +6,7 @@
 >        ██╔═══╝ ██╔══██╗██║   ██║╚════██║   ██║   ██╔══██║██╔══╝  ██╔══╝
 >        ██║     ██║  ██║╚██████╔╝███████║   ██║   ██║  ██║██║     ██║
 >        ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝
-                  API — eSports Analytics Hub - ProStaff.gg
+                  API - eSports Analytics Hub - ProStaff.gg
 ```
 
 <div align="center">
@@ -32,7 +32,7 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  PROSTAFF API — Ruby on Rails 7.2 (API-Only)                                 ║
+║  PROSTAFF API - Ruby on Rails 7.2 (API-Only)                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Backend for the ProStaff.gg esports team management platform.               ║
 ║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~200ms        ║
@@ -46,39 +46,39 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [■] JWT Authentication       — Refresh tokens + token blacklisting         │
-│  [■] Argon2id Password Hashing— OWASP preferred · lazy migration from bcrypt│
-│  [■] HashID URLs              — Base62 encoding for obfuscated URLs         │
-│  [■] Swagger Docs             — 200+ endpoints documented interactively     │
-│  [■] Riot Games API           — Automatic match and player import           │
-│  [■] Advanced Analytics       — KDA trends, champion pools, vision control  │
-│  [■] Scouting System          — Talent discovery + watchlist management     │
-│  [■] VOD Review System        — Collaborative timestamp annotations         │
-│  [■] Schedule Management      — Matches, scrims and team events             │
-│  [■] Goal Tracking            — Performance goals (team and players)        │
-│  [■] Competitive Module       — PandaScore + ES match detail + H2H          │
-│  [■] Match Detail View        — Per-game picks, KDA, gold, CS, DMG from ES  │
-│  [■] Pro Match Data Lake      — 97K+ games (2014-2026) in Elasticsearch     │
-│  [■] Multi-League Backfill    — CBLOL · Academy · CD auto-sync daily        │
-│  [■] Scrims Management        — Opponent tracking + analytics               │
-│  [■] Strategy Module          — Draft planning + tactical boards            │
-│  [■] AI Pick Recommendations  — Champion2Vec + XGBoost, 97K+ game dataset   │
-│  [■] Meta Intelligence        — Build aggregation, champion/item analytics  │
-│  [■] Support System           — Ticketing + staff dashboard + FAQ           │
-│  [■] Global Search            — Meilisearch full-text search across models  │
-│  [■] Search Fallback          — PostgreSQL ILIKE fallback when Meili offline│
-│  [■] Real-time Messaging      — Action Cable WebSocket team chat            │
-│  [■] Background Jobs          — Sidekiq for async background processing     │
-│  [■] Circuit Breaker          — Riot API isolation (3-state, Redis-backed)  │
-│  [■] Async Audit Log          — Non-blocking audit trail via Sidekiq job    │
-│  [■] Response Cache Layer     — Redis cache on 6 endpoints (TTL 5–30 min)   │
-│  [■] Security Hardened        — OWASP Top 10, Brakeman, Semgrep, CodeQL, ZAP│
-│  [■] Rate Limiting            — Rack::Attack: 5 rules + Retry-After headers │
-│  [■] High Performance         — p95: ~200ms prod · cached: ~50ms · >60% hit │
-│  [■] Modular Monolith         — Scalable modular architecture               │
-│  [■] Observability            — /health+/live /health/ready + cache metrics │
-│  [■] 401 Rate Spike Detection — Sliding-window middleware, alerts at >5%    │
-│  [■] Job Heartbeat Tracking   — Stale scheduled job detection via Redis     │
+│  [■] JWT Authentication       - Refresh tokens + token blacklisting         │
+│  [■] Argon2id Password Hashing- OWASP preferred · lazy migration from bcrypt│
+│  [■] HashID URLs              - Base62 encoding for obfuscated URLs         │
+│  [■] Swagger Docs             - 200+ endpoints documented interactively     │
+│  [■] Riot Games API           - Automatic match and player import           │
+│  [■] Advanced Analytics       - KDA trends, champion pools, vision control  │
+│  [■] Scouting System          - Talent discovery + watchlist management     │
+│  [■] VOD Review System        - Collaborative timestamp annotations         │
+│  [■] Schedule Management      - Matches, scrims and team events             │
+│  [■] Goal Tracking            - Performance goals (team and players)        │
+│  [■] Competitive Module       - PandaScore + ES match detail + H2H          │
+│  [■] Match Detail View        - Per-game picks, KDA, gold, CS, DMG from ES  │
+│  [■] Pro Match Data Lake      - 97K+ games (2014-2026) in Elasticsearch     │
+│  [■] Multi-League Backfill    - CBLOL · Academy · CD auto-sync daily        │
+│  [■] Scrims Management        - Opponent tracking + analytics               │
+│  [■] Strategy Module          - Draft planning + tactical boards            │
+│  [■] AI Pick Recommendations  - Champion2Vec + XGBoost, 97K+ game dataset   │
+│  [■] Meta Intelligence        - Build aggregation, champion/item analytics  │
+│  [■] Support System           - Ticketing + staff dashboard + FAQ           │
+│  [■] Global Search            - Meilisearch full-text search across models  │
+│  [■] Search Fallback          - PostgreSQL ILIKE fallback when Meili offline│
+│  [■] Real-time Messaging      - Action Cable WebSocket team chat            │
+│  [■] Background Jobs          - Sidekiq for async background processing     │
+│  [■] Circuit Breaker          - Riot API isolation (3-state, Redis-backed)  │
+│  [■] Async Audit Log          - Non-blocking audit trail via Sidekiq job    │
+│  [■] Response Cache Layer     - Redis cache on 6 endpoints (TTL 5–30 min)   │
+│  [■] Security Hardened        - OWASP Top 10, Brakeman, Semgrep, CodeQL, ZAP│
+│  [■] Rate Limiting            - Rack::Attack: 5 rules + Retry-After headers │
+│  [■] High Performance         - p95: ~200ms prod · cached: ~50ms · >60% hit │
+│  [■] Modular Monolith         - Scalable modular architecture               │
+│  [■] Observability            - /health+/live /health/ready + cache metrics │
+│  [■] 401 Rate Spike Detection - Sliding-window middleware, alerts at >5%    │
+│  [■] Job Heartbeat Tracking   - Stale scheduled job detection via Redis     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -178,7 +178,7 @@ Local Docker services started by `docker compose up -d`:
 | Container | Image | Port | Role |
 |---|---|---|---|
 | prostaff-api | docker-api | 3333 | Rails API |
-| docker-sidekiq-1 | docker-sidekiq | — | Background jobs |
+| docker-sidekiq-1 | docker-sidekiq | - | Background jobs |
 | docker-riot-gateway-1 | docker-riot-gateway | 4444 | Riot API proxy (Go) |
 | docker-redis-1 | redis:7-alpine | 6380 | Cache + Sidekiq queue |
 | docker-meilisearch-1 | meilisearch:v1.11 | 7700 | Full-text search |
@@ -242,13 +242,21 @@ This API follows a modular monolith architecture with the following modules:
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        Client[Frontend Application]
+        Client[Frontend Applications\nprostaff.gg / scrims.lol / arena-br.vercel.app]
+    end
+
+    subgraph "Infrastructure Layer"
+        Traefik[Traefik Reverse Proxy\napi.prostaff.gg - SSL + CORS]
+        subgraph "API Replicas - Round Robin"
+            API1[api-1\nPuma 4 workers]
+            API2[api-2\nPuma 4 workers]
+        end
     end
 
     subgraph "API Gateway"
         Router[Rails Router]
         CORS[CORS Middleware]
-        RateLimit[Rate Limiting]
+        RateLimit[Rate Limiting - Rack::Attack / Redis]
         Auth[Authentication Middleware]
     end
 
@@ -352,11 +360,15 @@ graph TB
         PandaScoreAPI[PandaScore API]
     end
 
-    Client -->|HTTP/JSON| CORS
+    Client -->|HTTPS| Traefik
+    Traefik -->|Round Robin| API1
+    Traefik -->|Round Robin| API2
+    API1 -->|HTTP| CORS
+    API2 -->|HTTP| CORS
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
-        
+
     Router --> AuthController
     Router --> DashboardController
     Router --> PlayersController
@@ -416,11 +428,14 @@ graph TB
     Sidekiq -- Uses --> Redis
 
     style Client fill:#e1f5ff
-    style PostgreSQL fill:#336791
-    style Redis fill:#d82c20
-    style RiotAPI fill:#eb0029
-    style PandaScoreAPI fill:#ff6b35
-    style Sidekiq fill:#b1003e
+    style Traefik fill:#1d63ed,color:#fff
+    style API1 fill:#4a90d9,color:#fff
+    style API2 fill:#4a90d9,color:#fff
+    style PostgreSQL fill:#336791,color:#fff
+    style Redis fill:#d82c20,color:#fff
+    style RiotAPI fill:#eb0029,color:#fff
+    style PandaScoreAPI fill:#ff6b35,color:#fff
+    style Sidekiq fill:#b1003e,color:#fff
 ```
 
 
@@ -480,7 +495,7 @@ Edit `.env` with your configuration:
 - PandaScore API key (optional, for competitive data)
 - Redis URL
 - CORS origins
-- HashID salt (for URL obfuscation — keep secret!)
+- HashID salt (for URL obfuscation - keep secret!)
 - Frontend URL
 
 **4. Setup the database:**
@@ -492,13 +507,13 @@ rails db:seed
 
 **5. Start the services:**
 ```bash
-# Terminal 1 — Redis
+# Terminal 1 - Redis
 redis-server
 
-# Terminal 2 — Sidekiq
+# Terminal 2 - Sidekiq
 bundle exec sidekiq
 
-# Terminal 3 — Rails server
+# Terminal 3 - Rails server
 rails server
 ```
 
@@ -550,7 +565,7 @@ TEST_EMAIL="admin@example.com" TEST_PASSWORD="MyPass123!" ./scripts/get-token.sh
 ## 06 · API Documentation
 
 <details>
-<summary><kbd>▶ Interactive Documentation — Swagger UI (click to expand)</kbd></summary>
+<summary><kbd>▶ Interactive Documentation - Swagger UI (click to expand)</kbd></summary>
 
 **Access:**
 ```
@@ -574,7 +589,7 @@ RSWAG_GENERATE=1 bundle exec rake rswag:specs:swaggerize
 bundle exec rspec spec/integration/
 ```
 
-> **Note:** `RSWAG_GENERATE=1` bypasses the local test-DB requirement — the
+> **Note:** `RSWAG_GENERATE=1` bypasses the local test-DB requirement - the
 > swagger formatter uses `--dry-run` so no database queries are executed.
 
 Generated file: `swagger/v1/swagger.yaml`
@@ -620,134 +635,134 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 
 ### Authentication Endpoints
 
-- `POST /auth/register` — Register new organization and admin user
-- `POST /auth/login` — Login user
-- `POST /auth/refresh` — Refresh JWT token
-- `POST /auth/logout` — Logout user
-- `POST /auth/forgot-password` — Request password reset
-- `POST /auth/reset-password` — Reset password
-- `GET  /auth/me` — Get current user info
+- `POST /auth/register` - Register new organization and admin user
+- `POST /auth/login` - Login user
+- `POST /auth/refresh` - Refresh JWT token
+- `POST /auth/logout` - Logout user
+- `POST /auth/forgot-password` - Request password reset
+- `POST /auth/reset-password` - Reset password
+- `GET  /auth/me` - Get current user info
 
 ### Core Endpoints
 
 #### Dashboard
-- `GET /dashboard` — Get complete dashboard data
-- `GET /dashboard/stats` — Get quick stats
-- `GET /dashboard/activities` — Get recent activities
-- `GET /dashboard/schedule` — Get upcoming schedule
+- `GET /dashboard` - Get complete dashboard data
+- `GET /dashboard/stats` - Get quick stats
+- `GET /dashboard/activities` - Get recent activities
+- `GET /dashboard/schedule` - Get upcoming schedule
 
 #### Players
-- `GET    /players` — List players
-- `GET    /players/:id` — Get player details
-- `POST   /players` — Create player
-- `PATCH  /players/:id` — Update player
-- `DELETE /players/:id` — Delete player
-- `GET    /players/stats` — Get roster statistics
-- `POST   /players/import` — Import player from Riot API
+- `GET    /players` - List players
+- `GET    /players/:id` - Get player details
+- `POST   /players` - Create player
+- `PATCH  /players/:id` - Update player
+- `DELETE /players/:id` - Delete player
+- `GET    /players/stats` - Get roster statistics
+- `POST   /players/import` - Import player from Riot API
 
 #### Matches
-- `GET  /matches` — List matches
-- `GET  /matches/:id` — Get match details
-- `POST /matches` — Create match
-- `POST /matches/import` — Import match from Riot API
+- `GET  /matches` - List matches
+- `GET  /matches/:id` - Get match details
+- `POST /matches` - Create match
+- `POST /matches/import` - Import match from Riot API
 
 #### Scouting
-- `GET  /scouting/players` — List scouting targets
-- `GET  /scouting/regions` — Get available regions
-- `POST /scouting/players` — Add scouting target
+- `GET  /scouting/players` - List scouting targets
+- `GET  /scouting/regions` - Get available regions
+- `POST /scouting/players` - Add scouting target
 
 #### Analytics
-- `GET /analytics/performance` — Team performance analytics
-- `GET /analytics/team-comparison` — Compare all players
-- `GET /analytics/champions/:player_id` — Champion pool statistics
-- `GET /analytics/kda-trend/:player_id` — KDA trend over time
-- `GET /analytics/laning/:player_id` — Laning phase performance
-- `GET /analytics/teamfights/:player_id` — Teamfight performance
-- `GET /analytics/vision/:player_id` — Vision control statistics
-- `GET /analytics/competitive/draft-performance` — Pick/ban/side/role performance from competitive matches
-- `GET /analytics/competitive/tournament-stats` — Win/loss breakdown per tournament and stage
-- `GET /analytics/competitive/opponents` — Aggregated record against each unique opponent
+- `GET /analytics/performance` - Team performance analytics
+- `GET /analytics/team-comparison` - Compare all players
+- `GET /analytics/champions/:player_id` - Champion pool statistics
+- `GET /analytics/kda-trend/:player_id` - KDA trend over time
+- `GET /analytics/laning/:player_id` - Laning phase performance
+- `GET /analytics/teamfights/:player_id` - Teamfight performance
+- `GET /analytics/vision/:player_id` - Vision control statistics
+- `GET /analytics/competitive/draft-performance` - Pick/ban/side/role performance from competitive matches
+- `GET /analytics/competitive/tournament-stats` - Win/loss breakdown per tournament and stage
+- `GET /analytics/competitive/opponents` - Aggregated record against each unique opponent
 
 > All competitive analytics endpoints accept optional query filters: `tournament`, `patch`, `region`, `start_date`, `end_date`
 
 #### Schedules
-- `GET    /schedules` — List all scheduled events
-- `GET    /schedules/:id` — Get schedule details
-- `POST   /schedules` — Create new event
-- `PATCH  /schedules/:id` — Update event
-- `DELETE /schedules/:id` — Delete event
+- `GET    /schedules` - List all scheduled events
+- `GET    /schedules/:id` - Get schedule details
+- `POST   /schedules` - Create new event
+- `PATCH  /schedules/:id` - Update event
+- `DELETE /schedules/:id` - Delete event
 
 #### Team Goals
-- `GET    /team-goals` — List all goals
-- `GET    /team-goals/:id` — Get goal details
-- `POST   /team-goals` — Create new goal
-- `PATCH  /team-goals/:id` — Update goal progress
-- `DELETE /team-goals/:id` — Delete goal
+- `GET    /team-goals` - List all goals
+- `GET    /team-goals/:id` - Get goal details
+- `POST   /team-goals` - Create new goal
+- `PATCH  /team-goals/:id` - Update goal progress
+- `DELETE /team-goals/:id` - Delete goal
 
 #### VOD Reviews
-- `GET    /vod-reviews` — List VOD reviews
-- `GET    /vod-reviews/:id` — Get review details
-- `POST   /vod-reviews` — Create new review
-- `PATCH  /vod-reviews/:id` — Update review
-- `DELETE /vod-reviews/:id` — Delete review
-- `GET    /vod-reviews/:id/timestamps` — List timestamps
-- `POST   /vod-reviews/:id/timestamps` — Create timestamp
-- `PATCH  /vod-timestamps/:id` — Update timestamp
-- `DELETE /vod-timestamps/:id` — Delete timestamp
+- `GET    /vod-reviews` - List VOD reviews
+- `GET    /vod-reviews/:id` - Get review details
+- `POST   /vod-reviews` - Create new review
+- `PATCH  /vod-reviews/:id` - Update review
+- `DELETE /vod-reviews/:id` - Delete review
+- `GET    /vod-reviews/:id/timestamps` - List timestamps
+- `POST   /vod-reviews/:id/timestamps` - Create timestamp
+- `PATCH  /vod-timestamps/:id` - Update timestamp
+- `DELETE /vod-timestamps/:id` - Delete timestamp
 
 #### Riot Data
-- `GET  /riot-data/champions` — Get champions ID map
-- `GET  /riot-data/champions/:key` — Get champion details
-- `GET  /riot-data/all-champions` — Get all champions data
-- `GET  /riot-data/items` — Get all items
-- `GET  /riot-data/summoner-spells` — Get summoner spells
-- `GET  /riot-data/version` — Get current Data Dragon version
-- `POST /riot-data/clear-cache` — Clear Data Dragon cache (owner only)
-- `POST /riot-data/update-cache` — Update Data Dragon cache (owner only)
+- `GET  /riot-data/champions` - Get champions ID map
+- `GET  /riot-data/champions/:key` - Get champion details
+- `GET  /riot-data/all-champions` - Get all champions data
+- `GET  /riot-data/items` - Get all items
+- `GET  /riot-data/summoner-spells` - Get summoner spells
+- `GET  /riot-data/version` - Get current Data Dragon version
+- `POST /riot-data/clear-cache` - Clear Data Dragon cache (owner only)
+- `POST /riot-data/update-cache` - Update Data Dragon cache (owner only)
 
 #### Riot Integration
-- `GET /riot-integration/sync-status` — Get sync status for all players
+- `GET /riot-integration/sync-status` - Get sync status for all players
 
 #### Competitive (PandaScore + Elasticsearch)
-- `GET  /competitive-matches` — List competitive matches
-- `GET  /competitive-matches/:id` — Get competitive match details
-- `GET  /competitive/pro-matches` — List all pro matches
-- `GET  /competitive/pro-matches/:id` — Get pro match details
-- `GET  /competitive/pro-matches/upcoming` — Get upcoming pro matches
-- `GET  /competitive/pro-matches/past` — Get past pro matches
-- `POST /competitive/pro-matches/refresh` — Refresh pro matches from PandaScore
-- `POST /competitive/pro-matches/import` — Import specific pro match
-- `GET  /competitive/pro-matches/match-preview` — Per-game picks + stats for a recent series (ES)
-- `GET  /competitive/pro-matches/es-series` — H2H series history between two teams (ES)
-- `POST /competitive/draft-comparison` — Compare team compositions
-- `GET  /competitive/meta/:role` — Get meta champions by role
-- `GET  /competitive/composition-winrate` — Get composition winrate statistics
-- `GET  /competitive/counters` — Get champion counter suggestions
+- `GET  /competitive-matches` - List competitive matches
+- `GET  /competitive-matches/:id` - Get competitive match details
+- `GET  /competitive/pro-matches` - List all pro matches
+- `GET  /competitive/pro-matches/:id` - Get pro match details
+- `GET  /competitive/pro-matches/upcoming` - Get upcoming pro matches
+- `GET  /competitive/pro-matches/past` - Get past pro matches
+- `POST /competitive/pro-matches/refresh` - Refresh pro matches from PandaScore
+- `POST /competitive/pro-matches/import` - Import specific pro match
+- `GET  /competitive/pro-matches/match-preview` - Per-game picks + stats for a recent series (ES)
+- `GET  /competitive/pro-matches/es-series` - H2H series history between two teams (ES)
+- `POST /competitive/draft-comparison` - Compare team compositions
+- `GET  /competitive/meta/:role` - Get meta champions by role
+- `GET  /competitive/composition-winrate` - Get composition winrate statistics
+- `GET  /competitive/counters` - Get champion counter suggestions
 
 > `match-preview` and `es-series` query the Elasticsearch data lake (97K+ games) and are league-agnostic. They accept `?team1=&team2=&league=&limit=` query params.
 
 #### Scrims Management
-- `GET    /scrims/scrims` — List all scrims
-- `GET    /scrims/scrims/:id` — Get scrim details
-- `POST   /scrims/scrims` — Create new scrim
-- `PATCH  /scrims/scrims/:id` — Update scrim
-- `DELETE /scrims/scrims/:id` — Delete scrim
-- `POST   /scrims/scrims/:id/add_game` — Add game to scrim
-- `GET    /scrims/scrims/calendar` — Get scrims calendar
-- `GET    /scrims/scrims/analytics` — Get scrims analytics
-- `GET    /scrims/opponent-teams` — List opponent teams
-- `GET    /scrims/opponent-teams/:id` — Get opponent team details
-- `POST   /scrims/opponent-teams` — Create opponent team
-- `PATCH  /scrims/opponent-teams/:id` — Update opponent team
-- `DELETE /scrims/opponent-teams/:id` — Delete opponent team
-- `GET    /scrims/opponent-teams/:id/scrim-history` — Get scrim history with opponent
+- `GET    /scrims/scrims` - List all scrims
+- `GET    /scrims/scrims/:id` - Get scrim details
+- `POST   /scrims/scrims` - Create new scrim
+- `PATCH  /scrims/scrims/:id` - Update scrim
+- `DELETE /scrims/scrims/:id` - Delete scrim
+- `POST   /scrims/scrims/:id/add_game` - Add game to scrim
+- `GET    /scrims/scrims/calendar` - Get scrims calendar
+- `GET    /scrims/scrims/analytics` - Get scrims analytics
+- `GET    /scrims/opponent-teams` - List opponent teams
+- `GET    /scrims/opponent-teams/:id` - Get opponent team details
+- `POST   /scrims/opponent-teams` - Create opponent team
+- `PATCH  /scrims/opponent-teams/:id` - Update opponent team
+- `DELETE /scrims/opponent-teams/:id` - Delete opponent team
+- `GET    /scrims/opponent-teams/:id/scrim-history` - Get scrim history with opponent
 
 #### AI Intelligence
 
-> Requires Tier 1 (Professional) subscription — `predictive_analytics` feature gate.
+> Requires Tier 1 (Professional) subscription - `predictive_analytics` feature gate.
 
-- `POST /ai/draft/analyze` — Analyze a saved draft plan (synergy, counter, risk, readiness)
-- `POST /ai/recommend-pick` — Top-5 ML champion recommendations for a partial draft
+- `POST /ai/draft/analyze` - Analyze a saved draft plan (synergy, counter, risk, readiness)
+- `POST /ai/recommend-pick` - Top-5 ML champion recommendations for a partial draft
 
 **Request** (`/ai/recommend-pick`):
 ```json
@@ -786,111 +801,111 @@ Response header `X-AI-Source: ml_v2` (XGBoost) or `X-AI-Source: legacy` (DraftSu
 The ML service (`prostaff-ml`) is a FastAPI container trained on 97K+ competitive matches using Champion2Vec embeddings (64D, Gensim Word2Vec) and an XGBoost classifier with 327 features. Training pipeline: `extract_features → train_champion2vec → train_win_probability → validate → export`. See [`prostaff-ml`](https://github.com/bulletdev/prostaff-ml).
 
 #### Strategy Module
-- `GET    /strategy/draft-plans` — List draft plans
-- `GET    /strategy/draft-plans/:id` — Get draft plan details
-- `POST   /strategy/draft-plans` — Create new draft plan
-- `PATCH  /strategy/draft-plans/:id` — Update draft plan
-- `DELETE /strategy/draft-plans/:id` — Delete draft plan
-- `POST   /strategy/draft-plans/:id/analyze` — Analyze draft plan
-- `PATCH  /strategy/draft-plans/:id/activate` — Activate draft plan
-- `PATCH  /strategy/draft-plans/:id/deactivate` — Deactivate draft plan
-- `GET    /strategy/tactical-boards` — List tactical boards
-- `GET    /strategy/tactical-boards/:id` — Get tactical board details
-- `POST   /strategy/tactical-boards` — Create new tactical board
-- `PATCH  /strategy/tactical-boards/:id` — Update tactical board
-- `DELETE /strategy/tactical-boards/:id` — Delete tactical board
-- `GET    /strategy/tactical-boards/:id/statistics` — Get tactical board statistics
-- `GET    /strategy/assets/champion/:champion_name` — Get champion assets
-- `GET    /strategy/assets/map` — Get map assets
+- `GET    /strategy/draft-plans` - List draft plans
+- `GET    /strategy/draft-plans/:id` - Get draft plan details
+- `POST   /strategy/draft-plans` - Create new draft plan
+- `PATCH  /strategy/draft-plans/:id` - Update draft plan
+- `DELETE /strategy/draft-plans/:id` - Delete draft plan
+- `POST   /strategy/draft-plans/:id/analyze` - Analyze draft plan
+- `PATCH  /strategy/draft-plans/:id/activate` - Activate draft plan
+- `PATCH  /strategy/draft-plans/:id/deactivate` - Deactivate draft plan
+- `GET    /strategy/tactical-boards` - List tactical boards
+- `GET    /strategy/tactical-boards/:id` - Get tactical board details
+- `POST   /strategy/tactical-boards` - Create new tactical board
+- `PATCH  /strategy/tactical-boards/:id` - Update tactical board
+- `DELETE /strategy/tactical-boards/:id` - Delete tactical board
+- `GET    /strategy/tactical-boards/:id/statistics` - Get tactical board statistics
+- `GET    /strategy/assets/champion/:champion_name` - Get champion assets
+- `GET    /strategy/assets/map` - Get map assets
 
 #### Meta Intelligence
-- `GET  /meta/builds` — List aggregated champion builds
-- `GET  /meta/builds/:champion` — Get build stats for a specific champion
-- `POST /meta/builds/aggregate` — Trigger build aggregation job (admin)
-- `GET  /meta/items` — List item analytics
-- `GET  /meta/items/:item_id` — Get item performance stats
+- `GET  /meta/builds` - List aggregated champion builds
+- `GET  /meta/builds/:champion` - Get build stats for a specific champion
+- `POST /meta/builds/aggregate` - Trigger build aggregation job (admin)
+- `GET  /meta/items` - List item analytics
+- `GET  /meta/items/:item_id` - Get item performance stats
 
 #### Support System
-- `GET    /support/tickets` — List user's tickets
-- `GET    /support/tickets/:id` — Get ticket details
-- `POST   /support/tickets` — Create new support ticket
-- `PATCH  /support/tickets/:id` — Update ticket
-- `DELETE /support/tickets/:id` — Delete ticket
-- `POST   /support/tickets/:id/close` — Close ticket
-- `POST   /support/tickets/:id/reopen` — Reopen ticket
-- `POST   /support/tickets/:id/messages` — Add message to ticket
-- `GET    /support/faq` — List all FAQs
-- `GET    /support/faq/:slug` — Get FAQ by slug
-- `POST   /support/faq/:slug/helpful` — Mark FAQ as helpful
-- `POST   /support/faq/:slug/not-helpful` — Mark FAQ as not helpful
-- `GET    /support/staff/dashboard` — Support staff dashboard (staff only)
-- `GET    /support/staff/analytics` — Support analytics (staff only)
-- `POST   /support/staff/tickets/:id/assign` — Assign ticket to staff (staff only)
-- `POST   /support/staff/tickets/:id/resolve` — Resolve ticket (staff only)
+- `GET    /support/tickets` - List user's tickets
+- `GET    /support/tickets/:id` - Get ticket details
+- `POST   /support/tickets` - Create new support ticket
+- `PATCH  /support/tickets/:id` - Update ticket
+- `DELETE /support/tickets/:id` - Delete ticket
+- `POST   /support/tickets/:id/close` - Close ticket
+- `POST   /support/tickets/:id/reopen` - Reopen ticket
+- `POST   /support/tickets/:id/messages` - Add message to ticket
+- `GET    /support/faq` - List all FAQs
+- `GET    /support/faq/:slug` - Get FAQ by slug
+- `POST   /support/faq/:slug/helpful` - Mark FAQ as helpful
+- `POST   /support/faq/:slug/not-helpful` - Mark FAQ as not helpful
+- `GET    /support/staff/dashboard` - Support staff dashboard (staff only)
+- `GET    /support/staff/analytics` - Support analytics (staff only)
+- `POST   /support/staff/tickets/:id/assign` - Assign ticket to staff (staff only)
+- `POST   /support/staff/tickets/:id/resolve` - Resolve ticket (staff only)
 
 #### Tournaments (ArenaBR)
-- `GET    /tournaments` — List active tournaments (public)
-- `GET    /tournaments/:id` — Show tournament with full bracket (public)
-- `POST   /tournaments` — Create tournament (admin only)
-- `PATCH  /tournaments/:id` — Update tournament (admin only)
-- `POST   /tournaments/:id/generate_bracket` — Generate 16-team double-elimination bracket (admin only)
-- `GET    /tournaments/:id/teams` — List enrolled teams with roster snapshot (public)
-- `POST   /tournaments/:id/teams` — Enroll organization as team
-- `PATCH  /tournaments/:id/teams/:team_id/approve` — Approve enrollment + lock roster (admin only)
-- `PATCH  /tournaments/:id/teams/:team_id/reject` — Reject enrollment (admin only)
-- `DELETE /tournaments/:id/teams/:team_id` — Withdraw team (own org, before bracket)
-- `GET    /tournaments/:id/matches` — List all bracket matches (public)
-- `GET    /tournaments/:id/matches/:match_id` — Show match detail with checkin status
-- `POST   /tournaments/:id/matches/:match_id/checkin` — Captain confirms presence
-- `GET    /tournaments/:id/matches/:match_id/report` — Get report status
-- `POST   /tournaments/:id/matches/:match_id/report` — Submit result report with evidence
-- `POST   /tournaments/:id/matches/:match_id/report/admin_resolve` — Admin resolves dispute (admin only)
+- `GET    /tournaments` - List active tournaments (public)
+- `GET    /tournaments/:id` - Show tournament with full bracket (public)
+- `POST   /tournaments` - Create tournament (admin only)
+- `PATCH  /tournaments/:id` - Update tournament (admin only)
+- `POST   /tournaments/:id/generate_bracket` - Generate 16-team double-elimination bracket (admin only)
+- `GET    /tournaments/:id/teams` - List enrolled teams with roster snapshot (public)
+- `POST   /tournaments/:id/teams` - Enroll organization as team
+- `PATCH  /tournaments/:id/teams/:team_id/approve` - Approve enrollment + lock roster (admin only)
+- `PATCH  /tournaments/:id/teams/:team_id/reject` - Reject enrollment (admin only)
+- `DELETE /tournaments/:id/teams/:team_id` - Withdraw team (own org, before bracket)
+- `GET    /tournaments/:id/matches` - List all bracket matches (public)
+- `GET    /tournaments/:id/matches/:match_id` - Show match detail with checkin status
+- `POST   /tournaments/:id/matches/:match_id/checkin` - Captain confirms presence
+- `GET    /tournaments/:id/matches/:match_id/report` - Get report status
+- `POST   /tournaments/:id/matches/:match_id/report` - Submit result report with evidence
+- `POST   /tournaments/:id/matches/:match_id/report/admin_resolve` - Admin resolves dispute (admin only)
 
 #### Global Search
-- `GET /search?q=:query` — Full-text search across players, organizations, scouting targets, opponent teams and FAQs
+- `GET /search?q=:query` - Full-text search across players, organizations, scouting targets, opponent teams and FAQs
 
 #### Notifications
-- `GET    /notifications` — List user notifications
-- `GET    /notifications/:id` — Get notification
-- `PATCH  /notifications/:id/mark-as-read` — Mark as read
-- `PATCH  /notifications/mark-all-as-read` — Mark all as read
-- `GET    /notifications/unread-count` — Get unread count
-- `DELETE /notifications/:id` — Delete notification
+- `GET    /notifications` - List user notifications
+- `GET    /notifications/:id` - Get notification
+- `PATCH  /notifications/:id/mark-as-read` - Mark as read
+- `PATCH  /notifications/mark-all-as-read` - Mark all as read
+- `GET    /notifications/unread-count` - Get unread count
+- `DELETE /notifications/:id` - Delete notification
 
 #### Health & Observability
 
 ```
-GET /health/live              — Liveness probe: is Puma alive? Never checks deps.
+GET /health/live              - Liveness probe: is Puma alive? Never checks deps.
                                 Always returns 200 while the process responds.
                                 Use for container restart policies (Coolify/K8s).
 
-GET /health/ready             — Readiness probe: checks PostgreSQL + Redis + Meilisearch.
+GET /health/ready             - Readiness probe: checks PostgreSQL + Redis + Meilisearch.
                                 Returns 200 (ok/disabled) or 503 (any dep unreachable).
                                 Use for load balancer traffic routing.
 
-GET /api/v1/monitoring/sidekiq      — Admin only. Full Sidekiq snapshot:
+GET /api/v1/monitoring/sidekiq      - Admin only. Full Sidekiq snapshot:
                                       queue depths, worker count, dead queue, retry queue,
                                       scheduled job heartbeats (stale detection), alert flags.
                                       Returns 503 if Redis unavailable.
 
-GET /api/v1/monitoring/cache_stats  — Admin only. Real-time cache hit rate:
+GET /api/v1/monitoring/cache_stats  - Admin only. Real-time cache hit rate:
                                       total reads, hits, misses, hit_rate (%).
                                       Counters persist in Redis, reset on Redis flush.
 ```
 
 > **Monitoring endpoint response includes:**
-> - `scheduled_jobs` — last run timestamp + `stale: true/false` per cron job
-> - `alerts.stale_jobs` — true if any scheduled job exceeded its alert window
-> - `alerts.no_workers` — true if no Sidekiq workers running
-> - `alerts.dead_queue_exceeded` — true if dead queue > 10 jobs
-> - `alerts.queue_depth_exceeded` — true if total queue depth > 100 jobs
+> - `scheduled_jobs` - last run timestamp + `stale: true/false` per cron job
+> - `alerts.stale_jobs` - true if any scheduled job exceeded its alert window
+> - `alerts.no_workers` - true if no Sidekiq workers running
+> - `alerts.dead_queue_exceeded` - true if dead queue > 10 jobs
+> - `alerts.queue_depth_exceeded` - true if total queue depth > 100 jobs
 
 #### Team Members (chat)
-- `GET /team-members` — List organization members (staff only — rejects player tokens)
+- `GET /team-members` - List organization members (staff only - rejects player tokens)
 
 #### Messages (DM)
-- `GET    /messages` — List direct message history with a member
-- `DELETE /messages/:id` — Soft-delete a message
+- `GET    /messages` - List direct message history with a member
+- `DELETE /messages/:id` - Soft-delete a message
 
 > For complete endpoint documentation with request/response examples, visit `/api-docs`
 
@@ -993,8 +1008,8 @@ open coverage/index.html
 ╔═══════════════════════════════════════╗
 ║  PERFORMANCE BENCHMARKS               ║
 ╠══════════════════╦════════════════════╣
-║  p(95) Docker    ║  ~880ms            ║
-║  p(95) Prod est. ║  <200ms(target)    ║
+║  p(95) Docker    ║  ~411ms            ║
+║  p(95) Prod est. ║  ~300ms (2 reps.)  ║
 ║  With cache      ║  ~50ms             ║
 ║  Cache hit rate  ║  >60%(after warmup)║
 ║  Error rate      ║  0%                ║
@@ -1025,11 +1040,11 @@ All cached responses include `X-Cache-Hit: true/false` header.
 # Complete security audit
 ./security_tests/scripts/full-security-audit.sh
 
-# SAST — code + dependency analysis
+# SAST - code + dependency analysis
 ./security_tests/scripts/brakeman-scan.sh          # Rails-specific SAST
 ./security_tests/scripts/dependency-scan.sh        # Vulnerable gems (bundle-audit)
 
-# DAST — runtime scanning
+# DAST - runtime scanning
 ./security_tests/scripts/zap-baseline-scan.sh      # OWASP ZAP baseline
 ./security_tests/scripts/zap-api-scan.sh           # ZAP API scan (OpenAPI)
 
@@ -1052,7 +1067,7 @@ All cached responses include `X-Cache-Hit: true/false` header.
 [✓] Timing oracle: login/register user enumeration
 [✓] Mass assignment: StrongParameters coverage
 [✓] CI/CD: security gates on every push + weekly CodeQL
-[✓] Password hashing: Argon2id (m=64MiB, t=3, p=2) — bcrypt lazy migration on login
+[✓] Password hashing: Argon2id (m=64MiB, t=3, p=2) - bcrypt lazy migration on login
 ```
 
 ### Security Status
@@ -1096,8 +1111,8 @@ We take security seriously. If you discover a security vulnerability, please fol
 
 |       Endpoint      |             Purpose              |   Returns  |
 |---------------------|----------------------------------|------------|
-| `GET /health/live`  | Liveness — is Puma responding?   | Always 200 |
-| `GET /health/ready` | Readiness — all deps reachable?  | 200 / 503  |
+| `GET /health/live`  | Liveness - is Puma responding?   | Always 200 |
+| `GET /health/ready` | Readiness - all deps reachable?  | 200 / 503  |
 | `GET /up`           | Legacy backward-compatible alias |    200     |
 
 > **Rule**: never point the liveness probe at an endpoint that checks Redis or DB.
@@ -1142,21 +1157,21 @@ Response shape:
 | `degraded`             | queue > 100, dead > 10, or any scheduled job stale |
 | `critical`             | no Sidekiq workers running                         |
 
-### Circuit Breaker — Riot API
+### Circuit Breaker - Riot API
 
 `CircuitBreakerService` protects the Riot API integration from cascade failures.
 State persists in Redis (shared across all Puma workers and Sidekiq threads).
 
 ```
-closed  (normal)    — requests pass through; failure count incremented on error
-open    (tripped)   — requests rejected immediately (<100ms); no upstream call
-half-open (recovery)— one probe request allowed; success closes, failure re-opens
+closed  (normal)    - requests pass through; failure count incremented on error
+open    (tripped)   - requests rejected immediately (<100ms); no upstream call
+half-open (recovery)- one probe request allowed; success closes, failure re-opens
 ```
 
 |     Parameter     |        Default       |           Env override      |
 |-------------------|----------------------|-----------------------------|
 | Failure threshold | 5 consecutive errors | `CIRCUIT_BREAKER_THRESHOLD` |
-| Recovery timeout  | 60 seconds           |                —            |
+| Recovery timeout  | 60 seconds           |                -            |
 
 Log events emitted on state transitions:
 ```
@@ -1206,11 +1221,11 @@ This API is one service in the ProStaff ecosystem. The other services it integra
 
 |                    Service                          |      Stack       |                          Role                                                                             |
 |-----------------------------------------------------|------------------|-----------------------------------------------------------------------------------------------------------|
-| [prostaff-events](https://github.com/bulletdev/prostaff-events)        | Elixir / Phoenix 1.7  | Real-time event bus — subscribes to Redis pub/sub and pushes via Phoenix Channels |
-| [prostaff-riot-gateway](https://github.com/bulletdev/prostaff-gateway) | Go 1.23               | Riot API proxy — token bucket rate limiting, L1/L2 cache, circuit breaker         |
-| [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)      | Python / FastAPI      | Pro match data pipeline — Leaguepedia + Oracle's Elixir → Elasticsearch           |
-|🔒prostaff-ml                 | Python 3.11 / FastAPI | ML service — Champion2Vec + XGBoost pick recommendations (serves `POST /ai/recommend-pick`) |
-|🔒prostaff-analytics-hub  | Next.js 15 / vinext    | Frontend SPA — consumes API (also: https://prostaff.gg, https://scrims.lol)
+| [prostaff-events](https://github.com/bulletdev/prostaff-events)        | Elixir / Phoenix 1.7  | Real-time event bus - subscribes to Redis pub/sub and pushes via Phoenix Channels |
+| [prostaff-riot-gateway](https://github.com/bulletdev/prostaff-gateway) | Go 1.23               | Riot API proxy - token bucket rate limiting, L1/L2 cache, circuit breaker         |
+|🔒 [ProStaff-Scraper](https://github.com/bulletdev/ProStaff-Scraper)      | Python / FastAPI      | Pro match data pipeline - Leaguepedia + Oracle's Elixir → Elasticsearch           |
+|🔒prostaff-ml                 | Python 3.11 / FastAPI | ML service - Champion2Vec + XGBoost pick recommendations (serves `POST /ai/recommend-pick`) |
+|🔒prostaff-analytics-hub  | Next.js 15 / vinext    | Frontend SPA - consumes API (also: https://prostaff.gg, https://scrims.lol)
 
 ### Deployment Architecture
 
@@ -1222,33 +1237,33 @@ graph TB
         PlayerPortal["Player Portal<br/>JWT player token"]
     end
 
-    subgraph "Production — Coolify"
+    subgraph "Production - Coolify"
         Traefik["Traefik<br/>TLS + Let's Encrypt<br/>WebSocket proxy"]
         CoolifyNode["Coolify<br/>Deploys & Manages<br/>all production services"]
     end
 
-    subgraph "Rails — Puma"
+    subgraph "Rails - Puma (2 replicas, round robin)"
         Cable["Action Cable<br/>WSS /cable<br/>(team chat)"]
         Router["Rails Router<br/>REST API v1<br/>200+ endpoints"]
-        Sidekiq["Sidekiq<br/>Background Workers<br/>(sync + backfill)"]
+        Sidekiq["Sidekiq<br/>Background Workers<br/>(1 instance - do not scale)"]
     end
 
-    subgraph "prostaff-events — Elixir/Phoenix"
+    subgraph "prostaff-events - Elixir/Phoenix"
         PhoenixEndpoint["Phoenix Endpoint<br/>WSS /socket<br/>(domain events)"]
         RedisSub["RedisSubscriber<br/>PSUBSCRIBE prostaff:events:*"]
         InhouseQ["InhouseQueue<br/>GenServer per active queue"]
     end
 
-    subgraph "prostaff-riot-gateway — Go"
+    subgraph "prostaff-riot-gateway - Go"
         Gateway["Riot Gateway :4444<br/>Token bucket · L1/L2 cache<br/>Circuit breaker"]
     end
 
-    subgraph "prostaff-ml — Python/FastAPI"
+    subgraph "prostaff-ml - Python/FastAPI"
         MlService["ML Service :8001<br/>Champion2Vec + XGBoost<br/>POST /recommend · /win-probability"]
         MlModels[("Models<br/>champion2vec.bin<br/>win_probability_v2.pkl")]
     end
 
-    subgraph "prostaff-scraper — Python/FastAPI"
+    subgraph "prostaff-scraper - Python/FastAPI"
         ScraperApi["Scraper API :8000<br/>GET /health · /matches · /status"]
         ScraperCron["scraper-cron<br/>polls LoL Esports API<br/>(every SYNC_INTERVAL_HOURS)"]
         Enrichment["enrichment daemon<br/>Leaguepedia + Riot<br/>(items/runes/KDA)"]
@@ -1361,13 +1376,13 @@ graph TB
 ╚══════════════════════════════╩═══════════════╩═══════════════════════════════════════════╝
 ```
 
-> Backfill jobs are resumable — re-running skips already-completed tournaments. First run imports full history (~8-12h); subsequent runs only process new/failed tournaments (minutes).
+> Backfill jobs are resumable - re-running skips already-completed tournaments. First run imports full history (~8-12h); subsequent runs only process new/failed tournaments (minutes).
 
 **Production Stack (Coolify):**
-- **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt)
-- **Application**: Rails 7.2 API (Puma) + Action Cable + Sidekiq
-- **Event Bus**: prostaff-events — Elixir/Phoenix 1.7 (domain events via Phoenix Channels)
-- **Riot Gateway**: prostaff-riot-gateway — Go 1.23 (token bucket, L1/L2 cache, circuit breaker)
+- **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt) - round robin across 2 api replicas
+- **Application**: Rails 7.2 API (Puma, 2 replicas) + Action Cable + Sidekiq (1 instance - do not scale)
+- **Event Bus**: prostaff-events - Elixir/Phoenix 1.7 (domain events via Phoenix Channels)
+- **Riot Gateway**: prostaff-riot-gateway - Go 1.23 (token bucket, L1/L2 cache, circuit breaker)
 - **Database**: PostgreSQL 14+ (Supabase self-hosted)
 - **Cache/Queue**: Redis 7
 - **Search**: Meilisearch (self-hosted)
@@ -1427,7 +1442,7 @@ ELASTICSEARCH_URL=https://user:password@elastic.example.com   # ES 8.x with basi
 # Local dev: http://localhost:8001 | Coolify production: http://ai-service:8001
 AI_SERVICE_URL=http://ai-service:8001
 
-# Historical backfill (Sidekiq scheduled jobs — override per-job via sidekiq.yml kwargs)
+# Historical backfill (Sidekiq scheduled jobs - override per-job via sidekiq.yml kwargs)
 BACKFILL_LEAGUE=CBLOL               # default league for manual runs
 BACKFILL_OUR_TEAM=paiN Gaming       # team name used in sync step
 BACKFILL_MIN_YEAR=2013              # earliest year to import
@@ -1474,13 +1489,13 @@ CodeQL runs as a complementary SAST engine alongside Brakeman and Semgrep, cover
 
 Results are published to the **GitHub Security tab** in SARIF format.
 
-Config: `.github/codeql/codeql-config.yml` — analysis scoped to `app/`, `lib/`, `config/` (excludes vendor, tests, scripts).
+Config: `.github/codeql/codeql-config.yml` - analysis scoped to `app/`, `lib/`, `config/` (excludes vendor, tests, scripts).
 
 ### Architecture Diagram Auto-Update
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  TRIGGER — changes in:                                         │
+│  TRIGGER - changes in:                                         │
 │    · app/modules/**    · app/models/**                         │
 │    · app/controllers/**  · config/routes.rb  · Gemfile         │
 ├────────────────────────────────────────────────────────────────┤

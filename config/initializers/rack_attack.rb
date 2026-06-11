@@ -1,5 +1,18 @@
 # frozen_string_literal: true
 
+# Use the IP resolved by ActionDispatch::RemoteIp (which runs earlier in the stack
+# and honors config.action_dispatch.trusted_proxies). This prevents X-Forwarded-For
+# spoofing: attackers cannot bypass throttles by rotating the X-Forwarded-For header.
+module Rack
+  class Attack
+    class Request < ::Rack::Request
+      def remote_ip
+        @remote_ip ||= (env['action_dispatch.remote_ip']&.to_s || ip)
+      end
+    end
+  end
+end
+
 module Rack
   class Attack
     # Disable entirely in test - specs use Rack::Test which sends no User-Agent
@@ -75,46 +88,38 @@ module Rack
 
     # Throttle all requests by IP
     throttle('req/ip', limit: ENV.fetch('RACK_ATTACK_LIMIT', 300).to_i,
-                       period: ENV.fetch('RACK_ATTACK_PERIOD', 300).to_i, &:ip)
+                       period: ENV.fetch('RACK_ATTACK_PERIOD', 300).to_i) do |req|
+      req.remote_ip
+    end
 
     # Throttle login attempts
     throttle('logins/ip', limit: 5, period: 20.seconds) do |req|
-      req.ip if req.path == '/api/v1/auth/login' && req.post?
+      req.remote_ip if req.path == '/api/v1/auth/login' && req.post?
     end
 
     # Throttle registration — 10/hour per IP to allow shared NAT (office, household)
-    # Uses X-Forwarded-For when present (Next.js proxy repassa o IP real do cliente)
     throttle('register/ip', limit: 10, period: 1.hour) do |req|
-      next unless req.path == '/api/v1/auth/register' && req.post?
-
-      forwarded = req.env['HTTP_X_FORWARDED_FOR']
-      first_ip = forwarded&.split(',')&.first
-      first_ip ? first_ip.strip : req.ip
+      req.remote_ip if req.path == '/api/v1/auth/register' && req.post?
     end
 
-    # Throttle player self-registration (ArenaBR) — 5/hour por IP real do cliente
-    # Uses X-Forwarded-For when present (Next.js proxy repassa o IP real do cliente)
+    # Throttle player self-registration (ArenaBR) — 5/hour per IP
     throttle('player-register/ip', limit: 5, period: 1.hour) do |req|
-      next unless req.path == '/api/v1/auth/player-register' && req.post?
-
-      forwarded = req.env['HTTP_X_FORWARDED_FOR']
-      first_ip = forwarded&.split(',')&.first
-      first_ip ? first_ip.strip : req.ip
+      req.remote_ip if req.path == '/api/v1/auth/player-register' && req.post?
     end
 
     # Throttle player login — mesma política que login de staff
     throttle('player-logins/ip', limit: 5, period: 20.seconds) do |req|
-      req.ip if req.path == '/api/v1/auth/player-login' && req.post?
+      req.remote_ip if req.path == '/api/v1/auth/player-login' && req.post?
     end
 
     # Throttle password reset requests
     throttle('password_reset/ip', limit: 5, period: 1.hour) do |req|
-      req.ip if req.path == '/api/v1/auth/forgot-password' && req.post?
+      req.remote_ip if req.path == '/api/v1/auth/forgot-password' && req.post?
     end
 
     # Throttle public lobby endpoint — unauthenticated, runs heavy joins
     throttle('lobby/ip', limit: 60, period: 1.minute) do |req|
-      req.ip if req.path == '/api/v1/scrims/lobby' && req.get?
+      req.remote_ip if req.path == '/api/v1/scrims/lobby' && req.get?
     end
 
     # Throttle API requests per authenticated user
@@ -144,7 +149,7 @@ module Rack
       # Only log if request was actually blocked or throttled
       if %i[throttle blocklist].include?(req.env['rack.attack.match_type'])
         discriminator = req.env['rack.attack.matched']
-        Rails.logger.warn "[Rack::Attack] #{req.env['rack.attack.match_type'].to_s.capitalize} #{discriminator}: #{req.env['REQUEST_METHOD']} #{req.url} from #{req.ip}"
+        Rails.logger.warn "[Rack::Attack] #{req.env['rack.attack.match_type'].to_s.capitalize} #{discriminator}: #{req.env['REQUEST_METHOD']} #{req.url} from #{req.remote_ip}"
       end
     end
   end

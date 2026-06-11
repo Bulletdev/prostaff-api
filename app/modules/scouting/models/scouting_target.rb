@@ -31,8 +31,21 @@ class ScoutingTarget < ApplicationRecord
   has_many :scouting_watchlists, dependent: :destroy
   has_many :organizations, through: :scouting_watchlists
 
+  # Reject values containing HTML injection patterns.
+  # Denylist (not allowlist): allows international names, e-sports tags, CJK scripts.
+  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i.freeze
+
   # Validations
-  validates :summoner_name, presence: true, length: { maximum: 100 }
+  validates :summoner_name, presence: true, length: { maximum: 100 },
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }
+  validates :real_name,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :twitter_handle,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :discord_username,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :notes,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
   validates :region, presence: true, inclusion: { in: Constants::REGIONS }
   validates :role, presence: true, inclusion: { in: Constants::Player::ROLES }
   validates :status, inclusion: { in: Constants::ScoutingTarget::STATUSES }

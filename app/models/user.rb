@@ -75,6 +75,10 @@ class User < ApplicationRecord
     role == 'owner'
   end
 
+  def manager?
+    role == 'manager'
+  end
+
   def admin_or_owner?
     %w[admin owner].include?(role)
   end
@@ -83,16 +87,20 @@ class User < ApplicationRecord
     role == 'support_staff'
   end
 
+  def can_manage_org?
+    %w[owner admin manager].include?(role)
+  end
+
   def can_manage_users?
     %w[owner admin].include?(role)
   end
 
   def can_manage_players?
-    %w[owner admin coach].include?(role)
+    %w[owner admin manager coach].include?(role)
   end
 
   def can_view_analytics?
-    %w[owner admin coach analyst].include?(role)
+    %w[owner admin manager coach analyst].include?(role)
   end
 
   def full_role_name

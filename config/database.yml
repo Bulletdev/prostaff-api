@@ -20,9 +20,10 @@ default: &default
   # Supabase transaction pooler (port 6543) does not support prepared statements.
   # Disabling here prevents PG::DuplicatePstatement errors across all envs.
   prepared_statements: false
-  # PgBouncer transaction mode doesn't support session-level advisory locks.
-  # Disabling prevents ConcurrentMigrationError on container restarts.
-  advisory_locks: false
+  # No PgBouncer in the Coolify path - connecting directly to local PostgreSQL.
+  # advisory_locks: true serializes concurrent rails db:migrate calls across
+  # replicas at startup, preventing ConcurrentMigrationError with 2+ api containers.
+  advisory_locks: true
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   # DB_POOL lets you set a higher pool for Sidekiq without raising Puma threads.

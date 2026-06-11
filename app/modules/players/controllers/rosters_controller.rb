@@ -167,7 +167,7 @@ module Players
       end
 
       def require_coach!
-        return if %w[coach admin owner].include?(current_user.role)
+        return if %w[coach manager admin owner].include?(current_user.role)
 
         render_error(
           message: 'You are not authorized to perform this action',

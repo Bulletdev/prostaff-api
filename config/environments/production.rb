@@ -29,7 +29,9 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
     /\A(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?\z/
   ].compact
 
-  config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
+  # Traefik proxies all requests to Rails — Rails must serve public/ directly.
+  # Default enabled; set RAILS_SERVE_STATIC_FILES=0 to disable if moving to nginx/CDN.
+  config.public_file_server.enabled = ENV.fetch('RAILS_SERVE_STATIC_FILES', '1') != '0'
 
   config.active_storage.variant_processor = :mini_magick
 
@@ -62,6 +64,7 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
                            :redis_cache_store,
                            {
                              url: ENV['REDIS_URL'],
+                             pool_size: 2,
                              reconnect_attempts: 3,
                              error_handler: lambda { |_method:, _returning:, exception:|
                                Rails.logger.warn "Rails cache Redis error: #{exception.message}"
