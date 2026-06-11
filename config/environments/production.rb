@@ -64,6 +64,7 @@ Rails.application.configure do # rubocop:disable Metrics/BlockLength
                            :redis_cache_store,
                            {
                              url: ENV['REDIS_URL'],
+                             pool_size: 2,
                              reconnect_attempts: 3,
                              error_handler: lambda { |_method:, _returning:, exception:|
                                Rails.logger.warn "Rails cache Redis error: #{exception.message}"

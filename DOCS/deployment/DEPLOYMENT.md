@@ -50,12 +50,25 @@ O `docker/docker-compose.production.yml` sobe os seguintes servicos na rede `coo
 
 - `redis` - Redis 7.2 com autenticacao por senha
 - `meilisearch` - Meilisearch v1.11 (busca full-text)
-- `api` - Rails API via Puma, exposta na porta 3000
-- `sidekiq` - Worker de background jobs
+- `api` - **2 replicas** do Rails API via Puma (api-1 e api-2), cada uma exposta na porta 3000
+- `sidekiq` - **1 instancia** do worker de background jobs (nao escalar - 9 cron jobs registrados)
 - `status` - Status page estatica (status.prostaff.gg)
 - `docs` - Documentacao estatica (docs.prostaff.gg)
 
 O banco de dados PostgreSQL e externo (DATABASE_URL apontando para Supabase ou outro provider).
+
+### Escalabilidade Horizontal (api)
+
+O servico `api` roda com `deploy.replicas: 2`. Ambas as replicas compartilham:
+
+- **PostgreSQL** - connection pool de 20 por replica (40 total + 10 Sidekiq = 50/100 max_connections)
+- **Redis** - pool_size: 2 por worker Puma (24 conns/replica × 2 = 48 total para cache; ~71 no total incluindo Sidekiq e prostaff-events)
+- **Rack::Attack** - rate limiting centralizado no Redis (compartilhado entre replicas)
+- **Action Cable** - adapter Redis garante pub/sub cross-replica
+
+O Traefik descobre automaticamente ambos os containers via labels e distribui o trafego em round robin.
+
+**Sidekiq NAO deve ser escalado** - os 9 jobs do cron scheduler executariam em duplicata.
 
 ---
 
@@ -296,7 +309,7 @@ Redis roda na porta `6380` (configuravel via `REDIS_PORT`).
 
 Os servicos nao expõem portas diretamente. O Traefik roteia o trafego externo via labels Docker:
 
-- `api.prostaff.gg` -> container `api` (porta 3000)
+- `api.prostaff.gg` -> **round robin** entre `api-1` e `api-2` (porta 3000 em cada)
 - `status.prostaff.gg` -> container `status` (porta 80)
 - `docs.prostaff.gg` -> container `docs` (porta 80)
 
@@ -414,10 +427,14 @@ docker compose -f docker/docker-compose.production.yml exec api bundle exec rail
 # Todos os servicos
 docker compose -f docker/docker-compose.production.yml logs -f
 
-# Servico especifico
+# Servico especifico (agrega logs das 2 replicas)
 docker compose -f docker/docker-compose.production.yml logs -f api
 docker compose -f docker/docker-compose.production.yml logs -f sidekiq
 docker compose -f docker/docker-compose.production.yml logs -f meilisearch
+
+# Replica especifica (para diagnosticar problema em uma instancia)
+docker logs prostaff-api-api-1 --tail 50
+docker logs prostaff-api-api-2 --tail 50
 ```
 
 ### Reiniciar servicos
@@ -488,6 +505,18 @@ docker compose -f docker/docker-compose.production.yml exec api bundle exec rail
 
 # Reverter ultima migration
 docker compose -f docker/docker-compose.production.yml exec api bundle exec rails db:rollback STEP=1
+```
+
+**Com 2 replicas**: o entrypoint executa `rails db:migrate` em cada container na subida.
+O `advisory_locks: true` (database.yml) serializa as tentativas via lock PostgreSQL - a segunda replica aguarda
+a primeira concluir e entao verifica que nao ha migrations pendentes. Se api-2 reiniciar durante o lock,
+aguardar ~90s para que o lock expire e o container se recupere automaticamente.
+
+Para escalar manualmente para 1 replica antes de um deploy com migrations de risco:
+```bash
+docker compose -f docker/docker-compose.production.yml up -d --scale api=1
+# apos o deploy e migrations bem-sucedidas:
+docker compose -f docker/docker-compose.production.yml up -d --scale api=2
 ```
 
 ### Performance lenta
