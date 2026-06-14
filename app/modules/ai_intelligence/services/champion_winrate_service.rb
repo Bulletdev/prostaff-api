@@ -28,8 +28,16 @@ class ChampionWinrateService
     effective_patch = patch.presence || latest_patch
     return nil if effective_patch.nil?
 
-    key = "#{champion}_#{effective_patch.to_s.split('.').first}"
-    data[key]
+    major    = effective_patch.to_s.split('.').first
+    alt_name = champion.gsub(/([a-z])([A-Z])/, '\1 \2') # "LeeSin" -> "Lee Sin"
+
+    result = data["#{champion}_#{major}"] || data["#{alt_name}_#{major}"]
+
+    if result.nil? && patch.present? && major != latest_patch
+      result = data["#{champion}_#{latest_patch}"] || data["#{alt_name}_#{latest_patch}"]
+    end
+
+    result
   end
 
   # Returns a hash mapping each champion name to its win rate (or nil).
