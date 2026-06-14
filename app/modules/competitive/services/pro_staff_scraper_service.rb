@@ -28,7 +28,7 @@ class ProStaffScraperService
 
   CACHE_TTL_MATCHES   = 5.minutes
   CACHE_TTL_STATUS    = 1.minute
-  CACHE_TTL_ADVERSARY = 2.minutes  # shorter TTL for draft-time requests (two ES queries per call)
+  CACHE_TTL_ADVERSARY = 2.minutes # shorter TTL for draft-time requests (two ES queries per call)
   REQUEST_TIMEOUT     = 15
 
   def initialize
@@ -216,6 +216,37 @@ class ProStaffScraperService
     result = parse_json(response)
     Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_ADVERSARY)
     result
+  end
+
+  # Fetch OE tournament stats (teams or players) from the local cache on the scraper.
+  #
+  # Data is pre-downloaded by etl/oe_stats_downloader.py and served from disk.
+  # Returns 404 (raises NotFoundError) if the tournament has not been downloaded yet.
+  #
+  # @param tournament [String] Leaguepedia OverviewPage, e.g. 'CBLOL/2026 Season/Split 1 Playoffs'
+  # @param type       [String] 'teams' or 'players'
+  # @param team       [String, nil] optional team name filter (partial, case-insensitive)
+  # @return [Hash] with :tournament, :type, :count, :data (Array)
+  def fetch_tournament_stats(tournament:, type: 'teams', team: nil)
+    params = { tournament: tournament, type: type }
+    params[:team] = team if team.present?
+    response = get('/api/v1/analytics/tournament-stats', params)
+    parse_json(response)
+  end
+
+  # List all OE tournament stats cached on the scraper, with optional filters.
+  #
+  # @param league [String, nil] filter by league short code (e.g. 'CBLOL')
+  # @param year   [Integer, nil] filter by year
+  # @param type   [String, nil] filter by stat type ('teams' or 'players')
+  # @return [Hash] with :count, :entries (Array of {league, year, slug, stat_type})
+  def fetch_tournament_stats_index(league: nil, year: nil, type: nil)
+    params = {}
+    params[:league] = league if league.present?
+    params[:year]   = year   if year.present?
+    params[:type]   = type   if type.present?
+    response = get('/api/v1/analytics/tournament-stats/index', params)
+    parse_json(response)
   end
 
   # Fetch current progress of the historical backfill for a league.

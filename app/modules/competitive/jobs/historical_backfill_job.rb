@@ -126,6 +126,9 @@ module Competitive
           limit: sync_limit
         )
       end
+
+      MetaIntelligence::SyncTournamentStatsJob.perform_later(league)
+      Rails.logger.info("[HistoricalBackfillJob] Enqueued SyncTournamentStatsJob for league=#{league}")
     end
   end
 end
