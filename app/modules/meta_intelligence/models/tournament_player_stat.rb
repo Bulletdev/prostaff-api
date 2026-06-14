@@ -37,12 +37,28 @@ class TournamentPlayerStat < ApplicationRecord
   scope :for_position,   ->(pos)    { where(position: pos) }
   scope :recent,                    -> { order(year: :desc, computed_at: :desc) }
 
+  def games_played
+    data['gp'] || data['GP'] || data['games_played']
+  end
+
   def kda
     data['kda'] || data['KDA']
   end
 
+  def deaths
+    data['d'] || data['D'] || data['deaths']
+  end
+
+  def assists
+    data['a'] || data['A'] || data['assists']
+  end
+
   def damage_per_minute
     data['dpm'] || data['DPM']
+  end
+
+  def damage_share
+    data['dmg'] || data['DMG%'] || data['damage_share']
   end
 
   def cs_per_minute

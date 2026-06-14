@@ -468,6 +468,13 @@ Rails.application.routes.draw do
         get 'champion-stats',
             to: '/meta_intelligence/controllers/champion_stats#index',
             as: 'meta_champion_stats'
+
+        get 'split-stats/tournaments',
+            to: '/meta_intelligence/controllers/split_stats#tournaments',
+            as: 'meta_split_stats_tournaments'
+        get 'split-stats',
+            to: '/meta_intelligence/controllers/split_stats#index',
+            as: 'meta_split_stats'
       end
 
       # Manager Module — Contract Hub (M2) + Budget Tracker (M3)
