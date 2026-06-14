@@ -7,7 +7,7 @@ module Scouting
     class PlayersController < Api::V1::BaseController
       include MetaIntelligence::OeStatSerializable
 
-      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster competitive_profile]
+      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster competitive_profile oe_history]
       before_action :require_management!, only: %i[import_to_roster]
 
       # GET /api/v1/scouting/players
@@ -175,6 +175,25 @@ module Scouting
         end
 
         render_success({ competitive_profile: result })
+      end
+
+      # GET /api/v1/scouting/players/:id/oe_history
+      # Returns all Oracle's Elixir tournament splits for this player, most recent first.
+      def oe_history
+        unless @target.professional_name.present?
+          return render_error(
+            message: 'No professional name set on this target',
+            code: 'NO_PROFESSIONAL_NAME',
+            status: :unprocessable_entity
+          )
+        end
+
+        splits = OePlayerLookupService.history(@target.professional_name)
+
+        render_success({
+                         player_name: @target.professional_name,
+                         splits: splits.map { |s| serialize_oe_player_stat(s) }
+                       })
       end
 
       def sync
