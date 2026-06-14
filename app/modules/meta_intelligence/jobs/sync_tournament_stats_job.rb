@@ -127,7 +127,7 @@ module MetaIntelligence
       TournamentTeamStat.upsert_all(
         records,
         unique_by: :uq_tournament_team_stats,
-        update_only: %i[data computed_at updated_at]
+        update_only: %i[data computed_at]
       )
       records.size
     end
@@ -148,7 +148,7 @@ module MetaIntelligence
       TournamentPlayerStat.upsert_all(
         records,
         unique_by: :uq_tournament_player_stats,
-        update_only: %i[team_name position data computed_at updated_at]
+        update_only: %i[team_name position data computed_at]
       )
       records.size
     end
