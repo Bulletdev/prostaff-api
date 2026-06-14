@@ -39,11 +39,17 @@ module MetaIntelligence
         return
       end
 
-      totals = by_tournament.sum { |tid, meta| sync_tournament(scraper, tid, meta) }
+      total_teams   = 0
+      total_players = 0
+      by_tournament.each do |tid, meta|
+        t, p = sync_tournament(scraper, tid, meta)
+        total_teams   += t
+        total_players += p
+      end
 
       Rails.logger.info(
         "[SyncTournamentStatsJob] complete — league=#{league} " \
-        "teams_upserted=#{totals[0]} players_upserted=#{totals[1]}"
+        "teams_upserted=#{total_teams} players_upserted=#{total_players}"
       )
     end
 
