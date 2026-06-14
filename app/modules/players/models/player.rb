@@ -41,6 +41,7 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   has_many :player_match_stats, dependent: :destroy
   has_many :matches, through: :player_match_stats
   has_many :champion_pools, dependent: :destroy
+  has_many :player_rank_snapshots, dependent: :destroy
   has_many :team_goals, dependent: :destroy
   has_many :vod_timestamps, foreign_key: 'target_player_id', dependent: :nullify
   has_many :password_reset_tokens, dependent: :destroy
@@ -92,6 +93,9 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   validates :country, length: { maximum: 2 }
   validates :status, inclusion: { in: Constants::Player::STATUSES }
   validates :line, inclusion: { in: Constants::Player::LINES }
+  validates :residency, inclusion: { in: Constants::Player::RESIDENCIES }, allow_blank: true
+  validates :player_type, inclusion: { in: Constants::Player::PLAYER_TYPES }
+  validates :staff_role, inclusion: { in: Constants::Player::STAFF_ROLES }, allow_blank: true
   validates :riot_puuid, uniqueness: true, allow_blank: true
   validates :riot_summoner_id, uniqueness: true, allow_blank: true
   validates :jersey_number, uniqueness: { scope: :organization_id }, allow_blank: true

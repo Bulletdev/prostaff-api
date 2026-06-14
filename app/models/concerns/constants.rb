@@ -56,6 +56,31 @@ module Constants
     QUEUE_RANKS = %w[I II III IV].freeze
     QUEUE_TIERS = %w[IRON BRONZE SILVER GOLD PLATINUM EMERALD DIAMOND MASTER GRANDMASTER CHALLENGER].freeze
 
+    # Import slot classification — aligns with Riot's residency rules per region.
+    # Values match PRD-analyst-intelligence-v3 section 5.1.
+    # Non-Resident covers both "Non-Resident" and "Non Resident" variants in the CSV.
+    RESIDENCIES = %w[resident non_resident na_resident americas_resident native_resident].freeze
+
+    # CSV contract database → DB value mapping for the importer.
+    # Source: DEVDOCS/refs/contract-database/*.csv (LCS, LEC, LJL, LPL, CBLOL).
+    CSV_RESIDENCY_MAP = {
+      'Resident'          => 'resident',
+      'Non-Resident'      => 'non_resident',
+      'Non Resident'      => 'non_resident',
+      'NA Resident'       => 'na_resident',
+      'Americas Resident' => 'americas_resident',
+      'Native Resident'   => 'native_resident',
+    }.freeze
+
+    # player_type distinguishes athletes from coaching/support staff on the same roster.
+    PLAYER_TYPES = %w[player coach analyst manager].freeze
+
+    # Staff-specific functional roles (null for player_type = "player").
+    STAFF_ROLES = %w[
+      head_coach assistant_coach strategic_coach positional_coach
+      analyst performance_coach manager general_manager
+    ].freeze
+
     ROLE_NAMES = {
       'top' => 'Top',
       'jungle' => 'Jungle',
