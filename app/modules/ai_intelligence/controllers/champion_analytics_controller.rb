@@ -25,8 +25,11 @@ module AiIntelligence
         data          = build_champion_data(champions, patch)
         pool_strength = calculate_pool_strength(data)
 
+        effective_patch = ChampionWinrateService.latest_patch
         render_success({
-                         patch: patch,
+                         patch: effective_patch,
+                         patch_requested: patch,
+                         patch_fallback: patch.present? && effective_patch != patch.to_s.split('.').first,
                          champions: data,
                          pool_strength: pool_strength,
                          champions_without_data: champions - data.map { |d| d[:name] }
