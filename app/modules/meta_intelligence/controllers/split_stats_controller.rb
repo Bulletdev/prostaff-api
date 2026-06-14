@@ -17,6 +17,8 @@ module MetaIntelligence
     # @example Include raw Datalisk payload (debug only)
     #   GET /api/v1/meta/split-stats?tournament=...&type=teams&include_raw=true
     class SplitStatsController < Api::V1::BaseController
+      include OeStatSerializable
+
       VALID_TYPES = %w[teams players].freeze
 
       # GET /api/v1/meta/split-stats/tournaments
@@ -50,6 +52,20 @@ module MetaIntelligence
           { tournament: tournament, type: type, count: data.size, data: data },
           message: 'Split stats retrieved'
         )
+      end
+
+      # GET /api/v1/meta/split-stats/player-lookup
+      def player_lookup
+        name = params[:name].presence
+        return render_error('name param is required', status: :unprocessable_entity) unless name
+
+        history = OePlayerLookupService.history(name)
+        render_success({
+                         player_name: name,
+                         tournaments_found: history.count,
+                         latest: serialize_oe_player_stat(history.first),
+                         history: history.map { |s| serialize_oe_player_stat(s) }
+                       })
       end
 
       private

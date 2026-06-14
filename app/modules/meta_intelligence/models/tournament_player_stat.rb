@@ -30,12 +30,13 @@ class TournamentPlayerStat < ApplicationRecord
   validates :computed_at,   presence: true
   validates :tournament_id, uniqueness: { scope: :player_name, message: 'player already exists for this tournament' }
 
-  scope :for_league,     ->(league) { where(league: league) }
-  scope :for_year,       ->(year)   { where(year: year) }
-  scope :for_tournament, ->(id)     { where(tournament_id: id) }
-  scope :for_team,       ->(team)   { where(team_name: team) }
-  scope :for_position,   ->(pos)    { where(position: pos) }
-  scope :recent,                    -> { order(year: :desc, computed_at: :desc) }
+  scope :for_league,          ->(league) { where(league: league) }
+  scope :for_year,            ->(year)   { where(year: year) }
+  scope :for_tournament,      ->(id)     { where(tournament_id: id) }
+  scope :for_team,            ->(team)   { where(team_name: team) }
+  scope :for_position,        ->(pos)    { where(position: pos) }
+  scope :recent,                         -> { order(year: :desc, computed_at: :desc) }
+  scope :by_professional_name, ->(name)  { where("LOWER(player_name) = LOWER(?)", name.to_s.strip) if name.present? }
 
   def games_played
     data['gp'] || data['GP'] || data['games_played']

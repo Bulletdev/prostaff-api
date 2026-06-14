@@ -53,6 +53,12 @@ module MetaIntelligence
       )
     end
 
+    # Prefixes confirmed by audit of 11,661 OE names (2014–2026, executed 2026-06-14)
+    # to cause false merges with major-league bare names. SHA Aki (LIT 2026) collides
+    # with Aki (LPL 2025) — the only active case without a min_year mitigation.
+    # When check_normalization_collisions logs a new collision: add the prefix here.
+    TEAM_PREFIX_DENYLIST = %w[SHA].freeze
+
     private
 
     # Query the scraper index and group entries by tournament_id.
@@ -141,11 +147,14 @@ module MetaIntelligence
 
     def upsert_players(tournament_id, league, year, rows, now)
       records = rows.filter_map do |row|
-        player_name = pick(row, 'player', 'Player', 'playerName')
+        raw_name    = pick(row, 'player', 'Player', 'playerName')
+        player_name = normalize_player_name(raw_name)
         next if player_name.blank?
 
-        { tournament_id: tournament_id, player_name: player_name, league: league,
-          year: year, team_name: pick(row, 'team', 'Team', 'teamName'),
+        { tournament_id: tournament_id, player_name: player_name,
+          raw_player_name: raw_name,
+          league: league, year: year,
+          team_name: pick(row, 'team', 'Team', 'teamName'),
           position: pick(row, 'pos', 'position', 'role', 'Position'),
           data: row, computed_at: now, created_at: now, updated_at: now }
       end
@@ -153,10 +162,12 @@ module MetaIntelligence
       records = records.uniq { |r| [r[:tournament_id], r[:player_name]] }
       return 0 if records.empty?
 
+      check_normalization_collisions(records)
+
       TournamentPlayerStat.upsert_all(
         records,
         unique_by: :uq_tournament_player_stats,
-        update_only: %i[team_name position data computed_at]
+        update_only: %i[raw_player_name team_name position data computed_at]
       )
       records.size
     end
@@ -165,6 +176,50 @@ module MetaIntelligence
     def pick(hash, *keys)
       keys.each { |k| return hash[k] if hash[k].present? }
       nil
+    end
+
+    def normalize_player_name(name)
+      return name if name.blank?
+
+      parts = name.strip.split
+      return name unless parts.length >= 2
+
+      prefix = parts.first
+      return name unless prefix.length.between?(2, 5) && prefix == prefix.upcase
+      return name if TEAM_PREFIX_DENYLIST.include?(prefix)
+
+      parts[1..].join(' ')
+    end
+
+    def check_normalization_collisions(records)
+      normalized = records.reject { |r| r[:raw_player_name] == r[:player_name] }
+      return if normalized.empty?
+
+      normalized_names = normalized.map { |r| r[:player_name] }
+
+      existing_bare = TournamentPlayerStat
+                      .where(player_name: normalized_names)
+                      .where('raw_player_name = player_name OR raw_player_name IS NULL')
+                      .pluck(:player_name, :league, :year)
+
+      return if existing_bare.empty?
+
+      existing_map = existing_bare.group_by(&:first)
+
+      normalized.each do |r|
+        next unless existing_map.key?(r[:player_name])
+
+        prefix = r[:raw_player_name].split(' ', 2).first
+        next if TEAM_PREFIX_DENYLIST.include?(prefix)
+
+        collisions = existing_map[r[:player_name]]
+        Rails.logger.warn(
+          '[SyncTournamentStatsJob] NORMALIZATION_COLLISION: ' \
+          "raw=#{r[:raw_player_name].inspect} normalized to #{r[:player_name].inspect} " \
+          "collides with existing bare-name rows: #{collisions.map { |_, lg, yr| "#{lg}/#{yr}" }.join(', ')}. " \
+          "Add #{prefix.inspect} to TEAM_PREFIX_DENYLIST if these are different people."
+        )
+      end
     end
   end
 end

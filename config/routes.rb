@@ -116,6 +116,7 @@ Rails.application.routes.draw do
           get :matches
           post :sync_from_riot
           post :link_discord
+          get 'oe-history', action: :oe_history, as: :oe_history
           get 'stats/export', to: '/players/controllers/stats_export#show', as: :stats_export
         end
       end
@@ -229,6 +230,7 @@ Rails.application.routes.draw do
           end
         end
         get 'regions', to: '/scouting/controllers/regions#index'
+        get 'oe-free-agents', to: '/scouting/controllers/free_agents#index', as: 'oe_free_agents'
         resources :watchlist, only: %i[index create destroy],
                               controller: '/scouting/controllers/watchlist'
       end
@@ -472,6 +474,9 @@ Rails.application.routes.draw do
         get 'split-stats/tournaments',
             to: '/meta_intelligence/controllers/split_stats#tournaments',
             as: 'meta_split_stats_tournaments'
+        get 'split-stats/player-lookup',
+            to: '/meta_intelligence/controllers/split_stats#player_lookup',
+            as: 'meta_split_stats_player_lookup'
         get 'split-stats',
             to: '/meta_intelligence/controllers/split_stats#index',
             as: 'meta_split_stats'
