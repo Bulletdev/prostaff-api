@@ -33,12 +33,14 @@ class ScoutingTarget < ApplicationRecord
 
   # Reject values containing HTML injection patterns.
   # Denylist (not allowlist): allows international names, e-sports tags, CJK scripts.
-  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i.freeze
+  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i
 
   # Validations
   validates :summoner_name, presence: true, length: { maximum: 100 },
-            format: { without: HTML_INJECTION, message: 'contains invalid characters' }
+                            format: { without: HTML_INJECTION, message: 'contains invalid characters' }
   validates :real_name,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :professional_name,
             format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
   validates :twitter_handle,
             format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true

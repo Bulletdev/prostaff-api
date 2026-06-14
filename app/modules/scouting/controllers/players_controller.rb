@@ -5,7 +5,7 @@ module Scouting
     # Scouting Players Controller
     # Manages GLOBAL scouting targets and org-specific watchlists
     class PlayersController < Api::V1::BaseController
-      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster]
+      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster competitive_profile]
       before_action :require_management!, only: %i[import_to_roster]
 
       # GET /api/v1/scouting/players
@@ -135,6 +135,40 @@ module Scouting
       rescue ArgumentError
         render_error(message: 'Invalid date format. Use YYYY-MM-DD', code: 'INVALID_DATE_FORMAT',
                      status: :unprocessable_entity)
+      end
+
+      # GET /api/v1/scouting/players/:id/competitive_profile
+      # Returns historical competitive profile from Elasticsearch.
+      # Requires `professional_name` to be set on the scouting target.
+      # The join key to ES is professional_name (Leaguepedia tournament IGN),
+      # NOT summoner_name (current Riot ID, which diverges from historical names).
+      def competitive_profile
+        result = CompetitiveProfileService.new(
+          player:    @target,
+          league:    params[:league],
+          min_year:  params[:min_year]&.to_i,
+          min_games: params[:min_games]&.to_i || 3
+        ).call
+
+        if result[:error]
+          status_map = {
+            'no_professional_name'   => :unprocessable_entity,
+            'player_not_found_in_es' => :not_found,
+            'scraper_unavailable'    => :service_unavailable
+          }
+          code_map = {
+            'no_professional_name'   => 'NO_PROFESSIONAL_NAME',
+            'player_not_found_in_es' => 'NOT_FOUND',
+            'scraper_unavailable'    => 'SCRAPER_UNAVAILABLE'
+          }
+          return render_error(
+            message: result[:error],
+            code:    code_map.fetch(result[:error], 'COMPETITIVE_PROFILE_ERROR'),
+            status:  status_map.fetch(result[:error], :unprocessable_entity)
+          )
+        end
+
+        render_success({ competitive_profile: result })
       end
 
       def sync
@@ -381,7 +415,7 @@ module Scouting
         # :role is the LoL in-game position (top/jungle/mid/adc/support), not an authorization role.
         # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
         params.require(:scouting_target).permit( # NOSONAR
-          :summoner_name, :real_name, :role, :region, :nationality,
+          :summoner_name, :real_name, :professional_name, :role, :region, :nationality,
           :age, :status, :current_team,
           :current_tier, :current_rank, :current_lp,
           :peak_tier, :peak_rank,
@@ -408,7 +442,7 @@ module Scouting
       def target_params
         # :role is the LoL in-game position (top/jungle/mid/adc/support), not an authorization role.
         params.fetch(:target, {}).permit( # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
-          :summoner_name, :real_name, :role, :region, :nationality,
+          :summoner_name, :real_name, :professional_name, :role, :region, :nationality,
           :age, :status, :current_team,
           :current_tier, :current_rank, :current_lp,
           :peak_tier, :peak_rank,

@@ -53,6 +53,7 @@ class Organization < ApplicationRecord
   has_many :competitive_matches, dependent: :destroy
   has_many :messages,     dependent: :destroy
   has_many :saved_builds, dependent: :destroy
+  has_many :roster_season_snapshots, dependent: :destroy
 
   # Validations
   validates :name, presence: true, length: { maximum: 255 }

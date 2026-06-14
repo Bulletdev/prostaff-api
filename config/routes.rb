@@ -125,6 +125,7 @@ Rails.application.routes.draw do
       post 'rosters/hire/:scouting_target_id', to: '/players/controllers/rosters#hire_from_scouting'
       get 'rosters/free-agents', to: '/players/controllers/rosters#free_agents'
       get 'rosters/statistics', to: '/players/controllers/rosters#statistics'
+      get 'rosters/season-snapshots', to: '/players/controllers/roster_season_snapshots#index'
 
       # Admin
       scope '/admin', as: 'admin' do
@@ -224,6 +225,7 @@ Rails.application.routes.draw do
           member do
             post :sync
             post :import_to_roster
+            get  :competitive_profile
           end
         end
         get 'regions', to: '/scouting/controllers/regions#index'
@@ -462,6 +464,10 @@ Rails.application.routes.draw do
         get 'champions/:champion',
             to: '/meta_intelligence/controllers/champion_meta#show',
             as: 'meta_champion'
+
+        get 'champion-stats',
+            to: '/meta_intelligence/controllers/champion_stats#index',
+            as: 'meta_champion_stats'
       end
 
       # Manager Module — Contract Hub (M2) + Budget Tracker (M3)
@@ -517,10 +523,11 @@ Rails.application.routes.draw do
       # AI Intelligence Module — draft analysis and win probability
       # Requires Tier 1 (Professional) subscription.
       namespace :ai do
-        post 'draft/analyze',        to: '/ai_intelligence/controllers/draft#analyze'
-        post 'draft/synergy-matrix', to: '/ai_intelligence/controllers/draft#synergy_matrix'
-        post 'recommend-pick',       to: '/ai_intelligence/controllers/recommend#recommend_pick'
-        get  'champion-analytics',   to: '/ai_intelligence/controllers/champion_analytics#index'
+        post 'draft/analyze',         to: '/ai_intelligence/controllers/draft#analyze'
+        post 'draft/synergy-matrix',  to: '/ai_intelligence/controllers/draft#synergy_matrix'
+        get  'draft/adversary-profile', to: '/ai_intelligence/controllers/adversary_draft#adversary_profile'
+        post 'recommend-pick',        to: '/ai_intelligence/controllers/recommend#recommend_pick'
+        get  'champion-analytics',    to: '/ai_intelligence/controllers/champion_analytics#index'
       end
 
       # Wallet Module — proxy to ProPay service
