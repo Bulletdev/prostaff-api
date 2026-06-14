@@ -85,7 +85,11 @@ class AiRecommendationService
   end
 
   def legacy_fallback
-    suggestions = DraftSuggester.call(team_a: @our_picks, team_b: @opponent_picks)
+    suggestions = DraftSuggester.call(
+      team_a: @our_picks,
+      team_b: @opponent_picks,
+      bans: Array(@our_bans) + Array(@opponent_bans)
+    )
     {
       source: 'legacy',
       model_version: nil,
