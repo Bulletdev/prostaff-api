@@ -10,7 +10,7 @@ module Strategy
       # GET /api/v1/strategy/draft-simulations
       def list
         series = organization_scoped(DraftSimulation)
-                 .select(:series_id, :team1_name, :team2_name, :patch, :league, :fearless, :created_at,
+                 .select(:series_id, :team1_name, :team2_name, :patch, :league, :our_side, :fearless, :created_at,
                          :blue_picks, :red_picks, :blue_bans, :red_bans)
                  .order(created_at: :desc)
                  .group_by(&:series_id)
@@ -102,6 +102,7 @@ module Strategy
           team2_name: first.team2_name,
           patch: first.patch,
           league: first.league,
+          our_side: first.our_side,
           fearless: first.fearless,
           game_count: games.size,
           total_picks: total_picks,
