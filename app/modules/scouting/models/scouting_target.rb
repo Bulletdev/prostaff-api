@@ -56,6 +56,8 @@ class ScoutingTarget < ApplicationRecord
 
   # Callbacks
   before_save :normalize_summoner_name
+  after_create_commit :enqueue_oe_enrichment
+  after_update_commit :enqueue_oe_enrichment, if: :saved_change_to_professional_name?
 
   # ── Meilisearch ────────────────────────────────────────────────────
   def self.meili_searchable_attributes
@@ -202,5 +204,11 @@ class ScoutingTarget < ApplicationRecord
 
   def normalize_summoner_name
     self.summoner_name = summoner_name.strip if summoner_name.present?
+  end
+
+  def enqueue_oe_enrichment
+    return unless professional_name.present?
+
+    MetaIntelligence::EnrichScoutingTargetWithOeJob.perform_later(id)
   end
 end
