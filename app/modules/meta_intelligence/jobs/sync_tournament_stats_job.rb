@@ -128,6 +128,7 @@ module MetaIntelligence
           year: year, data: row, computed_at: now, created_at: now, updated_at: now }
       end
 
+      records = records.uniq { |r| [r[:tournament_id], r[:team_name]] }
       return 0 if records.empty?
 
       TournamentTeamStat.upsert_all(
@@ -149,6 +150,7 @@ module MetaIntelligence
           data: row, computed_at: now, created_at: now, updated_at: now }
       end
 
+      records = records.uniq { |r| [r[:tournament_id], r[:player_name]] }
       return 0 if records.empty?
 
       TournamentPlayerStat.upsert_all(
