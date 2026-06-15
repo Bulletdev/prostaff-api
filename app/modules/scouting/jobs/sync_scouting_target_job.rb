@@ -49,14 +49,7 @@ module Scouting
         tag_line: tag_line,
         region: target.region
       )
-      summoner_data = riot_service.get_summoner_by_puuid(
-        puuid: account_data[:puuid],
-        region: target.region
-      )
-      target.update!(
-        riot_puuid: account_data[:puuid],
-        riot_summoner_id: summoner_data[:summoner_id]
-      )
+      target.update!(riot_puuid: account_data[:puuid])
     end
 
     def sync_account_name!(target, riot_service)
