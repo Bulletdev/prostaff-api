@@ -73,4 +73,11 @@ class TournamentPlayerStat < ApplicationRecord
   def kill_participation
     data['kp'] || data['KP%'] || data['kill_participation']
   end
+
+  def win_rate
+    raw = data['W%'] || data['wr'] || data['WR'] || data['win_rate']
+    return nil unless raw
+
+    raw.to_s.delete('%').strip.to_f
+  end
 end
