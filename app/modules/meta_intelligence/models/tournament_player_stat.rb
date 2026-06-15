@@ -59,7 +59,10 @@ class TournamentPlayerStat < ApplicationRecord
   end
 
   def damage_share
-    data['dmg'] || data['DMG%'] || data['damage_share']
+    raw = data['dmg'] || data['DMG%'] || data['damage_share']
+    return nil unless raw
+
+    raw.to_s.delete('%').strip.to_f
   end
 
   def cs_per_minute
@@ -71,7 +74,10 @@ class TournamentPlayerStat < ApplicationRecord
   end
 
   def kill_participation
-    data['kp'] || data['KP%'] || data['kill_participation']
+    raw = data['kp'] || data['KP%'] || data['kill_participation']
+    return nil unless raw
+
+    raw.to_s.delete('%').strip.to_f
   end
 
   def win_rate
