@@ -73,10 +73,10 @@ module Scouting
     end
 
     def sync_league_entries!(target, riot_service)
-      return unless target.riot_summoner_id.present?
+      return unless target.riot_puuid.present?
 
-      league_data = riot_service.get_league_entries(
-        summoner_id: target.riot_summoner_id,
+      league_data = riot_service.get_league_entries_by_puuid(
+        puuid: target.riot_puuid,
         region: target.region
       )
       update_rank_info(target, league_data)
