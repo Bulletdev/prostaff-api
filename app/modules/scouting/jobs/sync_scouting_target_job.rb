@@ -24,7 +24,7 @@ module Scouting
       sync_mastery_data!(target, riot_service)
       sync_recent_performance!(target, riot_service)
 
-      target.update!(last_sync_at: Time.current)
+      target.update!(last_api_sync_at: Time.current)
       Rails.logger.info("Successfully synced scouting target #{target.id}")
     rescue RiotApiService::NotFoundError => e
       Rails.logger.error("Scouting target not found in Riot API: #{target.summoner_name} - #{e.message}")
