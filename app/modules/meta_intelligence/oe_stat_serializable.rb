@@ -10,7 +10,8 @@ module MetaIntelligence
 
       { tournament_id: stat.tournament_id, league: stat.league, year: stat.year,
         team_name: stat.team_name, position: stat.position,
-        gp: stat.games_played, kda: stat.kda, deaths: stat.deaths, assists: stat.assists,
+        gp: stat.games_played, win_rate: stat.win_rate,
+        kda: stat.kda, deaths: stat.deaths, assists: stat.assists,
         dpm: stat.damage_per_minute, dmg_pct: stat.damage_share, csm: stat.cs_per_minute,
         kp_pct: stat.kill_participation, gd15: stat.gold_diff_at_15 }
     end
