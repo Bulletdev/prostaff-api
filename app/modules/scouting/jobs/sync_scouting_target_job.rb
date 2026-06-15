@@ -41,12 +41,20 @@ module Scouting
     def resolve_puuid!(target, riot_service)
       return if target.riot_puuid.present?
 
-      summoner_data = riot_service.get_summoner_by_name(
-        summoner_name: target.summoner_name,
+      game_name, tag_line = target.summoner_name.to_s.split('#', 2)
+      return unless game_name.present? && tag_line.present?
+
+      account_data = riot_service.get_account_by_riot_id(
+        game_name: game_name,
+        tag_line: tag_line,
+        region: target.region
+      )
+      summoner_data = riot_service.get_summoner_by_puuid(
+        puuid: account_data[:puuid],
         region: target.region
       )
       target.update!(
-        riot_puuid: summoner_data[:puuid],
+        riot_puuid: account_data[:puuid],
         riot_summoner_id: summoner_data[:summoner_id]
       )
     end
