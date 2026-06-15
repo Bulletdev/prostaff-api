@@ -27,8 +27,9 @@ module Players
     def sync_player_from_riot!(player, riot_api_key)
       region = player.region.presence&.downcase || 'br1'
       summoner_data = fetch_summoner_data(player, region, riot_api_key)
-      account_data  = fetch_account_by_puuid(player.riot_puuid, region, riot_api_key)
-      ranked_data   = fetch_ranked_stats_by_puuid(player.riot_puuid, region, riot_api_key)
+      puuid         = summoner_data['puuid']
+      account_data  = fetch_account_by_puuid(puuid, region, riot_api_key)
+      ranked_data   = fetch_ranked_stats_by_puuid(puuid, region, riot_api_key)
 
       update_data = build_update_data(summoner_data)
       update_summoner_name!(player, update_data, account_data)
