@@ -152,10 +152,9 @@ module Matches
       source.group_by { |p| p[:team_id] }.transform_values do |team_participants|
         {
           total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
-          total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
-          total_cs: team_participants.sum do |p|
-                      (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0)
-                    end.to_f
+          total_gold:   team_participants.sum { |p| p[:gold_earned] }.to_f,
+          total_kills:  team_participants.sum { |p| p[:kills].to_i }.to_f,
+          total_cs:     team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
         }
       end
     end
@@ -187,15 +186,37 @@ module Matches
     end
 
     def build_stat_attributes(match, player, participant_data, team_totals, opponent_map)
-      team_stats   = team_totals[participant_data[:team_id]]
-      damage_share = calc_share(participant_data[:total_damage_dealt], team_stats&.dig(:total_damage))
-      gold_share   = calc_share(participant_data[:gold_earned], team_stats&.dig(:total_gold))
-      cs_total     = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
+      team_stats       = team_totals[participant_data[:team_id]]
+      damage_share     = calc_share(participant_data[:total_damage_dealt], team_stats&.dig(:total_damage))
+      gold_share       = calc_share(participant_data[:gold_earned], team_stats&.dig(:total_gold))
+      cs_total         = (participant_data[:minions_killed] || 0) + (participant_data[:neutral_minions_killed] || 0)
+      duration_minutes = match.game_duration.to_f / 60.0
+      kp               = calc_kill_participation(participant_data, team_stats)
 
       base_stat_fields(match, player, participant_data, opponent_map, cs_total)
         .merge(combat_stat_fields(participant_data))
         .merge(vision_and_objective_fields(participant_data))
         .merge(share_and_spell_fields(participant_data, damage_share, gold_share))
+        .merge(rate_fields(cs_total, participant_data[:gold_earned], duration_minutes, kp))
+    end
+
+    def rate_fields(cs_total, gold_earned, duration_minutes, kill_participation)
+      if duration_minutes > 0
+        {
+          cs_per_min:         (cs_total.to_f / duration_minutes).round(2),
+          gold_per_min:       (gold_earned.to_f / duration_minutes).round(2),
+          kill_participation: kill_participation
+        }
+      else
+        { cs_per_min: 0.0, gold_per_min: 0.0, kill_participation: kill_participation }
+      end
+    end
+
+    def calc_kill_participation(participant_data, team_stats)
+      total_kills = team_stats&.dig(:total_kills).to_f
+      return 0.0 if total_kills.zero?
+
+      ((participant_data[:kills].to_i + participant_data[:assists].to_i) / total_kills).round(4)
     end
 
     def base_stat_fields(match, player, participant_data, opponent_map, cs_total)

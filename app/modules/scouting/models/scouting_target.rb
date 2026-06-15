@@ -33,12 +33,14 @@ class ScoutingTarget < ApplicationRecord
 
   # Reject values containing HTML injection patterns.
   # Denylist (not allowlist): allows international names, e-sports tags, CJK scripts.
-  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i.freeze
+  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i
 
   # Validations
   validates :summoner_name, presence: true, length: { maximum: 100 },
-            format: { without: HTML_INJECTION, message: 'contains invalid characters' }
+                            format: { without: HTML_INJECTION, message: 'contains invalid characters' }
   validates :real_name,
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :professional_name,
             format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
   validates :twitter_handle,
             format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
@@ -54,6 +56,8 @@ class ScoutingTarget < ApplicationRecord
 
   # Callbacks
   before_save :normalize_summoner_name
+  after_create_commit :enqueue_oe_enrichment
+  after_update_commit :enqueue_oe_enrichment, if: :saved_change_to_professional_name?
 
   # ── Meilisearch ────────────────────────────────────────────────────
   def self.meili_searchable_attributes
@@ -200,5 +204,11 @@ class ScoutingTarget < ApplicationRecord
 
   def normalize_summoner_name
     self.summoner_name = summoner_name.strip if summoner_name.present?
+  end
+
+  def enqueue_oe_enrichment
+    return unless professional_name.present?
+
+    MetaIntelligence::EnrichScoutingTargetWithOeJob.perform_later(id)
   end
 end

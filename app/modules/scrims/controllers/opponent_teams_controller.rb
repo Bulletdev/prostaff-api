@@ -11,6 +11,7 @@ module Scrims
     class OpponentTeamsController < Api::V1::BaseController
       include TierAuthorization
       include Paginatable
+      include MetaIntelligence::OeStatSerializable
 
       before_action :set_opponent_team, only: %i[show update destroy scrim_history]
       before_action :verify_team_usage!, only: %i[update destroy]
@@ -31,7 +32,13 @@ module Scrims
 
       # GET /api/v1/scrims/opponent_teams/:id
       def show
-        render json: { data: ScrimOpponentTeamSerializer.new(@opponent_team, detailed: true).as_json }
+        oe_stat = OePlayerLookupService.team_stats(
+          @opponent_team.name, league: @opponent_team.league
+        )
+        render json: {
+          data: ScrimOpponentTeamSerializer.new(@opponent_team, detailed: true).as_json
+                                           .merge('oe_stats' => serialize_oe_team_stat(oe_stat))
+        }
       end
 
       # GET /api/v1/scrims/opponent_teams/:id/scrim_history

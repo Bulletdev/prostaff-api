@@ -7,7 +7,9 @@ module Players
     class PlayersController < Api::V1::BaseController
       include Cacheable
 
-      before_action :set_player, only: %i[show update destroy stats matches sync_from_riot]
+      include MetaIntelligence::OeStatSerializable
+
+      before_action :set_player, only: %i[show update destroy stats matches sync_from_riot oe_history]
 
       after_action -> { invalidate_cache('players') }, only: %i[update destroy]
       after_action -> { invalidate_cache("players/#{@player&.id}") }, only: %i[update destroy]
@@ -63,7 +65,27 @@ module Players
         data = cache_response(cache_key, expires_in: 5.minutes) do
           { player: PlayerSerializer.render_as_hash(@player, root: :player, view: view) }
         end
+
+        oe_stat = OePlayerLookupService.latest_stats(@player.professional_name)
+        data[:oe_stats]         = serialize_oe_player_stat(oe_stat)
+        data[:oe_history_count] =
+          oe_stat ? OePlayerLookupService.history(@player.professional_name).count : 0
+
         render_success(data)
+      end
+
+      # GET /api/v1/players/:id/oe-history
+      def oe_history
+        if @player.professional_name.blank?
+          return render_error('Player has no professional_name', status: :unprocessable_entity)
+        end
+
+        stats = OePlayerLookupService.history(@player.professional_name)
+        render_success({
+                         player_name: @player.professional_name,
+                         tournaments_found: stats.count,
+                         data: stats.map { |s| serialize_oe_player_stat(s) }
+                       })
       end
 
       # POST /api/v1/players

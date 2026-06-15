@@ -116,6 +116,7 @@ Rails.application.routes.draw do
           get :matches
           post :sync_from_riot
           post :link_discord
+          get 'oe-history', action: :oe_history, as: :oe_history
           get 'stats/export', to: '/players/controllers/stats_export#show', as: :stats_export
         end
       end
@@ -125,6 +126,7 @@ Rails.application.routes.draw do
       post 'rosters/hire/:scouting_target_id', to: '/players/controllers/rosters#hire_from_scouting'
       get 'rosters/free-agents', to: '/players/controllers/rosters#free_agents'
       get 'rosters/statistics', to: '/players/controllers/rosters#statistics'
+      get 'rosters/season-snapshots', to: '/players/controllers/roster_season_snapshots#index'
 
       # Admin
       scope '/admin', as: 'admin' do
@@ -224,9 +226,12 @@ Rails.application.routes.draw do
           member do
             post :sync
             post :import_to_roster
+            get  :competitive_profile
+            get  :oe_history
           end
         end
         get 'regions', to: '/scouting/controllers/regions#index'
+        get 'oe-free-agents', to: '/scouting/controllers/free_agents#index', as: 'oe_free_agents'
         resources :watchlist, only: %i[index create destroy],
                               controller: '/scouting/controllers/watchlist'
       end
@@ -462,6 +467,20 @@ Rails.application.routes.draw do
         get 'champions/:champion',
             to: '/meta_intelligence/controllers/champion_meta#show',
             as: 'meta_champion'
+
+        get 'champion-stats',
+            to: '/meta_intelligence/controllers/champion_stats#index',
+            as: 'meta_champion_stats'
+
+        get 'split-stats/tournaments',
+            to: '/meta_intelligence/controllers/split_stats#tournaments',
+            as: 'meta_split_stats_tournaments'
+        get 'split-stats/player-lookup',
+            to: '/meta_intelligence/controllers/split_stats#player_lookup',
+            as: 'meta_split_stats_player_lookup'
+        get 'split-stats',
+            to: '/meta_intelligence/controllers/split_stats#index',
+            as: 'meta_split_stats'
       end
 
       # Manager Module — Contract Hub (M2) + Budget Tracker (M3)
@@ -517,10 +536,11 @@ Rails.application.routes.draw do
       # AI Intelligence Module — draft analysis and win probability
       # Requires Tier 1 (Professional) subscription.
       namespace :ai do
-        post 'draft/analyze',        to: '/ai_intelligence/controllers/draft#analyze'
-        post 'draft/synergy-matrix', to: '/ai_intelligence/controllers/draft#synergy_matrix'
-        post 'recommend-pick',       to: '/ai_intelligence/controllers/recommend#recommend_pick'
-        get  'champion-analytics',   to: '/ai_intelligence/controllers/champion_analytics#index'
+        post 'draft/analyze',         to: '/ai_intelligence/controllers/draft#analyze'
+        post 'draft/synergy-matrix',  to: '/ai_intelligence/controllers/draft#synergy_matrix'
+        get  'draft/adversary-profile', to: '/ai_intelligence/controllers/adversary_draft#adversary_profile'
+        post 'recommend-pick',        to: '/ai_intelligence/controllers/recommend#recommend_pick'
+        get  'champion-analytics',    to: '/ai_intelligence/controllers/champion_analytics#index'
       end
 
       # Wallet Module — proxy to ProPay service

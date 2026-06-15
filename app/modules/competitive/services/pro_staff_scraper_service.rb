@@ -26,9 +26,10 @@ class ProStaffScraperService
   class UnauthorizedError < ScraperError; end
   class UnavailableError < ScraperError; end
 
-  CACHE_TTL_MATCHES = 5.minutes
-  CACHE_TTL_STATUS  = 1.minute
-  REQUEST_TIMEOUT   = 15
+  CACHE_TTL_MATCHES   = 5.minutes
+  CACHE_TTL_STATUS    = 1.minute
+  CACHE_TTL_ADVERSARY = 2.minutes # shorter TTL for draft-time requests (two ES queries per call)
+  REQUEST_TIMEOUT     = 15
 
   def initialize
     @base_url = ENV.fetch('SCRAPER_API_URL', 'https://scraper.prostaff.gg')
@@ -137,6 +138,114 @@ class ProStaffScraperService
       { league: league, min_year: min_year },
       authenticated: true
     )
+    parse_json(response)
+  end
+
+  # Fetch aggregated pick/ban statistics per champion for a league + patch.
+  #
+  # Returns raw event counts (blue_bans, red_bans, blue_picks, red_picks, wins)
+  # and the total_games denominator so callers can compute presence_rate and
+  # win_rate. Presence range is [0, 2.0] (event-sum convention, not unique games).
+  #
+  # @param league    [String]       e.g. 'CBLOL', 'LCS'
+  # @param patch     [String, nil]  e.g. '14.10'. nil returns all patches.
+  # @param role      [String, nil]  top | jungle | mid | bot | support. nil = all roles.
+  # @param min_games [Integer]      exclude champions with fewer total appearances.
+  # @return [Hash] with :total_games, :champion_count, :champions (Array)
+  def fetch_champion_stats(league:, patch: nil, role: nil, min_games: 3)
+    cache_key = "scraper:champion_stats:#{league}:#{patch}:#{role}:#{min_games}"
+    cached = Rails.cache.read(cache_key)
+    return cached if cached
+
+    params = { league: league, min_games: min_games }
+    params[:patch] = patch if patch.present?
+    params[:role]  = role if role.present?
+
+    response = get('/api/v1/analytics/champions', params)
+    result = parse_json(response)
+    Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_MATCHES)
+    result
+  end
+
+  # Fetch competitive profile for a player across their career in Elasticsearch.
+  #
+  # Matches `name` against `participants.summoner_name` (which corresponds to
+  # `players.professional_name` in the Rails model — the join key between
+  # ProStaff player records and Leaguepedia data).
+  #
+  # @param name     [String]       Professional/competitive IGN (e.g. 'Titan')
+  # @param league   [String, nil]  Filter by league. nil = all leagues.
+  # @param min_year [Integer, nil] Ignore games before this year.
+  # @param min_games [Integer]     Exclude champions with fewer games from pool.
+  # @return [Hash] with :total_games, :win_rate, :champion_pool, :leagues, :years
+  def fetch_player_profile(name:, league: nil, min_year: nil, min_games: 3)
+    cache_key = "scraper:player_profile:#{name}:#{league}:#{min_year}:#{min_games}"
+    cached = Rails.cache.read(cache_key)
+    return cached if cached
+
+    params = { name: name, min_games: min_games }
+    params[:league]   = league   if league.present?
+    params[:min_year] = min_year if min_year.present?
+
+    response = get('/api/v1/analytics/player', params)
+    result = parse_json(response)
+    Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_MATCHES)
+    result
+  end
+
+  # Fetch draft tendencies for an adversary team over their last N games.
+  #
+  # Team filter uses `team1.name` / `team2.name` at document level in ES
+  # (NOT `participants.team_name` which is inside the nested type).
+  #
+  # @param team   [String]       Team name as indexed in ES (e.g. 'LOUD')
+  # @param league [String, nil]  Filter by league. nil = all leagues.
+  # @param last_n [Integer]      Analyse only the N most recent games (default 20).
+  # @return [Hash] with :games, :ban_data_available, :most_banned_in_games, :priority_picks, :top_picks
+  def fetch_adversary_profile(team:, league: nil, last_n: 20)
+    cache_key = "scraper:adversary:#{team}:#{league}:#{last_n}"
+    # Uses CACHE_TTL_ADVERSARY (2min) instead of the default 5min because
+    # this endpoint is called during live drafts where staleness matters more.
+    cached = Rails.cache.read(cache_key)
+    return cached if cached
+
+    params = { team: team, last_n: last_n }
+    params[:league] = league if league.present?
+
+    response = get('/api/v1/analytics/adversary', params)
+    result = parse_json(response)
+    Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_ADVERSARY)
+    result
+  end
+
+  # Fetch OE tournament stats (teams or players) from the local cache on the scraper.
+  #
+  # Data is pre-downloaded by etl/oe_stats_downloader.py and served from disk.
+  # Returns 404 (raises NotFoundError) if the tournament has not been downloaded yet.
+  #
+  # @param tournament [String] Leaguepedia OverviewPage, e.g. 'CBLOL/2026 Season/Split 1 Playoffs'
+  # @param type       [String] 'teams' or 'players'
+  # @param team       [String, nil] optional team name filter (partial, case-insensitive)
+  # @return [Hash] with :tournament, :type, :count, :data (Array)
+  def fetch_tournament_stats(tournament:, type: 'teams', team: nil)
+    params = { tournament: tournament, type: type }
+    params[:team] = team if team.present?
+    response = get('/api/v1/analytics/tournament-stats', params)
+    parse_json(response)
+  end
+
+  # List all OE tournament stats cached on the scraper, with optional filters.
+  #
+  # @param league [String, nil] filter by league short code (e.g. 'CBLOL')
+  # @param year   [Integer, nil] filter by year
+  # @param type   [String, nil] filter by stat type ('teams' or 'players')
+  # @return [Hash] with :count, :entries (Array of {league, year, slug, stat_type})
+  def fetch_tournament_stats_index(league: nil, year: nil, type: nil)
+    params = {}
+    params[:league] = league if league.present?
+    params[:year]   = year   if year.present?
+    params[:type]   = type   if type.present?
+    response = get('/api/v1/analytics/tournament-stats/index', params)
     parse_json(response)
   end
 

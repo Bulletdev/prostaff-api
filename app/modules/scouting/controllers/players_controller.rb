@@ -5,7 +5,9 @@ module Scouting
     # Scouting Players Controller
     # Manages GLOBAL scouting targets and org-specific watchlists
     class PlayersController < Api::V1::BaseController
-      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster]
+      include MetaIntelligence::OeStatSerializable
+
+      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster competitive_profile oe_history]
       before_action :require_management!, only: %i[import_to_roster]
 
       # GET /api/v1/scouting/players
@@ -49,17 +51,20 @@ module Scouting
       # GET /api/v1/scouting/players/:id
       def show
         watchlist = @target.scouting_watchlists.find_by(organization: current_organization)
+        oe_stat   = OePlayerLookupService.latest_stats(@target.professional_name)
 
         render_success({
                          scouting_target: JSON.parse(
                            ScoutingTargetSerializer.render(@target, watchlist: watchlist)
-                         )
+                         ),
+                         oe_stats: serialize_oe_player_stat(oe_stat)
                        })
       end
 
       # POST /api/v1/scouting/players
       # Creates/finds global target and adds to org watchlist
       def create
+        target = nil
         ActiveRecord::Base.transaction do
           target = find_or_create_target!
           watchlist = create_watchlist_for(target)
@@ -70,6 +75,7 @@ module Scouting
             message: 'Scouting target added successfully'
           )
         end
+        MetaIntelligence::EnrichScoutingTargetWithOeJob.perform_later(target.id) if target&.professional_name.present?
       rescue ActiveRecord::RecordInvalid => e
         render_error(
           message: 'Failed to add scouting target',
@@ -135,6 +141,59 @@ module Scouting
       rescue ArgumentError
         render_error(message: 'Invalid date format. Use YYYY-MM-DD', code: 'INVALID_DATE_FORMAT',
                      status: :unprocessable_entity)
+      end
+
+      # GET /api/v1/scouting/players/:id/competitive_profile
+      # Returns historical competitive profile from Elasticsearch.
+      # Requires `professional_name` to be set on the scouting target.
+      # The join key to ES is professional_name (Leaguepedia tournament IGN),
+      # NOT summoner_name (current Riot ID, which diverges from historical names).
+      def competitive_profile
+        result = CompetitiveProfileService.new(
+          player: @target,
+          league: params[:league],
+          min_year: params[:min_year]&.to_i,
+          min_games: params[:min_games]&.to_i || 3
+        ).call
+
+        if result[:error]
+          status_map = {
+            'no_professional_name' => :unprocessable_entity,
+            'player_not_found_in_es' => :not_found,
+            'scraper_unavailable' => :service_unavailable
+          }
+          code_map = {
+            'no_professional_name' => 'NO_PROFESSIONAL_NAME',
+            'player_not_found_in_es' => 'NOT_FOUND',
+            'scraper_unavailable' => 'SCRAPER_UNAVAILABLE'
+          }
+          return render_error(
+            message: result[:error],
+            code: code_map.fetch(result[:error], 'COMPETITIVE_PROFILE_ERROR'),
+            status: status_map.fetch(result[:error], :unprocessable_entity)
+          )
+        end
+
+        render_success({ competitive_profile: result })
+      end
+
+      # GET /api/v1/scouting/players/:id/oe_history
+      # Returns all Oracle's Elixir tournament splits for this player, most recent first.
+      def oe_history
+        unless @target.professional_name.present?
+          return render_error(
+            message: 'No professional name set on this target',
+            code: 'NO_PROFESSIONAL_NAME',
+            status: :unprocessable_entity
+          )
+        end
+
+        splits = OePlayerLookupService.history(@target.professional_name)
+
+        render_success({
+                         player_name: @target.professional_name,
+                         splits: splits.map { |s| serialize_oe_player_stat(s) }
+                       })
       end
 
       def sync
@@ -381,7 +440,7 @@ module Scouting
         # :role is the LoL in-game position (top/jungle/mid/adc/support), not an authorization role.
         # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
         params.require(:scouting_target).permit( # NOSONAR
-          :summoner_name, :real_name, :role, :region, :nationality,
+          :summoner_name, :real_name, :professional_name, :role, :region, :nationality,
           :age, :status, :current_team,
           :current_tier, :current_rank, :current_lp,
           :peak_tier, :peak_rank,
@@ -408,7 +467,7 @@ module Scouting
       def target_params
         # :role is the LoL in-game position (top/jungle/mid/adc/support), not an authorization role.
         params.fetch(:target, {}).permit( # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
-          :summoner_name, :real_name, :role, :region, :nationality,
+          :summoner_name, :real_name, :professional_name, :role, :region, :nationality,
           :age, :status, :current_team,
           :current_tier, :current_rank, :current_lp,
           :peak_tier, :peak_rank,

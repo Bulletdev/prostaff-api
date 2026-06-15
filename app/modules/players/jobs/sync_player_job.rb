@@ -102,6 +102,43 @@ module Players
       end
 
       player.update!(update_attributes) if update_attributes.present?
+
+      record_rank_snapshot(player, league_data)
+    end
+
+    def record_rank_snapshot(player, league_data)
+      today = Date.current
+      # Granularity: one snapshot per player per queue per day (first sync wins).
+      # If the job runs multiple times in a day (e.g. manual + scheduled), the first
+      # LP value is kept. This is sufficient for daily progression curves.
+      # Per-match granularity would require calling this after every match sync,
+      # adding a column for match_id, and significantly more storage — deferred to v2.
+
+      if (solo = league_data[:solo_queue]).present?
+        player.player_rank_snapshots.find_or_create_by(
+          queue_type: "RANKED_SOLO_5x5",
+          recorded_on: today
+        ) do |snap|
+          snap.tier          = solo[:tier]
+          snap.rank          = solo[:rank]
+          snap.league_points = solo[:lp].to_i
+          snap.wins          = solo[:wins].to_i
+          snap.losses        = solo[:losses].to_i
+        end
+      end
+
+      return unless (flex = league_data[:flex_queue]).present?
+
+      player.player_rank_snapshots.find_or_create_by(
+        queue_type: "RANKED_FLEX_SR",
+        recorded_on: today
+      ) do |snap|
+        snap.tier          = flex[:tier]
+        snap.rank          = flex[:rank]
+        snap.league_points = flex[:lp].to_i
+        snap.wins          = flex[:wins].to_i
+        snap.losses        = flex[:losses].to_i
+      end
     end
 
     def sync_champion_mastery(player, riot_service, region)
