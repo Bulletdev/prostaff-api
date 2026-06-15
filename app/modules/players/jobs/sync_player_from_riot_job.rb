@@ -144,7 +144,9 @@ module Players
       game_name, tag_line = summoner_name.split('#')
       tag_line ||= region.upcase
 
-      account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{URI.encode_www_form_component(game_name)}/#{URI.encode_www_form_component(tag_line)}"
+      encoded_name = URI.encode_www_form_component(game_name).gsub('+', '%20')
+      encoded_tag  = URI.encode_www_form_component(tag_line).gsub('+', '%20')
+      account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{encoded_name}/#{encoded_tag}"
       account_uri = URI(account_url)
       account_request = Net::HTTP::Get.new(account_uri)
       account_request['X-Riot-Token'] = api_key
