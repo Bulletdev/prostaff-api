@@ -155,7 +155,7 @@ module MetaIntelligence
           raw_player_name: raw_name,
           league: league, year: year,
           team_name: pick(row, 'team', 'Team', 'teamName'),
-          position: pick(row, 'pos', 'position', 'role', 'Position'),
+          position: pick(row, 'pos', 'Pos', 'position', 'role', 'Position'),
           data: row, computed_at: now, created_at: now, updated_at: now }
       end
 

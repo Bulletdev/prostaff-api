@@ -27,8 +27,9 @@ module Players
     def sync_player_from_riot!(player, riot_api_key)
       region = player.region.presence&.downcase || 'br1'
       summoner_data = fetch_summoner_data(player, region, riot_api_key)
-      account_data  = fetch_account_by_puuid(player.riot_puuid, region, riot_api_key)
-      ranked_data   = fetch_ranked_stats_by_puuid(player.riot_puuid, region, riot_api_key)
+      puuid         = summoner_data['puuid']
+      account_data  = fetch_account_by_puuid(puuid, region, riot_api_key)
+      ranked_data   = fetch_ranked_stats_by_puuid(puuid, region, riot_api_key)
 
       update_data = build_update_data(summoner_data)
       update_summoner_name!(player, update_data, account_data)
@@ -143,7 +144,9 @@ module Players
       game_name, tag_line = summoner_name.split('#')
       tag_line ||= region.upcase
 
-      account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{URI.encode_www_form_component(game_name)}/#{URI.encode_www_form_component(tag_line)}"
+      encoded_name = URI.encode_www_form_component(game_name).gsub('+', '%20')
+      encoded_tag  = URI.encode_www_form_component(tag_line).gsub('+', '%20')
+      account_url = "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/#{encoded_name}/#{encoded_tag}"
       account_uri = URI(account_url)
       account_request = Net::HTTP::Get.new(account_uri)
       account_request['X-Riot-Token'] = api_key

@@ -24,7 +24,7 @@ module Scouting
       sync_mastery_data!(target, riot_service)
       sync_recent_performance!(target, riot_service)
 
-      target.update!(last_sync_at: Time.current)
+      target.update!(last_api_sync_at: Time.current)
       Rails.logger.info("Successfully synced scouting target #{target.id}")
     rescue RiotApiService::NotFoundError => e
       Rails.logger.error("Scouting target not found in Riot API: #{target.summoner_name} - #{e.message}")
@@ -41,14 +41,15 @@ module Scouting
     def resolve_puuid!(target, riot_service)
       return if target.riot_puuid.present?
 
-      summoner_data = riot_service.get_summoner_by_name(
-        summoner_name: target.summoner_name,
+      game_name, tag_line = target.summoner_name.to_s.split('#', 2)
+      return unless game_name.present? && tag_line.present?
+
+      account_data = riot_service.get_account_by_riot_id(
+        game_name: game_name,
+        tag_line: tag_line,
         region: target.region
       )
-      target.update!(
-        riot_puuid: summoner_data[:puuid],
-        riot_summoner_id: summoner_data[:summoner_id]
-      )
+      target.update!(riot_puuid: account_data[:puuid])
     end
 
     def sync_account_name!(target, riot_service)
@@ -72,10 +73,10 @@ module Scouting
     end
 
     def sync_league_entries!(target, riot_service)
-      return unless target.riot_summoner_id.present?
+      return unless target.riot_puuid.present?
 
-      league_data = riot_service.get_league_entries(
-        summoner_id: target.riot_summoner_id,
+      league_data = riot_service.get_league_entries_by_puuid(
+        puuid: target.riot_puuid,
         region: target.region
       )
       update_rank_info(target, league_data)

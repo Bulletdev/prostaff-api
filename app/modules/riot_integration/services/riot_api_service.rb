@@ -44,6 +44,14 @@ class RiotApiService
     parse_account_response(response)
   end
 
+  def get_account_by_riot_id(game_name:, tag_line:, region:)
+    routing = routing_for(region)
+    encoded_name = URI.encode_www_form_component(game_name).gsub('+', '%20')
+    encoded_tag  = URI.encode_www_form_component(tag_line).gsub('+', '%20')
+    response = get("/riot/account/#{routing}/by-riot-id/#{encoded_name}/#{encoded_tag}")
+    parse_account_response(response)
+  end
+
   def get_league_entries(summoner_id:, region:)
     platform = platform_for(region)
     response = get("/riot/league/#{platform}/by-summoner/#{summoner_id}")
