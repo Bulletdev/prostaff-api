@@ -120,8 +120,6 @@ class StatusSnapshotJob < ApplicationJob
   end
 
   def check_events_service
-    return { status: 'operational', response_time_ms: nil } unless ENV['PHOENIX_EVENTS_ENABLED'] == 'true'
-
     ms = measure do
       conn = Faraday.new { |f| f.options.timeout = 3 }
       res = conn.get("#{EVENTS_URL}/health") { |req| req.headers['X-Forwarded-Proto'] = 'https' }
