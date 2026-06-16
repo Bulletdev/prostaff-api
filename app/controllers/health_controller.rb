@@ -43,7 +43,10 @@ class HealthController < ActionController::API
       database: check_database,
       redis: check_redis,
       meilisearch: check_meilisearch,
-      events_service: check_events_service
+      events_service: check_events_service,
+      scraper_api: check_scraper_api,
+      riot_gateway: check_riot_gateway,
+      propay: check_propay
     }
 
     # 'disabled' means the service is not configured (expected in some environments).
@@ -111,10 +114,11 @@ class HealthController < ActionController::API
     events_url = ENV['PHOENIX_EVENTS_URL'].presence || 'http://localhost:4000'
 
     conn = Faraday.new { |f| f.options.timeout = 2 }
-    response = conn.get("#{events_url}/health")
+    response = conn.get("#{events_url}/health") { |req| req.headers['X-Forwarded-Proto'] = 'https' }
 
     if response.success?
-      { status: 'ok' }
+      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      { status: 'ok' }.merge(body.slice(:service, :vsn))
     else
       { status: 'error', message: "HTTP #{response.status}" }
     end
@@ -137,6 +141,69 @@ class HealthController < ActionController::API
     { status: 'ok' }
   rescue StandardError => e
     Rails.logger.error "[HealthCheck] Meilisearch check failed: #{e.message}"
+    { status: 'error', message: e.message }
+  end
+
+  # Calls the ProStaff Scraper FastAPI GET /health endpoint.
+  #
+  # @return [Hash] { status: 'ok'|'disabled'|'error', ... }
+  def check_scraper_api
+    url = ENV['SCRAPER_API_URL'].presence
+    return { status: 'disabled', message: 'SCRAPER_API_URL not configured' } unless url
+
+    conn = Faraday.new { |f| f.options.timeout = 2 }
+    response = conn.get("#{url}/health")
+
+    if response.success?
+      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      { status: 'ok' }.merge(body.slice(:service, :elasticsearch))
+    else
+      { status: 'error', message: "HTTP #{response.status}" }
+    end
+  rescue StandardError => e
+    Rails.logger.warn "[HealthCheck] scraper_api check failed: #{e.message}"
+    { status: 'error', message: e.message }
+  end
+
+  # Calls the Riot Gateway GET /health endpoint.
+  #
+  # @return [Hash] { status: 'ok'|'disabled'|'error', ... }
+  def check_riot_gateway
+    url = ENV['RIOT_GATEWAY_URL'].presence
+    return { status: 'disabled', message: 'RIOT_GATEWAY_URL not configured' } unless url
+
+    conn = Faraday.new { |f| f.options.timeout = 2 }
+    response = conn.get("#{url}/health")
+
+    if response.success?
+      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      { status: 'ok' }.merge(body.slice(:version, :redis, :circuit_breakers))
+    else
+      { status: 'error', message: "HTTP #{response.status}" }
+    end
+  rescue StandardError => e
+    Rails.logger.warn "[HealthCheck] riot_gateway check failed: #{e.message}"
+    { status: 'error', message: e.message }
+  end
+
+  # Calls the ProPay service GET /health endpoint.
+  #
+  # @return [Hash] { status: 'ok'|'disabled'|'error', ... }
+  def check_propay
+    url = ENV['PROPAY_URL'].presence
+    return { status: 'disabled', message: 'PROPAY_URL not configured' } unless url
+
+    conn = Faraday.new { |f| f.options.timeout = 2 }
+    response = conn.get("#{url}/health")
+
+    if response.success?
+      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      { status: 'ok' }.merge(body.slice(:version))
+    else
+      { status: 'error', message: "HTTP #{response.status}" }
+    end
+  rescue StandardError => e
+    Rails.logger.warn "[HealthCheck] propay check failed: #{e.message}"
     { status: 'error', message: e.message }
   end
 end
