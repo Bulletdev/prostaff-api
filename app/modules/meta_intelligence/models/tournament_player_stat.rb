@@ -66,15 +66,15 @@ class TournamentPlayerStat < ApplicationRecord
   end
 
   def cs_per_minute
-    data['csm'] || data['CSM']
+    data['csm'] || data['CSM'] || data['CSPM'] || data['cspm']
   end
 
   def gold_diff_at_15
-    data['gd15'] || data['GD@15'] || data['csd15'] || data['CSD@15']
+    data['gd15'] || data['GD15'] || data['GD@15'] || data['GD10'] || data['csd15'] || data['CSD@15']
   end
 
   def kill_participation
-    raw = data['kp'] || data['KP%'] || data['kill_participation']
+    raw = data['kp'] || data['KP'] || data['KP%'] || data['kill_participation']
     return nil unless raw
 
     raw.to_s.delete('%').strip.to_f
