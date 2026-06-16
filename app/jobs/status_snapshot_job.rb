@@ -9,6 +9,10 @@ class StatusSnapshotJob < ApplicationJob
 
   RIOT_HEARTBEAT_PATTERN = 'prostaff:job_heartbeat:*Riot*'
   RIOT_STALENESS_HOURS   = 25
+  EVENTS_URL             = ENV.fetch('PHOENIX_EVENTS_URL', 'http://events:4000')
+  SCRAPER_URL            = ENV.fetch('SCRAPER_API_URL', 'http://scraper-api:8000')
+  RIOT_GATEWAY_URL       = ENV.fetch('RIOT_GATEWAY_URL', 'http://riot-gateway:4444')
+  PROPAY_URL             = ENV.fetch('PROPAY_URL', 'http://propay:5555')
 
   def perform
     checked_at = Time.current
@@ -113,6 +117,56 @@ class StatusSnapshotJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error("[STATUS] Riot API heartbeat check failed: #{e.message}")
     { status: 'degraded_performance', response_time_ms: nil }
+  end
+
+  def check_events_service
+    return { status: 'operational', response_time_ms: nil } unless ENV['PHOENIX_EVENTS_ENABLED'] == 'true'
+
+    ms = measure do
+      conn = Faraday.new { |f| f.options.timeout = 3 }
+      res = conn.get("#{EVENTS_URL}/health") { |req| req.headers['X-Forwarded-Proto'] = 'https' }
+      raise "HTTP #{res.status}" unless res.success?
+    end
+    { status: 'operational', response_time_ms: ms }
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] events_service check failed: #{e.message}")
+    { status: 'major_outage', response_time_ms: nil }
+  end
+
+  def check_scraper_api
+    ms = measure do
+      conn = Faraday.new { |f| f.options.timeout = 3 }
+      res = conn.get("#{SCRAPER_URL}/health")
+      raise "HTTP #{res.status}" unless res.success?
+    end
+    { status: 'operational', response_time_ms: ms }
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] scraper_api check failed: #{e.message}")
+    { status: 'major_outage', response_time_ms: nil }
+  end
+
+  def check_riot_gateway
+    ms = measure do
+      conn = Faraday.new { |f| f.options.timeout = 3 }
+      res = conn.get("#{RIOT_GATEWAY_URL}/health")
+      raise "HTTP #{res.status}" unless res.success?
+    end
+    { status: 'operational', response_time_ms: ms }
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] riot_gateway check failed: #{e.message}")
+    { status: 'major_outage', response_time_ms: nil }
+  end
+
+  def check_propay
+    ms = measure do
+      conn = Faraday.new { |f| f.options.timeout = 3 }
+      res = conn.get("#{PROPAY_URL}/health")
+      raise "HTTP #{res.status}" unless res.success?
+    end
+    { status: 'operational', response_time_ms: ms }
+  rescue StandardError => e
+    Rails.logger.error("[STATUS] propay check failed: #{e.message}")
+    { status: 'major_outage', response_time_ms: nil }
   end
 
   # Uses SCAN instead of KEYS to avoid blocking Redis under load.
