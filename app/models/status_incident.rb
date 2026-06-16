@@ -7,7 +7,7 @@
 class StatusIncident < ApplicationRecord
   SEVERITIES = %w[minor major critical].freeze
   STATUSES   = %w[investigating identified monitoring resolved].freeze
-  COMPONENTS = %w[api database redis websocket sidekiq riot_api].freeze
+  COMPONENTS = %w[api database redis websocket sidekiq riot_api events_service scraper_api riot_gateway propay].freeze
 
   belongs_to :created_by,
              class_name: 'User',
