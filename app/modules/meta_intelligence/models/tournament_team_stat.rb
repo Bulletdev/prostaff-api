@@ -42,11 +42,15 @@ class TournamentTeamStat < ApplicationRecord
   end
 
   def win_rate
-    data['wr'] || data['WR'] || data['win_rate']
+    val = data['wr'] || data['WR'] || data['win_rate']
+    return val if val
+    return nil unless data['W'] && data['GP'].to_i.positive?
+
+    (data['W'].to_f / data['GP'] * 100).round(1)
   end
 
   def gold_diff_at_15
-    data['gd15'] || data['GD@15'] || data['gd_at_15']
+    data['gd15'] || data['GD15'] || data['GD@15'] || data['gd_at_15']
   end
 
   def wpm
@@ -54,10 +58,12 @@ class TournamentTeamStat < ApplicationRecord
   end
 
   def dragon_control_pct
-    data['drg'] || data['DRG%'] || data['dragon_pct']
+    val = data['drg'] || data['DRG%'] || data['dragon_pct']
+    val.is_a?(String) ? val.to_f : val
   end
 
   def game_score_diff
-    data['gspd'] || data['GSPD']
+    val = data['gspd'] || data['GSPD']
+    val.is_a?(String) ? val.to_f : val
   end
 end
