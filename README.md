@@ -209,6 +209,7 @@ Local Docker services started by `docker compose up -d`:
 ║  Real-time           ║  Action Cable (WebSocket)                          ║
 ║  Data Lake           ║  Elasticsearch 8 (97K+ pro games, all leagues)     ║
 ║  ML Service          ║  Python 3.11 · FastAPI · XGBoost · Gensim Word2Vec ║
+║  Video AI            ║  Python 3.11 · FastAPI · yt-dlp · FFmpeg           ║
 ╚══════════════════════╩════════════════════════════════════════════════════╝
 ```
 
@@ -229,7 +230,7 @@ This API follows a modular monolith architecture with the following modules:
 - `analytics` - Performance analytics and reporting
 - `matches` - Match data and statistics
 - `schedules` - Event and schedule management
-- `vod_reviews` - Video review and timestamp management
+- `vod_reviews` - Video review and timestamp management (with VideoAI analysis integration)
 - `team_goals` - Goal setting and tracking
 - `riot_integration` - Riot Games API integration
 - `competitive` - PandaScore integration, pro matches, draft analysis
@@ -305,6 +306,8 @@ graph TB
             VODController[VOD Reviews Controller]
             VodReviewModel[VOD Review Model]
             VodTimestampModel[VOD Timestamp Model]
+            VodAnalysisJob[Vod Analysis Job\nAnalyzeVodJob]
+            VideoAiClient[VideoAiClient\nHTTP + JWT]
         end
 
         subgraph "Team Goals Module"
@@ -358,6 +361,7 @@ graph TB
     subgraph "External Services"
         RiotAPI[Riot Games API]
         PandaScoreAPI[PandaScore API]
+        VideoAI[ProStaff VideoAI\nprostaff-videoai:8001\nyt-dlp + FFmpeg]
     end
 
     Client -->|HTTPS| Traefik
@@ -400,6 +404,9 @@ graph TB
     SchedulesController --> ScheduleModel
     VODController --> VodReviewModel
     VodReviewModel --> VodTimestampModel
+    VODController --> VodAnalysisJob
+    VodAnalysisJob --> VideoAiClient
+    VideoAiClient -->|HTTP + JWT| VideoAI
     GoalsController --> TeamGoalModel
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
@@ -436,6 +443,9 @@ graph TB
     style RiotAPI fill:#eb0029,color:#fff
     style PandaScoreAPI fill:#ff6b35,color:#fff
     style Sidekiq fill:#b1003e,color:#fff
+    style VideoAI fill:#2d6a4f,color:#fff
+    style VodAnalysisJob fill:#b1003e,color:#fff
+    style VideoAiClient fill:#40916c,color:#fff
 ```
 
 
@@ -705,10 +715,16 @@ curl -X POST http://localhost:3333/api/v1/auth/refresh \
 - `POST   /vod-reviews` - Create new review
 - `PATCH  /vod-reviews/:id` - Update review
 - `DELETE /vod-reviews/:id` - Delete review
+- `GET    /vod-reviews/:id/player` - Get review data optimized for the video player UI
 - `GET    /vod-reviews/:id/timestamps` - List timestamps
 - `POST   /vod-reviews/:id/timestamps` - Create timestamp
 - `PATCH  /vod-timestamps/:id` - Update timestamp
 - `DELETE /vod-timestamps/:id` - Delete timestamp
+
+#### VOD AI Analysis (VideoAI microservice)
+- `POST   /vod-reviews/:id/analyze` - Enqueue VideoAI analysis job; returns `job_id`
+- `GET    /vod-reviews/:id/analyze/:job_id` - Poll job status (`pending` → `downloading` → `analyzing` → `done` | `failed`)
+- `POST   /vod-reviews/:id/import_suggestions` - Import selected AI-suggested timestamps into the review
 
 #### Riot Data
 - `GET  /riot-data/champions` - Get champions ID map
@@ -1263,6 +1279,11 @@ graph TB
         MlModels[("Models<br/>champion2vec.bin<br/>win_probability_v2.pkl")]
     end
 
+    subgraph "prostaff-videoai - Python/FastAPI"
+        VideoAiService["VideoAI :8001<br/>yt-dlp + FFmpeg<br/>POST /jobs · /clips"]
+        ClipsVol[("clips_data volume<br/>/tmp/videoai_clips")]
+    end
+
     subgraph "prostaff-scraper - Python/FastAPI"
         ScraperApi["Scraper API :8000<br/>GET /health · /matches · /status"]
         ScraperCron["scraper-cron<br/>polls LoL Esports API<br/>(every SYNC_INTERVAL_HOURS)"]
@@ -1320,6 +1341,10 @@ graph TB
     Router -. "HTTP POST /recommend<br/>(fallback: DraftSuggester)" .-> MlService
     MlService --- MlModels
 
+    Sidekiq -. "internal JWT" .-> VideoAiService
+    Router -. "internal JWT<br/>POST /jobs · GET /jobs/:id" .-> VideoAiService
+    VideoAiService --- ClipsVol
+
     ScraperCron -- "indexes new games" --> ES
     ScraperCron -- "polls events" --> LoLEsports
     Enrichment -- "enriches KDA/items" --> ES
@@ -1350,6 +1375,8 @@ graph TB
     style Leaguepedia fill:#8a6914
     style MlService fill:#1a6b3a
     style MlModels fill:#0f3d22
+    style VideoAiService fill:#2d6a4f
+    style ClipsVol fill:#1a3d2e
     style ScraperApi fill:#3d6b1a
     style ScraperCron fill:#2d5010
     style Enrichment fill:#2d5010

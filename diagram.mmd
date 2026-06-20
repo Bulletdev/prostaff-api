@@ -63,6 +63,8 @@ graph TB
             VODController[VOD Reviews Controller]
             VodReviewModel[VOD Review Model]
             VodTimestampModel[VOD Timestamp Model]
+            VodAnalysisJob[Vod Analysis Job\nAnalyzeVodJob]
+            VideoAiClient[VideoAiClient\nHTTP + JWT]
         end
 
         subgraph "Team Goals Module"
@@ -116,6 +118,7 @@ graph TB
     subgraph "External Services"
         RiotAPI[Riot Games API]
         PandaScoreAPI[PandaScore API]
+        VideoAI[ProStaff VideoAI\nprostaff-videoai:8001\nyt-dlp + FFmpeg]
     end
 
     Client -->|HTTPS| Traefik
@@ -158,6 +161,9 @@ graph TB
     SchedulesController --> ScheduleModel
     VODController --> VodReviewModel
     VodReviewModel --> VodTimestampModel
+    VODController --> VodAnalysisJob
+    VodAnalysisJob --> VideoAiClient
+    VideoAiClient -->|HTTP + JWT| VideoAI
     GoalsController --> TeamGoalModel
     AnalyticsController --> PerformanceService
     AnalyticsController --> KDAService
@@ -194,3 +200,6 @@ graph TB
     style RiotAPI fill:#eb0029,color:#fff
     style PandaScoreAPI fill:#ff6b35,color:#fff
     style Sidekiq fill:#b1003e,color:#fff
+    style VideoAI fill:#2d6a4f,color:#fff
+    style VodAnalysisJob fill:#b1003e,color:#fff
+    style VideoAiClient fill:#40916c,color:#fff
