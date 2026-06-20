@@ -9,6 +9,7 @@ class VodReviewSerializer < Blueprinter::Base
          :video_url, :thumbnail_url, :duration,
          :is_public, :share_link, :shared_with_players,
          :status, :tags, :metadata,
+         :video_urls, :video_sync_offsets, :video_labels,
          :created_at, :updated_at
 
   # HashID for short, obfuscated public URLs
@@ -24,6 +25,12 @@ class VodReviewSerializer < Blueprinter::Base
   # Direct HashID URL (for explicit HashID usage)
   field :public_hashid_url do |vod_review|
     vod_review.public_hashid_url
+  end
+
+  # Identifies the video hosting provider based on the video_url host.
+  # Returns 'youtube', 'twitch', or 'direct' for unknown/self-hosted URLs.
+  field :video_provider do |vod_review|
+    VideoUrlValidator.provider_for(vod_review.video_url)
   end
 
   field :timestamps_count do |vod_review, options|

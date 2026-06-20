@@ -119,7 +119,8 @@ module VodReviews
       def vod_timestamp_params
         params.require(:vod_timestamp).permit(
           :timestamp_seconds, :category, :importance,
-          :title, :description, :target_type, :target_player_id
+          :title, :description, :target_type, :target_player_id,
+          :source_video_index
         )
       end
     end

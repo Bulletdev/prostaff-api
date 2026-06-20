@@ -21,6 +21,64 @@ RSpec.describe VodTimestamp, type: :model do
     it { should validate_inclusion_of(:target_type).in_array(%w[player team opponent]).allow_blank }
   end
 
+  describe '#timestamp_within_duration validation' do
+    context 'when the associated vod_review has a duration' do
+      let(:vod_review) { create(:vod_review, duration: 3600) }
+
+      it 'is invalid when timestamp_seconds exceeds the video duration' do
+        timestamp = build(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 3601)
+        expect(timestamp).not_to be_valid
+        expect(timestamp.errors[:timestamp_seconds]).to include('exceeds video duration')
+      end
+
+      it 'is valid when timestamp_seconds equals the video duration' do
+        timestamp = build(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 3600)
+        expect(timestamp).to be_valid
+      end
+
+      it 'is valid when timestamp_seconds is within the video duration' do
+        timestamp = build(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 1800)
+        expect(timestamp).to be_valid
+      end
+    end
+
+    context 'when the associated vod_review has no duration' do
+      let(:vod_review) { create(:vod_review, duration: nil) }
+
+      it 'skips the duration check and is valid regardless of timestamp_seconds' do
+        timestamp = build(:vod_timestamp, vod_review: vod_review, timestamp_seconds: 99_999)
+        expect(timestamp).to be_valid
+      end
+    end
+  end
+
+  describe 'drawing_data_size validation' do
+    let(:vod_review) { create(:vod_review) }
+
+    it 'is valid when drawing_data is empty hash' do
+      timestamp = build(:vod_timestamp, vod_review: vod_review, drawing_data: {})
+      expect(timestamp).to be_valid
+    end
+
+    it 'is valid when drawing_data is within 500KB' do
+      small_data = { shapes: Array.new(10) { { id: SecureRandom.uuid, type: 'rect' } } }
+      timestamp = build(:vod_timestamp, vod_review: vod_review, drawing_data: small_data)
+      expect(timestamp).to be_valid
+    end
+
+    it 'is invalid when drawing_data exceeds 500KB' do
+      large_string = 'x' * (501 * 1024)
+      timestamp = build(:vod_timestamp, vod_review: vod_review, drawing_data: { payload: large_string })
+      expect(timestamp).not_to be_valid
+      expect(timestamp.errors[:drawing_data]).to include('exceeds maximum size of 500KB')
+    end
+
+    it 'is valid when drawing_data is nil' do
+      timestamp = build(:vod_timestamp, vod_review: vod_review, drawing_data: nil)
+      expect(timestamp).to be_valid
+    end
+  end
+
   describe 'scopes' do
     let(:vod_review) { create(:vod_review) }
     let!(:mistake_timestamp) { create(:vod_timestamp, :mistake, vod_review: vod_review) }

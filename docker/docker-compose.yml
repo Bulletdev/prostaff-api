@@ -111,6 +111,29 @@ services:
       "
     restart: unless-stopped
 
+  # ProStaff VideoAI — AI-powered VOD analysis service
+  prostaff-videoai:
+    build:
+      context: ../../ProStaff-VideoAI
+      dockerfile: Dockerfile
+    container_name: prostaff-videoai
+    env_file:
+      - ../../ProStaff-VideoAI/.env
+    volumes:
+      - ../../ProStaff-VideoAI:/app
+      - videoai_clips:/tmp/videoai_clips
+    ports:
+      - "8001:8001"
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
   # Sidekiq for background jobs
   sidekiq:
     build: ..
@@ -138,6 +161,7 @@ volumes:
   redis_data:
   bundle_cache:
   meilisearch_data:
+  videoai_clips:
 
 networks:
   security-net:

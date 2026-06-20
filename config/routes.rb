@@ -279,6 +279,12 @@ Rails.application.routes.draw do
       # VOD Reviews
       resources :vod_reviews, path: 'vod-reviews',
                               controller: '/vod_reviews/controllers/vod_reviews' do
+        member do
+          get  :player
+          post :analyze
+          get  'analyze/:job_id', action: :analyze_status, as: :analyze_status
+          post :import_suggestions
+        end
         resources :timestamps, controller: '/vod_reviews/controllers/vod_timestamps',
                                only: %i[index create]
       end

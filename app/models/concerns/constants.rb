@@ -220,13 +220,15 @@ module Constants
 
   # VOD Review constants
   module VodReview
-    TYPES = %w[team individual opponent].freeze
+    TYPES = %w[team individual opponent multi_pov].freeze
     STATUSES = %w[draft published archived].freeze
+    ANALYSIS_STATUSES = %w[pending queued downloading analyzing done failed].freeze
 
     TYPE_NAMES = {
-      'team' => 'Team Review',
+      'team'      => 'Team Review',
       'individual' => 'Individual Review',
-      'opponent' => 'Opponent Review'
+      'opponent'  => 'Opponent Review',
+      'multi_pov' => 'Multi-POV'
     }.freeze
 
     STATUS_NAMES = {

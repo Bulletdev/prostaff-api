@@ -94,4 +94,81 @@ RSpec.describe VodTimestampSerializer do
       expect(result[:created_by].keys).not_to include(:password_digest)
     end
   end
+
+  describe 'drawing_data field' do
+    it 'is present in the serialized output' do
+      expect(result).to have_key(:drawing_data)
+    end
+
+    it 'returns an empty hash when no drawing has been saved' do
+      expect(result[:drawing_data]).to eq({})
+    end
+
+    context 'when drawing_data has content' do
+      let(:drawing_payload) { { 'shapes' => [{ 'id' => '1', 'type' => 'rect' }] } }
+      let(:timestamp) do
+        create(:vod_timestamp,
+               vod_review: vod_review,
+               target_player: player,
+               created_by: reviewer,
+               timestamp_seconds: 125,
+               drawing_data: drawing_payload)
+      end
+
+      it 'serializes the stored drawing data' do
+        expect(result[:drawing_data]).to eq(drawing_payload)
+      end
+    end
+  end
+
+  describe 'source_video_index field' do
+    it 'is present in the serialized output' do
+      expect(result).to have_key(:source_video_index)
+    end
+
+    it 'defaults to 0' do
+      expect(result[:source_video_index]).to eq(0)
+    end
+
+    context 'when source_video_index is set to a non-zero value' do
+      let(:timestamp) do
+        create(:vod_timestamp,
+               vod_review: vod_review,
+               target_player: player,
+               created_by: reviewer,
+               timestamp_seconds: 125,
+               source_video_index: 2)
+      end
+
+      it 'serializes the stored index' do
+        expect(result[:source_video_index]).to eq(2)
+      end
+    end
+  end
+
+  describe 'annotations field' do
+    it 'is present in the serialized output' do
+      expect(result).to have_key(:annotations)
+    end
+
+    it 'returns an empty array when no annotations have been saved' do
+      expect(result[:annotations]).to eq([])
+    end
+
+    context 'when annotations have content' do
+      let(:annotations_payload) { [{ 'text' => 'bad positioning', 'at' => 30 }] }
+      let(:timestamp) do
+        create(:vod_timestamp,
+               vod_review: vod_review,
+               target_player: player,
+               created_by: reviewer,
+               timestamp_seconds: 125,
+               annotations: annotations_payload)
+      end
+
+      it 'serializes the stored annotations' do
+        expect(result[:annotations]).to eq(annotations_payload)
+      end
+    end
+  end
 end

@@ -6,7 +6,8 @@ class VodTimestampSerializer < Blueprinter::Base
   identifier :id
 
   fields :timestamp_seconds, :category, :importance, :title,
-         :description, :created_at, :updated_at
+         :description, :drawing_data, :annotations, :source_video_index,
+         :created_at, :updated_at
 
   field :formatted_timestamp do |timestamp|
     seconds = timestamp.timestamp_seconds

@@ -16,6 +16,8 @@ class VodTimestamp < ApplicationRecord
   validates :category, inclusion: { in: Constants::VodTimestamp::CATEGORIES }, allow_blank: true
   validates :importance, inclusion: { in: Constants::VodTimestamp::IMPORTANCE_LEVELS }
   validates :target_type, inclusion: { in: Constants::VodTimestamp::TARGET_TYPES }, allow_blank: true
+  validate :timestamp_within_duration
+  validate :drawing_data_size
 
   # Scopes
   scope :by_category, ->(category) { where(category: category) }
@@ -127,5 +129,27 @@ class VodTimestamp < ApplicationRecord
               .where('timestamp_seconds < ?', timestamp_seconds)
               .order(:timestamp_seconds)
               .last
+  end
+
+  private
+
+  # Validates that drawing_data does not exceed the 500KB size limit.
+  def drawing_data_size
+    return unless drawing_data.present?
+
+    serialized = drawing_data.to_json
+    return unless serialized.bytesize > 500.kilobytes
+
+    errors.add(:drawing_data, 'exceeds maximum size of 500KB')
+  end
+
+  # Validates that the timestamp does not exceed the video duration.
+  # Only enforced when the associated review has a known duration.
+  def timestamp_within_duration
+    return unless vod_review&.duration.present?
+    return unless timestamp_seconds.present?
+    return unless timestamp_seconds > vod_review.duration
+
+    errors.add(:timestamp_seconds, 'exceeds video duration')
   end
 end
