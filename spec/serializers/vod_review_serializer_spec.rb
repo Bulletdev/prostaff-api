@@ -103,4 +103,47 @@ RSpec.describe VodReviewSerializer do
       expect(result[:match][:id]).to eq(match.id)
     end
   end
+
+  describe 'multi-pov fields' do
+    it 'exposes video_urls as an array' do
+      expect(result).to have_key(:video_urls)
+      expect(result[:video_urls]).to be_an(Array)
+    end
+
+    it 'exposes video_sync_offsets as an array' do
+      expect(result).to have_key(:video_sync_offsets)
+      expect(result[:video_sync_offsets]).to be_an(Array)
+    end
+
+    it 'exposes video_labels as an array' do
+      expect(result).to have_key(:video_labels)
+      expect(result[:video_labels]).to be_an(Array)
+    end
+
+    context 'when review has multi-pov data' do
+      let(:vod_review) do
+        create(:vod_review,
+               organization: organization,
+               reviewer: reviewer,
+               match: match,
+               review_type: 'multi_pov',
+               video_urls: ['https://www.youtube.com/watch?v=pov1', 'https://www.youtube.com/watch?v=pov2'],
+               video_sync_offsets: [0, 5],
+               video_labels: ['Player A', 'Player B'])
+      end
+
+      it 'serializes video_urls correctly' do
+        expect(result[:video_urls]).to eq(['https://www.youtube.com/watch?v=pov1',
+                                           'https://www.youtube.com/watch?v=pov2'])
+      end
+
+      it 'serializes video_sync_offsets correctly' do
+        expect(result[:video_sync_offsets]).to eq([0, 5])
+      end
+
+      it 'serializes video_labels correctly' do
+        expect(result[:video_labels]).to eq(['Player A', 'Player B'])
+      end
+    end
+  end
 end

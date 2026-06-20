@@ -4,11 +4,12 @@ module VodReviews
   module Controllers
     # CRUD API for VOD review sessions, with filtering by status, match, and reviewer.
     class VodReviewsController < Api::V1::BaseController
-      before_action :set_vod_review, only: %i[show update destroy]
+      before_action :set_vod_review,
+                    only: %i[show update destroy player analyze analyze_status import_suggestions]
 
       def index
         authorize VodReview
-        vod_reviews = organization_scoped(VodReview).includes(:match, :reviewer, :vod_timestamps)
+        vod_reviews = organization_scoped(VodReview).includes(:organization, :match, :reviewer, :vod_timestamps)
 
         vod_reviews = vod_reviews.where(status: params[:status]) if params[:status].present?
 
@@ -103,6 +104,25 @@ module VodReviews
         end
       end
 
+      # Returns the VOD review data optimized for the video player UI.
+      # Includes all timestamps ordered chronologically.
+      # This endpoint is intentionally not cached — timestamps change frequently.
+      def player
+        authorize @vod_review, :show?
+        timestamps = @vod_review.vod_timestamps
+                                .includes(:target_player, :created_by)
+                                .order(:timestamp_seconds)
+        latest_job = @vod_review.vod_analysis_jobs
+                                .where(status: 'done')
+                                .order(created_at: :desc)
+                                .first
+        render_success({
+                         vod_review: VodReviewSerializer.render_as_hash(@vod_review),
+                         timestamps: VodTimestampSerializer.render_as_hash(timestamps),
+                         latest_analysis_job: latest_job ? { id: latest_job.id, status: latest_job.status } : nil
+                       })
+      end
+
       def destroy
         authorize @vod_review
         if @vod_review.destroy
@@ -123,6 +143,52 @@ module VodReviews
         end
       end
 
+      # POST /api/v1/vod-reviews/:id/analyze
+      # Enqueues a VideoAI analysis job for the given VOD review.
+      #
+      # @return [JSON] job_id and initial status ('pending')
+      def analyze
+        authorize @vod_review, :update?
+
+        job = @vod_review.vod_analysis_jobs.create!(status: 'pending')
+        AnalyzeVodJob.perform_later(job.id)
+
+        render_created({ job_id: job.id, status: job.status }, message: 'Analysis queued')
+      end
+
+      # GET /api/v1/vod-reviews/:id/analyze/:job_id
+      # Returns current status of an analysis job, polling VideoAI when in progress.
+      #
+      # @return [JSON] job status, progress, and suggested_timestamps when done
+      def analyze_status
+        authorize @vod_review, :show?
+
+        job = @vod_review.vod_analysis_jobs.find(params[:job_id])
+        sync_job_status(job) if job.in_progress? && job.external_job_id.present?
+
+        render_success(build_status_payload(job))
+      end
+
+      # POST /api/v1/vod-reviews/:id/import_suggestions
+      # Imports selected AI suggestions as real VodTimestamps.
+      #
+      # @param job_id [String] UUID of a done VodAnalysisJob
+      # @param suggestion_ids [Array<String>] IDs of suggestions to import
+      # @return [JSON] count of imported timestamps and their serialized data
+      def import_suggestions
+        authorize @vod_review, :update?
+
+        job = @vod_review.vod_analysis_jobs.done.find(params.require(:job_id))
+        suggestion_ids = params.require(:suggestion_ids)
+
+        created = import_from_job(job, suggestion_ids)
+
+        render_created({
+                         imported_count: created.size,
+                         timestamps: VodTimestampSerializer.render_as_hash(created)
+                       }, message: "#{created.size} timestamp(s) imported")
+      end
+
       private
 
       def set_vod_review
@@ -134,7 +200,7 @@ module VodReviews
                         VodReview.find_by_hashid(id_param)
                       else
                         # Looks like a UUID or numeric ID
-                        organization_scoped(VodReview).find_by(id: id_param)
+                        organization_scoped(VodReview).includes(:organization, :match, :reviewer).find_by(id: id_param)
                       end
 
         # If not found, raise 404
@@ -146,8 +212,66 @@ module VodReviews
           :title, :description, :review_type, :review_date,
           :video_url, :thumbnail_url, :duration,
           :status, :is_public, :match_id,
-          tags: [], shared_with_players: []
+          tags: [], shared_with_players: [],
+          video_urls: [], video_sync_offsets: [], video_labels: []
         )
+      end
+
+      def sync_job_status(job)
+        remote = VideoAiClient.get_job(job.external_job_id)
+        updates = build_remote_updates(remote, job)
+        job.update!(updates)
+      rescue VideoAiClient::Error
+        nil
+      end
+
+      def build_remote_updates(remote, job)
+        updates = { status: remote[:status], progress: remote[:progress].to_i }
+        if remote[:status] == 'done' && remote[:suggested_timestamps].present?
+          updates[:suggested_timestamps] = tag_suggestions(remote[:suggested_timestamps], job.id)
+        elsif remote[:status] == 'failed'
+          updates[:error_message] = remote[:error_message]
+        end
+        updates
+      end
+
+      def tag_suggestions(suggestions, job_id)
+        suggestions.map.with_index { |s, i| s.merge('id' => "#{job_id}-#{i}") }
+      end
+
+      def build_status_payload(job)
+        {
+          job_id: job.id,
+          status: job.status,
+          progress: job.progress,
+          suggested_timestamps: job.done? ? job.suggested_timestamps : nil,
+          error_message: job.failed? ? job.error_message : nil
+        }
+      end
+
+      def import_from_job(job, suggestion_ids)
+        timestamps_to_import = job.suggested_timestamps.select do |s|
+          suggestion_ids.include?(s['id'])
+        end
+
+        timestamps_to_import.map do |suggestion|
+          @vod_review.vod_timestamps.create!(
+            timestamp_seconds: suggestion['start_seconds'].to_f.round,
+            title: suggestion['reason'].gsub('+', ' e ').humanize,
+            importance: confidence_to_importance(suggestion['confidence']),
+            category: nil,
+            created_by: current_user
+          )
+        end
+      end
+
+      def confidence_to_importance(confidence)
+        conf = confidence.to_f
+        return 'critical' if conf >= 0.9
+        return 'high' if conf >= 0.7
+        return 'normal' if conf >= 0.5
+
+        'low'
       end
     end
   end

@@ -14,7 +14,7 @@ RSpec.describe VodReview, type: :model do
     it { should validate_presence_of(:title) }
     it { should validate_length_of(:title).is_at_most(255) }
     it { should validate_presence_of(:video_url) }
-    it { should validate_inclusion_of(:review_type).in_array(%w[team individual opponent]).allow_blank }
+    it { should validate_inclusion_of(:review_type).in_array(%w[team individual opponent multi_pov]).allow_blank }
     it { should validate_inclusion_of(:status).in_array(%w[draft published archived]) }
 
     describe 'video_url format' do
@@ -26,6 +26,59 @@ RSpec.describe VodReview, type: :model do
       it 'rejects invalid URLs' do
         vod_review = build(:vod_review, video_url: 'not-a-valid-url')
         expect(vod_review).not_to be_valid
+      end
+    end
+
+    describe 'multi_pov validations' do
+      let(:valid_urls) do
+        [
+          'https://www.youtube.com/watch?v=abc123',
+          'https://www.youtube.com/watch?v=def456'
+        ]
+      end
+
+      it 'accepts multi_pov as a valid review_type' do
+        vod_review = build(:vod_review, review_type: 'multi_pov', video_urls: valid_urls)
+        expect(vod_review).to be_valid
+      end
+
+      it 'requires video_urls when review_type is multi_pov' do
+        vod_review = build(:vod_review, review_type: 'multi_pov', video_urls: [])
+        expect(vod_review).not_to be_valid
+        expect(vod_review.errors[:video_urls]).to be_present
+      end
+
+      it 'is invalid with only 1 URL for multi_pov' do
+        vod_review = build(:vod_review, review_type: 'multi_pov',
+                                        video_urls: ['https://www.youtube.com/watch?v=abc123'])
+        expect(vod_review).not_to be_valid
+        expect(vod_review.errors[:video_urls]).to include('must have between 2 and 4 URLs for multi-POV reviews')
+      end
+
+      it 'is invalid with more than 4 URLs for multi_pov' do
+        five_urls = Array.new(5) { |i| "https://www.youtube.com/watch?v=vid#{i}" }
+        vod_review = build(:vod_review, review_type: 'multi_pov', video_urls: five_urls)
+        expect(vod_review).not_to be_valid
+        expect(vod_review.errors[:video_urls]).to include('must have between 2 and 4 URLs for multi-POV reviews')
+      end
+
+      it 'accepts exactly 4 URLs for multi_pov' do
+        four_urls = Array.new(4) { |i| "https://www.youtube.com/watch?v=vid#{i}" }
+        vod_review = build(:vod_review, review_type: 'multi_pov', video_urls: four_urls)
+        expect(vod_review).to be_valid
+      end
+
+      it 'rejects invalid URLs in video_urls' do
+        vod_review = build(:vod_review, review_type: 'multi_pov',
+                                        video_urls: ['https://www.youtube.com/watch?v=abc123',
+                                                     'https://evil.com/fake'])
+        expect(vod_review).not_to be_valid
+        expect(vod_review.errors[:video_urls].first).to include('contains invalid URLs')
+      end
+
+      it 'does not require video_urls for non-multi_pov types' do
+        vod_review = build(:vod_review, review_type: 'team', video_urls: [])
+        expect(vod_review).to be_valid
       end
     end
 

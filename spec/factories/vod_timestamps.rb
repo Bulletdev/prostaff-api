@@ -2,7 +2,10 @@
 
 FactoryBot.define do
   factory :vod_timestamp do
-    association :vod_review
+    # duration: nil skips the timestamp_within_duration validation so the factory
+    # is not dependent on random duration/timestamp alignment.
+    # Specs that need a specific duration create the vod_review explicitly.
+    association :vod_review, duration: nil
     association :target_player, factory: :player
     association :created_by, factory: :user
 
