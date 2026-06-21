@@ -18,6 +18,7 @@ class MarketRegistration < ApplicationRecord
   scope :expiring_before, lambda { |date|
     where('contract_end_date <= ?', date).where.not(contract_end_date: nil) if date.present?
   }
+  scope :expired_contracts, -> { where('contract_end_date < ?', Date.current).where.not(contract_end_date: nil) }
   scope :recent_snapshot, -> { where(snapshot_date: (7.days.ago.to_date)..) }
   scope :by_player, -> { order(:player_external_name) }
 end
