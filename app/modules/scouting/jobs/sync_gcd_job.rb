@@ -8,6 +8,7 @@ module Scouting
   # without raising so the Sidekiq retry mechanism handles it.
   class SyncGcdJob
     include Sidekiq::Job
+
     sidekiq_options queue: 'default', retry: 3
 
     LEAGUES = %w[CBLOL LCK LEC LCS LPL].freeze
@@ -45,8 +46,6 @@ module Scouting
 
     def fetch_from_scraper(league)
       ProStaffScraperService.new.fetch_gcd_players(league: league)
-    rescue ProStaffScraperService::UnavailableError
-      raise
     end
 
     def upsert_record(record, snapshot_date, count)
@@ -64,16 +63,16 @@ module Scouting
     def build_upsert_attrs(record, snapshot_date)
       {
         player_external_name: record['player_name'],
-        team_name:            record['team_name'],
-        region:               record['region'],
-        role:                 record['role'],
-        residency:            record['residency'],
-        contract_end_date:    parse_date(record['contract_end_date']),
-        source:               record.fetch('source', 'leaguepedia_gcd'),
-        snapshot_date:        snapshot_date,
-        raw_payload:          record,
-        created_at:           Time.current,
-        updated_at:           Time.current
+        team_name: record['team_name'],
+        region: record['region'],
+        role: record['role'],
+        residency: record['residency'],
+        contract_end_date: parse_date(record['contract_end_date']),
+        source: record.fetch('source', 'leaguepedia_gcd'),
+        snapshot_date: snapshot_date,
+        raw_payload: record,
+        created_at: Time.current,
+        updated_at: Time.current
       }
     end
 
