@@ -18,7 +18,7 @@ require 'uri'
 module VideoUrlValidator
   SUFFIXES = {
     'youtube' => %w[youtube.com youtu.be],
-    'twitch'  => %w[twitch.tv]
+    'twitch' => %w[twitch.tv]
   }.freeze
 
   # Returns true if the URL host matches a known allowed provider.

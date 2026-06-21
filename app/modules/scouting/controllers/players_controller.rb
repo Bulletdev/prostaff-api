@@ -7,7 +7,8 @@ module Scouting
     class PlayersController < Api::V1::BaseController
       include MetaIntelligence::OeStatSerializable
 
-      before_action :set_scouting_target, only: %i[show update destroy sync import_to_roster competitive_profile oe_history]
+      before_action :set_scouting_target,
+                    only: %i[show update destroy sync import_to_roster competitive_profile oe_history]
       before_action :require_management!, only: %i[import_to_roster]
 
       # GET /api/v1/scouting/players

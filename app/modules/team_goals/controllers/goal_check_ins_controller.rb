@@ -76,7 +76,10 @@ module TeamGoals
       def update_goal_current_value(value)
         @goal.update_columns(current_value: value, updated_at: Time.current)
       rescue StandardError => e
-        Rails.logger.warn("[GoalCheckInsController] current_value cache update failed goal=#{@goal.id} error=#{e.message}")
+        Rails.logger.warn(
+          '[GoalCheckInsController] current_value cache update failed ' \
+          "goal=#{@goal.id} error=#{e.message}"
+        )
       end
     end
   end

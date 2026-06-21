@@ -34,28 +34,31 @@ end
 def load_schema_with_supabase_patch
   ActiveRecord::Base.connection.class.prepend(SUPABASE_SCHEMA_PATCH)
   load Rails.root.join('db/schema.rb')
+  backfill_schema_migrations
+end
 
+def backfill_schema_migrations
   conn = ActiveRecord::Base.connection
-  migration_versions = ActiveRecord::MigrationContext.new(
+  missing = missing_migration_versions(conn)
+  return if missing.empty?
+
+  values = missing.map { |v| "('#{v}')" }.join(', ')
+  conn.execute("INSERT INTO schema_migrations (version) VALUES #{values}")
+end
+
+def missing_migration_versions(conn)
+  all_versions = ActiveRecord::MigrationContext.new(
     Rails.root.join('db/migrate').to_s
   ).migrations.map { |m| m.version.to_s }
-
   existing = conn.execute('SELECT version FROM schema_migrations').to_a.map { |r| r['version'] }
-  missing  = migration_versions - existing
-
-  unless missing.empty?
-    values = missing.map { |v| "('#{v}')" }.join(', ')
-    conn.execute("INSERT INTO schema_migrations (version) VALUES #{values}")
-  end
+  all_versions - existing
 end
 
 # Override the Rails default db:test:load_schema so that maintain_test_schema!
 # (called automatically by RSpec) uses the patched loader instead of aborting
 # on missing Supabase extensions. The purge step is intentionally preserved so
 # the DB is cleaned before each schema reload.
-if Rake::Task.task_defined?('db:test:load_schema')
-  Rake::Task['db:test:load_schema'].clear
-end
+Rake::Task['db:test:load_schema'].clear if Rake::Task.task_defined?('db:test:load_schema')
 
 namespace :db do
   namespace :test do

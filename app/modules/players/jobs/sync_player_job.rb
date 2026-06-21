@@ -116,7 +116,7 @@ module Players
 
       if (solo = league_data[:solo_queue]).present?
         player.player_rank_snapshots.find_or_create_by(
-          queue_type: "RANKED_SOLO_5x5",
+          queue_type: 'RANKED_SOLO_5x5',
           recorded_on: today
         ) do |snap|
           snap.tier          = solo[:tier]
@@ -130,7 +130,7 @@ module Players
       return unless (flex = league_data[:flex_queue]).present?
 
       player.player_rank_snapshots.find_or_create_by(
-        queue_type: "RANKED_FLEX_SR",
+        queue_type: 'RANKED_FLEX_SR',
         recorded_on: today
       ) do |snap|
         snap.tier          = flex[:tier]

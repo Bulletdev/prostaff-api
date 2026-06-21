@@ -62,7 +62,8 @@ module Manager
       def staff_params
         # :role is the professional staff role (head_coach, analyst, etc.),
         # not a user authorization role — no privilege escalation possible.
-        params.require(:staff_member).permit( # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
+        # nosemgrep: ruby.lang.security.model-attr-accessible.model-attr-accessible
+        params.require(:staff_member).permit(
           :name, :role, :status, :line, :country, :birth_date,
           :contract_start_date, :contract_end_date, :contract_id,
           :twitter_handle, :instagram_handle, :avatar_url, :notes

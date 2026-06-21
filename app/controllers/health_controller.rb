@@ -74,6 +74,12 @@ class HealthController < ActionController::API
 
   private
 
+  def parse_health_body(body_str)
+    JSON.parse(body_str, symbolize_names: true)
+  rescue JSON::ParserError
+    {}
+  end
+
   # Executes a minimal query against PostgreSQL to confirm the connection is alive.
   #
   # @return [Hash] { status: 'ok'|'error', message: String }
@@ -117,7 +123,7 @@ class HealthController < ActionController::API
     response = conn.get("#{events_url}/health") { |req| req.headers['X-Forwarded-Proto'] = 'https' }
 
     if response.success?
-      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      body = parse_health_body(response.body)
       { status: 'ok' }.merge(body.slice(:service, :vsn))
     else
       { status: 'error', message: "HTTP #{response.status}" }
@@ -155,7 +161,7 @@ class HealthController < ActionController::API
     response = conn.get("#{url}/health")
 
     if response.success?
-      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      body = parse_health_body(response.body)
       { status: 'ok' }.merge(body.slice(:service, :elasticsearch))
     else
       { status: 'error', message: "HTTP #{response.status}" }
@@ -176,7 +182,7 @@ class HealthController < ActionController::API
     response = conn.get("#{url}/health")
 
     if response.success?
-      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      body = parse_health_body(response.body)
       { status: 'ok' }.merge(body.slice(:version, :redis, :circuit_breakers))
     else
       { status: 'error', message: "HTTP #{response.status}" }
@@ -197,7 +203,7 @@ class HealthController < ActionController::API
     response = conn.get("#{url}/health")
 
     if response.success?
-      body = JSON.parse(response.body, symbolize_names: true) rescue {}
+      body = parse_health_body(response.body)
       { status: 'ok' }.merge(body.slice(:version))
     else
       { status: 'error', message: "HTTP #{response.status}" }

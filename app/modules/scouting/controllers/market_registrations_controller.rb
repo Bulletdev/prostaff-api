@@ -6,46 +6,59 @@ module Scouting
     # Exposes global GCD (Global Contract Database) data sourced from Leaguepedia.
     # Records are synced nightly by Scouting::SyncGcdJob — they are read-only for most users.
     class MarketRegistrationsController < Api::V1::BaseController
-      # Allowlist mapping frontend sort_by keys to actual DB column names.
-      # status and contract_end both sort by contract_end_date (status is derived from it).
-      SORT_COLUMNS = {
-        'player'       => 'player_external_name',
-        'team'         => 'team_name',
-        'region'       => 'region',
-        'role'         => 'role',
-        'residency'    => 'residency',
-        'contract_end' => 'contract_end_date',
-        'status'       => 'contract_end_date'
+      # Pre-built ORDER BY clauses — all values are string literals so no SQL injection is possible.
+      # Keys: "{sort_by}_{sort_dir}" where sort_by and sort_dir come from the request params.
+      ORDER_CLAUSES = {
+        'player_asc' => 'player_external_name ASC NULLS LAST',
+        'player_desc' => 'player_external_name DESC NULLS LAST',
+        'team_asc' => 'team_name ASC NULLS LAST',
+        'team_desc' => 'team_name DESC NULLS LAST',
+        'region_asc' => 'region ASC NULLS LAST',
+        'region_desc' => 'region DESC NULLS LAST',
+        'role_asc' => 'role ASC NULLS LAST',
+        'role_desc' => 'role DESC NULLS LAST',
+        'residency_asc' => 'residency ASC NULLS LAST',
+        'residency_desc' => 'residency DESC NULLS LAST',
+        'contract_end_asc' => 'contract_end_date ASC NULLS LAST',
+        'contract_end_desc' => 'contract_end_date DESC NULLS LAST',
+        'status_asc' => 'contract_end_date ASC NULLS LAST',
+        'status_desc' => 'contract_end_date DESC NULLS LAST'
       }.freeze
-      # Hash (not array) so .fetch returns the literal value — Brakeman recognizes it as a safe literal.
-      SORT_DIRS = { 'asc' => 'asc', 'desc' => 'desc' }.freeze
+
+      DEFAULT_ORDER = 'player_external_name ASC NULLS LAST'
+      RECORDS_PER_PAGE = 50
 
       # GET /api/v1/scouting/market-registrations
-      # Returns paginated market registration records with optional filters and server-side sort.
+      # Returns paginated GCD records with optional filters and server-side sort.
       #
-      # @param [String]  region          Filter by region (stored name e.g. 'Korea', or code e.g. 'LCK')
+      # @param [String]  region          Stored region name (e.g. 'Korea') — translated by frontend
       # @param [String]  expiring_before ISO date — only records with contract_end_date <= this value
-      # @param [String]  sort_by         Column key: player|team|region|role|residency|contract_end|status
-      # @param [String]  sort_dir        Direction: asc|desc (default: asc)
-      # @param [Integer] page            Page number (default 1)
+      # @param [String]  q               Text search on player_external_name and team_name (ILIKE)
+      # @param [Boolean] expired_only    When 'true', only records with contract_end_date < today
+      # @param [String]  sort_by         player|team|region|role|residency|contract_end|status
+      # @param [String]  sort_dir        asc|desc (default: asc)
+      # @param [Integer] page            Page number (default: 1)
       def index
         authorize MarketRegistration, :index?
 
-        registrations = filtered_registrations.order(sort_order)
-        result = paginate(registrations, per_page: 50)
+        scope = filtered_registrations
+        total = scope.count
+        result = paginate(scope.order(sort_order), per_page: RECORDS_PER_PAGE)
 
         render_success({
                          market_registrations: MarketRegistrationSerializer.render_as_hash(result[:data]),
-                         pagination: result[:pagination],
+                         pagination: result[:pagination].merge(
+                           total_count: total,
+                           total_pages: [(total.to_f / RECORDS_PER_PAGE).ceil, 1].max
+                         ),
                          source_notice: 'Data from Leaguepedia (lol.fandom.com), CC BY-SA 3.0.'
                        })
       end
 
       # GET /api/v1/scouting/market-registrations/:id
       def show
-        # MarketRegistration is global public GCD data (no org scope by design).
-        # Access is controlled by Pundit (MarketRegistrationPolicy).
-        registration = MarketRegistration.find(params[:id]) # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
+        # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
+        registration = MarketRegistration.find(params[:id])
         authorize registration
 
         render_success({
@@ -57,16 +70,15 @@ module Scouting
 
       def filtered_registrations
         base = MarketRegistration
-                 .for_region(params[:region])
-                 .expiring_before(params[:expiring_before])
-                 .search_query(params[:q])
+               .for_region(params[:region])
+               .expiring_before(params[:expiring_before])
+               .search_query(params[:q])
         params[:expired_only] == 'true' ? base.expired_contracts : base
       end
 
       def sort_order
-        col = SORT_COLUMNS.fetch(params[:sort_by].to_s, 'player_external_name')
-        dir = SORT_DIRS.fetch(params[:sort_dir].to_s.downcase, 'asc')
-        Arel.sql("#{col} #{dir} NULLS LAST")
+        key = "#{params[:sort_by]}_#{params[:sort_dir]&.downcase}"
+        Arel.sql(ORDER_CLAUSES.fetch(key, DEFAULT_ORDER))
       end
     end
   end

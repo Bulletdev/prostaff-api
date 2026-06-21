@@ -34,20 +34,38 @@ module Manager
     private
 
     def row(expense)
+      row_identity(expense) + row_financials(expense) + row_people(expense)
+    end
+
+    def row_identity(expense)
       [
         expense.id,
         sanitize(expense.category),
-        sanitize(expense.description),
+        sanitize(expense.description)
+      ]
+    end
+
+    def row_financials(expense)
+      [
         expense.amount,
         expense.currency,
         sanitize(expense.status),
         expense.expense_date&.iso8601,
-        sanitize(expense.payment_method),
-        sanitize(expense.player&.professional_name || expense.player&.summoner_name),
+        sanitize(expense.payment_method)
+      ]
+    end
+
+    def row_people(expense)
+      [
+        sanitize(player_display_name(expense.player)),
         sanitize(expense.created_by&.full_name),
         sanitize(expense.approved_by&.full_name),
         sanitize(expense.notes)
       ]
+    end
+
+    def player_display_name(player)
+      player&.professional_name || player&.summoner_name
     end
 
     def sanitize(value)

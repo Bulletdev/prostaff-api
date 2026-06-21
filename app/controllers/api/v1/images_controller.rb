@@ -29,6 +29,7 @@ module Api
       ].freeze
 
       HTTP_TIMEOUT_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze
+      ALLOWED_IMAGE_EXTENSIONS = %w[.png .jpg .jpeg .gif .webp .svg .ico].freeze
 
       # GET /api/v1/images/proxy
       # Proxies and caches external images
@@ -151,7 +152,14 @@ module Api
         send_data cached_data[:body],
                   type: cached_data[:content_type],
                   disposition: 'inline',
-                  filename: File.basename(uri.path)
+                  filename: safe_filename(uri.path)
+      end
+
+      # Returns a sanitized filename — extension from the URL path, no user string passthrough.
+      def safe_filename(path)
+        ext = File.extname(path.to_s).downcase
+        ext = '.jpg' unless ALLOWED_IMAGE_EXTENSIONS.include?(ext)
+        "image#{ext}"
       end
 
       # Handles proxy errors

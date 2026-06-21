@@ -11,11 +11,11 @@ class StatusController < ActionController::API
     'redis' => { name: 'Cache & Background Jobs', description: 'Redis cache and Sidekiq queue processor' },
     'websocket' => { name: 'Real-time (WebSocket)', description: 'ActionCable WebSocket connections' },
     'sidekiq' => { name: 'Background Jobs (Sidekiq)', description: 'Async job processing' },
-    'riot_api'       => { name: 'Riot API Integration', description: 'Riot Games data synchronization' },
-    'events_service' => { name: 'Events Service',       description: 'Phoenix real-time events pipeline' },
-    'scraper_api'    => { name: 'Scraper API',          description: 'Player data scraping service' },
-    'riot_gateway'   => { name: 'Riot Gateway',         description: 'Internal Riot API proxy and circuit breaker' },
-    'propay'         => { name: 'ProPay',               description: 'Payment processing service' }
+    'riot_api' => { name: 'Riot API Integration', description: 'Riot Games data synchronization' },
+    'events_service' => { name: 'Events Service', description: 'Phoenix real-time events pipeline' },
+    'scraper_api' => { name: 'Scraper API', description: 'Player data scraping service' },
+    'riot_gateway' => { name: 'Riot Gateway', description: 'Internal Riot API proxy and circuit breaker' },
+    'propay' => { name: 'ProPay', description: 'Payment processing service' }
   }.freeze
 
   def index

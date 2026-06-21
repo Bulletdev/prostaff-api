@@ -24,6 +24,7 @@ class GoalCheckInPolicy < ApplicationPolicy
     false
   end
 
+  # Scope class for GoalCheckInPolicy -- restricts visibility to the current organization.
   class Scope < Scope
     def resolve
       scope.where(organization: user.organization)
