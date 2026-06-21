@@ -55,9 +55,10 @@ module Scouting
       private
 
       def filtered_registrations
-        MarketRegistration
-          .for_region(params[:region])
-          .expiring_before(params[:expiring_before])
+        base = MarketRegistration
+                 .for_region(params[:region])
+                 .expiring_before(params[:expiring_before])
+        params[:expired_only] == 'true' ? base.expired_contracts : base
       end
 
       def sort_order
