@@ -19,20 +19,22 @@ module Scouting
         result = paginate(registrations, per_page: 50)
 
         render_success({
-          market_registrations: MarketRegistrationSerializer.render_as_hash(result[:data]),
-          pagination: result[:pagination],
-          source_notice: 'Data from Leaguepedia (lol.fandom.com), CC BY-SA 3.0.'
-        })
+                         market_registrations: MarketRegistrationSerializer.render_as_hash(result[:data]),
+                         pagination: result[:pagination],
+                         source_notice: 'Data from Leaguepedia (lol.fandom.com), CC BY-SA 3.0.'
+                       })
       end
 
       # GET /api/v1/scouting/market-registrations/:id
       def show
-        registration = MarketRegistration.find(params[:id])
+        # MarketRegistration is global public GCD data (no org scope by design).
+        # Access is controlled by Pundit (MarketRegistrationPolicy).
+        registration = MarketRegistration.find(params[:id]) # nosemgrep: ruby.rails.security.brakeman.check-unscoped-find.check-unscoped-find
         authorize registration
 
         render_success({
-          market_registration: MarketRegistrationSerializer.render_as_hash(registration)
-        })
+                         market_registration: MarketRegistrationSerializer.render_as_hash(registration)
+                       })
       end
 
       private

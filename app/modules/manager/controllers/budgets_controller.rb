@@ -65,10 +65,10 @@ module Manager
         burn_rate = Manager::BurnRateService.new(current_organization, service_params).call
 
         render_success({
-          budget: @budget.as_json,
-          burn_rate: burn_rate,
-          remaining: @budget.total_budget - burn_rate[:total_spent]
-        })
+                         budget: @budget.as_json,
+                         burn_rate: burn_rate,
+                         remaining: @budget.total_budget - burn_rate[:total_spent]
+                       })
       end
 
       private
