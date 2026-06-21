@@ -15,6 +15,9 @@ class MarketRegistration < ApplicationRecord
   scope :for_region, lambda { |region|
     where(region: region) if region.present?
   }
+  scope :search_query, lambda { |q|
+    where('player_external_name ILIKE ? OR team_name ILIKE ?', "%#{q}%", "%#{q}%") if q.present?
+  }
   scope :expiring_before, lambda { |date|
     where('contract_end_date <= ?', date).where.not(contract_end_date: nil) if date.present?
   }
