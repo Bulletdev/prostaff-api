@@ -1,10 +1,6 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "f2fd7351c85e531b66f6444ab8a89071e039b96befcdd5a6f897d3f55bb2d9dd",
-      "note": "False positive — :role is a League of Legends in-game position (top/jungle/mid/adc/support), NOT a user authorization role. riot_puuid and riot_summoner_id were intentionally removed from this permit list. Reviewed 2026-04-09."
-    },
-    {
       "fingerprint": "4e9eb66fae6365a1347b7ceb5de9c3834f80bfac2416c80526b09fc6a66eb4fa",
       "note": "False positive — the SQL interpolation only inserts PostgreSQL numbered bind-parameter placeholders ($1, $2, ...). The actual type_names values are passed separately as exec_query bind parameters, never concatenated into the SQL string. No user input reaches this code path. Reviewed 2026-02-28."
     },
@@ -13,20 +9,32 @@
       "note": "False positive — the SQL interpolation only inserts PostgreSQL numbered bind-parameter placeholders ($1, $2, ...). The actual type_names values are passed separately as exec_query bind parameters. No user input reaches this code path. Reviewed 2026-04-05."
     },
     {
-      "fingerprint": "8273a221da2916071e72130e8e4a184b37aa96df641daff5c11d7069740e2c81",
-      "note": "False positive — :role is a League of Legends in-game position (top/jungle/mid/adc/support), NOT a user authorization role. ScoutingTarget model has no admin/privilege-escalation fields. Reviewed 2026-04-05."
-    },
-    {
-      "fingerprint": "88173572797556fd8d8d2da622fdb463673c0793a9ec10126b1803fc39f04f06",
-      "note": "False positive — :role is a League of Legends in-game position (top/jungle/mid/adc/support), NOT a user authorization role. ScoutingTarget model has no admin/privilege-escalation fields. Reviewed 2026-04-05."
-    },
-    {
       "fingerprint": "8bf697cde545723f2f3d339a8fc87f1cbb80dccb7cc50ea42243ebde2c0d7883",
       "note": "False positive — safe_ids values come from Meilisearch hit IDs (internal database PKs) and are individually escaped via ActiveRecord::Base.connection.quote() before interpolation. User search query is sent only to Meilisearch, never interpolated into SQL. Reviewed 2026-04-05."
     },
     {
       "fingerprint": "a53e36aea1309fb0af3b08b9d5403838087ed98264a2a158a98adde5f6d496d3",
       "note": "False positive — :role is a League of Legends champion role (adc/jungle/mid/support/top), NOT a user authorization role. SavedBuild model has no admin/banned/account_id or privilege-escalation fields. Reviewed 2026-02-28."
+    },
+    {
+      "fingerprint": "24e81fefefbb64613b12709fcc01b3299440f60051390153353a3e7530a27b32",
+      "note": "False positive — :role is the staff member position (Coach/Analyst/etc), NOT a user authorization role. StaffMember model has no privilege-escalation fields. Reviewed 2026-06-21."
+    },
+    {
+      "fingerprint": "2da7e9e25af6f0e0544718f2ff37813f8991b76ebe63b8f621e83402c6232ffd",
+      "note": "False positive — :role is a League of Legends in-game position (Top/Jng/Mid/Bot/Sup), NOT a user authorization role. ScoutingTarget model has no admin/privilege-escalation fields. Reviewed 2026-06-21."
+    },
+    {
+      "fingerprint": "7e6e2d8ffe708bfe786ae5ea4649101f525d6cbfb6997ef3e358c80db29d5e66",
+      "note": "False positive — :role is a League of Legends in-game position (Top/Jng/Mid/Bot/Sup), NOT a user authorization role. ScoutingTarget model has no admin/privilege-escalation fields. Reviewed 2026-06-21."
+    },
+    {
+      "fingerprint": "d5de58df1bdeaeef0a64427804f871a63d91c57161253531ea62350c75128e9f",
+      "note": "False positive — :role is a League of Legends in-game position (top/jungle/mid/adc/support), NOT a user authorization role. Player model has no privilege-escalation fields. Reviewed 2026-06-21."
+    },
+    {
+      "fingerprint": "21ab0fe00fdd5899ffc405cff75aadb91b805ee996a614f7e27b08a287e9062d",
+      "note": "Known planned upgrade — Rails 7.2.x EOL 2026-08-09. Upgrade to Rails 8.x scheduled before EOL date. Reviewed 2026-06-21."
     }
   ]
 }
