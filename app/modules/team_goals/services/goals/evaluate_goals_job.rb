@@ -89,7 +89,7 @@ module Goals
       case comparator
       when 'gte' then value.to_f >= target
       when 'lte' then value.to_f <= target
-      when 'eq'  then value.to_f == target
+      when 'eq'  then (value.to_f - target).abs < Float::EPSILON
       else false
       end
     end
@@ -103,16 +103,15 @@ module Goals
         user_id: goal.created_by_id || goal.organization.users.first&.id || 'system',
         org_id: goal.organization_id,
         type: "team_goal.#{new_status}",
-        payload: {
-          goal_id: goal.id,
-          title: goal.title,
-          player_id: goal.player_id,
-          metric_key: goal.metric_key,
-          status: new_status
-        }
+        payload: critical_event_payload(goal, new_status)
       )
     rescue StandardError => e
       Rails.logger.warn("[EvaluateGoalsJob] Event publish failed goal=#{goal.id} error=#{e.message}")
+    end
+
+    def critical_event_payload(goal, new_status)
+      { goal_id: goal.id, title: goal.title, player_id: goal.player_id,
+        metric_key: goal.metric_key, status: new_status }
     end
   end
 end

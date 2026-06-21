@@ -114,7 +114,7 @@ module Manager
       case bonus.comparator
       when 'gte' then value.to_f >= target
       when 'lte' then value.to_f <= target
-      when 'eq'  then value.to_f == target
+      when 'eq'  then (value.to_f - target).abs < Float::EPSILON
       else false
       end
     end
