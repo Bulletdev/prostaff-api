@@ -17,7 +17,8 @@ module Scouting
         'contract_end' => 'contract_end_date',
         'status'       => 'contract_end_date'
       }.freeze
-      SORT_DIRS = %w[asc desc].freeze
+      # Hash (not array) so .fetch returns the literal value — Brakeman recognizes it as a safe literal.
+      SORT_DIRS = { 'asc' => 'asc', 'desc' => 'desc' }.freeze
 
       # GET /api/v1/scouting/market-registrations
       # Returns paginated market registration records with optional filters and server-side sort.
@@ -63,7 +64,7 @@ module Scouting
 
       def sort_order
         col = SORT_COLUMNS.fetch(params[:sort_by].to_s, 'player_external_name')
-        dir = SORT_DIRS.include?(params[:sort_dir].to_s.downcase) ? params[:sort_dir].downcase : 'asc'
+        dir = SORT_DIRS.fetch(params[:sort_dir].to_s.downcase, 'asc')
         Arel.sql("#{col} #{dir} NULLS LAST")
       end
     end
