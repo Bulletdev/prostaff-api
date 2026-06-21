@@ -32,7 +32,7 @@ class ContractBonus < ApplicationRecord
   validates :bonus_type,  inclusion: { in: TYPES }
   validates :status,      inclusion: { in: STATUSES }
   validates :trigger, :amount, presence: true
-  validates :amount,     numericality: { greater_than: 0 }
+  validates :amount, numericality: { greater_than: 0 }
   validates :comparator,        inclusion: { in: COMPARATORS },  allow_blank: true
   validates :evaluation_window, inclusion: { in: EVAL_WINDOWS }, allow_blank: true
   validate  :validate_structured_bonus_fields

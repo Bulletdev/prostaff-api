@@ -26,9 +26,9 @@ module Manager
         contracts = Manager::ContractQuery.new(scoped, params).call
         result = paginate(contracts)
         render_success({
-          contracts: Manager::ContractSerializer.render_as_hash(result[:data]),
-          pagination: result[:pagination]
-        })
+                         contracts: Manager::ContractSerializer.render_as_hash(result[:data]),
+                         pagination: result[:pagination]
+                       })
       end
 
       # GET /api/v1/manager/contracts/:id

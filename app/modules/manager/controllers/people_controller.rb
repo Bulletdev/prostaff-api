@@ -17,10 +17,10 @@ module Manager
       def index
         authorize StaffMember, :index?, policy_class: Manager::StaffMemberPolicy
         render_success({
-          players: serialized_players,
-          staff: serialized_staff,
-          totals: build_totals
-        })
+                         players: serialized_players,
+                         staff: serialized_staff,
+                         totals: build_totals
+                       })
       end
 
       private
@@ -31,16 +31,16 @@ module Manager
 
       def active_players
         @active_players ||= organization_scoped(Player)
-                              .where(status: 'active')
-                              .includes(:active_contract)
-                              .order(:role, :professional_name)
+                            .where(status: 'active')
+                            .includes(:active_contract)
+                            .order(:role, :professional_name)
       end
 
       def active_staff
         @active_staff ||= organization_scoped(StaffMember)
-                            .not_deleted
-                            .includes(:contract)
-                            .order(:role, :name)
+                          .not_deleted
+                          .includes(:contract)
+                          .order(:role, :name)
       end
 
       def serialized_players
@@ -54,8 +54,8 @@ module Manager
       def build_totals
         {
           players: active_players.size,
-          staff:   active_staff.size,
-          total:   active_players.size + active_staff.size
+          staff: active_staff.size,
+          total: active_players.size + active_staff.size
         }
       end
     end
