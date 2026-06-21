@@ -59,6 +59,7 @@ module Scouting
         base = MarketRegistration
                  .for_region(params[:region])
                  .expiring_before(params[:expiring_before])
+                 .search_query(params[:q])
         params[:expired_only] == 'true' ? base.expired_contracts : base
       end
 
