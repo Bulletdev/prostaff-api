@@ -15,6 +15,7 @@ module Manager
     #   GET /api/v1/manager/budgets/:id/summary
     class BudgetsController < Api::V1::BaseController
       before_action :require_manager_access!
+      before_action -> { require_tier_feature!(:budget_tracker) }
       before_action :set_budget, only: %i[show update destroy summary]
       after_action  :verify_authorized
 
@@ -32,13 +33,13 @@ module Manager
         budget.created_by = current_user
         budget.save!
         log_user_action(action: 'create', entity_type: 'BudgetAllocation', entity_id: budget.id)
-        render_created(budget: budget.as_json)
+        render_created({ budget: budget.as_json })
       end
 
       # GET /api/v1/manager/budgets/:id
       def show
         authorize @budget, policy_class: Manager::BudgetAllocationPolicy
-        render_success(budget: @budget.as_json)
+        render_success({ budget: @budget.as_json })
       end
 
       # PATCH /api/v1/manager/budgets/:id
@@ -46,7 +47,7 @@ module Manager
         authorize @budget, policy_class: Manager::BudgetAllocationPolicy
         @budget.update!(budget_params)
         log_user_action(action: 'update', entity_type: 'BudgetAllocation', entity_id: @budget.id)
-        render_success(budget: @budget.as_json)
+        render_success({ budget: @budget.as_json })
       end
 
       # DELETE /api/v1/manager/budgets/:id
@@ -63,11 +64,11 @@ module Manager
         service_params = { from: @budget.start_date.to_s, to: @budget.end_date.to_s }
         burn_rate = Manager::BurnRateService.new(current_organization, service_params).call
 
-        render_success(
+        render_success({
           budget: @budget.as_json,
           burn_rate: burn_rate,
           remaining: @budget.total_budget - burn_rate[:total_spent]
-        )
+        })
       end
 
       private

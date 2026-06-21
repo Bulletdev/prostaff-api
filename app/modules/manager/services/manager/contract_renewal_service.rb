@@ -28,18 +28,19 @@ module Manager
 
     def build_renewal_contract
       Contract.create!(
-        organization: @original.organization,
-        player: @original.player,
-        contract_type: @original.contract_type,
-        status: 'draft',
-        created_by: @user,
-        renewed_from_id: @original.id,
-        start_date: @params[:start_date],
-        end_date: @params[:end_date],
-        base_salary: @params[:base_salary] || @original.base_salary,
-        salary_currency: @params[:salary_currency] || @original.salary_currency,
-        salary_period: @params[:salary_period] || @original.salary_period,
-        notes: @params[:notes]
+        organization:     @original.organization,
+        player:           @original.player,
+        staff_member_id:  @original.staff_member_id,
+        contract_type:    @original.contract_type,
+        status:           'draft',
+        created_by:       @user,
+        renewed_from_id:  @original.id,
+        start_date:       @params[:start_date],
+        end_date:         @params[:end_date],
+        base_salary:      @params[:base_salary]      || @original.base_salary,
+        salary_currency:  @params[:salary_currency]  || @original.salary_currency,
+        salary_period:    @params[:salary_period]    || @original.salary_period,
+        notes:            @params[:notes]
       )
     end
   end

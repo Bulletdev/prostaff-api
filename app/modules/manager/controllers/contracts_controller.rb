@@ -15,19 +15,20 @@ module Manager
     #   POST /api/v1/manager/contracts/:id/activate
     class ContractsController < Api::V1::BaseController
       before_action :require_manager_access!
+      before_action -> { require_tier_feature!(:contracts_basic) }
       before_action :set_contract, only: %i[show update destroy activate terminate renew]
       after_action  :verify_authorized
 
       # GET /api/v1/manager/contracts
       def index
         authorize Contract, :index?, policy_class: Manager::ContractPolicy
-        scoped = organization_scoped(Contract).includes(:player, :bonuses)
+        scoped = organization_scoped(Contract).includes(:player, :staff_member, :bonuses)
         contracts = Manager::ContractQuery.new(scoped, params).call
         result = paginate(contracts)
-        render_success(
+        render_success({
           contracts: Manager::ContractSerializer.render_as_hash(result[:data]),
           pagination: result[:pagination]
-        )
+        })
       end
 
       # GET /api/v1/manager/contracts/:id
@@ -138,7 +139,7 @@ module Manager
 
       def contract_params
         params.require(:contract).permit(
-          :player_id, :contract_type, :start_date, :end_date,
+          :player_id, :staff_member_id, :contract_type, :start_date, :end_date,
           :base_salary, :salary_currency, :salary_period,
           :auto_renewal, :renewal_notice_days, :notes
         )

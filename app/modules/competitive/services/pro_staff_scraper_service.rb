@@ -249,6 +249,20 @@ class ProStaffScraperService
     parse_json(response)
   end
 
+  # Fetch GCD (Global Contract Database) player entries for a league from Leaguepedia via the scraper.
+  #
+  # Each record contains the player's current team, region, role, residency,
+  # and indicative contract end date. Data is sourced from the Leaguepedia GCD cargo table.
+  #
+  # @param league [String] e.g. 'CBLOL', 'LCK', 'LEC', 'LCS', 'LPL'
+  # @return [Array<Hash>] list of player contract records
+  def fetch_gcd_players(league:)
+    response = get('/api/v1/gcd/players', { league: league })
+    parse_json(response).fetch('players', [])
+  rescue Faraday::Error => e
+    raise UnavailableError, e.message
+  end
+
   # Fetch current progress of the historical backfill for a league.
   #
   # Returns a breakdown of how many tournaments are completed, pending or errored,
