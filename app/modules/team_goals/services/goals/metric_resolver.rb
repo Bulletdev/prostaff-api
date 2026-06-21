@@ -39,26 +39,40 @@ module Goals
 
     # Aggregates player_match_stats in the goal's date window.
     def resolve_from_analytics
-      match_ids = Match
-                  .where(organization: @player.organization)
-                  .joins(:player_match_stats)
-                  .where(player_match_stats: { player_id: @player.id })
-                  .where(game_start: window_datetime_range)
-                  .select(:id)
-
-      stats = PlayerMatchStat.where(player_id: @player.id, match_id: match_ids)
-
+      stats, match_ids = fetch_player_stats
       return nil if stats.none?
 
-      case @goal.metric_key
-      when 'kda_ratio'            then compute_kda(stats)
-      when 'cs_per_min'           then stats.average(:cs_per_min)&.to_f&.round(2)
-      when 'vision_score_per_min' then compute_vision_per_min(stats, match_ids)
-      when 'gold_per_min'         then stats.average(:gold_per_min)&.to_f&.round(2)
-      when 'damage_per_min'       then compute_damage_per_min(stats, match_ids)
-      when 'kill_participation'   then stats.average(:kill_participation)&.to_f&.round(2)
-      when 'win_rate'             then compute_win_rate(stats)
-      end
+      compute_analytics_value(stats, match_ids)
+    end
+
+    def fetch_player_stats
+      match_ids = player_match_scope.select(:id)
+      stats = PlayerMatchStat.where(player_id: @player.id, match_id: match_ids)
+      [stats, match_ids]
+    end
+
+    def player_match_scope
+      Match
+        .where(organization: @player.organization)
+        .joins(:player_match_stats)
+        .where(player_match_stats: { player_id: @player.id })
+        .where(game_start: window_datetime_range)
+    end
+
+    def compute_analytics_value(stats, match_ids)
+      {
+        'kda_ratio' => -> { compute_kda(stats) },
+        'cs_per_min' => -> { avg_stat(stats, :cs_per_min) },
+        'vision_score_per_min' => -> { compute_vision_per_min(stats, match_ids) },
+        'gold_per_min' => -> { avg_stat(stats, :gold_per_min) },
+        'damage_per_min' => -> { compute_damage_per_min(stats, match_ids) },
+        'kill_participation' => -> { avg_stat(stats, :kill_participation) },
+        'win_rate' => -> { compute_win_rate(stats) }
+      }[@goal.metric_key]&.call
+    end
+
+    def avg_stat(stats, column)
+      stats.average(column)&.to_f&.round(2)
     end
 
     # Reads the latest solo queue snapshot — no HTTP needed.
@@ -153,7 +167,7 @@ module Goals
 
     def extract_scraper_metric(profile)
       case @goal.metric_key
-      when 'pro_kda'       then profile['avg_kda']&.to_f
+      when 'pro_kda' then profile['avg_kda']&.to_f
       when 'pro_cs_per_min', 'pro_dpm', 'pro_gd15', 'pro_wpm'
         extract_tournament_metric(profile)
       end

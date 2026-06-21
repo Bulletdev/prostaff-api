@@ -36,7 +36,7 @@ class TournamentPlayerStat < ApplicationRecord
   scope :for_team,            ->(team)   { where(team_name: team) }
   scope :for_position,        ->(pos)    { where(position: pos) }
   scope :recent,                         -> { order(year: :desc, computed_at: :desc) }
-  scope :by_professional_name, ->(name)  { where("LOWER(player_name) = LOWER(?)", name.to_s.strip) if name.present? }
+  scope :by_professional_name, ->(name)  { where('LOWER(player_name) = LOWER(?)', name.to_s.strip) if name.present? }
 
   def position
     self[:position] || data['Pos'] || data['pos'] || data['position'] || data['role']

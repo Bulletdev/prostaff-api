@@ -535,7 +535,7 @@ Rails.application.routes.draw do
           end
         end
 
-        get  'people', to: '/manager/controllers/people#index'
+        get 'people', to: '/manager/controllers/people#index'
         resources :staff, except: %i[new edit index],
                           controller: '/manager/controllers/staff_members'
       end

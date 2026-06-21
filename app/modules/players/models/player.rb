@@ -71,14 +71,18 @@ class Player < ApplicationRecord # rubocop:disable Metrics/ClassLength
   # Denylist (not allowlist) to accommodate international summoner names,
   # unicode characters, e-sports tags (#, |, _), and CJK scripts.
   # Covers: HTML tags, javascript: protocol, event handlers, template delimiters.
-  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i.freeze
+  HTML_INJECTION = /[<>]|javascript:|on\w+\s*=|\{\{|\}\}/i
 
   # Validations
   validates :source_app, inclusion: { in: Constants::SOURCE_APPS }
-  validates :summoner_name, presence: true, length: { maximum: 100 },
+  validates :summoner_name,
+            presence: true,
+            length: { maximum: 100 },
             format: { without: HTML_INJECTION, message: 'contains invalid characters' }
-  validates :real_name, length: { maximum: 255 },
-            format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
+  validates :real_name,
+            length: { maximum: 255 },
+            format: { without: HTML_INJECTION, message: 'contains invalid characters' },
+            allow_blank: true
   validates :professional_name,
             format: { without: HTML_INJECTION, message: 'contains invalid characters' }, allow_blank: true
   validates :notes,

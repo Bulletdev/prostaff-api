@@ -38,32 +38,46 @@ class TournamentTeamStat < ApplicationRecord
   scope :recent,                    -> { order(year: :desc, computed_at: :desc) }
 
   def games_played
-    data['gp'] || data['GP'] || data['games_played']
+    fetch_field('gp', 'GP', 'games_played')
   end
 
   def win_rate
-    val = data['wr'] || data['WR'] || data['win_rate']
-    return val if val
+    stored = fetch_field('wr', 'WR', 'win_rate')
+    return stored if stored
+
+    computed_win_rate
+  end
+
+  def gold_diff_at_15
+    fetch_field('gd15', 'GD15', 'GD@15', 'gd_at_15')
+  end
+
+  def wpm
+    fetch_field('wpm', 'WPM')
+  end
+
+  def dragon_control_pct
+    coerce_float(fetch_field('drg', 'DRG%', 'dragon_pct'))
+  end
+
+  def game_score_diff
+    coerce_float(fetch_field('gspd', 'GSPD'))
+  end
+
+  private
+
+  def fetch_field(*keys)
+    keys.each { |k| return data[k] if data[k] }
+    nil
+  end
+
+  def computed_win_rate
     return nil unless data['W'] && data['GP'].to_i.positive?
 
     (data['W'].to_f / data['GP'] * 100).round(1)
   end
 
-  def gold_diff_at_15
-    data['gd15'] || data['GD15'] || data['GD@15'] || data['gd_at_15']
-  end
-
-  def wpm
-    data['wpm'] || data['WPM']
-  end
-
-  def dragon_control_pct
-    val = data['drg'] || data['DRG%'] || data['dragon_pct']
-    val.is_a?(String) ? val.to_f : val
-  end
-
-  def game_score_diff
-    val = data['gspd'] || data['GSPD']
+  def coerce_float(val)
     val.is_a?(String) ? val.to_f : val
   end
 end

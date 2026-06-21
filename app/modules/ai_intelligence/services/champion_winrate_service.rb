@@ -29,16 +29,31 @@ class ChampionWinrateService
     return nil if effective_patch.nil?
 
     major    = effective_patch.to_s.split('.').first
-    alt_name = champion.gsub(/([a-z])([A-Z])/, '\1 \2') # "LeeSin" -> "Lee Sin"
+    alt_name = champion_alt_name(champion)
 
-    result = data["#{champion}_#{major}"] || data["#{alt_name}_#{major}"]
-
-    if result.nil? && patch.present? && major != latest_patch
-      result = data["#{champion}_#{latest_patch}"] || data["#{alt_name}_#{latest_patch}"]
-    end
-
-    result
+    lookup_champion(champion, alt_name, major, patch)
   end
+
+  def self.champion_alt_name(champion)
+    champion.gsub(/([a-z])([A-Z])/, '\1 \2')
+  end
+  private_class_method :champion_alt_name
+
+  def self.lookup_champion(champion, alt_name, major, original_patch)
+    result = data["#{champion}_#{major}"] || data["#{alt_name}_#{major}"]
+    return result if result
+
+    fallback_lookup(champion, alt_name, major, original_patch)
+  end
+  private_class_method :lookup_champion
+
+  def self.fallback_lookup(champion, alt_name, major, original_patch)
+    lp = latest_patch
+    return nil unless original_patch.present? && major != lp
+
+    data["#{champion}_#{lp}"] || data["#{alt_name}_#{lp}"]
+  end
+  private_class_method :fallback_lookup
 
   # Returns a hash mapping each champion name to its win rate (or nil).
   #

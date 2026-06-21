@@ -7,7 +7,7 @@ module Rack
   class Attack
     class Request < ::Rack::Request
       def remote_ip
-        @remote_ip ||= (env['action_dispatch.remote_ip']&.to_s || ip)
+        @remote_ip ||= env['action_dispatch.remote_ip']&.to_s || ip
       end
     end
   end
