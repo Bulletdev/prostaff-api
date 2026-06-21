@@ -234,6 +234,9 @@ Rails.application.routes.draw do
         get 'oe-free-agents', to: '/scouting/controllers/free_agents#index', as: 'oe_free_agents'
         resources :watchlist, only: %i[index create destroy],
                               controller: '/scouting/controllers/watchlist'
+        resources :market_registrations, path: 'market-registrations',
+                                         controller: '/scouting/controllers/market_registrations',
+                                         only: %i[index show]
       end
 
       # Analytics
@@ -294,7 +297,11 @@ Rails.application.routes.draw do
 
       # Team Goals
       resources :team_goals, path: 'team-goals',
-                             controller: '/team_goals/controllers/team_goals'
+                             controller: '/team_goals/controllers/team_goals' do
+        resources :check_ins, path: 'check-ins',
+                              controller: '/team_goals/controllers/goal_check_ins',
+                              only: %i[index show create]
+      end
 
       # Scrims Module (Tier 2+)
       scope '/scrims', as: 'scrims' do
@@ -527,6 +534,10 @@ Rails.application.routes.draw do
             post :reject
           end
         end
+
+        get  'people', to: '/manager/controllers/people#index'
+        resources :staff, except: %i[new edit index],
+                          controller: '/manager/controllers/staff_members'
       end
 
       # Contact form (public, no auth)

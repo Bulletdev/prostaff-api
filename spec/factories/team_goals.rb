@@ -21,5 +21,23 @@ FactoryBot.define do
     trait :for_player do
       association :player
     end
+
+    trait :evaluable do
+      association :player
+      metric_key      { 'win_rate' }
+      comparator      { 'gte' }
+      assignable_type { 'Player' }
+      due_date        { Date.current + 14.days }
+      status          { 'active' }
+    end
+
+    trait :at_risk do
+      association :player
+      metric_key      { 'kda_ratio' }
+      comparator      { 'gte' }
+      assignable_type { 'Player' }
+      due_date        { Date.current + 3.days }
+      status          { 'on_track' }
+    end
   end
 end

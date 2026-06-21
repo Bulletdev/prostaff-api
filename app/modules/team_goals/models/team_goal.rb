@@ -48,6 +48,8 @@ class TeamGoal < ApplicationRecord
   belongs_to :player, optional: true
   belongs_to :assigned_to, class_name: 'User', optional: true
   belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :updated_by, class_name: 'User', optional: true
+  has_many :goal_check_ins, dependent: :destroy
 
   # Validations
   validates :title, presence: true, length: { maximum: 255 }
@@ -56,7 +58,10 @@ class TeamGoal < ApplicationRecord
   validates :start_date, :end_date, presence: true
   validates :status, inclusion: { in: Constants::TeamGoal::STATUSES }
   validates :progress, numericality: { in: 0..100 }
+  validates :comparator, inclusion: { in: Constants::TeamGoal::COMPARATORS }, allow_blank: true
+  validates :assignable_type, inclusion: { in: %w[Player User] }, allow_blank: true
   validate :end_date_after_start_date
+  validate :validate_metric_key
 
   # Callbacks
   before_save :calculate_progress_if_needed
@@ -70,7 +75,12 @@ class TeamGoal < ApplicationRecord
   scope :player_goals, -> { where.not(player_id: nil) }
   scope :for_player, ->(player_id) { where(player_id: player_id) }
   scope :expiring_soon, ->(days = 7) { where(end_date: Date.current..(Date.current + days.days)) }
-  scope :overdue, -> { where('end_date < ? AND status = ?', Date.current, 'active') }
+  scope :overdue, -> { where('end_date < ?', Date.current).where(status: %w[active open on_track at_risk]) }
+  scope :evaluable, lambda {
+    where(status: %w[active open on_track at_risk])
+      .where.not(metric_key: [nil, ''])
+      .where(assignable_type: 'Player')
+  }
 
   # Instance methods
   def is_team_goal?
@@ -103,8 +113,14 @@ class TeamGoal < ApplicationRecord
     (days_elapsed.to_f / days_total * 100).round(1)
   end
 
+  def evaluable?
+    Constants::TeamGoal::TERMINAL_STATUSES.exclude?(status) &&
+      metric_key.present? &&
+      assignable_type == 'Player'
+  end
+
   def is_overdue?
-    Date.current > end_date && status == 'active'
+    Date.current > end_date && Constants::TeamGoal::TERMINAL_STATUSES.exclude?(status)
   end
 
   def is_expiring_soon?(days = 7)
@@ -228,6 +244,12 @@ class TeamGoal < ApplicationRecord
     return unless start_date && end_date
 
     errors.add(:end_date, 'must be after start date') if end_date <= start_date
+  end
+
+  def validate_metric_key
+    return if metric_key.blank?
+
+    errors.add(:metric_key, 'is not a valid metric key') unless Goals::MetricRegistry.valid?(metric_key)
   end
 
   def calculate_progress_if_needed

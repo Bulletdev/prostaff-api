@@ -192,7 +192,9 @@ module Constants
   module TeamGoal
     CATEGORIES = %w[performance rank tournament skill].freeze
     METRIC_TYPES = %w[win_rate kda cs_per_min vision_score damage_share rank_climb].freeze
-    STATUSES = %w[active completed failed cancelled].freeze
+    STATUSES = %w[active open on_track at_risk met missed completed failed cancelled].freeze
+    COMPARATORS = %w[gte lte eq].freeze
+    TERMINAL_STATUSES = %w[met missed completed failed cancelled].freeze
 
     CATEGORY_NAMES = {
       'performance' => 'Performance',
@@ -211,9 +213,14 @@ module Constants
     }.freeze
 
     STATUS_NAMES = {
-      'active' => 'Active',
+      'active'    => 'Active',
+      'open'      => 'Open',
+      'on_track'  => 'On Track',
+      'at_risk'   => 'At Risk',
+      'met'       => 'Met',
+      'missed'    => 'Missed',
       'completed' => 'Completed',
-      'failed' => 'Failed',
+      'failed'    => 'Failed',
       'cancelled' => 'Cancelled'
     }.freeze
   end

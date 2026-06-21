@@ -133,6 +133,19 @@ module Authenticatable
     render_forbidden("Required role: #{allowed_roles.join(' or ')}")
   end
 
+  # Gate access by org tier. Feature keys are defined in TierFeatures::TIER_FEATURES[:features].
+  # Returns 403 with UPGRADE_REQUIRED code when the org's tier does not include the feature.
+  def require_tier_feature!(feature)
+    return if current_organization&.can_access?(feature)
+
+    render json: {
+      error: {
+        code: 'UPGRADE_REQUIRED',
+        message: "Your plan does not include '#{feature}'. Upgrade to access this feature."
+      }
+    }, status: :forbidden
+  end
+
   # Rejects player tokens — for endpoints that are staff-only (e.g. chat members)
   def require_user_auth!
     return if user_signed_in?

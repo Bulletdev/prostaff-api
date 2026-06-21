@@ -102,3 +102,28 @@
     class: Manager::ContractExpiryAlertJob
     queue: default
     description: 'Daily contract expiry alerts'
+
+  # Nightly goal evaluation at 6 AM UTC.
+  # Resolves metric values for evaluable TeamGoals, writes GoalCheckIn records,
+  # recomputes status (on_track / at_risk / met / missed), and fires events.
+  evaluate_goals:
+    cron: '0 6 * * *'
+    class: Goals::EvaluateGoalsJob
+    queue: default
+    description: 'Auto-evaluate team goals and create check-in records'
+
+  # Nightly GCD sync at 3 AM UTC — upserts Leaguepedia contract data into market_registrations.
+  sync_gcd:
+    cron: '0 3 * * *'
+    class: Scouting::SyncGcdJob
+    queue: default
+    description: 'Sync Leaguepedia Global Contract Database into market_registrations'
+
+  # Nightly contract bonus evaluation at 7 AM UTC.
+  # Resolves metric values for structured ContractBonuses within their evaluation
+  # window and marks them as achieved when the comparator condition is satisfied.
+  evaluate_bonuses:
+    cron: '0 7 * * *'
+    class: Manager::EvaluateBonusesJob
+    queue: default
+    description: 'Auto-evaluate structured contract bonuses via MetricResolver'

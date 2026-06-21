@@ -25,6 +25,7 @@ module TierFeatures
       features: %w[
         vod_reviews champion_pools schedules
         scrims draft_analysis team_composition opponent_database
+        contracts_basic
       ],
       api_access: false
     },
@@ -40,6 +41,7 @@ module TierFeatures
         scrims draft_analysis team_composition opponent_database
         competitive_data predictive_analytics meta_analysis
         patch_impact player_form_tracking
+        contracts_basic contracts_full budget_tracker salary_summary export
       ],
       api_access: true # only for enterprise plan
     }

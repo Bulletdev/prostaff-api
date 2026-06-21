@@ -31,8 +31,15 @@ RSpec.describe Contract, type: :model do
   describe 'validations' do
     describe 'contract_type' do
       it 'is valid for every allowed type' do
+        staff_member = create(:staff_member, organization: organization)
+
         Contract::TYPES.each do |type|
-          contract = build_contract(contract_type: type)
+          overrides = { contract_type: type }
+          if Contract::STAFF_TYPES.include?(type)
+            overrides[:player]       = nil
+            overrides[:staff_member] = staff_member
+          end
+          contract = build_contract(**overrides)
           expect(contract).to be_valid, "expected #{type} to be valid"
         end
       end

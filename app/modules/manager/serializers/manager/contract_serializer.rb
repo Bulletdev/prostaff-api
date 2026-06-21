@@ -22,14 +22,23 @@ module Manager
       contract.expiring_soon?(30)
     end
 
-    association :player, blueprint: PlayerSummarySerializer
-    association :bonuses, blueprint: Manager::ContractBonusSerializer
+    field :assignee_name do |contract|
+      contract.assignee_name
+    end
+
+    association :player,        blueprint: PlayerSummarySerializer
+    association :staff_member,  blueprint: Manager::StaffMemberSerializer
+    association :bonuses,       blueprint: Manager::ContractBonusSerializer
 
     view :summary do
       fields :status, :end_date, :base_salary, :salary_currency, :salary_period
 
       field :days_remaining do |contract|
         contract.days_remaining
+      end
+
+      field :assignee_name do |contract|
+        contract.assignee_name
       end
 
       association :player, blueprint: PlayerSummarySerializer

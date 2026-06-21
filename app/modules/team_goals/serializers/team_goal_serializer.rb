@@ -6,8 +6,9 @@ class TeamGoalSerializer < Blueprinter::Base
   identifier :id
 
   fields :title, :description, :category, :metric_type,
-         :target_value, :current_value, :start_date, :end_date,
-         :status, :progress, :created_at, :updated_at
+         :target_value, :current_value, :start_date, :end_date, :due_date,
+         :status, :progress, :metric_key, :comparator, :assignable_type,
+         :created_at, :updated_at
 
   field :is_team_goal do |obj|
     obj.is_team_goal?
@@ -41,8 +42,16 @@ class TeamGoalSerializer < Blueprinter::Base
     obj.completion_percentage
   end
 
+  field :evaluable do |obj|
+    obj.evaluable?
+  end
+
   association :organization, blueprint: OrganizationSerializer
   association :player, blueprint: PlayerSerializer
   association :assigned_to, blueprint: UserSerializer
   association :created_by, blueprint: UserSerializer
+
+  view :with_check_ins do
+    association :goal_check_ins, blueprint: GoalCheckInSerializer
+  end
 end
