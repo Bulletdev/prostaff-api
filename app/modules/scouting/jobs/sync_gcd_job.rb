@@ -26,6 +26,7 @@ module Scouting
         "skipped=#{count[:skipped]} errors=#{count[:errors]}"
       )
       enqueue_tag_enrichment
+      enqueue_null_enrichment
     end
 
     private
@@ -88,6 +89,13 @@ module Scouting
         .where.not("solo_queue_id LIKE '%#%'")
         .where(solo_queue_id_override: nil)
         .find_each { |reg| Scouting::EnrichSoloQueueTagJob.perform_async(reg.id) }
+    end
+
+    def enqueue_null_enrichment
+      MarketRegistration
+        .where(solo_queue_id: nil, tag_enriched: false)
+        .where(solo_queue_id_override: [nil, ''])
+        .find_each { |reg| Scouting::EnrichNullSoloQueueJob.perform_async(reg.id) }
     end
 
     def parse_date(date_str)
