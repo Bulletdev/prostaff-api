@@ -24,4 +24,8 @@ class MarketRegistration < ApplicationRecord
   scope :expired_contracts, -> { where('contract_end_date < ?', Date.current).where.not(contract_end_date: nil) }
   scope :recent_snapshot, -> { where(snapshot_date: (7.days.ago.to_date)..) }
   scope :by_player, -> { order(:player_external_name) }
+  scope :free_agents, lambda {
+    where(team_name: [nil, '']).or(where('contract_end_date < ?', Date.current))
+  }
+  scope :with_soloqueue, -> { where.not(solo_queue_id: [nil, '']) }
 end

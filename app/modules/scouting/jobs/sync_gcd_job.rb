@@ -52,7 +52,8 @@ module Scouting
       MarketRegistration.upsert(
         build_upsert_attrs(record, snapshot_date),
         unique_by: %i[player_external_name snapshot_date],
-        update_only: %i[team_name region role residency contract_end_date raw_payload]
+        update_only: %i[team_name region role residency contract_end_date
+                        solo_queue_id image_url raw_payload]
       )
       count[:upserted] += 1
     rescue StandardError => e
@@ -68,6 +69,8 @@ module Scouting
         role: record['role'],
         residency: record['residency'],
         contract_end_date: parse_date(record['contract_end_date']),
+        solo_queue_id: record['solo_queue_id'],
+        image_url: record['image_url'],
         source: record.fetch('source', 'leaguepedia_gcd'),
         snapshot_date: snapshot_date,
         raw_payload: record,
