@@ -28,17 +28,15 @@ module Scouting
     def perform(registration_id)
       reg = MarketRegistration.find_by(id: registration_id)
       return unless reg
-      return if reg.solo_queue_id.present? || reg.solo_queue_id_override.present? || reg.tag_enriched
+      return unless should_enrich?(reg)
 
       slug    = deeplol_slug(reg.player_external_name)
       riot_id = fetch_riot_id(slug, reg.player_external_name)
 
       if riot_id
-        reg.update!(solo_queue_id: riot_id)
-        Rails.logger.info("[EnrichNullSoloQueueJob] #{reg.player_external_name} -> #{riot_id}")
+        apply_enrichment(reg, riot_id)
       else
-        reg.update!(tag_enriched: true)
-        Rails.logger.debug("[EnrichNullSoloQueueJob] Not found: #{reg.player_external_name} (slug=#{slug})")
+        handle_not_found(reg)
       end
     rescue StandardError => e
       Rails.logger.error("[EnrichNullSoloQueueJob] reg=#{registration_id}: #{e.message}")
@@ -57,6 +55,36 @@ module Scouting
       end
 
       lolpros_riot_id(player_name)
+    end
+
+    # ── Guards ─────────────────────────────────────────────────────────
+
+    def should_enrich?(reg)
+      return false if reg.solo_queue_id_override.present?
+      return true  if bare_name?(reg)
+
+      # Null players: respect tag_enriched set by previous failed lookups
+      reg.solo_queue_id.blank? && !reg.tag_enriched
+    end
+
+    # Bare-name players have a solo_queue_id but without #TAGLINE (old summoner name format).
+    # tag_enriched is ignored for them — EnrichSoloQueueTagJob may have set it via
+    # Riot API 410, but DeepLOL/lolpros can still resolve the current Riot ID.
+    def bare_name?(reg)
+      reg.solo_queue_id.present? && !reg.solo_queue_id.include?('#')
+    end
+
+    def apply_enrichment(reg, riot_id)
+      # Bare names: write to override so the value survives the next Leaguepedia
+      # sync (which resets solo_queue_id back to the old summoner name).
+      attr = bare_name?(reg) ? :solo_queue_id_override : :solo_queue_id
+      reg.update!(attr => riot_id)
+      Rails.logger.info("[EnrichNullSoloQueueJob] #{reg.player_external_name} -> #{riot_id}")
+    end
+
+    def handle_not_found(reg)
+      reg.update!(tag_enriched: true) unless bare_name?(reg)
+      Rails.logger.debug("[EnrichNullSoloQueueJob] Not found: #{reg.player_external_name}")
     end
 
     # ── DeepLOL ────────────────────────────────────────────────────────
