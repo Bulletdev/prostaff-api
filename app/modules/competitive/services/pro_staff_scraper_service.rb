@@ -257,7 +257,7 @@ class ProStaffScraperService
   # @param league [String] e.g. 'CBLOL', 'LCK', 'LEC', 'LCS', 'LPL'
   # @return [Array<Hash>] list of player contract records
   def fetch_gcd_players(league:)
-    response = get('/api/v1/gcd/players', { league: league })
+    response = get('/api/v1/gcd/players', { league: league, limit: 500 })
     parse_json(response).fetch('players', [])
   rescue Faraday::Error => e
     raise UnavailableError, e.message
