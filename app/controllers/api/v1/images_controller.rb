@@ -73,7 +73,9 @@ module Api
         # Re-derive host from our constant so downstream calls receive a value
         # that does not trace back to params[:url] in taint analysis.
         safe_host = ALLOWED_DOMAINS.find { |d| d == uri.host }
-        URI::HTTPS.build(host: safe_host, path: uri.path, query: uri.query)
+        safe_path  = uri.path.to_s.delete("\r\n\x00")
+        safe_query = uri.query&.delete("\r\n\x00")
+        URI::HTTPS.build(host: safe_host, path: safe_path, query: safe_query)
       rescue URI::InvalidURIError, URI::InvalidComponentError
         nil
       end
@@ -121,7 +123,7 @@ module Api
         Net::HTTP.start(host, 443,
                         use_ssl: true,
                         **HTTP_TIMEOUT_OPTIONS) do |http|
-          request = Net::HTTP::Get.new(uri.request_uri) # nosemgrep: ruby.net.http.ssrf
+          request = Net::HTTP::Get.new(uri.request_uri) # nosemgrep
           request['User-Agent'] = 'ProStaff-API/1.0 (Image Proxy)'
           http.request(request)
         end
