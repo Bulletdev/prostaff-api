@@ -6,7 +6,7 @@ class MarketRegistrationSerializer < Blueprinter::Base
   identifier :id
 
   fields :player_external_name, :team_name, :region, :role, :residency,
-         :contract_end_date, :source, :snapshot_date
+         :contract_end_date, :solo_queue_id, :image_url, :source, :snapshot_date
 
   field :created_at do |record|
     record.created_at&.iso8601

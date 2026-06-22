@@ -232,6 +232,7 @@ Rails.application.routes.draw do
         end
         get 'regions', to: '/scouting/controllers/regions#index'
         get 'oe-free-agents', to: '/scouting/controllers/free_agents#index', as: 'oe_free_agents'
+        get 'gcd-free-agents', to: '/scouting/controllers/gcd_free_agents#index', as: 'gcd_free_agents'
         resources :watchlist, only: %i[index create destroy],
                               controller: '/scouting/controllers/watchlist'
         resources :market_registrations, path: 'market-registrations',
