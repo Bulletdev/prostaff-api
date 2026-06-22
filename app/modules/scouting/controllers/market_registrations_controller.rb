@@ -69,11 +69,13 @@ module Scouting
       private
 
       def filtered_registrations
-        base = MarketRegistration
-               .for_region(params[:region])
-               .expiring_before(params[:expiring_before])
-               .search_query(params[:q])
-        params[:expired_only] == 'true' ? base.expired_contracts : base
+        scope = MarketRegistration
+                  .for_region(params[:region])
+                  .expiring_before(params[:expiring_before])
+                  .search_query(params[:q])
+        scope = scope.free_agents      if params[:free_agents_only] == 'true'
+        scope = scope.expired_contracts if params[:expired_only] == 'true'
+        scope
       end
 
       def sort_order
