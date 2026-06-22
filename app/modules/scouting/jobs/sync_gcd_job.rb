@@ -25,6 +25,7 @@ module Scouting
         "[SyncGcdJob] Done — upserted=#{count[:upserted]} " \
         "skipped=#{count[:skipped]} errors=#{count[:errors]}"
       )
+      enqueue_tag_enrichment
     end
 
     private
@@ -53,7 +54,8 @@ module Scouting
         build_upsert_attrs(record, snapshot_date),
         unique_by: %i[player_external_name],
         update_only: %i[team_name region role residency contract_end_date
-                        solo_queue_id image_url raw_payload snapshot_date]
+                        solo_queue_id solo_queue_server image_url raw_payload
+                        snapshot_date tag_enriched]
       )
       count[:upserted] += 1
     rescue StandardError => e
@@ -70,11 +72,22 @@ module Scouting
         residency: record['residency'],
         contract_end_date: parse_date(record['contract_end_date']),
         solo_queue_id: record['solo_queue_id'],
+        solo_queue_server: record['solo_queue_server'],
+        tag_enriched: false,
         image_url: record['image_url'],
         source: record.fetch('source', 'leaguepedia_gcd'),
         snapshot_date: snapshot_date,
         raw_payload: record
       }
+    end
+
+    def enqueue_tag_enrichment
+      MarketRegistration
+        .where(tag_enriched: false)
+        .where.not(solo_queue_id: nil)
+        .where.not("solo_queue_id LIKE '%#%'")
+        .where(solo_queue_id_override: nil)
+        .find_each { |reg| Scouting::EnrichSoloQueueTagJob.perform_async(reg.id) }
     end
 
     def parse_date(date_str)
