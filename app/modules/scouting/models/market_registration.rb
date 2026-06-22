@@ -28,4 +28,16 @@ class MarketRegistration < ApplicationRecord
     where(team_name: [nil, '']).or(where('contract_end_date < ?', Date.current))
   }
   scope :with_soloqueue, -> { where.not(solo_queue_id: [nil, '']) }
+
+  def effective_solo_queue_id
+    solo_queue_id_override.presence || solo_queue_id
+  end
+
+  def needs_tag_enrichment?
+    solo_queue_id_override.blank? &&
+      solo_queue_id.present? &&
+      !solo_queue_id.include?('#') &&
+      !tag_enriched &&
+      RiotApiService::REGIONS.key?(solo_queue_server)
+  end
 end
