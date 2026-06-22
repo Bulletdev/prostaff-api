@@ -243,21 +243,13 @@ This API follows a modular monolith architecture with the following modules:
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        Client[Frontend Applications\nprostaff.gg / scrims.lol / arena-br.vercel.app]
-    end
-
-    subgraph "Infrastructure Layer"
-        Traefik[Traefik Reverse Proxy\napi.prostaff.gg - SSL + CORS]
-        subgraph "API Replicas - Round Robin"
-            API1[api-1\nPuma 4 workers]
-            API2[api-2\nPuma 4 workers]
-        end
+        Client[Frontend Application]
     end
 
     subgraph "API Gateway"
         Router[Rails Router]
         CORS[CORS Middleware]
-        RateLimit[Rate Limiting - Rack::Attack / Redis]
+        RateLimit[Rate Limiting]
         Auth[Authentication Middleware]
     end
 
@@ -364,15 +356,11 @@ graph TB
         VideoAI[ProStaff VideoAI\nprostaff-videoai:8001\nyt-dlp + FFmpeg]
     end
 
-    Client -->|HTTPS| Traefik
-    Traefik -->|Round Robin| API1
-    Traefik -->|Round Robin| API2
-    API1 -->|HTTP| CORS
-    API2 -->|HTTP| CORS
+    Client -->|HTTP/JSON| CORS
     CORS --> RateLimit
     RateLimit --> Auth
     Auth --> Router
-
+        
     Router --> AuthController
     Router --> DashboardController
     Router --> PlayersController
