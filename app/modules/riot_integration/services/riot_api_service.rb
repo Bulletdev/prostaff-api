@@ -110,7 +110,7 @@ class RiotApiService
   def handle_response(response)
     case response.status
     when 200 then response
-    when 404 then raise NotFoundError, 'Resource not found'
+    when 404, 410 then raise NotFoundError, 'Resource not found'
     when 401, 403 then raise UnauthorizedError, 'Gateway auth failed'
     when 429
       retry_after = response.headers['Retry-After']&.to_i || 60
