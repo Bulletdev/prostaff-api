@@ -9,25 +9,29 @@ module Scouting
   # CDN API to resolve a pro player name to a full Riot ID (gameName#tagLine).
   # No authentication required — URL is hardcoded, no user input in the URI.
   #
+  # Primary lookup: strm_pro_info with the derived slug.
+  # Fallback: pro-search-auto-complete to correct slug mismatches
+  # (e.g. Leaguepedia "Pyeonsik" -> DeepLOL slug "Pyeonsick").
+  #
   # On success: updates solo_queue_id with the most recently active account.
-  # On failure (player not in DeepLOL): marks tag_enriched: true so we stop
-  # retrying until the next sync resets the flag.
+  # On failure: marks tag_enriched: true to stop retrying until next sync.
   class EnrichNullSoloQueueJob
     include Sidekiq::Job
 
     sidekiq_options queue: 'default', retry: 2
 
-    DEEPLOL_HOST = 'b2c-api-cdn.deeplol.gg'
-    DEEPLOL_PATH = '/summoner/strm_pro_info'
-    REQUEST_TIMEOUT = 5
+    DEEPLOL_HOST        = 'b2c-api-cdn.deeplol.gg'
+    PRO_INFO_PATH       = '/summoner/strm_pro_info'
+    AUTOCOMPLETE_PATH   = '/summoner/pro-search-auto-complete'
+    REQUEST_TIMEOUT     = 5
 
     def perform(registration_id)
       reg = MarketRegistration.find_by(id: registration_id)
       return unless reg
       return if reg.solo_queue_id.present? || reg.solo_queue_id_override.present? || reg.tag_enriched
 
-      slug = deeplol_slug(reg.player_external_name)
-      riot_id = fetch_riot_id(slug)
+      slug    = deeplol_slug(reg.player_external_name)
+      riot_id = fetch_riot_id(slug, reg.player_external_name)
 
       if riot_id
         reg.update!(solo_queue_id: riot_id)
@@ -50,21 +54,24 @@ module Scouting
       m = name.match(/\A(.+?)\s*\((.+?)\)\z/)
       return name unless m
 
-      first = m[1].strip.tr(' ', '-')
+      first  = m[1].strip.tr(' ', '-')
       second = m[2].strip.tr(' ', '_')
       "#{first}-#{second}"
     end
 
-    def fetch_riot_id(slug)
-      query = URI.encode_www_form(status: 'pro', name: slug)
-      path  = "#{DEEPLOL_PATH}?#{query}"
+    def fetch_riot_id(slug, player_name)
+      result = call_deeplol(slug)
+      return result if result
 
-      http = Net::HTTP.new(DEEPLOL_HOST, 443)
-      http.use_ssl      = true
-      http.open_timeout = REQUEST_TIMEOUT
-      http.read_timeout = REQUEST_TIMEOUT
+      url_name = autocomplete_slug(player_name)
+      return nil if url_name.nil? || url_name == slug
 
-      response = http.get(path)
+      call_deeplol(url_name)
+    end
+
+    def call_deeplol(slug)
+      query    = URI.encode_www_form(status: 'pro', name: slug)
+      response = http_get("#{PRO_INFO_PATH}?#{query}")
       return nil unless response.is_a?(Net::HTTPSuccess)
 
       accounts = Array(JSON.parse(response.body)['account_list'])
@@ -78,8 +85,26 @@ module Scouting
 
       "#{riot_id}##{riot_tag}"
     rescue StandardError => e
-      Rails.logger.debug("[EnrichNullSoloQueueJob] fetch_riot_id failed slug=#{slug}: #{e.message}")
+      Rails.logger.debug("[EnrichNullSoloQueueJob] call_deeplol failed slug=#{slug}: #{e.message}")
       nil
+    end
+
+    def autocomplete_slug(name)
+      query    = URI.encode_www_form(search_string: name, riot_id_tag_line: '')
+      response = http_get("#{AUTOCOMPLETE_PATH}?#{query}")
+      return nil unless response.is_a?(Net::HTTPSuccess)
+
+      JSON.parse(response.body).dig('pro', 0, 'url_name')
+    rescue StandardError
+      nil
+    end
+
+    def http_get(path)
+      http              = Net::HTTP.new(DEEPLOL_HOST, 443)
+      http.use_ssl      = true
+      http.open_timeout = REQUEST_TIMEOUT
+      http.read_timeout = REQUEST_TIMEOUT
+      http.get(path)
     end
   end
 end
