@@ -5,25 +5,25 @@ require 'net/https'
 module Scouting
   # Enriches MarketRegistration records where solo_queue_id is NULL.
   #
-  # Triggered by SyncGcdJob after each nightly sync. Calls the DeepLOL public
-  # CDN API to resolve a pro player name to a full Riot ID (gameName#tagLine).
-  # No authentication required — URL is hardcoded, no user input in the URI.
+  # Triggered by SyncGcdJob after each nightly sync. Attempts three sources in order:
   #
-  # Primary lookup: strm_pro_info with the derived slug.
-  # Fallback: pro-search-auto-complete to correct slug mismatches
-  # (e.g. Leaguepedia "Pyeonsik" -> DeepLOL slug "Pyeonsick").
+  #   1. DeepLOL strm_pro_info — primary, covers most main-roster players
+  #   2. DeepLOL autocomplete  — fallback for slug mismatches (e.g. Pyeonsik → Pyeonsick)
+  #   3. lolpros.gg search API — fallback for players not in DeepLOL (EMEA, coaches)
   #
-  # On success: updates solo_queue_id with the most recently active account.
-  # On failure: marks tag_enriched: true to stop retrying until next sync.
+  # On success: updates solo_queue_id with the highest-ranked account found.
+  # On failure: marks tag_enriched: true to stop retrying until next sync resets the flag.
   class EnrichNullSoloQueueJob
     include Sidekiq::Job
 
     sidekiq_options queue: 'default', retry: 2
 
-    DEEPLOL_HOST        = 'b2c-api-cdn.deeplol.gg'
-    PRO_INFO_PATH       = '/summoner/strm_pro_info'
-    AUTOCOMPLETE_PATH   = '/summoner/pro-search-auto-complete'
-    REQUEST_TIMEOUT     = 5
+    DEEPLOL_HOST    = 'b2c-api-cdn.deeplol.gg'
+    LOLPROS_HOST    = 'api.lolpros.gg'
+    PRO_INFO_PATH   = '/summoner/strm_pro_info'
+    AUTOCOMPLETE_PATH = '/summoner/pro-search-auto-complete'
+    LOLPROS_PATH    = '/es/search'
+    REQUEST_TIMEOUT = 5
 
     def perform(registration_id)
       reg = MarketRegistration.find_by(id: registration_id)
@@ -46,6 +46,21 @@ module Scouting
 
     private
 
+    def fetch_riot_id(slug, player_name)
+      result = call_deeplol(slug)
+      return result if result
+
+      url_name = autocomplete_slug(player_name)
+      if url_name && url_name != slug
+        result = call_deeplol(url_name)
+        return result if result
+      end
+
+      lolpros_riot_id(player_name)
+    end
+
+    # ── DeepLOL ────────────────────────────────────────────────────────
+
     # Mirrors _leaguepedia_to_deeplol_slug from providers/deeplol.py.
     # "Frozen (Kim Tae-il)" -> "Frozen-Kim_Tae-il"
     # "Pyeonsik"            -> "Pyeonsik"
@@ -59,19 +74,9 @@ module Scouting
       "#{first}-#{second}"
     end
 
-    def fetch_riot_id(slug, player_name)
-      result = call_deeplol(slug)
-      return result if result
-
-      url_name = autocomplete_slug(player_name)
-      return nil if url_name.nil? || url_name == slug
-
-      call_deeplol(url_name)
-    end
-
     def call_deeplol(slug)
       query    = URI.encode_www_form(status: 'pro', name: slug)
-      response = http_get("#{PRO_INFO_PATH}?#{query}")
+      response = http_get("#{PRO_INFO_PATH}?#{query}", host: DEEPLOL_HOST)
       return nil unless response.is_a?(Net::HTTPSuccess)
 
       accounts = Array(JSON.parse(response.body)['account_list'])
@@ -91,7 +96,7 @@ module Scouting
 
     def autocomplete_slug(name)
       query    = URI.encode_www_form(search_string: name, riot_id_tag_line: '')
-      response = http_get("#{AUTOCOMPLETE_PATH}?#{query}")
+      response = http_get("#{AUTOCOMPLETE_PATH}?#{query}", host: DEEPLOL_HOST)
       return nil unless response.is_a?(Net::HTTPSuccess)
 
       JSON.parse(response.body).dig('pro', 0, 'url_name')
@@ -99,8 +104,45 @@ module Scouting
       nil
     end
 
-    def http_get(path)
-      http              = Net::HTTP.new(DEEPLOL_HOST, 443)
+    # ── lolpros.gg ─────────────────────────────────────────────────────
+
+    # Strips parenthetical from Leaguepedia names for lolpros search.
+    # "Albi (Albert Bera)" -> "Albi"
+    # "Canyon"             -> "Canyon"
+    def lolpros_query(player_name)
+      player_name.to_s.strip.sub(/\s*\(.*\)\z/, '').strip
+    end
+
+    def lolpros_riot_id(player_name)
+      query    = lolpros_query(player_name)
+      response = http_get("#{LOLPROS_PATH}?#{URI.encode_www_form(query: query)}", host: LOLPROS_HOST)
+      return nil unless response.is_a?(Net::HTTPSuccess)
+
+      data = JSON.parse(response.body)
+      return nil if data.empty?
+
+      entry = data[0]
+      return nil unless entry['name'].to_s.casecmp?(query)
+
+      accounts = Array(entry.dig('league_player', 'accounts'))
+      return nil if accounts.empty?
+
+      best     = accounts.max_by { |a| a.dig('rank', 'score') || 0 }
+      gamename = best['gamename'].to_s.strip
+      tagline  = best['tagline'].to_s.strip
+
+      return nil if gamename.empty? || tagline.empty?
+
+      "#{gamename}##{tagline}"
+    rescue StandardError => e
+      Rails.logger.debug("[EnrichNullSoloQueueJob] lolpros_riot_id failed #{player_name}: #{e.message}")
+      nil
+    end
+
+    # ── HTTP ───────────────────────────────────────────────────────────
+
+    def http_get(path, host:)
+      http              = Net::HTTP.new(host, 443)
       http.use_ssl      = true
       http.open_timeout = REQUEST_TIMEOUT
       http.read_timeout = REQUEST_TIMEOUT
