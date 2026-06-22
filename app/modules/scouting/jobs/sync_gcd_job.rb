@@ -51,9 +51,9 @@ module Scouting
     def upsert_record(record, snapshot_date, count)
       MarketRegistration.upsert(
         build_upsert_attrs(record, snapshot_date),
-        unique_by: %i[player_external_name snapshot_date],
+        unique_by: %i[player_external_name],
         update_only: %i[team_name region role residency contract_end_date
-                        solo_queue_id image_url raw_payload]
+                        solo_queue_id image_url raw_payload snapshot_date]
       )
       count[:upserted] += 1
     rescue StandardError => e
@@ -73,9 +73,7 @@ module Scouting
         image_url: record['image_url'],
         source: record.fetch('source', 'leaguepedia_gcd'),
         snapshot_date: snapshot_date,
-        raw_payload: record,
-        created_at: Time.current,
-        updated_at: Time.current
+        raw_payload: record
       }
     end
 
