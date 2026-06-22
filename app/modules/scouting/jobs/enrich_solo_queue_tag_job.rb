@@ -37,6 +37,13 @@ module Scouting
       Rails.logger.info(
         "[EnrichSoloQueueTagJob] #{reg.player_external_name}: #{reg.solo_queue_id} -> #{full_id}"
       )
+    rescue RiotApiService::RateLimitError => e
+      Rails.logger.warn("[EnrichSoloQueueTagJob] Rate limited for registration_id=#{registration_id}: #{e.message}")
+      raise
+    rescue RiotApiService::RiotApiError => e
+      # NotFoundError (404/410) and other permanent API failures — stop retrying
+      Rails.logger.warn("[EnrichSoloQueueTagJob] Permanent API failure reg=#{registration_id}: #{e.message}")
+      reg&.update!(tag_enriched: true)
     rescue StandardError => e
       Rails.logger.error("[EnrichSoloQueueTagJob] registration_id=#{registration_id}: #{e.message}")
     end
