@@ -22,8 +22,8 @@ class PlayerRankSnapshot < ApplicationRecord
   validates :recorded_on, presence: true
   validates :player_id, uniqueness: { scope: %i[queue_type recorded_on] }
 
-  scope :solo_queue, -> { where(queue_type: "RANKED_SOLO_5x5") }
-  scope :flex_queue, -> { where(queue_type: "RANKED_FLEX_SR") }
-  scope :recent,     lambda { |days = 90| where(recorded_on: (days.days.ago.to_date)..Date.current) }
+  scope :solo_queue, -> { where(queue_type: 'RANKED_SOLO_5x5') }
+  scope :flex_queue, -> { where(queue_type: 'RANKED_FLEX_SR') }
+  scope :recent,     ->(days = 90) { where(recorded_on: (days.days.ago.to_date)..Date.current) }
   scope :chronological, -> { order(recorded_on: :asc) }
 end

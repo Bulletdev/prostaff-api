@@ -20,7 +20,7 @@ module TeamGoals
 
       def show
         render_success({
-                         goal: TeamGoalSerializer.render_as_hash(@goal)
+                         goal: TeamGoalSerializer.render_as_hash(@goal, view: :with_check_ins)
                        })
       end
 
@@ -103,8 +103,9 @@ module TeamGoals
       def team_goal_params
         params.require(:team_goal).permit(
           :title, :description, :category, :metric_type,
-          :target_value, :current_value, :start_date, :end_date,
+          :target_value, :current_value, :start_date, :end_date, :due_date,
           :status, :progress, :notes,
+          :metric_key, :comparator, :assignable_type,
           :player_id, :assigned_to_id
         )
       end

@@ -152,9 +152,9 @@ module Matches
       source.group_by { |p| p[:team_id] }.transform_values do |team_participants|
         {
           total_damage: team_participants.sum { |p| p[:total_damage_dealt] }.to_f,
-          total_gold:   team_participants.sum { |p| p[:gold_earned] }.to_f,
-          total_kills:  team_participants.sum { |p| p[:kills].to_i }.to_f,
-          total_cs:     team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
+          total_gold: team_participants.sum { |p| p[:gold_earned] }.to_f,
+          total_kills: team_participants.sum { |p| p[:kills].to_i }.to_f,
+          total_cs: team_participants.sum { |p| (p[:minions_killed] || 0) + (p[:neutral_minions_killed] || 0) }.to_f
         }
       end
     end
@@ -201,10 +201,10 @@ module Matches
     end
 
     def rate_fields(cs_total, gold_earned, duration_minutes, kill_participation)
-      if duration_minutes > 0
+      if duration_minutes.positive?
         {
-          cs_per_min:         (cs_total.to_f / duration_minutes).round(2),
-          gold_per_min:       (gold_earned.to_f / duration_minutes).round(2),
+          cs_per_min: (cs_total.to_f / duration_minutes).round(2),
+          gold_per_min: (gold_earned.to_f / duration_minutes).round(2),
           kill_participation: kill_participation
         }
       else

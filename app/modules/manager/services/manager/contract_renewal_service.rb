@@ -30,6 +30,7 @@ module Manager
       Contract.create!(
         organization: @original.organization,
         player: @original.player,
+        staff_member_id: @original.staff_member_id,
         contract_type: @original.contract_type,
         status: 'draft',
         created_by: @user,

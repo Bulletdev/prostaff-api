@@ -18,20 +18,7 @@ module Players
       def index
         ActiveRecord::Base.connection.execute("SET statement_timeout = '5000'")
 
-        base_includes = [:organization]
-        base_includes << :active_contract if financial_access?
-        players = organization_scoped(Player).includes(base_includes)
-
-        players = players.by_role(params[:role]) if params[:role].present?
-        players = players.by_status(params[:status]) if params[:status].present?
-        players = players.by_line(params[:line]) if params[:line].present?
-
-        if params[:search].present?
-          search_term = "%#{params[:search]}%"
-          players = players.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
-        end
-
-        result = paginate(players.ordered_by_role.order(:summoner_name))
+        result = paginate(filtered_players.ordered_by_role.order(:summoner_name))
         view = financial_access? ? :with_contract : :default
 
         cache_key = "players/#{financial_access? ? 'financial' : 'standard'}"
@@ -399,6 +386,27 @@ module Players
       end
 
       private
+
+      def filtered_players
+        base_includes = [:organization]
+        base_includes << :active_contract if financial_access?
+        players = organization_scoped(Player).includes(base_includes)
+        apply_player_filters(players)
+      end
+
+      def apply_player_filters(players)
+        players = players.by_role(params[:role]) if params[:role].present?
+        players = players.by_status(params[:status]) if params[:status].present?
+        players = players.by_line(params[:line]) if params[:line].present?
+        apply_search_filter(players)
+      end
+
+      def apply_search_filter(players)
+        return players unless params[:search].present?
+
+        search_term = "%#{params[:search]}%"
+        players.where('summoner_name ILIKE ? OR real_name ILIKE ?', search_term, search_term)
+      end
 
       def financial_access?
         current_user.role.in?(%w[owner admin manager])

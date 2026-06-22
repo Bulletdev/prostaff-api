@@ -16,9 +16,9 @@ module Manager
       def index
         authorize @contract, :show?, policy_class: Manager::ContractPolicy
         bonuses = @contract.bonuses.order(created_at: :desc)
-        render_success(
-          bonuses: Manager::ContractBonusSerializer.render_as_hash(bonuses)
-        )
+        render_success({
+                         bonuses: Manager::ContractBonusSerializer.render_as_hash(bonuses)
+                       })
       end
 
       # POST /api/v1/manager/contracts/:contract_id/bonuses
@@ -28,17 +28,17 @@ module Manager
         bonus.organization = current_organization
         bonus.save!
         log_user_action(action: 'create', entity_type: 'ContractBonus', entity_id: bonus.id)
-        render_created(
-          bonus: Manager::ContractBonusSerializer.render_as_hash(bonus)
-        )
+        render_created({
+                         bonus: Manager::ContractBonusSerializer.render_as_hash(bonus)
+                       })
       end
 
       # GET /api/v1/manager/contracts/:contract_id/bonuses/:id
       def show
         authorize @contract, :show?, policy_class: Manager::ContractPolicy
-        render_success(
-          bonus: Manager::ContractBonusSerializer.render_as_hash(@bonus)
-        )
+        render_success({
+                         bonus: Manager::ContractBonusSerializer.render_as_hash(@bonus)
+                       })
       end
 
       # PATCH /api/v1/manager/contracts/:contract_id/bonuses/:id
@@ -46,9 +46,9 @@ module Manager
         authorize @contract, :update?, policy_class: Manager::ContractPolicy
         @bonus.update!(bonus_params)
         log_user_action(action: 'update', entity_type: 'ContractBonus', entity_id: @bonus.id)
-        render_success(
-          bonus: Manager::ContractBonusSerializer.render_as_hash(@bonus)
-        )
+        render_success({
+                         bonus: Manager::ContractBonusSerializer.render_as_hash(@bonus)
+                       })
       end
 
       # DELETE /api/v1/manager/contracts/:contract_id/bonuses/:id

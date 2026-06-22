@@ -39,12 +39,12 @@ module Constants
     ROLES = %w[owner admin manager coach analyst viewer].freeze
 
     ROLE_NAMES = {
-      'owner'   => 'Owner',
-      'admin'   => 'Administrator',
+      'owner' => 'Owner',
+      'admin' => 'Administrator',
       'manager' => 'Team Manager',
-      'coach'   => 'Coach',
+      'coach' => 'Coach',
       'analyst' => 'Analyst',
-      'viewer'  => 'Viewer'
+      'viewer' => 'Viewer'
     }.freeze
   end
 
@@ -64,12 +64,12 @@ module Constants
     # CSV contract database → DB value mapping for the importer.
     # Source: DEVDOCS/refs/contract-database/*.csv (LCS, LEC, LJL, LPL, CBLOL).
     CSV_RESIDENCY_MAP = {
-      'Resident'          => 'resident',
-      'Non-Resident'      => 'non_resident',
-      'Non Resident'      => 'non_resident',
-      'NA Resident'       => 'na_resident',
+      'Resident' => 'resident',
+      'Non-Resident' => 'non_resident',
+      'Non Resident' => 'non_resident',
+      'NA Resident' => 'na_resident',
       'Americas Resident' => 'americas_resident',
-      'Native Resident'   => 'native_resident',
+      'Native Resident' => 'native_resident'
     }.freeze
 
     # player_type distinguishes athletes from coaching/support staff on the same roster.
@@ -192,7 +192,9 @@ module Constants
   module TeamGoal
     CATEGORIES = %w[performance rank tournament skill].freeze
     METRIC_TYPES = %w[win_rate kda cs_per_min vision_score damage_share rank_climb].freeze
-    STATUSES = %w[active completed failed cancelled].freeze
+    STATUSES = %w[active open on_track at_risk met missed completed failed cancelled].freeze
+    COMPARATORS = %w[gte lte eq].freeze
+    TERMINAL_STATUSES = %w[met missed completed failed cancelled].freeze
 
     CATEGORY_NAMES = {
       'performance' => 'Performance',
@@ -212,6 +214,11 @@ module Constants
 
     STATUS_NAMES = {
       'active' => 'Active',
+      'open' => 'Open',
+      'on_track' => 'On Track',
+      'at_risk' => 'At Risk',
+      'met' => 'Met',
+      'missed' => 'Missed',
       'completed' => 'Completed',
       'failed' => 'Failed',
       'cancelled' => 'Cancelled'
@@ -220,13 +227,15 @@ module Constants
 
   # VOD Review constants
   module VodReview
-    TYPES = %w[team individual opponent].freeze
+    TYPES = %w[team individual opponent multi_pov].freeze
     STATUSES = %w[draft published archived].freeze
+    ANALYSIS_STATUSES = %w[pending queued downloading analyzing done failed].freeze
 
     TYPE_NAMES = {
       'team' => 'Team Review',
       'individual' => 'Individual Review',
-      'opponent' => 'Opponent Review'
+      'opponent' => 'Opponent Review',
+      'multi_pov' => 'Multi-POV'
     }.freeze
 
     STATUS_NAMES = {

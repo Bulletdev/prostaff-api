@@ -110,4 +110,41 @@ RSpec.describe TeamGoal, type: :model do
       expect(described_class.metrics_for_role('support')).to include('vision_score')
     end
   end
+
+  describe 'metric_key validation' do
+    it 'is valid when metric_key is nil (qualitative goal)' do
+      goal = build(:team_goal, organization: org, metric_key: nil)
+      expect(goal).to be_valid
+    end
+
+    it 'is valid when metric_key is blank' do
+      goal = build(:team_goal, organization: org, metric_key: '')
+      expect(goal).to be_valid
+    end
+
+    it 'is valid with a known metric key' do
+      goal = build(:team_goal, organization: org, metric_key: 'kda_ratio')
+      expect(goal).to be_valid
+    end
+
+    it 'is invalid with an unknown metric key' do
+      goal = build(:team_goal, organization: org, metric_key: 'not_a_real_metric')
+      expect(goal).not_to be_valid
+      expect(goal.errors[:metric_key]).to be_present
+    end
+
+    it 'rejects keys not in the registry' do
+      %w[win_ratio kda_score soloQ_lp WIN_RATE].each do |bad_key|
+        goal = build(:team_goal, organization: org, metric_key: bad_key)
+        expect(goal).not_to be_valid, "expected #{bad_key} to be invalid"
+      end
+    end
+
+    it 'accepts all keys declared in Goals::MetricRegistry' do
+      Goals::MetricRegistry::METRICS.each_key do |key|
+        goal = build(:team_goal, organization: org, metric_key: key)
+        expect(goal).to be_valid, "expected registry key #{key} to be valid"
+      end
+    end
+  end
 end

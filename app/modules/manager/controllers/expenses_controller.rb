@@ -16,6 +16,10 @@ module Manager
     #   GET /api/v1/manager/expenses/salary_summary
     class ExpensesController < Api::V1::BaseController
       before_action :require_manager_access!
+      before_action -> { require_tier_feature!(:contracts_basic) },
+                    only: %i[index show create update destroy approve mark_paid reject]
+      before_action -> { require_tier_feature!(:budget_tracker) },
+                    only: %i[report salary_summary export]
       before_action :set_expense, only: %i[show update destroy approve mark_paid reject]
       after_action  :verify_authorized
 
@@ -33,7 +37,7 @@ module Manager
       def show
         authorize @expense, policy_class: Manager::ExpensePolicy
         render_success(
-          expense: Manager::ExpenseSerializer.render_as_hash(@expense)
+          { expense: Manager::ExpenseSerializer.render_as_hash(@expense) }
         )
       end
 
@@ -45,7 +49,7 @@ module Manager
         expense.save!
         log_user_action(action: 'create', entity_type: 'Expense', entity_id: expense.id)
         render_created(
-          expense: Manager::ExpenseSerializer.render_as_hash(expense)
+          { expense: Manager::ExpenseSerializer.render_as_hash(expense) }
         )
       end
 
@@ -55,7 +59,7 @@ module Manager
         @expense.update!(expense_params)
         log_user_action(action: 'update', entity_type: 'Expense', entity_id: @expense.id)
         render_success(
-          expense: Manager::ExpenseSerializer.render_as_hash(@expense)
+          { expense: Manager::ExpenseSerializer.render_as_hash(@expense) }
         )
       end
 
@@ -73,7 +77,7 @@ module Manager
         @expense.update!(status: 'approved', approved_by: current_user)
         log_user_action(action: 'approve', entity_type: 'Expense', entity_id: @expense.id)
         render_success(
-          expense: Manager::ExpenseSerializer.render_as_hash(@expense)
+          { expense: Manager::ExpenseSerializer.render_as_hash(@expense) }
         )
       end
 
@@ -83,7 +87,7 @@ module Manager
         @expense.update!(status: 'paid', paid_at: Date.current)
         log_user_action(action: 'mark_paid', entity_type: 'Expense', entity_id: @expense.id)
         render_success(
-          expense: Manager::ExpenseSerializer.render_as_hash(@expense)
+          { expense: Manager::ExpenseSerializer.render_as_hash(@expense) }
         )
       end
 
@@ -93,7 +97,7 @@ module Manager
         @expense.update!(status: 'rejected')
         log_user_action(action: 'reject', entity_type: 'Expense', entity_id: @expense.id)
         render_success(
-          expense: Manager::ExpenseSerializer.render_as_hash(@expense)
+          { expense: Manager::ExpenseSerializer.render_as_hash(@expense) }
         )
       end
 
@@ -110,14 +114,19 @@ module Manager
       end
 
       # GET /api/v1/manager/expenses/export
-      # Placeholder — CSV export requires storage provider decision (PRD out-of-scope).
+      # Returns a CSV of expenses filtered by the same params as #index.
+      # Cells beginning with formula characters are prefixed with ' to prevent
+      # CSV injection in Excel/LibreOffice.
       def export
         authorize Expense, :export?, policy_class: Manager::ExpensePolicy
-        render_error(
-          message: 'Export not yet implemented',
-          code: 'NOT_IMPLEMENTED',
-          status: :not_implemented
-        )
+        expenses = Manager::ExpenseQuery.new(
+          organization_scoped(Expense).includes(:player, :created_by, :approved_by),
+          params
+        ).call
+
+        csv = Manager::ExpenseCsvExporter.new(expenses).call
+        filename = "expenses_#{Date.current.iso8601}.csv"
+        send_data csv, filename: filename, type: 'text/csv; charset=utf-8', disposition: 'attachment'
       end
 
       private

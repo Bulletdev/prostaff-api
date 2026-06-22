@@ -29,6 +29,7 @@ module Api
       ].freeze
 
       HTTP_TIMEOUT_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze
+      ALLOWED_IMAGE_EXTENSIONS = %w[.png .jpg .jpeg .gif .webp .svg .ico].freeze
 
       # GET /api/v1/images/proxy
       # Proxies and caches external images
@@ -112,15 +113,15 @@ module Api
       end
 
       # Performs HTTP request to fetch image.
-      # host is re-derived from ALLOWED_DOMAINS - not from user input.
-      # uri.port and uri.request_uri are intentional: this is an image proxy
-      # and the domain allowlist ensures all requests target trusted CDNs only.
+      # host is re-derived from ALLOWED_DOMAINS (not from user input).
+      # Port is hardcoded to 443 — we enforce HTTPS-only in parse_and_validate_url,
+      # so all allowed CDN domains always run on 443.
       def perform_http_request(uri)
         host = ALLOWED_DOMAINS.find { |d| d == uri.host }
-        Net::HTTP.start(host, uri.port, # nosemgrep: ruby.net.http.ssrf
+        Net::HTTP.start(host, 443,
                         use_ssl: true,
                         **HTTP_TIMEOUT_OPTIONS) do |http|
-          request = Net::HTTP::Get.new(uri.request_uri) # nosemgrep
+          request = Net::HTTP::Get.new(uri.request_uri) # nosemgrep: ruby.net.http.ssrf
           request['User-Agent'] = 'ProStaff-API/1.0 (Image Proxy)'
           http.request(request)
         end
@@ -151,7 +152,14 @@ module Api
         send_data cached_data[:body],
                   type: cached_data[:content_type],
                   disposition: 'inline',
-                  filename: File.basename(uri.path)
+                  filename: safe_filename(uri.path)
+      end
+
+      # Returns a sanitized filename — extension from the URL path, no user string passthrough.
+      def safe_filename(path)
+        ext = File.extname(path.to_s).downcase
+        ext = '.jpg' unless ALLOWED_IMAGE_EXTENSIONS.include?(ext)
+        "image#{ext}"
       end
 
       # Handles proxy errors

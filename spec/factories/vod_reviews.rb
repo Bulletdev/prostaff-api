@@ -12,7 +12,11 @@ FactoryBot.define do
     review_date { Faker::Time.between(from: 30.days.ago, to: Time.current) }
     video_url { "https://www.youtube.com/watch?v=#{Faker::Alphanumeric.alpha(number: 11)}" }
     thumbnail_url { Faker::Internet.url }
-    duration { rand(1800..3600) }
+    # nil means "duration unknown" — the timestamp_within_duration validation
+    # is only enforced when duration is present, so this keeps factory
+    # timestamps valid regardless of timestamp_seconds.
+    # Pass an explicit duration in specs that test the duration validation.
+    duration { nil }
     status { 'draft' }
     is_public { false }
     tags { %w[scrim review analysis].sample(2) }

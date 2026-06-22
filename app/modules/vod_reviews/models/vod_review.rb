@@ -40,6 +40,7 @@ class VodReview < ApplicationRecord
   belongs_to :match, optional: true
   belongs_to :reviewer, class_name: 'User', optional: true
   has_many :vod_timestamps, dependent: :destroy
+  has_many :vod_analysis_jobs, dependent: :destroy
 
   # Validations
   validates :title, presence: true, length: { maximum: 255 }
@@ -47,6 +48,9 @@ class VodReview < ApplicationRecord
   validates :review_type, inclusion: { in: Constants::VodReview::TYPES }, allow_blank: true
   validates :status, inclusion: { in: Constants::VodReview::STATUSES }
   validates :share_link, uniqueness: true, allow_blank: true
+  validates :video_urls, presence: true, if: -> { review_type == 'multi_pov' }
+  validate :video_urls_must_be_valid, if: -> { review_type == 'multi_pov' && video_urls.present? }
+  validate :video_urls_count, if: -> { review_type == 'multi_pov' && video_urls.present? }
 
   # Callbacks
   before_create :generate_share_link, if: -> { is_public? }
@@ -167,6 +171,19 @@ class VodReview < ApplicationRecord
   end
 
   private
+
+  def video_urls_must_be_valid
+    invalid = video_urls.reject { |url| VideoUrlValidator.allowed?(url) }
+    return if invalid.empty?
+
+    errors.add(:video_urls, "contains invalid URLs: #{invalid.join(', ')}")
+  end
+
+  def video_urls_count
+    return if video_urls.size.between?(2, 4)
+
+    errors.add(:video_urls, 'must have between 2 and 4 URLs for multi-POV reviews')
+  end
 
   def generate_share_link
     self.share_link = generate_share_link_value
