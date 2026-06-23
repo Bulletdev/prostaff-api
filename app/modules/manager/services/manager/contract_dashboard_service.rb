@@ -22,7 +22,7 @@ module Manager
       {
         total_contracts: contracts.count,
         active_contracts: contracts.active.count,
-        expiring_soon: contracts.expiring(30).count,
+        expiring_soon: contracts.expiring(90).count,
         expiring_60: contracts.expiring(60).count,
         expired: contracts.expired.count,
         total_monthly_payroll: monthly_equivalent(contracts.active.to_a),
