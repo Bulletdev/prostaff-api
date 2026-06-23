@@ -5,5 +5,5 @@
 class PlayerSummarySerializer < Blueprinter::Base
   identifier :id
 
-  fields :summoner_name, :role, :status, :solo_queue_tier, :solo_queue_rank
+  fields :summoner_name, :professional_name, :real_name, :role, :status, :solo_queue_tier, :solo_queue_rank
 end
