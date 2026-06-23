@@ -42,6 +42,8 @@ module Manager
       {
         player_id: contract.player_id,
         player_name: player&.summoner_name,
+        professional_name: player&.professional_name,
+        real_name: player&.real_name,
         role: player&.role,
         salary: contract.base_salary,
         salary_period: contract.salary_period,
