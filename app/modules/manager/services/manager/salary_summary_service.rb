@@ -22,11 +22,13 @@ module Manager
 
       player_ids = active_contracts.pluck(:player_id)
       players_by_id = Player.unscoped.where(id: player_ids).index_by(&:id)
+      contracts_array = active_contracts.to_a
 
       {
-        total_monthly_payroll: normalize_to_monthly(active_contracts.to_a),
+        total_monthly_payroll: normalize_to_monthly(contracts_array),
+        payroll_by_currency: payroll_by_currency(contracts_array),
         player_count: active_contracts.count,
-        players: build_player_list(active_contracts, players_by_id)
+        players: build_player_list(contracts_array, players_by_id)
       }
     end
 
@@ -52,6 +54,13 @@ module Manager
 
     def normalize_to_monthly(contracts)
       contracts.sum { |c| monthly_equiv(c) }
+    end
+
+    def payroll_by_currency(contracts)
+      contracts.each_with_object({}) do |c, hash|
+        currency = c.salary_currency
+        hash[currency] = (hash[currency] || 0) + monthly_equiv(c)
+      end
     end
 
     def monthly_equiv(contract)
