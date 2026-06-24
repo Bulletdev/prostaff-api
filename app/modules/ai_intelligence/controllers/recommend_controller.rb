@@ -21,6 +21,7 @@ module AiIntelligence
       # @param opponent_bans  [Array<String>] champions banned by opponent (optional)
       # @param patch          [String]        patch version, e.g. "16.08" (optional)
       # @param league         [String]        league identifier, e.g. "LCK" (optional)
+      # @param role_needed    [String]        role hint: 'top', 'jungle', 'mid', 'adc', 'support' (optional)
       #
       # @return [JSON] { recommendations: [...], source: "ml_v2"|"legacy", model_version: "v2"|nil }
       def recommend_pick
@@ -30,7 +31,8 @@ module AiIntelligence
           our_bans: Array(params[:our_bans]),
           opponent_bans: Array(params[:opponent_bans]),
           patch: params[:patch],
-          league: params[:league]
+          league: params[:league],
+          role_needed: params[:role_needed]
         )
 
         patch = params[:patch]

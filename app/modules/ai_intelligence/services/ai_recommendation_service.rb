@@ -36,13 +36,15 @@ class AiRecommendationService
     new(**).call
   end
 
-  def initialize(our_picks:, opponent_picks:, our_bans: [], opponent_bans: [], patch: nil, league: nil)
+  def initialize(our_picks:, opponent_picks:, our_bans: [], opponent_bans: [],
+                 patch: nil, league: nil, role_needed: nil)
     @our_picks      = our_picks
     @opponent_picks = opponent_picks
     @our_bans       = our_bans
     @opponent_bans  = opponent_bans
     @patch          = patch
     @league         = league
+    @role_needed    = role_needed
   end
 
   def call
@@ -113,7 +115,8 @@ class AiRecommendationService
       our_bans: @our_bans,
       opponent_bans: @opponent_bans,
       patch: @patch,
-      league: @league
+      league: @league,
+      role_needed: @role_needed
     }
   end
 end

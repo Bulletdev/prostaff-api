@@ -8,7 +8,7 @@ module Scouting
       include MetaIntelligence::OeStatSerializable
 
       before_action :set_scouting_target,
-                    only: %i[show update destroy sync import_to_roster competitive_profile oe_history]
+                    only: %i[show update destroy sync import_to_roster competitive_profile oe_history matches]
       before_action :require_management!, only: %i[import_to_roster]
 
       # GET /api/v1/scouting/players
@@ -212,6 +212,41 @@ module Scouting
       rescue RiotApiService::RiotApiError => e
         render_error(message: "Failed to sync player data: #{e.message}", code: 'RIOT_API_ERROR',
                      status: :service_unavailable)
+      end
+
+      # GET /api/v1/scouting/players/:id/matches
+      # Returns recent PlayerMatchStat records for this scouting target.
+      # Looks up the player via riot_puuid. Returns empty array if no match data exists.
+      def matches
+        unless @target.riot_puuid.present?
+          return render_success({ matches: [], message: 'No Riot PUUID available for this player' })
+        end
+
+        player = Player.unscoped.find_by(riot_puuid: @target.riot_puuid)
+
+        unless player
+          return render_success({ matches: [], message: 'No match data found for this player' })
+        end
+
+        limit = [(params[:limit] || 20).to_i, 50].min
+        stats = PlayerMatchStat.where(player: player)
+                               .joins(:match)
+                               .order('matches.game_start DESC')
+                               .limit(limit)
+                               .to_a
+                               .select { |s| s.match.present? }
+
+        riot_service = RiotCdnService.new
+
+        render_success({
+                         matches: stats.map { |stat| build_match_entry(stat, riot_service) },
+                         player_name: @target.summoner_name,
+                         total: stats.size
+                       })
+      rescue StandardError => e
+        Rails.logger.error("[SCOUTING] Error in scouting/players#matches: #{e.message}")
+        render_error(message: 'Failed to load match data', code: 'INTERNAL_ERROR',
+                     status: :internal_server_error)
       end
 
       # Ordered list of tiers from lowest to highest for peak comparison.
@@ -435,6 +470,91 @@ module Scouting
 
       def set_scouting_target
         @target = ScoutingTarget.find_by!(id: params[:id])
+      end
+
+      def build_match_entry(stat, riot_service)
+        build_match_summary(stat)
+          .merge(build_combat_stats(stat))
+          .merge(build_performance_metrics(stat))
+          .merge(build_ward_stats(stat))
+          .merge(build_multi_kill_stats(stat))
+          .merge(build_match_items_and_runes(stat, riot_service))
+      end
+
+      def build_match_summary(stat)
+        {
+          match_id: stat.match.id,
+          game_id: stat.match.riot_match_id,
+          date: stat.match.game_start&.strftime('%Y-%m-%d %H:%M'),
+          victory: stat.match.victory?,
+          game_duration: stat.match.game_duration.to_i,
+          champion: stat.champion,
+          role: stat.role,
+          opponent_champion: stat.opponent_champion
+        }
+      end
+
+      def build_combat_stats(stat)
+        {
+          kda: stat.kda_display,
+          kda_ratio: (stat.kda_ratio || 0).round(2),
+          kills: stat.kills.to_i,
+          deaths: stat.deaths.to_i,
+          assists: stat.assists.to_i
+        }
+      end
+
+      def build_performance_metrics(stat)
+        {
+          cs: stat.cs.to_i,
+          cs_per_min: (stat.cs_per_min || 0).round(1),
+          damage_dealt: stat.damage_dealt_total.to_i,
+          damage_taken: stat.damage_taken.to_i,
+          gold_earned: stat.gold_earned.to_i,
+          gold_per_min: (stat.gold_per_min || 0).round(0),
+          vision_score: stat.vision_score.to_i,
+          performance_score: stat.performance_score || 0,
+          kill_participation: stat.kill_participation || 0,
+          damage_share: stat.damage_share || 0,
+          gold_share: stat.gold_share || 0,
+          healing_done: stat.healing_done.to_i
+        }
+      end
+
+      def build_ward_stats(stat)
+        {
+          wards_placed: stat.wards_placed.to_i,
+          wards_destroyed: stat.wards_destroyed.to_i,
+          control_wards: stat.control_wards_purchased.to_i
+        }
+      end
+
+      def build_multi_kill_stats(stat)
+        {
+          double_kills: stat.double_kills.to_i,
+          triple_kills: stat.triple_kills.to_i,
+          quadra_kills: stat.quadra_kills.to_i,
+          penta_kills: stat.penta_kills.to_i,
+          first_blood: stat.first_blood || false,
+          first_tower: stat.first_tower || false,
+          largest_killing_spree: stat.largest_killing_spree.to_i,
+          largest_multi_kill: stat.largest_multi_kill.to_i
+        }
+      end
+
+      def build_match_items_and_runes(stat, riot_service)
+        {
+          items: (stat.items || []).map { |id| { id: id, icon_url: riot_service.item_icon_url(id) } },
+          runes: (stat.runes || []).map { |id| { id: id, icon_url: riot_service.rune_icon_url(id) } },
+          spells: build_spells(stat, riot_service)
+        }
+      end
+
+      def build_spells(stat, riot_service)
+        [
+          { name: stat.summoner_spell_1, icon_url: riot_service.spell_icon_url(stat.summoner_spell_1&.to_i) },
+          { name: stat.summoner_spell_2, icon_url: riot_service.spell_icon_url(stat.summoner_spell_2&.to_i) }
+        ].select { |s| s[:name].present? }
       end
 
       def scouting_target_params

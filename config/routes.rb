@@ -228,6 +228,7 @@ Rails.application.routes.draw do
             post :import_to_roster
             get  :competitive_profile
             get  :oe_history
+            get  :matches
           end
         end
         get 'regions', to: '/scouting/controllers/regions#index'
