@@ -20,6 +20,7 @@ class DraftPlan < ApplicationRecord
 
   # Validate JSON structures
   validate :validate_bans_structure
+  validate :validate_opponent_picks_structure
   validate :validate_priority_picks_structure
   validate :validate_scenarios_structure
 
@@ -157,6 +158,16 @@ class DraftPlan < ApplicationRecord
     errors.add(:our_bans, 'cannot exceed 5 bans') if our_bans.size > 5
   end
 
+  def validate_opponent_picks_structure
+    return if opponent_picks.blank?
+
+    unless opponent_picks.is_a?(Array) && opponent_picks.all? { |p| p.is_a?(String) }
+      errors.add(:opponent_picks, 'must be an array of strings')
+    end
+
+    errors.add(:opponent_picks, 'cannot exceed 5 picks') if opponent_picks.size > 5
+  end
+
   def validate_priority_picks_structure
     return if priority_picks.blank?
 
@@ -187,12 +198,14 @@ class DraftPlan < ApplicationRecord
   end
 
   def normalize_champion_names
-    self.our_bans = our_bans.map(&:strip) if our_bans.is_a?(Array)
-    self.opponent_bans = opponent_bans.map(&:strip) if opponent_bans.is_a?(Array)
+    self.our_bans       = strip_champ_array(our_bans)
+    self.opponent_bans  = strip_champ_array(opponent_bans)
+    self.opponent_picks = strip_champ_array(opponent_picks)
+    self.priority_picks = priority_picks.transform_values(&:strip) if priority_picks.is_a?(Hash)
+  end
 
-    return unless priority_picks.is_a?(Hash)
-
-    self.priority_picks = priority_picks.transform_values(&:strip)
+  def strip_champ_array(arr)
+    arr.is_a?(Array) ? arr.map(&:strip) : arr
   end
 
   def log_audit_trail

@@ -6,7 +6,7 @@ class DraftPlanSerializer < Blueprinter::Base
   identifier :id
 
   fields :opponent_team, :side, :patch_version, :notes
-  fields :our_bans, :opponent_bans, :priority_picks, :if_then_scenarios
+  fields :our_bans, :opponent_bans, :opponent_picks, :priority_picks, :if_then_scenarios
   fields :is_active
   fields :created_at, :updated_at
 

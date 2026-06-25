@@ -178,6 +178,7 @@ module Strategy
           :is_active,
           our_bans: [],
           opponent_bans: [],
+          opponent_picks: [],
           priority_picks: {},
           if_then_scenarios: %i[
             trigger
