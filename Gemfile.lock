@@ -252,7 +252,7 @@ GEM
       httparty (~> 0.24)
     mini_mime (1.1.5)
     minitest (5.27.0)
-    msgpack (1.8.0)
+    msgpack (1.8.3)
     multi_json (1.21.1)
     multi_xml (0.8.1)
       bigdecimal (>= 3.1, < 5)
