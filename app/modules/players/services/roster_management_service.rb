@@ -76,9 +76,6 @@ class RosterManagementService
         organization: organization,
         status: 'active',
         line: line.presence_in(Constants::Player::LINES) || 'main',
-        contract_start_date: contract_start,
-        contract_end_date: contract_end,
-        salary: salary,
         jersey_number: jersey_number,
         deleted_at: nil,
         removed_reason: nil,
@@ -609,8 +606,6 @@ class RosterManagementService
     {
       status: player.status,
       organization_id: player.organization_id,
-      contract_start_date: player.contract_start_date,
-      contract_end_date: player.contract_end_date,
       source: 'scouting_target',
       scouting_target_id: scouting_target.id
     }
