@@ -56,9 +56,7 @@ jobs:
           bundler-cache: true
 
       - name: Install dependencies
-        run: |
-          bundle config set --local without 'development'
-          bundle install --jobs 4 --retry 3
+        run: bundle install --jobs 4 --retry 3
 
       - name: Setup database
         env:
@@ -68,6 +66,7 @@ jobs:
         run: |
           bundle exec rails db:create
           bundle exec rails db:schema:load
+          bundle exec rails db:migrate
 
       - name: Run RSpec tests
         env:
@@ -75,6 +74,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
           REDIS_URL: redis://localhost:6379/0
           COVERAGE: true
+          INTERNAL_JWT_SECRET: test-internal-secret-ci
+          PANDASCORE_API_KEY: test-pandascore-key-ci
         run: bundle exec rspec --format documentation
         continue-on-error: ${{ github.event.inputs.force_deploy == 'true' }}
 
