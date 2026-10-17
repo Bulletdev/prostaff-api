@@ -7,7 +7,7 @@ class CreateGoalCheckIns < ActiveRecord::Migration[7.2]
       t.uuid       :organization_id, null: false
       t.decimal    :measured_value,  precision: 10, scale: 4
       t.text       :note
-      t.string     :source,          null: false  # auto | manual
+      t.string     :source, null: false # auto | manual
       t.uuid       :created_by_id
       t.timestamps
     end

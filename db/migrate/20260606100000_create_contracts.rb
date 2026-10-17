@@ -25,22 +25,22 @@ class CreateContracts < ActiveRecord::Migration[7.1]
       t.uuid    :renewed_from_id
 
       t.text    :notes
-      t.jsonb   :metadata,              default: {}
+      t.jsonb   :metadata, default: {}
       t.datetime :deleted_at
 
       t.timestamps
     end
 
     add_foreign_key :contracts, :organizations, column: :organization_id,
-                    name: 'fk_contracts_organization'
+                                                name: 'fk_contracts_organization'
     add_foreign_key :contracts, :players, column: :player_id,
-                    name: 'fk_contracts_player'
+                                          name: 'fk_contracts_player'
     add_foreign_key :contracts, :users, column: :created_by_id,
-                    name: 'fk_contracts_created_by'
+                                        name: 'fk_contracts_created_by'
     add_foreign_key :contracts, :users, column: :updated_by_id,
-                    name: 'fk_contracts_updated_by'
+                                        name: 'fk_contracts_updated_by'
     add_foreign_key :contracts, :contracts, column: :renewed_from_id,
-                    name: 'fk_contracts_renewed_from'
+                                            name: 'fk_contracts_renewed_from'
 
     add_index :contracts, :organization_id
     add_index :contracts, :player_id

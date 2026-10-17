@@ -45,9 +45,13 @@ RSpec.describe ScraperImporterService do
         # Force lazy lets to evaluate before the subscribed block so their
         # DB activity (savepoints, INSERT org) is not counted.
         service
+        # Warm the schema cache so Rails 8.1 does not issue an extra SCHEMA
+        # query inside insert_all when CompetitiveMatch is first touched.
+        CompetitiveMatch.column_names
 
         query_count = 0
-        counter = ->(*, **) { query_count += 1 }
+        # Exclude SCHEMA events (Rails internal schema introspection) from the count.
+        counter = ->(*args) { query_count += 1 unless args.last.is_a?(Hash) && args.last[:name] == 'SCHEMA' }
 
         ActiveSupport::Notifications.subscribed(counter, 'sql.active_record') do
           service.import_batch(matches, our_team: 'paiN Gaming')
