@@ -6,7 +6,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '3.4.8'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails', '~> 7.2.3', '>= 7.2.3.1'
+gem 'rails', '~> 8.1.4'
 gem 'connection_pool', '< 3.0'
 
 # Use postgresql as the database for Active Record
@@ -112,7 +112,7 @@ end
 group :development do
   # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
   # gem "spring"
-  gem 'annotate'
+  gem 'annotaterb'
   gem 'bullet'
   gem 'rubocop'
   gem 'rubocop-rails'
