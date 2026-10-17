@@ -19,9 +19,9 @@ class CreateContractBonuses < ActiveRecord::Migration[7.1]
     end
 
     add_foreign_key :contract_bonuses, :contracts, column: :contract_id,
-                    name: 'fk_contract_bonuses_contract'
+                                                   name: 'fk_contract_bonuses_contract'
     add_foreign_key :contract_bonuses, :organizations, column: :organization_id,
-                    name: 'fk_contract_bonuses_organization'
+                                                       name: 'fk_contract_bonuses_organization'
 
     add_index :contract_bonuses, :contract_id
     add_index :contract_bonuses, %i[organization_id status]
