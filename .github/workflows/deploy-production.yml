@@ -268,11 +268,18 @@ jobs:
           ref: ${{ github.event.inputs.version || github.ref }}
 
       - name: Setup SSH
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
         run: |
+          if [ -z "$PRODUCTION_HOST" ]; then
+            echo "PRODUCTION_HOST secret not configured, skipping deploy"
+            exit 0
+          fi
           mkdir -p ~/.ssh
-          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "$PRODUCTION_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts
 
       - name: Create deployment announcement
         run: |
