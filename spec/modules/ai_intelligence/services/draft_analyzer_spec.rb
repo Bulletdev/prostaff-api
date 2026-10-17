@@ -51,9 +51,11 @@ RSpec.describe DraftAnalyzer do
       let(:team_a) { %w[Jinx Thresh Azir Vi] }
 
       before do
-        create(:ai_champion_vector, champion_name: 'Garen',     vector_data: [0.6, 0.5, 0.2, 0.2, 0.5], games_count: 15)
-        create(:ai_champion_vector, champion_name: 'Orianna',   vector_data: [0.7, 0.6, 0.3, 0.25, 0.6], games_count: 20)
-        create(:ai_champion_vector, champion_name: 'Lissandra', vector_data: [0.65, 0.4, 0.25, 0.2, 0.5], games_count: 12)
+        # team_a = [Jinx(adc), Thresh(support), Azir(mid), Vi(jungle)] - top role is unfilled
+        # All three candidates are top-laners so they pass the role-coverage filter
+        create(:ai_champion_vector, champion_name: 'Garen',   vector_data: [0.6, 0.5, 0.2, 0.2, 0.5], games_count: 15)
+        create(:ai_champion_vector, champion_name: 'Darius',  vector_data: [0.7, 0.6, 0.3, 0.25, 0.6], games_count: 20)
+        create(:ai_champion_vector, champion_name: 'Camille', vector_data: [0.65, 0.4, 0.25, 0.2, 0.5], games_count: 12)
       end
 
       it 'returns top-3 suggested picks' do

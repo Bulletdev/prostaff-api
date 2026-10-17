@@ -46,20 +46,27 @@ RSpec.describe ContractBonus, type: :model do
       expect(bonus).to be_valid
     end
 
-    it 'is valid with a known metric key' do
-      bonus = build_bonus(metric_key: 'win_rate')
+    it 'is valid with a known metric key and required structured fields' do
+      bonus = build_bonus(metric_key: 'win_rate', comparator: 'gte', threshold: 60.0)
       expect(bonus).to be_valid
     end
 
+    it 'is invalid with metric_key but no comparator or threshold' do
+      bonus = build_bonus(metric_key: 'win_rate')
+      expect(bonus).not_to be_valid
+      expect(bonus.errors[:comparator]).to be_present
+      expect(bonus.errors[:threshold]).to be_present
+    end
+
     it 'is invalid with an unknown metric key' do
-      bonus = build_bonus(metric_key: 'made_up_metric')
+      bonus = build_bonus(metric_key: 'made_up_metric', comparator: 'gte', threshold: 50.0)
       expect(bonus).not_to be_valid
       expect(bonus.errors[:metric_key]).to be_present
     end
 
     it 'accepts all keys declared in Goals::MetricRegistry' do
       Goals::MetricRegistry::METRICS.each_key do |key|
-        bonus = build_bonus(metric_key: key)
+        bonus = build_bonus(metric_key: key, comparator: 'gte', threshold: 50.0)
         expect(bonus).to be_valid, "expected registry key #{key} to be valid on ContractBonus"
       end
     end

@@ -117,6 +117,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prostaff_test
           REDIS_URL: redis://localhost:6379/0
           COVERAGE: true
+          INTERNAL_JWT_SECRET: test-internal-secret-ci
+          PANDASCORE_API_KEY: test-pandascore-key-ci
         run: |
           bundle exec rspec --format documentation --format json --out rspec-results.json
 

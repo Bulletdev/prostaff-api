@@ -13,10 +13,10 @@ RSpec.describe DiscordDmService do
 
   # Helpers to create users with discord_user_id set
   let!(:target_admin) do
-    create(:user, :admin, organization: target_org, discord_user_id: 'test-discord-uid-1')
+    create(:user, :admin, organization: target_org, discord_user_id: '123456789012345678')
   end
   let!(:requesting_admin) do
-    create(:user, :admin, organization: requesting_org, discord_user_id: 'test-discord-uid-2')
+    create(:user, :admin, organization: requesting_org, discord_user_id: '987654321098765432')
   end
 
   before do

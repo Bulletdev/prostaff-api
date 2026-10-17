@@ -50,7 +50,7 @@ module Players
         view = financial_access? ? :with_contract : :default
         cache_key = "players/#{@player.id}/#{financial_access? ? 'financial' : 'standard'}"
         data = cache_response(cache_key, expires_in: 5.minutes) do
-          { player: PlayerSerializer.render_as_hash(@player, root: :player, view: view) }
+          PlayerSerializer.render_as_hash(@player, root: :player, view: view)
         end
 
         oe_stat = OePlayerLookupService.latest_stats(@player.professional_name)
