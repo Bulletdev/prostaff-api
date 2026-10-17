@@ -16,7 +16,7 @@ class CreateStaffMembers < ActiveRecord::Migration[7.2]
       t.string :role,            null: false
       t.string :status,          null: false, default: 'active'
       t.string :line
-      t.string :country,         limit: 2
+      t.string :country, limit: 2
       t.date   :birth_date
       t.date   :contract_start_date
       t.date   :contract_end_date

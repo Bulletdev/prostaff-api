@@ -39,9 +39,7 @@ RSpec.describe ProMatchPolicy, type: :policy do
       expect(described_class.new(user, nil)).not_to permit_action(:refresh)
     end
 
-    # NOTE: ProMatchPolicy#import? calls user.coach? which does not exist on User model.
-    # This is a bug in the policy. The spec is skipped until the policy is fixed.
-    xit 'can import matches' do
+    it 'can import matches' do
       expect(described_class.new(user, nil)).to permit_action(:import)
     end
   end
@@ -55,7 +53,7 @@ RSpec.describe ProMatchPolicy, type: :policy do
       expect(described_class.new(user, nil)).not_to permit_action(:refresh)
     end
 
-    xit 'cannot import matches' do
+    it 'cannot import matches' do
       expect(described_class.new(user, nil)).not_to permit_action(:import)
     end
   end
@@ -69,7 +67,7 @@ RSpec.describe ProMatchPolicy, type: :policy do
       expect(described_class.new(user, nil)).not_to permit_action(:refresh)
     end
 
-    xit 'cannot import matches' do
+    it 'cannot import matches' do
       expect(described_class.new(user, nil)).not_to permit_action(:import)
     end
   end

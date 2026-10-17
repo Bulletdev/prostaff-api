@@ -79,6 +79,10 @@ class User < ApplicationRecord
     role == 'manager'
   end
 
+  def coach?
+    role == 'coach'
+  end
+
   def admin_or_owner?
     %w[admin owner].include?(role)
   end

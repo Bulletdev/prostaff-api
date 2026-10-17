@@ -20,7 +20,7 @@
 
 
 [![Ruby Version](https://img.shields.io/badge/ruby-3.4.8-CC342D?logo=ruby)](https://www.ruby-lang.org/)
-[![Rails Version](https://img.shields.io/badge/rails-7.2.3.1-CC342D?logo=rubyonrails)](https://rubyonrails.org/)
+[![Rails Version](https://img.shields.io/badge/rails-8.1.4-CC342D?logo=rubyonrails)](https://rubyonrails.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg?logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-6+-red.svg?logo=redis)](https://redis.io/)
 [![Swagger](https://img.shields.io/badge/API-Swagger-85EA2D?logo=swagger)](http://localhost:3333/api-docs)
@@ -32,7 +32,7 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  PROSTAFF API - Ruby on Rails 7.2 (API-Only)                                 ║
+║  PROSTAFF API - Ruby on Rails 8.1 (API-Only)                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Backend for the ProStaff.gg esports team management platform.               ║
 ║  200+ documented endpoints · JWT Auth · Modular Monolith · p95 ~200ms        ║
@@ -195,7 +195,7 @@ Local Docker services started by `docker compose up -d`:
 ║  LAYER               ║  TECNOLOGY                                         ║
 ╠══════════════════════╬════════════════════════════════════════════════════╣
 ║  Language            ║  Ruby 3.4.8                                        ║
-║  Framework           ║  Rails 7.2.3.1 (API-only mode)                     ║
+║  Framework           ║  Rails 8.1.4 (API-only mode)                     ║
 ║  Database            ║  PostgreSQL 14+                                    ║
 ║  Authentication      ║  JWT (access + refresh tokens) + Argon2id hashing  ║
 ║  URL Obfuscation     ║  HashID with Base62 encoding                       ║
@@ -1407,7 +1407,7 @@ graph TB
 
 **Production Stack (Coolify):**
 - **Reverse Proxy**: Traefik with automatic TLS (Let's Encrypt) - round robin across 2 api replicas
-- **Application**: Rails 7.2 API (Puma, 2 replicas) + Action Cable + Sidekiq (1 instance - do not scale)
+- **Application**: Rails 8.1 API (Puma, 2 replicas) + Action Cable + Sidekiq (1 instance - do not scale)
 - **Event Bus**: prostaff-events - Elixir/Phoenix 1.7 (domain events via Phoenix Channels)
 - **Riot Gateway**: prostaff-riot-gateway - Go 1.23 (token bucket, L1/L2 cache, circuit breaker)
 - **Database**: PostgreSQL 14+ (Supabase self-hosted)

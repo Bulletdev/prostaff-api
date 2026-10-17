@@ -224,9 +224,7 @@ module Scouting
 
         player = Player.unscoped.find_by(riot_puuid: @target.riot_puuid)
 
-        unless player
-          return render_success({ matches: [], message: 'No match data found for this player' })
-        end
+        return render_success({ matches: [], message: 'No match data found for this player' }) unless player
 
         limit = [(params[:limit] || 20).to_i, 50].min
         stats = PlayerMatchStat.where(player: player)
