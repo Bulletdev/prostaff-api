@@ -161,7 +161,7 @@ class ProStaffScraperService
     params[:patch] = patch if patch.present?
     params[:role]  = role if role.present?
 
-    response = get('/api/v1/analytics/champions', params)
+    response = get('/api/v1/analytics/champions', params, authenticated: true)
     result = parse_json(response)
     Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_MATCHES)
     result
@@ -187,7 +187,7 @@ class ProStaffScraperService
     params[:league]   = league   if league.present?
     params[:min_year] = min_year if min_year.present?
 
-    response = get('/api/v1/analytics/player', params)
+    response = get('/api/v1/analytics/player', params, authenticated: true)
     result = parse_json(response)
     Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_MATCHES)
     result
@@ -212,7 +212,7 @@ class ProStaffScraperService
     params = { team: team, last_n: last_n }
     params[:league] = league if league.present?
 
-    response = get('/api/v1/analytics/adversary', params)
+    response = get('/api/v1/analytics/adversary', params, authenticated: true)
     result = parse_json(response)
     Rails.cache.write(cache_key, result, expires_in: CACHE_TTL_ADVERSARY)
     result
@@ -230,7 +230,7 @@ class ProStaffScraperService
   def fetch_tournament_stats(tournament:, type: 'teams', team: nil)
     params = { tournament: tournament, type: type }
     params[:team] = team if team.present?
-    response = get('/api/v1/analytics/tournament-stats', params)
+    response = get('/api/v1/analytics/tournament-stats', params, authenticated: true)
     parse_json(response)
   end
 
@@ -245,7 +245,7 @@ class ProStaffScraperService
     params[:league] = league if league.present?
     params[:year]   = year   if year.present?
     params[:type]   = type   if type.present?
-    response = get('/api/v1/analytics/tournament-stats/index', params)
+    response = get('/api/v1/analytics/tournament-stats/index', params, authenticated: true)
     parse_json(response)
   end
 
