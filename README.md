@@ -1072,6 +1072,15 @@ All cached responses include `X-Cache-Hit: true/false` header.
 ./security_tests/scripts/test-body-fuzzing.sh             # mass assignment + type confusion
 ```
 
+### Pentest Relay Endpoint
+
+`GET /r?to=<url>` issues a 302 redirect to the target URL with `allow_other_host`. Used by [AnarCry](https://github.com/effront/anarcry) SSRF module Phase 3 as an open-redirect intermediary: WAFs that allowlist `prostaff.gg` will follow the redirect into internal targets, exposing SSRF behind allowlist-based defenses.
+
+```bash
+curl -I "https://api.prostaff.gg/r?to=http://169.254.169.254/latest/meta-data/"
+# HTTP/1.1 302 Found — Location: http://169.254.169.254/latest/meta-data/
+```
+
 ```
 [✓] OWASP Top 10
 [✓] SAST: Brakeman (Rails) + Semgrep + CodeQL (security-extended)
