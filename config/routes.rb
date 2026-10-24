@@ -33,6 +33,9 @@ Rails.application.routes.draw do
   # SEO - Sitemap
   get 'sitemap.xml', to: 'sitemap#index', defaults: { format: 'xml' }
 
+  # Pentest relay -- redireciona para qualquer URL (usado como intermediario em testes SSRF)
+  get 'r', to: 'relay#redirect'
+
   # API routes
   namespace :api do
     namespace :v1 do
